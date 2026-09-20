@@ -55,11 +55,9 @@ Tests/test_output.xml
 compile_output.txt
 build_output.txt
 compile_log.txt
-TestResults/*.xml
-TestResults/*.txt
-TestResults/*.json
-TestResults/_*/
-TestResults/autofix-*/
+# 测试运行产物整目录不入库（H6 受控证据）：原按扩展名/子目录的 5 条部分覆盖漏过 csv/png/md/bmp，
+# 使 182 件产物长期被跟踪并贡献 142 件 i/crlf 行尾噪声；乙R6-N2 收口为整目录并去跟踪。
+TestResults/
 Tests/test_results.xml
 Tests/Logs/
 

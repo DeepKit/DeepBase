@@ -1,2 +1,0 @@
-Test.DeepBase.DB.DoQry.TTestDeepBaseDoQry
-Test.Regression.BUG339_DoQrySweepInUse.TBUG339_DoQrySweepInUseTest

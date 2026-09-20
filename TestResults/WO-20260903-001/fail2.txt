@@ -1,2 +1,0 @@
-Test.Regression.BUG344_WorkerQueueTimeoutSlotReuse.TBUG344_WorkerQueueTimeoutSlotReuseTest
-Test.Regression.BUG346_JobQueueConcurrentDequeue.TBUG346_JobQueueConcurrentDequeueTest
