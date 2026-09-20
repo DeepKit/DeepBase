@@ -26,6 +26,8 @@
 | **PI-E7-CLOUDSYNC-TIMEOUT** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | E7 CloudSync 显式超时+重试 | 网络同步请求新增 30s 超时+2次重试 | 同步等待行为变：原来无限等→30s超时 | **ACTIVE** |
 | **PI-E8-LLMCHAT-GUARD** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | E8 FMX/VCL LLMChatFrame 回调守卫 | 防回调重入：快速连发请求时仅首次响应 | UI 响应行为变（丢弃后续回调） | **ACTIVE** |
 | **PI-B1-B5-GOVERNANCE** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | B1-B5 Governance/Browser | 配置注册/动作审核/审查队列/缓存接线 | Governance 执行路径变更，可观察 | **ACTIVE** |
+| **PI-R4-SELECTORS-UTF16FIX** | `DeepBase` | `3e72786` | 2026-09-20 10:40 | 乙R4-L2 UTF-16 损坏 blob 替换 | `Tests/Test.DeepBase.Browser.Selectors.pas` HEAD blob 由 UTF-16LE+U+FFFD 双重损坏体替换为 UTF-8 修复版（逐字符无损重建验证，`-text`→`i/lf`，EOL 立法恢复） | 该文件恢复 diff/renormalize 能力；K6 排除集 .pas 由 2 件收敛为 1 件 | **ACTIVE** |
+| **PI-R4-GATE-G4G5** | `DeepBase` | `b307896` | 2026-09-20 10:55 | 乙R4-L4 编码门禁扩展 | `check_pas_encoding.js` 新增 G4（.pas 禁 NUL/UTF-16/32 BOM，零基线）与 G5（.pas 禁孤立 CR，存量豁免 `Core/DeepBase.Schema.pas`=2,883 待归属裁定后移除）；负向样本 5 类全覆盖 | 阻断 UTF-16/-text 类缺陷再次入库；Schema.pas 暂由基线豁免，不改变其现有行为 | **ACTIVE** |
 
 > **登记来源**：`L8-E001-Observation-Active-Execution-Policy.md` §二（START Anchor `f47c573` 之后 commit 分类登记）+ `WO-20260919-AUDIT-乙-R3` K4。
 > **时间界**：INT-20260917-01/02/03 均发生在 Case 001 START 宣告（2026-09-17 16:31）**之后** ⇒ 凡 `timestamp` 早于其 `Effective Time` 的 Episode 归入 `Before`，晚者归入 `After`，**严禁混池**。
