@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-19 WO-20260919-AUDIT-乙 B1；来源 CodeReview/_audit_recheck/乙-B1-scan-after.json。loneCr 基线：2026-09-20 WO-20260920-AUDIT-乙-R4 L4；来源 CodeReview/_audit_recheck/乙-R4-schema-text-诊断.txt（全工作树 960 个 .pas 实测，仅 Schema.pas 命中）",
+ "generated": "2026-09-19 WO-20260919-AUDIT-乙 B1；来源 CodeReview/_audit_recheck/乙-B1-scan-after.json。loneCr 基线：2026-09-20 WO-20260920-AUDIT-乙-R4 L4；来源 CodeReview/_audit_recheck/乙-R4-schema-text-诊断.txt（全工作树 960 个 .pas 实测，仅 Schema.pas 命中）。bomExceptions 收口：2026-09-20 WO-20260920-AUDIT-乙-R6 N1 移除 2 项 HEAD blob 已含 UTF-8 BOM 的死条目（Governance/DeepBase.Governance.ActionExecutor.pas / Governance/DeepBase.Governance.ReviewQueue.pas），47→45",
  "loneCr": {},
  "fffd": {
   "Core/DeepBase.Hotkeys.pas": 128,
@@ -29,7 +29,6 @@
   "Governance/DeepBase.Governance.AbilityRegistry.pas",
   "Governance/DeepBase.Governance.Accountability.pas",
   "Governance/DeepBase.Governance.ActionBinding.pas",
-  "Governance/DeepBase.Governance.ActionExecutor.pas",
   "Governance/DeepBase.Governance.ActionGrid.pas",
   "Governance/DeepBase.Governance.Actor.pas",
   "Governance/DeepBase.Governance.AI.ProposalQueue.pas",
@@ -59,7 +58,6 @@
   "Governance/DeepBase.Governance.ProjectionResolver.pas",
   "Governance/DeepBase.Governance.Purpose.pas",
   "Governance/DeepBase.Governance.Registration.pas",
-  "Governance/DeepBase.Governance.ReviewQueue.pas",
   "Governance/DeepBase.Governance.ReviewQueue.SQLite.pas",
   "Governance/DeepBase.Governance.RouteResolver.pas",
   "Governance/DeepBase.Governance.RouteStore.SQLite.pas",

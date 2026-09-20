@@ -1,0 +1,54 @@
+WO-20260920-AUDIT-乙-R6 / N1 编码门禁 G3 口径校正 —— 实测 stdout 证据
+生成时间：2026-09-20 15:22:40 +0800
+取证 HEAD：e24f68aba6333d0247ffbd62627b700356c11179（工作树含本单未提交改动）
+编码口径：UTF-8 无 BOM / LF / NUL=0（H18）
+
+=== [1] 改前基线：HEAD 版脚本 + HEAD 版 baseline（原始口径「任何 .pas 须 BOM」）===
+$ git show HEAD:09_工程脚本/encoding-gate/check_pas_encoding.js > .tmp/r6/before/  （baseline 同法）
+$ node .tmp/r6/before/check_pas_encoding.js --root . --baseline .tmp/r6/before/pas_encoding_baseline.json
+EXIT=1（stderr+stdout 合并）
+编码门禁失败，违规 7 项:
+  G3 缺UTF-8 BOM: Core/DeepBase.EHAI.Types.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.Gate.Verdict.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.HB.Choice.Types.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.Template.pas
+  G3 缺UTF-8 BOM: Features/DeepBase.UIA.UnifiedActuator.pas
+  G3 缺UTF-8 BOM: Features/UIAutomationClient_TLB.pas
+  G3 缺UTF-8 BOM: Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+
+=== [2] 改后：工作树版脚本 + 工作树版 baseline（新口径「含非 ASCII 字节的 .pas 须 BOM」）===
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js
+EXIT=1
+编码门禁失败，违规 4 项:
+  G3 缺UTF-8 BOM: Core/DeepBase.EHAI.Types.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.Gate.Verdict.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.HB.Choice.Types.pas
+  G3 缺UTF-8 BOM: Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+
+违规计数 7 → 4；出列 3 件（均纯 ASCII）：
+  Core/DeepBase.Template.pas
+  Features/DeepBase.UIA.UnifiedActuator.pas
+  Features/UIAutomationClient_TLB.pas
+余 4 件均含非 ASCII 且属甲域/公共层，按 H2 只登记移交、不代改（清单见交付回执 §一）。
+
+=== [3] 负向样本测试（含 N1 新增两条断言：含非 ASCII+无 BOM 被拦 / 纯 ASCII+无 BOM 放行）===
+$ node 09_工程脚本/encoding-gate/test_negative_sample.js
+EXIT=0
+门禁输出（预期包含 5 类违规）:
+编码门禁失败，违规 7 项:
+  G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas
+  G1 U+FFFD 1 > 基线 0: src/Injected.pas
+  G5 孤立CR 1 > 基线 0: src/LoneCr.pas
+  G3 缺UTF-8 BOM: src/NoBom.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=1): src/NulIn.pas
+  G3 缺UTF-8 BOM: src/Utf16.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=46): src/Utf16.pas
+
+NEGATIVE-TEST: PASS
+
+=== [4] 基线死条目清理对账（bomExceptions 47 → 45）===
+$ node -e "统计 bomExceptions 中 HEAD blob 已含 UTF-8 BOM 的条目"
+  Governance/DeepBase.Governance.ActionExecutor.pas  HEAD blob BOM=YES（bytes 4913，最后触及 ed50cfdf）
+  Governance/DeepBase.Governance.ReviewQueue.pas     HEAD blob BOM=YES（bytes 11581，最后触及 ed50cfdf）
+剩余 45 条均为「含非 ASCII 且确实无 BOM」的存量豁免，无纯 ASCII 死条目（新口径下命中数 = 0）。
+

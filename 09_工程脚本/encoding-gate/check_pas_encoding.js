@@ -2,7 +2,9 @@
 // 规则：
 //  G1 任何 .pas 禁止引入基线之外的 U+FFFD（按文件计数，超过基线即失败；新文件出现 U+FFFD 即失败）
 //  G2 任何 .pas 必须是合法 UTF-8（禁止 GBK/ANSI 原始字节入库）
-//  G3 任何 .pas 必须带 UTF-8 BOM（例外清单：基线 bomExceptions，待相应独占人整改后移除）
+//  G3 含非 ASCII 字节的 .pas 必须带 UTF-8 BOM（例外清单：基线 bomExceptions，待相应独占人整改后移除）
+//     纯 ASCII 的 .pas 不要求 BOM：dcc64 按 ANSI 代码页解析时与 UTF-8 结果逐字节相同，加 BOM 无收益；
+//     口径与 bomExceptions 生成口径（含中文且无 BOM）对齐，消除两者之间的误报裂缝（乙R6-N1）
 //  G4 任何 .pas 禁止含 NUL 字节或 UTF-16/32 BOM（纯 ASCII 的 UTF-16LE 能通过 G2/G1，须专规拦截；
 //     孤立 CR/UTF-16 内容会使 git 将文件判为 -text，EOL 立法与 clean/smudge 对其失效——见乙R4 L3 诊断）
 //  G5 任何 .pas 禁止含孤立 CR（0x0D 后不跟 0x0A；基线 loneCr 按文件计数给存量豁免，新文件出现即失败）
@@ -48,11 +50,15 @@ function countByte(buf, byte) {
   for (let i = 0; i < buf.length; i++) if (buf[i] === byte) n++;
   return n;
 }
+function hasNonAscii(buf) {
+  for (let i = 0; i < buf.length; i++) if (buf[i] > 0x7F) return true;
+  return false;
+}
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
   const buf = fs.readFileSync(f);
   const bom = buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
-  if (!bom && !bomExcepts.has(rel)) violations.push(`G3 缺UTF-8 BOM: ${rel}`);
+  if (!bom && hasNonAscii(buf) && !bomExcepts.has(rel)) violations.push(`G3 缺UTF-8 BOM: ${rel}`);
   // G4: UTF-16/32 BOM 或任何 NUL 字节一律拒绝（存量 .pas 基线为 0，不设豁免）
   const u16bom = buf.length >= 2 && ((buf[0] === 0xFF && buf[1] === 0xFE) || (buf[0] === 0xFE && buf[1] === 0xFF));
   const u32bom = buf.length >= 4 && buf[0] === 0x00 && (buf[1] === 0xFE || buf[1] === 0xFF) && buf[2] === 0x00;
