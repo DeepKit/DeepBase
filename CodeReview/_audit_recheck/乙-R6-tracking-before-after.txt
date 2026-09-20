@@ -1,0 +1,52 @@
+WO-20260920-AUDIT-乙-R6 / N2 TestResults/** 去跟踪 —— 前后对账证据
+生成时间：2026-09-20 15:29:39 +0800
+BEFORE 取证 HEAD：6511e62（乙R6-N1 干预登记行提交）
+AFTER 落定 HEAD：c966abc（本单项提交）
+编码口径：UTF-8 无 BOM / LF / NUL=0（H18）
+
+=== [BEFORE-1] tracked 口径 ===
+$ git ls-files TestResults/ | wc -l
+182
+  扩展名分布：xml 117 / log 23 / txt 13 / csv 12 / png 8 / md 5 / bmp 4 = 182
+  （原 .gitignore 5 条只覆盖 xml/txt/json + 两个子目录形态，另 23 件 .log 靠全局 *.log 规则；
+   csv/png/md/bmp 共 29 件从未被任何规则覆盖，故长期停留在跟踪态）
+
+=== [BEFORE-2] 行尾属性分布（git ls-files --eol TestResults/ 按 index 侧计数）===
+  142 i/crlf
+  17 i/lf
+  13 i/-text
+  9 i/none
+  1 i/mixed
+  ⇒ i/crlf 142 件 = 本单要消除的长期行尾噪声来源（与工单基线 13/142/17/1/9 逐档一致）
+
+=== [BEFORE-3] 工作树口径（H4 零删除的对账基数，递归 node 计数）===
+  worktree files=37578 dirs=402 bytes=7082344701
+  status 中带 TestResults 的条目：156（全部为 M，即已跟踪件的未提交改动）
+
+=== [动作] ===
+$ .gitignore：删除 5 条部分覆盖（TestResults/*.xml|*.txt|*.json|_*/|autofix-*/），收口为 1 条 TestResults/
+$ git rm --cached -r TestResults/     # 仅动 index，禁删工作树（H4）
+$ git diff --cached --name-status | uniq -c  →  182 D + 1 M(.gitignore)（无他方条目，H16 复查通过）
+$ git commit  →  c966abc  (183 files changed, 3 insertions(+), 62358 deletions(-))
+
+=== [AFTER-1] tracked 口径 ===
+$ git ls-files TestResults/ | wc -l
+0                       # 工单验收 182 → 0 成立
+$ git status --porcelain | grep -c TestResults/
+0                       # 156 → 0，噪声退出 status
+
+=== [AFTER-2] 忽略规则实际生效（抽样验证，非自报）===
+$ git check-ignore -v TestResults/WO-20260914-EHAI-001R3/MANIFEST.md TestResults/EncodingGate.json
+  .gitignore:60:TestResults/	TestResults/WO-20260914-EHAI-001R3/MANIFEST.md
+  .gitignore:60:TestResults/	TestResults/EncodingGate.json
+  （.md 与 .json 两类此前均无规则覆盖，现由整目录规则命中）
+
+=== [AFTER-3] 工作树口径（必须与 BEFORE-3 逐位一致）===
+  files=37578 dirs=402 bytes=7082344701
+  ⇒ files / dirs / bytes 三项与 BEFORE-3 完全相同：本次仅去跟踪，零工作树删除（H4）
+
+=== [AFTER-4] eol-gate 复跑 ===
+$ node 09_工程脚本/eol-gate/check_eol.js ; EXIT=0
+  行尾门禁通过：检查了 1403 个文件（.pas CRLF / .md LF）
+  （eol-gate 的 SKIP 集合本就含 TestResults，门禁口径不变；收益体现在 index 侧不再持有 142 件 i/crlf blob）
+
