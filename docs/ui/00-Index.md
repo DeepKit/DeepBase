@@ -175,14 +175,18 @@ for file in *.md; do mmdc -i "$file" -o "${file%.md}.png"; done
 > **【体系与规范定位声明】**  
 > **Efficient Human-AI Interaction（高效 AI 人机交互体系）**定义 AI 与 Human 高效共同工作所需要的核心原则、交互规则、机器语义和产品实现边界。**Efficient Human-AI Interaction Specification（高效 AI 人机交互规范）**是其正式规范表达。**DeepBase** 是用于工程化实现和承载高效 AI 人机交互规范的 Delphi 软件框架。**HB** 是 DeepBase 中面向 Human 的统一人机交互承载与呈现基础设施，负责把高效 AI 人机交互体系中的语义、逻辑、状态、功能与交互行为，转化为 Human 可感知、可理解、可判断、可操作的交互。行为适配是 HB 的重要能力之一，但不是 HB 的全部。
 
-### 高效 AI 人机交互规范分层结构（L1～L7）
-- **L1：AI 人机认知哲学**：[`../DeepBase-AI-Human-Cognition-Philosophy-v1.md`](../DeepBase-AI-Human-Cognition-Philosophy-v1.md)（Frozen v1.0 · P1~P12 认知哲学母源，源于 ASTO 理论）
-- **L2：AI 交付原则**：[`../DeepBase-AI-Delivery-Principles-v1.md`](../DeepBase-AI-Delivery-Principles-v1.md)（Frozen v1.0 · D1~D7 认知交付结构、四自质量检查框架）
-- **L3：AI 人类介入原则**：[`../DeepBase-AI-Human-Intervention-Principles-v1.md`](../DeepBase-AI-Human-Intervention-Principles-v1.md)（Freeze Candidate v1.0 · H/A/E 三轴模型、最小必要介入、承诺边界）
-- **L4：通用 AI 交互协议**：[`../DeepBase-General-AI-Interaction-Protocol-v1.md`](../DeepBase-General-AI-Interaction-Protocol-v1.md)（Freeze Candidate v1.0 · 判断协议、认知语素与选择语义）
-- **L5：HB 人机行为适配基础设施**：[`../DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md`](../DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md)（Freeze Candidate v1.0 · 认知投射与行为适配母稿）
-- **L6：机器语义与介入基础设施**：[`../DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md`](../DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md)（Frozen v1.0 · DeepBase 工程实现：DB-MSI）
-- **L7：产品实现边界**：[`../DeepBase-Product-Realization-Boundary-v1.md`](../DeepBase-Product-Realization-Boundary-v1.md) / [`-r2`](../DeepBase-Product-Realization-Boundary-v1-r2.md)（Freeze Candidate v1.0 · 规范性产品绑定与符合性边界）
+### 高效 AI 人机交互规范分层结构（L1～L8）
+- **L1：AI 人机认知哲学**：[`../EHAI.01.L1-人机认知哲学.md`](../EHAI.01.L1-人机认知哲学.md)（FROZEN v1.0 · P1~P12 认知哲学母源，源于 ASTO 理论）
+- **L2：AI 交付原则**：[`../EHAI.02.L2-AI交付原则.md`](../EHAI.02.L2-AI交付原则.md)（FROZEN v1.0 · D1~D7 认知交付结构、四自质量检查框架）
+- **L3：AI 人类介入原则**：[`../EHAI.03.L3-人类介入原则.md`](../EHAI.03.L3-人类介入原则.md)（FROZEN v1.0 · H/A/E 三轴模型、最小必要介入、承诺边界）
+- **L4：通用 AI 交互协议**：[`../EHAI.04.L4-通用交互协议.md`](../EHAI.04.L4-通用交互协议.md)（FROZEN v1.0 · 判断协议、认知语素与选择语义）
+- **L5：HB 人机行为适配基础设施**：[`../EHAI.05.L5-极简人类交互适配.md`](../EHAI.05.L5-极简人类交互适配.md)（FROZEN v1.0 · 认知投射与行为适配母稿）
+- **L6：机器语义与介入基础设施**：[`../EHAI.06.L6-机器语义与介入.md`](../EHAI.06.L6-机器语义与介入.md)（FROZEN v1.0 · DeepBase 工程实现：DB-MSI）
+- **L7：产品实现边界**：[`../EHAI.07.L7-具体实现边界.md`](../EHAI.07.L7-具体实现边界.md)（FROZEN v1.0 · 规范性产品绑定与符合性边界）
+- **L8：现实效应与经验闭环**：[`../EHAI.08.L8-现实效应与经验闭环.md`](../EHAI.08.L8-现实效应与经验闭环.md)（FROZEN v1.0 · 现实效应回观与经验闭环）
+
+> 旧名 `DeepBase-*-v1.md` 母稿及其历史版本已统一收进 [`../规范历史版本与对比库/`](../规范历史版本与对比库/)，
+> 逐件封版时间与母本路径见该层 [`README-版本对比台账.md`](../规范历史版本与对比库/README-版本对比台账.md)；本索引只指现行名。
 
 ### HB 交互实现标准与下游接入资料
 - **HB AI 选择式交互标准**：[`DeepBase-HB-AI-Choice-Interaction-Standard.md`](DeepBase-HB-AI-Choice-Interaction-Standard.md)（0–9 协议、1–7 多选扩展、Truthful State Machine）

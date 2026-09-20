@@ -1,0 +1,70 @@
+乙R6-N6 eol 基线路径键迁移证据（WO-20260920-AUDIT-乙-R6 §N6）
+时间(本地): 2026/9/20 16:36:57  仓库: D:\_Progs\02Business\DeepBase
+
+【为什么需要迁移】
+  09_工程脚本/eol-gate/eol_baseline.json 的 md_crlf_exceptions 以“仓库相对路径”为键；
+  N6 的 15 件归档位移改变了路径、未改写字节，因此每条位移都会让旧键失效、新路径裸奔。
+  处理口径：只做 1:1 键位改名（同一批字节的旧名 → 新名），不新增任何被豁免文件；
+  位移后仍存在的旧路径（2 件指针文档）实测 CR=0，故其键位一并迁走而非保留。
+  被否决的替代方案（登记为待主控裁定，见工单回执）：把这些 .md 的工作区 CRLF 归一为 LF 从而真正退役豁免；
+  否决理由：L1~L8 为 FROZEN v1.0 契约正文，本工单铁律要求“逐字节不改任何文档正文”。
+
+【迁移前：门禁实测（15 项违规，全部为位移目的地）】
+  命令: node 09_工程脚本/eol-gate/check_eol.js   退出码=1
+  行尾门禁失败，违规 15 项:
+    L2 .md 文档非预期包含 CR (要求 LF): docs/EHAI.01.L1-人机认知哲学.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/EHAI.02.L2-AI交付原则.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.快照-20260909.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.快照-20260909.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol-v1.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.快照-20260909.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure.快照-20260909.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/EHAI-Language-Common-Layer-Overview.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/EHAI-Language-Neutral-Realization-Contract-v0.md
+    L2 .md 文档非预期包含 CR (要求 LF): docs/规范历史版本与对比库/EHAI.00-总览与推导总纲.md
+
+【迁移明细】
+  RENAME docs/DeepBase-AI-Human-Cognition-Philosophy-v1.md -> docs/EHAI.01.L1-人机认知哲学.md | 目标CR=398 | 旧路径存在=false
+  RENAME docs/DeepBase-AI-Delivery-Principles-v1.md -> docs/EHAI.02.L2-AI交付原则.md | 目标CR=516 | 旧路径存在=false
+  RENAME docs/DeepBase-AI-Human-Intervention-Principles-v1.md -> docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md | 目标CR=717 | 旧路径存在=false
+  RENAME docs/DeepBase-General-AI-Interaction-Protocol-v1.md -> docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol-v1.md | 目标CR=472 | 旧路径存在=false
+  RENAME docs/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md -> docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md | 目标CR=620 | 旧路径存在=false
+  RENAME docs/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md -> docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md | 目标CR=645 | 旧路径存在=false
+  RENAME docs/DeepBase-Product-Realization-Boundary-v1.md -> docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md | 目标CR=702 | 旧路径存在=false
+  RENAME docs/DeepBase-Product-Realization-Boundary-v1-r2.md -> docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md | 目标CR=702 | 旧路径存在=false
+  RENAME docs/EHAI.00-总览与推导总纲.md -> docs/规范历史版本与对比库/EHAI.00-总览与推导总纲.md | 目标CR=233 | 旧路径存在=false
+  RENAME docs/EHAI-Language-Common-Layer-Overview.md -> docs/规范历史版本与对比库/EHAI-Language-Common-Layer-Overview.md | 目标CR=246 | 旧路径存在=true
+  RENAME docs/EHAI-Language-Neutral-Realization-Contract-v0.md -> docs/规范历史版本与对比库/EHAI-Language-Neutral-Realization-Contract-v0.md | 目标CR=308 | 旧路径存在=true
+  RENAME docs/backup_20260909_l1_l7/DeepBase-AI-Delivery-Principles-v1.md -> docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.快照-20260909.md | 目标CR=456 | 旧路径存在=false
+  RENAME docs/backup_20260909_l1_l7/DeepBase-AI-Human-Cognition-Philosophy-v1.md -> docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.快照-20260909.md | 目标CR=260 | 旧路径存在=false
+  RENAME docs/backup_20260909_l1_l7/DeepBase-General-AI-Interaction-Protocol-v1.md -> docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.快照-20260909.md | 目标CR=666 | 旧路径存在=false
+  RENAME docs/backup_20260909_l1_l7/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md -> docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure.快照-20260909.md | 目标CR=673 | 旧路径存在=false
+  RETIRE docs/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md | 归档副本CR=0
+  ALIVE-OLD docs/EHAI-Language-Common-Layer-Overview.md | CR=0
+  ALIVE-OLD docs/EHAI-Language-Neutral-Realization-Contract-v0.md | CR=0
+  BEFORE=217 AFTER=216 DELTA=-1 ERRS=0
+  新增键数=15 移除键数=16
+
+【迁移后：同一命令复跑】
+  退出码=0
+  行尾门禁通过：检查了 1408 个文件（.pas CRLF / .md LF）
+
+【净增减自证】
+  md_crlf_exceptions: 217 -> 216（-1，满足 H8 只减不增）
+  新增键 15 条 = 15 个位移目的地；移除键 16 条 = 15 个位移来源 + 1 条 N3 归档遗留死键
+  （docs/EHAI-Realization-001-HB-AsWish-...-AsIs.md：文件已在 docs/archive/ 且实测 CR=0，无需豁免）。
+  任何“净新增被豁免的内容”为 0：迁移前后被豁免的字节集合完全同一。
+
+【补记：根因实测（供主控裁定是否一次性归一）】
+  .gitattributes:22 规定 *.md text eol=lf，core.autocrlf=false。实测 docs/ui/00-Index.md：
+    工作区字节 CR=225（CRLF），而 HEAD blob 字节 CR=0（LF）。
+  即 md_crlf_exceptions 的 216 条豁免豁免的是“本地工作区被工具写成 CRLF”，仓库内正文本就是 LF；
+  新克隆/重新检出会得到 LF 版本，门禁在那些机器上本就不会报这些违规。
+  因此真正的收口选项是一次性把工作区 .md 归一为 LF（等价于 renormalize 落地），
+  可一次性退役绝大多数豁免键；但它会改写本地 FROZEN 文档的工作区字节，超出本工单“逐字节不改正文”的铁律，
+  故本工单只做键位 1:1 迁移，把归一决策登记给主控（回执 §待裁定）。

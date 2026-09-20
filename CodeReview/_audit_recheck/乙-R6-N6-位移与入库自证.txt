@@ -1,0 +1,76 @@
+乙R6-N6 位移与入库自证（WO-20260920-AUDIT-乙-R6 §N6）
+取证方式: 移动前后逐件 sha256 实算比对；本文件内所有数字为脚本实测，非手工誊写。
+
+【一】15 件归档位移：内容零改写自证（源=移动前记录，标=当前目的路径实测）
+状态	说明	旧路径 -> 新路径	字节	移动前sha256[0:16]	现实测sha256[0:16]	比对
+OK	D1①② L1 新名化	docs/DeepBase-AI-Human-Cognition-Philosophy-v1.md -> docs/EHAI.01.L1-人机认知哲学.md	26458/26458	dad297651e2adb65	dad297651e2adb65	一致
+OK	D1①② L2 新名化	docs/DeepBase-AI-Delivery-Principles-v1.md -> docs/EHAI.02.L2-AI交付原则.md	38722/38722	441ed9963ce7fe29	441ed9963ce7fe29	一致
+OK	D1③ 旧名转归档	docs/DeepBase-AI-Human-Intervention-Principles-v1.md -> docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md	47674/47674	f7f9fcc37aaa36b8	f7f9fcc37aaa36b8	一致
+OK	D1③ 旧名转归档	docs/DeepBase-General-AI-Interaction-Protocol-v1.md -> docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol-v1.md	36330/36330	f0c056f433c08595	f0c056f433c08595	一致
+OK	D1③ 旧名转归档	docs/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md -> docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md	41565/41565	bac975e98b4237eb	bac975e98b4237eb	一致
+OK	D1③ 旧名转归档	docs/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md -> docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md	56656/56656	72e40b959eef4348	72e40b959eef4348	一致
+OK	D1③ 旧名转归档	docs/DeepBase-Product-Realization-Boundary-v1.md -> docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md	50601/50601	18bd30bec847b511	18bd30bec847b511	一致
+OK	D1③ 旧名转归档	docs/DeepBase-Product-Realization-Boundary-v1-r2.md -> docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md	50601/50601	18bd30bec847b511	18bd30bec847b511	一致
+OK	D2 旧总纲转归档	docs/EHAI.00-总览与推导总纲.md -> docs/规范历史版本与对比库/EHAI.00-总览与推导总纲.md	21348/21348	5cbc7daa664be18e	5cbc7daa664be18e	一致
+OK	D3 跨仓镜像正文下沉	docs/EHAI-Language-Common-Layer-Overview.md -> docs/规范历史版本与对比库/EHAI-Language-Common-Layer-Overview.md	17238/17238	07b165aed14636f7	07b165aed14636f7	一致
+OK	D3 跨仓镜像正文下沉	docs/EHAI-Language-Neutral-Realization-Contract-v0.md -> docs/规范历史版本与对比库/EHAI-Language-Neutral-Realization-Contract-v0.md	28205/28205	e7b2101d59cc8e45	e7b2101d59cc8e45	一致
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-AI-Delivery-Principles-v1.md -> docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.快照-20260909.md	33260/33260	0f0c871f2ef10aa1	0f0c871f2ef10aa1	一致
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-AI-Human-Cognition-Philosophy-v1.md -> docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.快照-20260909.md	16807/16807	d36f1b7b11249939	d36f1b7b11249939	一致
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-General-AI-Interaction-Protocol-v1.md -> docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.快照-20260909.md	46605/46605	f2c22db068eb4d63	f2c22db068eb4d63	一致
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md -> docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure.快照-20260909.md	53721/53721	4c94fa5efe9b4feb	4c94fa5efe9b4feb	一致
+位移比对: BAD=0（0 表示 15 件字节完全未变）
+
+【二】本轮入库清单（bytes / 工作区全 sha256 / 入库前是否已被 git 跟踪）
+  注: .gitattributes:22 规定 *.md text eol=lf，入库时 git 只把工作区 CRLF 归一为仓库 LF，属既有全局规则，
+      非本工单对正文的改写；工作区字节自移位后逐件未变（见【一】）。
+新增入库	1171	f3d55be4a24d025edd31020394a88ab5514d31a7b388a76ec4e0c778a76817bf	docs/EHAI-Language-Common-Layer-Overview.md
+新增入库	1473	b1b5c0da439923d299be2b1515150de83c8894413c36d8ad8cd2f47df89fd4d2	docs/EHAI-Language-Neutral-Realization-Contract-v0.md
+新增入库	40025	cf3629a3c308ee9499dea8566592e61c99fb80508d7979aacd8b431cad596bb1	docs/EHAI.00-总纲与规范索引.md
+新增入库	26458	dad297651e2adb65c2e7c9ea1656d1b98fe0f576ec7307833c657dc2d0b9ba2e	docs/EHAI.01.L1-人机认知哲学.md
+新增入库	38722	441ed9963ce7fe297324acb67ee8ca3aeae24ce68d6a676431ba74d766b0bbc1	docs/EHAI.02.L2-AI交付原则.md
+新增入库	64366	e753a82f2535b175d1040a8ad7bc0dbc6f31eb40e62d7664dca06748af282395	docs/EHAI.03.L3-人类介入原则.md
+新增入库	39282	34421b57e0ce8bd388c65a328741fe8381c89b783e94137e6aa1c0b7e4475ff4	docs/EHAI.04.L4-通用交互协议.md
+新增入库	49452	a489f49fca12a11d70dce5203f2a49dfd74eeafd05c974d335c32b3aa79afd3e	docs/EHAI.05.D1-表述适配.md
+新增入库	41565	bac975e98b4237ebf8a68cd24d3c6cef3b187fa18944e4166eb7d33ff8c85d8f	docs/EHAI.05.L5-极简人类交互适配.md
+新增入库	66262	e0fa2563a08351b24e75d770a85e2f5b83dc5d083ef9b1d249c0f25911a2732d	docs/EHAI.06.L6-机器语义与介入.md
+新增入库	65569	338dcb577dcad6bb05cb9b117a7b0b59abd5c894108dcae03315fa12e2295b56	docs/EHAI.07.L7-具体实现边界.md
+新增入库	81982	9f1a1de6819c237c678d98bbd3ffda22f7e8b867a0f060c81acf598899246ab3	docs/EHAI.08.L8-现实效应与经验闭环.md
+已跟踪(改动)	9633	ba1859a092f0ad89535bdc505da62e7f20c570aa4645570a1e52d8e6c1e1ce90	docs/ui/00-Index.md
+新增入库	33249	4ab183b1c9a96bf7d7ba8e494cb9085255664ae2c2d1edd3b99d39c5a3427c24	docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.原稿-20260908.md
+新增入库	38722	441ed9963ce7fe297324acb67ee8ca3aeae24ce68d6a676431ba74d766b0bbc1	docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.封版-20260910-Frozen_v1.0.md
+新增入库	33260	0f0c871f2ef10aa11bcf8a17c1a3ba9455e10b50bdfbfb56c2fbc55e96c52599	docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.快照-20260909.md
+新增入库	16808	981ce381dbb68caa86c76fef72f2fe41a5b1d0cc257aecd725d91aed9a61c212	docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.原稿-20260908.md
+新增入库	26458	dad297651e2adb65c2e7c9ea1656d1b98fe0f576ec7307833c657dc2d0b9ba2e	docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.封版-20260909-Frozen_v1.0.md
+新增入库	16807	d36f1b7b112499396e9376d9462c385c2b50b5399939a6c3f110ca4c64a2d108	docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.快照-20260909.md
+新增入库	47674	f7f9fcc37aaa36b8e9485ce208ebe834deaafd891c0926bf6adf579857095810	docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md
+新增入库	36330	f0c056f433c085952675808bff50b4ff55db5cfc44a221ff53943194d1498944	docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol-v1.md
+新增入库	46570	d67b20cfa26ef5c28cbbfec5ab10bf1dde337576dbeb8babcfd0a32804fadfcb	docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.原稿-20260908.md
+新增入库	32041	06009c2618a4dcc11b96e5b0c21b3e3cf83d1781a4d9692df003b8663b1f4a85	docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.封版-20260910-Frozen_v1.0.md
+新增入库	46605	f2c22db068eb4d6329632cd28d2d311c53e8ffeb20493a4eef6259de91131b9b	docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.快照-20260909.md
+新增入库	41565	bac975e98b4237ebf8a68cd24d3c6cef3b187fa18944e4166eb7d33ff8c85d8f	docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+新增入库	63167	c5c9eb2a72a37fada324747843fe360fadb201bad2e7639d69b00c6ba77b1d0f	docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure.原稿-20260908.md
+新增入库	56656	72e40b959eef4348749b16f86ec2e4803222e48da95b72b4f30b23fd0af64f16	docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md
+新增入库	53721	4c94fa5efe9b4feb6c7969c77b1363115324c933b22536ed93dd960bb6c9741c	docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure.快照-20260909.md
+新增入库	50601	18bd30bec847b5119307d3b79671feaf4e692586767f545ce2497776d635e0ae	docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+新增入库	50601	18bd30bec847b5119307d3b79671feaf4e692586767f545ce2497776d635e0ae	docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md
+新增入库	17238	07b165aed14636f7ed52ee3817782dd72f8c694cd5913c08ab48b27d2324088f	docs/规范历史版本与对比库/EHAI-Language-Common-Layer-Overview.md
+新增入库	28205	e7b2101d59cc8e4504dcab6d869e7895da9d0c7022512277f6065d8f78580601	docs/规范历史版本与对比库/EHAI-Language-Neutral-Realization-Contract-v0.md
+新增入库	21348	5cbc7daa664be18e49d68806bf006b39290b2b61ec55ef1d032b26f7a2ff513b	docs/规范历史版本与对比库/EHAI.00-总览与推导总纲.md
+新增入库	16808	981ce381dbb68caa86c76fef72f2fe41a5b1d0cc257aecd725d91aed9a61c212	docs/规范历史版本与对比库/EHAI.01.L1-人机认知哲学.原稿-20260908.md
+新增入库	26458	dad297651e2adb65c2e7c9ea1656d1b98fe0f576ec7307833c657dc2d0b9ba2e	docs/规范历史版本与对比库/EHAI.01.L1-人机认知哲学.封版-20260909-Frozen_v1.0.md
+新增入库	33249	4ab183b1c9a96bf7d7ba8e494cb9085255664ae2c2d1edd3b99d39c5a3427c24	docs/规范历史版本与对比库/EHAI.02.L2-AI交付原则.原稿-20260908.md
+新增入库	38722	441ed9963ce7fe297324acb67ee8ca3aeae24ce68d6a676431ba74d766b0bbc1	docs/规范历史版本与对比库/EHAI.02.L2-AI交付原则.封版-20260910-Frozen_v1.0.md
+新增入库	47654	6ce7af4a9057886f6551c4c68833b4256c4cd999b22a83293b43bba3196fba1d	docs/规范历史版本与对比库/EHAI.03.L3-人类介入原则.原稿-20260909-FreezeCandidate.md
+新增入库	46570	d67b20cfa26ef5c28cbbfec5ab10bf1dde337576dbeb8babcfd0a32804fadfcb	docs/规范历史版本与对比库/EHAI.04.L4-通用交互协议.原稿-20260908-FreezeCandidate.md
+新增入库	32041	06009c2618a4dcc11b96e5b0c21b3e3cf83d1781a4d9692df003b8663b1f4a85	docs/规范历史版本与对比库/EHAI.04.L4-通用交互协议.封版-20260910-Frozen_v1.0.md
+新增入库	49452	a489f49fca12a11d70dce5203f2a49dfd74eeafd05c974d335c32b3aa79afd3e	docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
+新增入库	63028	4e394f5f62fc1c2abc78966c32bdc439836044d55c7bf640bc144920ae354ae8	docs/规范历史版本与对比库/EHAI.05.L5-人机行为适配.原稿-20260908-FreezeCandidate.md
+新增入库	41565	bac975e98b4237ebf8a68cd24d3c6cef3b187fa18944e4166eb7d33ff8c85d8f	docs/规范历史版本与对比库/EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md
+新增入库	53646	397438dcc2b69097d2795a6dc3b01cf053bafa37b3ab3f5fac0ccbd9c412f7ff	docs/规范历史版本与对比库/EHAI.06.L6-机器语义与介入.原稿-20260909-Frozen_v1.0.md
+新增入库	17319	08287c1a6322f6f0b8ec37c7b0fa5f789fd671ed543c8371d6860dfa4c1377b9	docs/规范历史版本与对比库/README-版本对比台账.md
+合计 45 件，其中入库前未跟踪 44 件（归档层与 EHAI 现行名此前全部游离在版本库外）。
+
+【三】零删除声明
+  本轮未执行任何删除。D4(1)+D5(4)+D7(2) 共 7 件纯重复候选的逐件清单见
+  CodeReview/_audit_recheck/乙-R6-N6-删除清单待复核.txt，含仓库外备份路径与回收站流程，待主控复核后方可执行。
+  上述 7 件的字节的 100% 已由本文件【二】中入库的归档副本承载（逐件对应关系见删除清单），删除不损失任何内容。
