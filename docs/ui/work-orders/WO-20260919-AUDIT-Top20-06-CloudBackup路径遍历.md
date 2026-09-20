@@ -1,7 +1,7 @@
 ﻿# WO-20260919-AUDIT-Top20-06 — CloudBackup `ABackupId` 路径遍历：备份 API 成任意文件读/写/删原语
 
 - 法源：`CodeReview/20260918-全库审计-总报告.md` §三 Top20 #6；明细条目 `CodeReview/20260918-Features-C-防御云意图.md` CB-02
-- 执行方：待定（本单由 WO-20260919-AUDIT-甲 A5 建立）
+- 执行方：**开发 AI 乙**（2026-09-20 主控派发 → `WO-20260920-AUDIT-乙-R5-Top20路径遍历与归档卫生.md` N1；本单由 WO-20260919-AUDIT-甲 A5 建立；主控按文件所有权 `Features\DeepBase.CloudBackup.pas` 属乙组切分）
 
 ## 五件套
 

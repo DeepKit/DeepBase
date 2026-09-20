@@ -1,7 +1,7 @@
 ﻿# WO-20260919-AUDIT-Top20-17 — Net：SSRF 非规范 IP/DNS rebinding 绕过 + 环境变量全局关闸
 
 - 法源：`CodeReview/20260918-全库审计-总报告.md` §三 Top20 #17；明细条目 `CodeReview/20260918-Features-C-防御云意图.md` NET-02/NET-03/NET-04/NET-05
-- 执行方：待定（本单由 WO-20260919-AUDIT-甲 A5 建立）
+- 执行方：**开发 AI 甲**（2026-09-20 主控派发 → `WO-20260920-AUDIT-甲-R5-Top20安全链与Gate5.md` M3；本单由 WO-20260919-AUDIT-甲 A5 建立；主控裁定理由：`Features\DeepBase.Net.pas` 不在任一方脏集，安全线主导权在甲）
 
 ## 五件套
 
