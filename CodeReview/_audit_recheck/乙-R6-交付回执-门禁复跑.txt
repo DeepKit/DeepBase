@@ -1,0 +1,132 @@
+== 1. 门禁主判据复跑 ==
+[eol-gate] 09_工程脚本/eol-gate/check_eol.js
+  行尾门禁通过：检查了 1409 个文件（.pas CRLF / .md LF）
+  EXIT=0
+
+[evidence-encoding-gate --all-worktree] 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --all-worktree
+  证据编码门禁通过：扫描 98 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  EXIT=0
+
+[encoding-gate] 09_工程脚本/encoding-gate/check_pas_encoding.js
+  编码门禁失败，违规 4 项:
+    G3 缺UTF-8 BOM: Core/DeepBase.EHAI.Types.pas
+    G3 缺UTF-8 BOM: Core/DeepBase.Gate.Verdict.pas
+    G3 缺UTF-8 BOM: Core/DeepBase.HB.Choice.Types.pas
+    G3 缺UTF-8 BOM: Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+  EXIT=1
+
+[managed-copy-gate] 09_工程脚本/managed-copy-gate/check_managed_copy.js
+  托管拷贝门禁通过：检查了 962 个 .pas 文件（M1 硬规则 + M2 基线 99 项豁免存量）
+  EXIT=0
+
+== 2. 负向样本复跑（门禁自身仍会拦） ==
+[eol-gate/test_negative_sample] 09_工程脚本/eol-gate/test_negative_sample.js
+  门禁输出（预期包含 L1, L2, L3, L4 违规）:
+  行尾门禁失败，违规 5 项:
+    L2 .md 文档非预期包含 CR (要求 LF): docs/Bad_CRLF.md
+    L1 .pas 源码非预期纯 LF (要求 CRLF): src/Bad_LF.pas
+    L3 .pas 源码混用 CRLF 与 LF (crlf=2, lf=2): src/Bad_Mixed.pas
+    L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=4, crlf=0, lf=0): src/Bad_MultiCR.pas
+    L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=1, crlf=2, lf=1): src/Bad_MultiCR_Mixed.pas
+  NEGATIVE-TEST: PASS
+  EXIT=0
+
+[encoding-gate/test_negative_sample] 09_工程脚本/encoding-gate/test_negative_sample.js
+  门禁输出（预期包含 5 类违规）:
+  编码门禁失败，违规 7 项:
+    G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas
+    G1 U+FFFD 1 > 基线 0: src/Injected.pas
+    G5 孤立CR 1 > 基线 0: src/LoneCr.pas
+    G3 缺UTF-8 BOM: src/NoBom.pas
+    G4 含NUL/UTF-16/32 BOM(NUL=1): src/NulIn.pas
+    G3 缺UTF-8 BOM: src/Utf16.pas
+    G4 含NUL/UTF-16/32 BOM(NUL=46): src/Utf16.pas
+  NEGATIVE-TEST: PASS
+  EXIT=0
+
+[evidence-encoding-gate/test_negative_sample] 09_工程脚本/evidence-encoding-gate/test_negative_sample.js
+  门禁输出（预期包含 E1 两类 + E2 一类违规）:
+  证据编码门禁失败：扫描 4 个 CodeReview 证据文件，违规 3 项:
+    E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+    E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+    E1 证据含 NUL 字节(NUL=20, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+  存量基线（ps-redirect.log=20）命中输出:
+  证据编码门禁失败：扫描 4 个 CodeReview 证据文件，违规 2 项:
+    E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+    E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  存量件 NUL 上升后输出:
+  证据编码门禁失败：扫描 4 个 CodeReview 证据文件，违规 3 项:
+    E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+    E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+    E1 证据含 NUL 字节(NUL=21, 首偏移=3, 存量基线=20)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+  清理后复跑: 证据编码门禁通过：扫描 1 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  NEGATIVE-TEST: PASS
+  EXIT=0
+
+[managed-copy-gate/test_negative_sample] 09_工程脚本/managed-copy-gate/test_negative_sample.js
+  门禁输出（预期包含 M1, M2 违规）:
+  托管拷贝门禁失败，违规 3 项:
+    M1 Move/托管类型裸拷贝: src/Bad_M1.pas:7
+    M2 未评审的裸内存 Move 调用 (当前 1 > 基线 0): src/Bad_M1.pas
+    M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): src/Bad_M2.pas
+  正向样本通过：OK
+  NEGATIVE-TEST: PASS
+  EXIT=0
+
+[build-ownership/test_negative_sample] 09_工程脚本/build-ownership/test_negative_sample.js
+  门禁输出（预期包含 O1/O2/O4 违规；O3 因 tmp 无新轨 Manager.pas 文件不适用）:
+  构建归属门禁失败，违规 4 项:
+    O2/C2 BLOCK 新轨单元进入生产构建: DeepBase.Plugins.Manager ∈ prod.dpk
+    O4/C2 BLOCK 生产单元引用新轨: Core/Evil.pas -> DeepBase.Plugins.Manager
+    O1 FAIL 新增孤儿单元（不在基线）: Core/Evil.pas (unit Evil)
+    O1 FAIL 新增孤儿单元（不在基线）: Core/FooOrphan.pas (unit FooOrphan)
+  OWNERSHIP-NEGATIVE-TEST: PASS
+  EXIT=0
+
+== 3. N1/N2 验收量复测 ==
+  git ls-files TestResults/ => 0 件
+  pas_encoding_baseline bomExceptions = 45 项
+  evidence_encoding_baseline 键 = _comment,nulStock（nulStock 存在=true）
+  eol_baseline md_crlf_exceptions = 216 项
+
+== 4. D4/D5/D7 待删 7 件现状（复核期仍在位，零删除） ==
+  在位 bytes=36330 sha256=f0c056f433c08595  docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md
+  在位 bytes=47674 sha256=f7f9fcc37aaa36b8  docs/backup_20260909_l1_l7/DeepBase-AI-Human-Intervention-Principles-v1.md
+  在位 bytes=50601 sha256=18bd30bec847b511  docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md
+  在位 bytes=50601 sha256=18bd30bec847b511  docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md
+  在位 bytes=63167 sha256=c5c9eb2a72a37fad  docs/backup_20260909_l1_l7/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+  在位 bytes=10148 sha256=f2b66a15e68cc735  docs/WO-20260830-HB-交付报告纠偏-开发甲-交付报告.md
+  在位 bytes=5897 sha256=27f7dd7e55f129b1  docs/WO-20260830-补修-开发甲-交付报告.md
+  清单解析候选件 = 7 件
+  备份目录在位=true
+
+== 5. 工作树未跟踪 EHAI/归档件残留（应为 0，除他方在写件） ==
+  docs/ 下 porcelain 条目 = 27（含甲在写 docs/66.backend.*）
+    M docs/66.backend.DB4后端交接说明-db4-backend-handoff.md
+     M docs/ui/work-orders/L8-E001-Intervention-Registry.md
+    ?? docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md
+    ?? docs/WO-20260829-0230-开发甲-VCL-HB-视觉层全面修复交付报告.md
+    ?? docs/WO-20260830-003-审核-交付验收报告.md
+    ?? docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md
+    ?? docs/WO-20260830-004-审核-最终裁决.md
+    ?? docs/WO-20260830-004-开发甲-HB审计文档整理交付报告.md
+    ?? docs/WO-20260830-005-审核-最终裁决.md
+    ?? docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度交付报告.md
+    ?? docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度工单.md
+    ?? docs/WO-20260830-005-开发甲-HB审计统计口径纠偏交付报告.md
+    ?? docs/WO-20260830-HB-交付报告纠偏-审核-最终裁决.md
+    ?? docs/WO-20260830-HB-交付报告纠偏-开发甲-交付报告.md
+    ?? docs/WO-20260830-审核-交付验收-最终裁决.md
+    ?? docs/WO-20260830-文档整理-开发甲-交付报告.md
+    ?? docs/WO-20260830-最终验证-开发甲-交付报告.md
+    ?? docs/WO-20260830-补修-开发甲-交付报告.md
+    ?? docs/backup_20260909_l1_l7/DeepBase-AI-Human-Intervention-Principles-v1.md
+    ?? docs/backup_20260909_l1_l7/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+    ?? docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md
+    ?? docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md
+    ?? docs/brief-WO-20260905-003-开发甲.md
+    ?? docs/brief-WO-20260905-004-开发甲.md
+    ?? docs/brief-WO-20260905-005-开发甲.md
+    ?? docs/evidence-dcc64-hb-005-34units.txt
+    ?? docs/evidence-dcc64-hb-32units.txt
+
