@@ -1,5 +1,8 @@
 {
- "generated": "2026-09-19 WO-20260919-AUDIT-乙 B1；来源 CodeReview/_audit_recheck/乙-B1-scan-after.json",
+ "generated": "2026-09-19 WO-20260919-AUDIT-乙 B1；来源 CodeReview/_audit_recheck/乙-B1-scan-after.json。loneCr 基线：2026-09-20 WO-20260920-AUDIT-乙-R4 L4；来源 CodeReview/_audit_recheck/乙-R4-schema-text-诊断.txt（全工作树 960 个 .pas 实测，仅 Schema.pas 命中）",
+ "loneCr": {
+  "Core/DeepBase.Schema.pas": 2883
+ },
  "fffd": {
   "Core/DeepBase.Hotkeys.pas": 128,
   "Core/DeepBase.Resilience.CircuitBreaker.pas": 1,

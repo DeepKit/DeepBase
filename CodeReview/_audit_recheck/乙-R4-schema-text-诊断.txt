@@ -1,0 +1,83 @@
+乙R4-L3 · Core/DeepBase.Schema.pas 的 `i/-text` 成因诊断
+取证时间: 2026-09-20（主控基线 HEAD=832ad65，取证时 HEAD=3e72786）
+执行人: 开发 AI 乙
+纪律声明: Schema.pas 当前为脏（` M`，归属未定）。本诊断全程只读（git cat-file / 逐字节统计 / 隔离仓库复现），未改动、未提交、未 checkout 该文件（WO §L3 前置约束）。
+
+════════════════════════════════════════════
+一、结论（可复验）
+════════════════════════════════════════════
+
+**成因 = blob 内存在 2,883 个"孤立 CR"（CR 后不跟 LF）。git 的文本判定规则：一个 .pas 文件只要含 ≥1 个孤立 CR 字节，即被分类为 `-text`（按二进制处理），clean/smudge/EOL 立法全部失效。与 NUL、编码有效性、gitattributes、文件模式、git 版本均无关。**
+
+具体字节形态：blob 全部 970 行中 961 行的行尾为 `CR CR CR CR LF`（即 `\r\r\r\r\n`），每行贡献 3 个孤立 CR + 1 个 CRLF；961×3 = 2,883，与全文件孤立 CR 精确计数吻合。这是"把 `\n` 盲目替换成 `\r\n`"的规范化脚本被执行了 3 遍的遗留痕迹（原文 1 个 `\r` + 3 次追加 = 4 个 `\r`）。
+
+引入 commit（git 历史逐 blob 统计定位）：
+- `0c899b5`（2026-06-15, chore: align backlog）: size=47,167, crlf=0, loneCR=0, loneLF=971 —— **纯 LF，干净**
+- `5a6b9d0e`（2026-06-20 17:10, fix: QA-P0-001 green CI — resolve Start-Process ExitCode null bug）: size=50,992, crlf=971, **loneCR=2,913(=971×3)**, loneLF=0 —— **异常在此提交引入**，即该提交以PowerShell类脚本做了 3 遍盲目 `\n→\r\n` 转换
+- 之后各提交（a1a6b96→b11bc2e→HEAD）行数微变，loneCR 恒为 2,883(=961×3)，损坏形态原样传承至今。
+
+════════════════════════════════════════════
+二、复现证据 1：最小合成矩阵（隔离仓库）
+════════════════════════════════════════════
+
+仓库: `.tmp/r4/repro`（git init 独立仓 + 拷贝本仓根 `.gitattributes` 的 `*.pas text eol=crlf`）。git 2.52.0.windows.1，core.autocrlf=false。
+
+| 样本 | 字节形态 | `git ls-files --eol` 结果 |
+| :--- | :--- | :--- |
+| S1_pure_crlf.pas | 纯 CRLF | `i/lf  w/crlf` （正常） |
+| S2_pure_lf.pas | 纯 LF | `i/lf  w/crlf` （正常） |
+| S3_crlf_plus_lonecr.pas | CRLF + 2 个孤立 CR | **`i/-text w/-text`** |
+| S4_mixed_no_lonecr.pas | LF + 末尾 CRLF（无孤立 CR） | `i/lf  w/mixed` （正常立法生效） |
+| S5_lonecr_only.pas | 仅孤立 CR（无 LF） | **`i/-text w/-text`** |
+| S6_lf_plus_lonecr.pas | LF + 1 个孤立 CR | **`i/-text w/-text`** |
+
+⇒ 判定唯一敏感变量是"孤立 CR 的有无"；CRLF/LF 混合本身不触发（S4 对照）。含 1 个孤立 CR 即触发（S6）。
+
+复现命令（任一空仓）：
+  printf 'unit F;\ninterface\nimpl\nend\n\r' > S6.pas   # 末字节为孤立CR
+  git add S6.pas && git ls-files --eol S6.pas           # → i/-text（需 *.pas text eol=crlf）
+
+════════════════════════════════════════════
+三、复现证据 2：真实 blob 隔离重放
+════════════════════════════════════════════
+
+同一隔离仓库中放入三份真实字节：
+- BlobCase.pas = `git cat-file blob HEAD:Core/DeepBase.Schema.pas` 原样 → **`i/-text w/-text`（成功复现主控现象）**
+- WtCase.pas   = 当前工作树字节 → `i/-text w/-text`（工作树字节类与 blob 一致：970 CRLF + 2,883 孤立 CR + 12 LF）
+- NoLoneCrCase.pas = 同 blob 删除全部孤立 CR 后 → `i/lf w/mixed`（**恢复正常文本分类**）
+
+⇒ 排除"主控本机 git 版本 / 本仓 index 状态 / update-index 标记"等环境因素：同一份字节在任何同版本 git 仓都得 `-text`。
+
+════════════════════════════════════════════
+四、主控 7 项已排除假设 —— 乙独立复核（H7）
+════════════════════════════════════════════
+
+| 主控已排除 | 乙独立实测 |
+| :--- | :--- |
+| blob 含 NUL | 0（本诊断逐字节统计，与主控一致） |
+| blob UTF-8 可解码 | 是（TextDecoder fatal 通过；51,626 字节全文件） |
+| 异常控制字节 | 无 <32 且非 \t\r\n 者；**但此前口径未把"孤立 CR"视为问题——它不是非法控制字节，而是 git 分类触发器** |
+| 子目录 .gitattributes | 全库仅根一份（复核一致） |
+| check-attr | text=set / eol=crlf（合成矩阵证明属性设置正确仍判 -text，故成因必在内容） |
+| index blob ≠ HEAD blob | 同一对象（本诊断直接用 HEAD blob 在隔离仓重放即复现，与 index/HEAD 无关） |
+| blob 含 \x1a | 0（统计含 0x1A 计数，未见） |
+
+新变量：**孤立 CR**（`0x0D` 后不跟 `0x0A`），主控 7 项中无一覆盖，本诊断定位其为唯一充分触发条件。
+
+════════════════════════════════════════════
+五、影响面
+════════════════════════════════════════════
+
+1. 该 blob 不参与 EOL 立法：K6 全库 renormalize 会跳过它（`i/-text`），须先修内容再 renormalize，否则永远收敛不掉。
+2. diff/ blame 仍可用（git 对 -text 只是不做换行转换，非禁止 diff），但 `w/-text` 使行尾状态自述失真。
+3. 同异常类波及面：L1 交叉对账发现 CodeReview/_audit_recheck 下 13 个 txt/log 证据文件同为 `i/-text` 且无 NUL，高度疑似同为"多次盲目 \n→\r\n"或同类转码产物，可在 K6 前按本口径批量扫描定位（不属本单范围，仅登记）。
+
+════════════════════════════════════════════
+六、整改选项（受归属前置约束，乙未执行）
+════════════════════════════════════════════
+
+- 方案①（推荐）：将行尾 `\r\r\r\r\n` 归一为 `\r\n`（等价于删 2,883 个孤立 CR）。等长内容改写，语义零损失；提交后 `git ls-files --eol` 应回 `i/lf w/crlf`，并从 K6 排除集收敛。工作树当前脏改动与本缺陷无关（改动后统计仍含同量级孤立 CR）。
+- 方案②：留待 K6 一并处理——不可行，`-text` 文件被 renormalize 跳过，必须先做方案①。
+- 前置：归属裁定未下前，任何对上述字节的操作（含 checkout）由主控排序。乙 B1 编码线可承接（属编码/EOL 缺陷家族），但须主控书面放行。
+
+—— 证据脚本与中间产物：`.tmp/r4/repro/`（合成矩阵）、`.tmp/r4/blob_full.bin`（HEAD blob 原件 51,626B）、`.tmp/r4/h_*.bin`（历史各版本 blob）。

@@ -1,0 +1,29 @@
+扫描根: git 仓库根 D:/_Progs/02Business/DeepBase
+口径: git ls-files '*.pas'（已跟踪 .pas）→ git cat-file --batch 取 HEAD:<path> blob
+排除集: 未跟踪 .pas（不在 ls-files 口径）+ .tmp/.claude/.git/构建产物（均未跟踪）
+文件总数: 959  missing: 0
+
+=== 前 8000 字节 NUL>0（主控口径对账）: 1 件 ===
+NUL8000=3996 NULtotal=5231 size=10470  Tests/Test.DeepBase.Browser.Selectors.pas
+
+=== 全文件 NUL>0: 1 件 ===
+NULtotal=5231 size=10470  Tests/Test.DeepBase.Browser.Selectors.pas
+
+=== 口径二对账：git ls-files --eol 的 i/-text 清单 ===
+全库 i/-text 共 39 件，其中 .pas 恰好 2 件：
+  i/-text w/-text  attr/text eol=crlf  Core/DeepBase.Schema.pas
+  i/-text w/crlf   attr/text eol=crlf  Tests/Test.DeepBase.Browser.Selectors.pas
+其余 37 件（非 .pas）：
+  - 13 件 CodeReview/_audit_recheck/*.txt|*.log（attr/text eol=lf 或 eol=crlf）——与 Schema.pas 同类异常（text 属性却被判二进制），供 L3 对照
+  - 3 件 *.db（Examples/Phase0Demo、Phase1Demo、data/示例Config.db，attr/text=auto）
+  - 8 件 TestResults/*.png|*.bmp（attr/-text 正常二进制）
+  - 4 件 *.ico（DeepBaseRun、Tools/SeedTool、Tools/Studio、Tools/UniPublisher、doQry/sql.ico，attr/-text 正常）
+  - 1 件 TestResults/WO-20260905-004/build_packages.log（attr/text=auto）
+
+=== 两口径差异解释 ===
+1. Selectors.pas：两口径一致命中（NUL=3996/5231；-text）。blob 10470B ≈ 工作树 5234B 的 2.0 倍，UTF-16LE 特征。
+2. Core/DeepBase.Schema.pas：-text 命中但全文件 NUL=0 → 即 L3 待查异常（7 假设已被主控排除，乙在 R4-L3 继续）。
+3. NUL 扫描（959 件 .pas）与 -text 扫描（2 件 .pas）的对账结论：全库 .pas 中 UTF-16 存储仅此 1 件；text 属性被判二进制的 .pas 有 2 件（Selectors 已解 + Schema 待查）。
+4. 与主控基线对账：主控 NUL=3996（前 8000B）↔ 乙 NUL8000=3996，逐项一致；主控「命中仅 1 件」↔ 乙 hits=1，一致。
+
+环境：git version 2.52.0.windows.1；core.autocrlf=false。

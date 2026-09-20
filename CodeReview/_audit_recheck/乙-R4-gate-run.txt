@@ -1,0 +1,30 @@
+乙R4-L4 编码门禁扩展实跑证据  2026-09-20（HEAD=3e72786 之上，工作树）
+
+=== 1) 负向样本测试 test_negative_sample.js（G1-G5 全覆盖，预期拦截）===
+门禁输出（预期包含 5 类违规）:
+编码门禁失败，违规 7 项:
+  G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas
+  G1 U+FFFD 1 > 基线 0: src/Injected.pas
+  G5 孤立CR 1 > 基线 0: src/LoneCr.pas
+  G3 缺UTF-8 BOM: src/NoBom.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=1): src/NulIn.pas
+  G3 缺UTF-8 BOM: src/Utf16.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=46): src/Utf16.pas
+
+NEGATIVE-TEST: PASS
+EXIT=0
+
+=== 2) 全库实跑 check_pas_encoding.js --root . ===
+编码门禁失败，违规 7 项:
+  G3 缺UTF-8 BOM: Core/DeepBase.EHAI.Types.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.Gate.Verdict.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.HB.Choice.Types.pas
+  G3 缺UTF-8 BOM: Core/DeepBase.Template.pas
+  G3 缺UTF-8 BOM: Features/DeepBase.UIA.UnifiedActuator.pas
+  G3 缺UTF-8 BOM: Features/UIAutomationClient_TLB.pas
+  G3 缺UTF-8 BOM: Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+EXIT=1（7项G3为B1存量登记项：EHAI.Types/Gate.Verdict/HB.Choice.Types/Template/UIA.UnifiedActuator/UIAutomationClient_TLB/A8_InFlightUnloadGate，均非乙R4范围，不代改）
+
+=== 3) 新规则命中面 ===
+G4（NUL/UTF-16/32 BOM）：全库 .pas 命中 0（工作树 NUL 统计=0）
+G5（孤立CR）：全库 960 个 .pas 仅 Core/DeepBase.Schema.pas=2883，已入基线豁免（归属待裁，见乙-R4-schema-text-诊断.txt）
