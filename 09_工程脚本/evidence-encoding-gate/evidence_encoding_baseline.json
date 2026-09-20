@@ -1,6 +1,4 @@
 {
   "_comment": "DeepBase 证据 NUL 字节存量基线 (WO-20260920-AUDIT-乙-R5 N3)。只允许下调或删除条目，禁止新增文件或提高计数。命中条目的文件按二进制处理（E2 一并跳过），其内容本不可读，整改唯一路径是由该文件独占人按 H18 以 UTF-8 重落后删除条目。",
-  "nulStock": {
-    "CodeReview/20260919-AUDIT-甲-证据/R3-run-tests.log": 987
-  }
+  "nulStock": {}
 }
