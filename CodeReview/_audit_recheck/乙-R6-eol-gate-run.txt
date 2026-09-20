@@ -1,0 +1,40 @@
+# 乙R6 eol-gate 复跑与 N3 归档件行尾回归收口（WO-20260920-AUDIT-乙-R6 N3/N7 阶段）
+# 基准 HEAD(取证时)=a007e57  本机时间=2026-09-20 16:05:58 +0800
+
+## 1. 违规发现（本工单 N1/N5/N7 后三门禁复跑，逐字摘录当时 stdout）
+EOL_EXIT=1
+行尾门禁失败，违规 1 项:
+  L2 .md 文档非预期包含 CR (要求 LF): docs/archive/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md
+# 该项由本单 N3(commit 2629b2c) 将跨仓文档移入 docs/archive/ 时引入：git 按 .gitattributes(*.md text eol=lf) 在 add 时把 blob 归一为 LF，
+# 但工作树副本仍是源侧的 CRLF 字节；check_eol.js 扫描的是工作树字节，故报 L2。
+
+## 2. 定位：CR 在工作树还是 blob？
+$ git check-attr text eol -- docs/archive/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md
+docs/archive/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md: text: set
+docs/archive/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md: eol: lf
+$ # 工作树字节: len=48019 CR=632(全为 CRLF 对) loneCR=0 multiCR=0 ; HEAD blob: len=47387 CR=0
+48019 - 632 = 47387 = blob 字节数  => 工作树与 blob 的差异恰好只是 CRLF 的行尾前缀，正文内容零差异
+
+## 3. 修法（不改正文，只把工作树行尾归一到与已提交内容一致）
+# 仅剥离 CRLF 中的 CR（loneCR/multiCR 均为 0，故无损），结果字节与 HEAD blob 逐字节相同；仓库内容无任何变化，EHAI 正文零改写。
+$ git hash-object <修复后工作树文件>  vs  $ git rev-parse HEAD:<file>
+worktree(raw)=a3e6d5fbbe94324a4fabefee6188722c6b857184
+headBlob    =a3e6d5fbbe94324a4fabefee6188722c6b857184
+worktree_sha256=7930fb17bb5e6e1a03a7435e16a555c0aa6d4d3ee9d72cafcca68d2196da6f21
+headBlob_sha256 =7930fb17bb5e6e1a03a7435e16a555c0aa6d4d3ee9d72cafcca68d2196da6f21
+
+## 4. 反事实复现：由 HEAD blob 重装 CRLF 得修复前工作树字节，并让门禁在临时 root 上跑
+# 重装字节 sha256 = ea5dba71b840c54b5822d146492c7fe3e2f8fa62075c0078d3e9e39896900d5b（与修复前工作树实测一致，证明复现忠实）
+$ node 09_工程脚本/eol-gate/check_eol.js --root .tmp/r6/eolrepro
+行尾门禁失败，违规 1 项:
+  L2 .md 文档非预期包含 CR (要求 LF): docs/archive/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md
+REPRO_EXIT=1
+
+## 5. 修复后全库门禁复跑原始 stdout
+行尾门禁通过：检查了 1405 个文件（.pas CRLF / .md LF）
+EOL_EXIT=0
+
+## 6. 口径与门禁基线
+# - 未向 eol_baseline.json 新增任何豁免条目（H8：基线只降不升、不留宽松兼容分支）；本轮基线文件零改动。
+# - 违规数 1 -> 0；扫描文件数 1405。
+# - 工作树归一化后 git status 该文件不再出现（内容与 blob 逐字节相同），故本文件不产生新 commit。
