@@ -1,0 +1,29 @@
+乙R6-N6 指针与链接完整性自证
+生成时间（本地）：Sun Sep 20 2026 16:51:53 GMT+0800 (中国标准时间)
+取证基线 HEAD：33d80b8
+
+说明：本节全部数字由本脚本当场实测产生，非手工誊写。
+
+== 1. 修复的指针（工作树实测） ==
+docs/README.md | bytes=9951 CR=197 LF=197 BOM=true | sha256=17dba898670d39bb2736345b86b521a0800bbfe7ce2c3aa0e3f58196457d5c3e
+  修复前：L1～L7 逐层重复列表，指向已位移的 docs/DeepBase-*-v1.md 旧名
+  修复后：改为指向唯一登记表 EHAI.00-总纲与规范索引.md §13.1/§13.2 + 归档台账，消除分层表第二真源
+docs/ui/00-Index.md | bytes=9649 CR=225 LF=225 BOM=false | sha256=22ed55b9c2cd09324c5671a2e6adc1e0a19d560792efd0395c723c9f74ba78a7
+  修复前：AsWish 资料包链接指向 docs/ 顶层（N3 已移入 docs/archive/）
+  修复后：改为 ../archive/AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md
+
+== 2. 相对链接完整性（resolve 到工作树实际路径） ==
+  docs/README.md links=81 broken=0
+  docs/ui/00-Index.md links=14 broken=0
+  TOTAL links=95 BROKEN=0
+
+== 3. 旧名/被移文件在现行文档中的残留引用（排除归档层与历史工单） ==
+docs/ui/00-Index.md:198:- **AsWish × 唤金共性现状资料包**：[`../archive/AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md`](../archive/AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md)
+
+注：docs/规范历史版本与对比库/ 内 FROZEN 快照正文按铁律零改写，其自述性前序文件名保留为历史事实；
+    docs/ui/work-orders/ 为历史工单记录，不属现行指针。
+
+== 4. eol-gate 复跑（本轮两次指针修复后） ==
+  行尾门禁通过：检查了 1408 个文件（.pas CRLF / .md LF）
+  EXIT=0
+

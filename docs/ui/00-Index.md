@@ -195,7 +195,7 @@ for file in *.md; do mmdc -i "$file" -o "${file%.md}.png"; done
 - **Core AI 人类判断记忆模型**：[`../DeepBase-AI-Human-Judgment-Memory.md`](../DeepBase-AI-Human-Judgment-Memory.md)（4-B 存储母稿：通用判断沉淀 Schema、场景指纹检索与注入）
 - **通用大模型成本阶梯架构规范**：[`../DeepBase-AI-Cost-Optimization-and-Template-Tiering-Standard.md`](../DeepBase-AI-Cost-Optimization-and-Template-Tiering-Standard.md)（三级调用阶梯、本地模型暂缓；话术资产单一母稿在唤金 24）
 - **HB 触点引擎与四自度量权威源**：[`../30.touchpoint.md`](../30.touchpoint.md)（触点契约、分级采样与四自验收 SSOT）
-- **AsWish × 唤金共性现状资料包**：[`../AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md`](../AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md)
+- **AsWish × 唤金共性现状资料包**：[`../archive/AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md`](../archive/AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md)
 
 ### 基础设计与集成指南
 - 文档索引：`../00.00.DeepBase-文档索引-v1.0.md`
