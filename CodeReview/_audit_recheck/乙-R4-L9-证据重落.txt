@@ -42,5 +42,6 @@ git 历史中 UTF-16 原 blob 仍可按 commit+path 恢复，构成第二重保�
 [残留披露：特例文件提交后仍为 -text]
 `乙-R2-E2-残留逐行登记.txt` 重落后 NUL=0，但拼接缝处原件即含 1 个孤立 CR（片段尾部 `Selectors;\r` 直接接 tail 的 `\r\n`，形成 `\r\r\n`）。
 乙独立实测：以 splice 定界解码原件所得文本与当前工作树文件**逐字节相同**（189 行 = 189 行），孤立 CR 系忠实保留的原始内容，非本次转换引入。
-按 R4 L3 已证结论（孤立 CR ⇒ git 判 `-text`），该文件提交后 i/ 状态仍为 -text。处置：不改写（证据不得洗白）、原件与 _manifest.json 留 .tmp 备查；
-git clean（text eol=lf）提交时会把缝处 `\r\r\n` 折叠为 `\r\n`，属仓库行尾立法的既定作用域，行序列语义以 .tmp 原件为准。
+按 R4 L3 已证结论（孤立 CR ⇒ git 工作树侧判 `-text`），该文件工作树仍为 w/-text。处置：不改写（证据不得洗白）、原件与 _manifest.json 留 .tmp 备查。
+提交后实测（git ls-files --eol @ 550f9f0）：该文件为 `i/mixed w/-text`——git clean（text eol=lf）把 blob 内 `\r\r\n` 折叠后，blob 不再含 NUL 且按文本分类（i/mixed），
+git diff/grep 恢复可用；工作树侧因残留 CR 仍显示 w/-text。其余 14 件重落文件均为 `i/lf`；证据文件本体 `i/lf`。
