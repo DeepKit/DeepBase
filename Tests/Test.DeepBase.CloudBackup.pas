@@ -581,6 +581,7 @@ procedure TTestBackupProgress.Test_ProgressPercent_Zero;
 var
   Progress: TBackupProgress;
 begin
+  Progress := Default(TBackupProgress);
   Progress.TotalBytes := 0;
   Progress.ProcessedBytes := 0;
   
@@ -591,6 +592,7 @@ procedure TTestBackupProgress.Test_ProgressPercent_Partial;
 var
   Progress: TBackupProgress;
 begin
+  Progress := Default(TBackupProgress);
   Progress.TotalBytes := 1000;
   Progress.ProcessedBytes := 500;
   
@@ -601,6 +603,7 @@ procedure TTestBackupProgress.Test_ProgressPercent_Complete;
 var
   Progress: TBackupProgress;
 begin
+  Progress := Default(TBackupProgress);
   Progress.TotalBytes := 1000;
   Progress.ProcessedBytes := 1000;
   
@@ -612,6 +615,7 @@ var
   Progress: TBackupProgress;
   Formatted: string;
 begin
+  Progress := Default(TBackupProgress);
   Progress.TotalFiles := 100;
   Progress.ProcessedFiles := 50;
   Progress.TotalBytes := 10000;
@@ -626,6 +630,7 @@ procedure TTestBackupProgress.Test_Status_Values;
 var
   Progress: TBackupProgress;
 begin
+  Progress := Default(TBackupProgress);
   Progress.Status := bsIdle;
   Assert.AreEqual(bsIdle, Progress.Status);
   

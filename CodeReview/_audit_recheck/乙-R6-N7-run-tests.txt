@@ -1,0 +1,121 @@
+乙R6-N7 测试初始化缺陷修复 — 真实运行证据
+生成时间：2026-09-20 15:58（本地）
+改动文件：Tests/Test.DeepBase.CloudBackup.pas（仅测试；生产单元 Features/DeepBase.CloudBackup.pas 零改动）
+判据来源：工单 WO-20260920-AUDIT-乙-R6 N7（主控 15:18 增补，commit e24f68a）
+
+============================================================================
+一、同类排查（逐用例判定，非批量套用）
+============================================================================
+TTestBackupProgress（Tests/Test.DeepBase.CloudBackup.pas，5 例）：
+  Test_ProgressPercent_Zero      —— 真实缺陷。TotalBytes:=0 后 ProgressPercent 落入
+                                    `else if TotalFiles > 0` 分支，而 TotalFiles/ProcessedFiles
+                                    从未赋值 => 读未初始化栈内存。主控全量跑实测
+                                    Expected [0] but got [-103]（见工单 §二 N7）。
+  Test_FormattedProgress         —— 真实缺陷。FormattedProgress 读 BytesPerSecond（本用例未赋值）
+                                    => 未初始化读（输出内容随栈垃圾变化）。
+  Test_ProgressPercent_Partial   —— 无未初始化读（TotalBytes>0 分支不触碰 TotalFiles）。
+  Test_ProgressPercent_Complete  —— 同上，无未初始化读。
+  Test_Status_Values             —— 无未初始化读（逐字段先赋后读）。
+  处置：5 例断言前统一 `Progress := Default(TBackupProgress);` 后再赋目标字段。
+        3 例本身无缺陷但同属「未初始化 record + 派生属性」模式，统一归零消除对栈内容的隐式依赖；
+        生产侧 TBackupProgress.ProgressPercent/FormattedProgress 语义一字未动（工单红线）。
+
+TTestSyncProgress（Tests/Test.DeepBase.CloudSync.pas，孪生）—— 经核查无该缺陷，不改：
+  TSyncProgress.ProgressPercent（Features/DeepBase.CloudSync.pas）只读 TotalItems/ProcessedItems，
+  Test_ProgressPercent_ZeroTotal_ReturnsZero 对二者均已赋值，不存在未初始化读；
+  且该实现无 `else if` 回退到第三字段的分支，故无 Zero 场景下的隐藏读取。
+
+生产侧未发现新缺陷，无需另裁。
+
+============================================================================
+二、全量测试工程编译被甲 R6 在途 WIP 阻断（真实 stdout，非本单引入）
+============================================================================
+命令：powershell -NoProfile -ExecutionPolicy Bypass -File Scripts/run_tests.ps1 -Type Unit -Run TTestBackupProgress
+前置状态：git status 显示 Features/DeepBase.Updater.pas 为 ` M`（甲域在途改动，H2 乙禁触碰/禁代改）
+
+--- stdout 摘录（.tmp/r6/n7-run.log）---
+Test.DeepBase.Updater.pas(747) Error: E2003 Undeclared identifier: 'ucStable'
+Test.DeepBase.Updater.pas(752) Error: E2003 Undeclared identifier: 'ucBeta'
+Test.DeepBase.Updater.pas(757) Error: E2003 Undeclared identifier: 'ucAlpha'
+Test.DeepBase.Updater.pas(762) Error: E2003 Undeclared identifier: 'ucDev'
+Test.DeepBase.Updater.pas(782) Error: E2003 Undeclared identifier: 'ChannelToString'
+Test.DeepBase.Updater.pas(868) Error: E2003 Undeclared identifier: 'SignatureAlgorithm'
+Test.DeepBase.Updater.pas(928) Error: E2532 Couldn't infer generic type argument from different argument types for method 'AreEqual'
+Test.DeepBase.Updater.pas(1208) Error: E2034 Too many actual parameters
+Test.DeepBase.Updater.pas(1227) Error: E2034 Too many actual parameters
+Test.DeepBase.Updater.pas(1243) Error: E2034 Too many actual parameters
+Test.DeepBase.Updater.pas(1260) Error: E2034 Too many actual parameters
+Test.DeepBase.Updater.pas(1276) Error: E2034 Too many actual parameters
+DeepBaseTests.dpr(32) Fatal: F2063 Could not compile used unit 'Test.DeepBase.Updater.pas'
+ERROR: Failed to compile Unit Tests
+--- 摘录结束 ---
+
+该失败与 Tests/Test.DeepBase.CloudBackup.pas 无关（错误全部位于 Test.DeepBase.Updater.pas，
+其对甲在途修改后的 DeepBase.Updater 接口签名/枚举不再匹配）。按 H1/H2 乙不处置、不代改，
+仅登记移交。为在不触碰甲域文件的前提下取得 N7 真实运行证据，改用一次性独立 DUnitX runner
+（.tmp/r6/n7/R6N7BackupProgress.dpr，仅 uses Test.DeepBase.CloudBackup；gitignored，
+不入库以免形成第二条构建路径/架构分叉）。
+
+============================================================================
+三、编译（改后）真实 stdout
+============================================================================
+命令：dcc64 -U<与 Scripts/run_tests.ps1 同一 UnitPaths> -N0.tmp\r6\n7\dcu -E.tmp\r6\n7 -Q -B .tmp\r6\n7\R6N7BackupProgress.dpr
+退出码：EXIT=0
+
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+31610 lines, 1.59 seconds, 3869748 bytes code, 486576 bytes data.
+
+============================================================================
+四、运行（改后）真实 stdout
+============================================================================
+4.1 fixture 级（N7 验收对象）
+命令：R6N7BackupProgress.exe --run:Test.DeepBase.CloudBackup.TTestBackupProgress
+EXIT=0
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+=> NUnit XML 见同目录 乙-R6-N7-nunit.xml（total=5 errors=0 failures=0，date 2026-09-20 time 15:55:19）
+
+4.2 整个测试单元（防止修一个 fixture 弄坏同文件其它用例）
+命令：R6N7BackupProgress.exe   （无过滤）
+EXIT=0
+Tests Found   : 47
+Tests Ignored : 0
+Tests Passed  : 47
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+=> total=47 errors=0 failures=0（date 2026-09-20 time 15:57:06）
+
+============================================================================
+五、改前对照（HEAD blob 重放）与诚实申报
+============================================================================
+取 HEAD 版本测试单元重放：
+  git cat-file blob HEAD:Tests/Test.DeepBase.CloudBackup.pas > .tmp/r6/before/Test.DeepBase.CloudBackup.pas
+  该文件 bytes=33440，`Default(TBackupProgress)` 出现次数 = 0（确认是改前状态；改后工作树 33600 B）
+  dcc64 独立编译同一 runner：EXIT=0（31605 lines）
+运行结果（fixture 级 + 无过滤 47 例，各跑 3 次）：全部 EXIT=0，failures=0。
+
+诚实申报：改前代码在本机「独立 5 例进程 / 本单元 47 例进程」两种驱动下均未复现 -103。
+原因：该缺陷是对未初始化栈内存的读取，属未定义行为——结果取决于进程当时栈内容，
+不是确定性失败。主控在全量 DeepBaseTests.exe（4587 例，前序用例已污染栈）中复现了
+Expected [0] but got [-103]。因此本证据只能证明：
+  ① 改后 5 例与整单元 47 例真实通过（且不再依赖栈垃圾，Default 归零后为确定性通过）；
+  ② 不能证明改前必然失败（未定义行为的复现依赖执行现场）。
+本次未伪造「改前必红」的对照输出。
+
+============================================================================
+六、证据文件命名与行尾口径（防后续误读）
+============================================================================
+1) 本文件原名 乙-R6-N7-run-tests.log，已改名为 .txt：.gitignore 第 37 行 `*.log` 属
+   “临时文件”类规则，受控证据若以 .log 落盘会被静默忽略（本轮实测 git status 不列出）。
+   工单 §六 证据命名一律用 .txt，故按既有约定改名而非强制 add 被忽略路径。
+2) 乙-R6-N7-nunit.xml 含工具原始 CRLF 字节（工作树 21 CR）；`.gitattributes` 对 *.xml
+   设 text eol=lf，提交时 blob 归一为 LF。此与 R5 先例完全一致（实测
+   乙-R5-N1-full-suite-nunit.xml：工作树 CR=10293，HEAD blob CR=0）。
+   eol-gate 只覆盖 .pas/.md，证据类 .xml/.txt 不在其判定范围，不构成违规。
