@@ -211,7 +211,8 @@ implementation
 
 uses
   System.NetEncoding,
-  DeepBase.Security;
+  DeepBase.Security,
+  DeepBase.SecureMemory;
 
 {$IFDEF MSWINDOWS}
 

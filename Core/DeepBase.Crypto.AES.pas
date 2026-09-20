@@ -44,6 +44,9 @@ type
     function UnpadData(const AData: TBytes): TBytes;
     function GetKey: TBytes;
     function GetIV: TBytes;
+    // AAD is authenticated but not encrypted; ignored in CBC mode.
+    function EncryptImpl(const AData, AAD: TBytes): TBytes;
+    function DecryptImpl(const AData, AAD: TBytes): TBytes;
   public
     constructor Create(AKeySize: TAESKeySize = aes256; AMode: TAESMode = aesGCM);
     destructor Destroy; override;
@@ -67,10 +70,16 @@ type
     function GenerateNonce: TBytes;
 
     /// <summary>Encrypt bytes</summary>
-    function Encrypt(const AData: TBytes): TBytes;
+    function Encrypt(const AData: TBytes): TBytes; overload;
+
+    /// <summary>Encrypt bytes with additional authenticated data (GCM only)</summary>
+    function Encrypt(const AData, AAD: TBytes): TBytes; overload;
 
     /// <summary>Decrypt bytes</summary>
-    function Decrypt(const AData: TBytes): TBytes;
+    function Decrypt(const AData: TBytes): TBytes; overload;
+
+    /// <summary>Decrypt bytes verifying additional authenticated data (GCM only)</summary>
+    function Decrypt(const AData, AAD: TBytes): TBytes; overload;
 
     /// <summary>Encrypt string (returns Base64)</summary>
     function EncryptString(const AData: string): string;
@@ -328,7 +337,7 @@ begin
     Move(AData[0], Result[0], Length(Result));
 end;
 
-function TAESCrypto.Encrypt(const AData: TBytes): TBytes;
+function TAESCrypto.EncryptImpl(const AData, AAD: TBytes): TBytes;
 {$IFDEF MSWINDOWS}
 var
   LAlgHandle: BCRYPT_ALG_HANDLE;
@@ -385,6 +394,11 @@ begin
       LAuthInfo.cbNonce := AES_GCM_NONCE_SIZE;
       LAuthInfo.pbTag := @LTag[0];
       LAuthInfo.cbTag := AES_GCM_TAG_SIZE;
+      if Length(AAD) > 0 then
+      begin
+        LAuthInfo.pbAuthData := @AAD[0];
+        LAuthInfo.cbAuthData := Length(AAD);
+      end;
 
       // GCM: no padding, output size = input size
       SetLength(LCipher, Length(AData));
@@ -466,7 +480,7 @@ begin
   begin
     // GCM authenticated encryption via OpenSSL
     LNonce := TRandomGenerator.RandomBytes(AES_GCM_NONCE_SIZE);
-    LCipher := DeepBase.Crypto.OpenSSL.OpenSSL_AES256GCM_Encrypt(FKey, LNonce, AData, nil, LTag);
+    LCipher := DeepBase.Crypto.OpenSSL.OpenSSL_AES256GCM_Encrypt(FKey, LNonce, AData, AAD, LTag);
 
     // Output format: Nonce(12) + CipherText + Tag(16)
     SetLength(Result, AES_GCM_NONCE_SIZE + Length(LCipher) + AES_GCM_TAG_SIZE);
@@ -487,7 +501,7 @@ begin
 end;
 {$ENDIF}
 
-function TAESCrypto.Decrypt(const AData: TBytes): TBytes;
+function TAESCrypto.DecryptImpl(const AData, AAD: TBytes): TBytes;
 {$IFDEF MSWINDOWS}
 var
   LAlgHandle: BCRYPT_ALG_HANDLE;
@@ -557,6 +571,11 @@ begin
       LAuthInfo.cbNonce := AES_GCM_NONCE_SIZE;
       LAuthInfo.pbTag := @LTag[0];
       LAuthInfo.cbTag := AES_GCM_TAG_SIZE;
+      if Length(AAD) > 0 then
+      begin
+        LAuthInfo.pbAuthData := @AAD[0];
+        LAuthInfo.cbAuthData := Length(AAD);
+      end;
 
       // GCM: output size = ciphertext size (no padding)
       SetLength(LDecrypted, LCipherLen);
@@ -644,7 +663,7 @@ begin
     if LCipherLen > 0 then
       Move(AData[AES_GCM_NONCE_SIZE], LCipher[0], LCipherLen);
 
-    Result := DeepBase.Crypto.OpenSSL.OpenSSL_AES256GCM_Decrypt(FKey, LNonce, LCipher, nil, LTag);
+    Result := DeepBase.Crypto.OpenSSL.OpenSSL_AES256GCM_Decrypt(FKey, LNonce, LCipher, AAD, LTag);
   end
   else
   begin
@@ -655,6 +674,31 @@ begin
   end;
 end;
 {$ENDIF}
+
+function TAESCrypto.Encrypt(const AData: TBytes): TBytes;
+begin
+  Result := EncryptImpl(AData, nil);
+end;
+
+function TAESCrypto.Encrypt(const AData, AAD: TBytes): TBytes;
+begin
+  // CBC cannot authenticate; silently dropping AAD would lie about the guarantee.
+  if (FMode <> aesGCM) and (Length(AAD) > 0) then
+    raise ECryptoException.Create('Additional authenticated data requires GCM mode');
+  Result := EncryptImpl(AData, AAD);
+end;
+
+function TAESCrypto.Decrypt(const AData: TBytes): TBytes;
+begin
+  Result := DecryptImpl(AData, nil);
+end;
+
+function TAESCrypto.Decrypt(const AData, AAD: TBytes): TBytes;
+begin
+  if (FMode <> aesGCM) and (Length(AAD) > 0) then
+    raise ECryptoException.Create('Additional authenticated data requires GCM mode');
+  Result := DecryptImpl(AData, AAD);
+end;
 
 function TAESCrypto.EncryptString(const AData: string): string;
 var

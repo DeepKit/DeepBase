@@ -4,26 +4,23 @@
   Version: 1.0
   Description: Provides secure storage for sensitive data.
                - Windows: Uses DPAPI (user scope)
-               - macOS/Linux: Uses OpenSSL AES-256-GCM + PBKDF2 (requires bundled libcrypto)
+               - macOS/Linux: Uses the UBS2 authenticated envelope
                Use this module for passwords, API keys, tokens, and other secrets.
-  
+
+  The envelope format, the KDF cost policy and the legacy-v1 reader live in
+  DeepBase.Security.UBS2 (format SSOT). The user secret lives in
+  DeepBase.Security.MasterKey, the machine binding in
+  DeepBase.Security.MachineIdentity. This unit only composes them.
+
   Thread Safety: All public methods are thread-safe.
-  
+
   SECURITY NOTES:
   - Windows DPAPI uses user-scope encryption (current Windows user only)
-  - macOS/Linux uses AES-256-GCM with PBKDF2 key derivation from machine entropy
-  - Encrypted data cannot be decrypted on different machines or users
-  - For cross-machine scenarios, set DeepBase_MASTER_KEY environment variable
-  
-  DATA FORMAT (UBS2 for macOS/Linux):
-  - Magic: "UBS2" (4 bytes)
-  - Version: 0x01 (1 byte)
-  - KDF: 0x01=PBKDF2-SHA256 (1 byte)
-  - Iterations: UInt32 LE (4 bytes)
-  - Salt: 16 bytes
-  - IV/Nonce: 12 bytes (GCM)
-  - Ciphertext: variable
-  - Tag: 16 bytes (GCM auth tag)
+  - macOS/Linux derives the AES-256-GCM key from the per-user secret only; machine
+    identity is authenticated through the AAD, never mixed into the key password
+  - Encrypted data cannot be decrypted on a different machine or by a different user
+  - Cross-machine migration is an explicit export/import of the user secret, not an
+    environment variable carrying key material
   ============================================================================ }
 
 unit DeepBase.Security;
@@ -106,28 +103,19 @@ type
     /// Get all secret names (without values for security).
     /// </summary>
     function GetSecretNames: TArray<string>;
+
+    {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+    /// <summary>迁移窗口：把库中仍为 UBS2 v1 的凭据逐条用旧口令熵解出、以当前用户
+    /// 密钥重新封存为 v2 后写回（名称与描述不变），返回迁移条数。旧熵公式只存在于
+    /// 迁移器中，正常读取路径仍然拒绝 v1。</summary>
+    function MigrateLegacyUBS2Secrets(const ALegacyPassphrase: string): Integer;
+    {$ENDIF}
     
     /// <summary>
     /// Validate secret name format for security
     /// </summary>
     class function IsValidSecretName(const AName: string): Boolean; static;
   end;
-
-// ============================================================================
-// BUG-038 FIX: Secure Memory Functions
-// ============================================================================
-
-/// <summary>
-/// Securely zero memory to prevent sensitive data from remaining in memory.
-/// Uses volatile write to prevent compiler optimization.
-/// </summary>
-procedure SecureZeroMemory(var Data: TBytes); overload;
-procedure SecureZeroMemory(var Data: string); overload;
-
-/// <summary>
-/// Securely clear a byte array and set length to 0.
-/// </summary>
-procedure SecureClearBytes(var Data: TBytes);
 
 // ============================================================================
 // Global Shortcut Functions
@@ -152,16 +140,17 @@ procedure SaveSecret(const AName, APlainValue: string;
 function SecretExists(const AName: string): Boolean;
 
 // ============================================================================
-// Low-level DPAPI Functions (for advanced usage)
+// Low-level Secret Protection Functions (for advanced usage)
 // ============================================================================
 
 /// <summary>
-/// Encrypt string using Windows DPAPI (user scope).
+/// Encrypt a secret string. Windows: DPAPI user scope. macOS/Linux: UBS2 envelope.
 /// </summary>
 function ProtectStringDpapi(const AText: string): TBytes;
 
 /// <summary>
-/// Decrypt binary data using Windows DPAPI.
+/// Decrypt output of ProtectStringDpapi. Windows: DPAPI user scope.
+/// macOS/Linux: UBS2 v2 only; v1 must go through the UBS2 migrator first.
 /// </summary>
 function UnprotectStringDpapi(const AData: TBytes): string;
 
@@ -172,85 +161,14 @@ uses
   Winapi.Windows,
   {$ENDIF}
   {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
-  DeepBase.Crypto.OpenSSL,
+  DeepBase.SecureMemory,
+  DeepBase.Security.UBS2,
+  DeepBase.Security.UBS2.Migration,
+  DeepBase.Security.MasterKey,
+  DeepBase.Security.MachineIdentity,
   {$ENDIF}
   System.NetEncoding,
-  DeepBase.Manager,
-  DeepBase.Consts;
-
-// ============================================================================
-// BUG-038 FIX: Secure Memory Functions Implementation
-// ============================================================================
-
-{$IFDEF MSWINDOWS}
-type
-  TSecureZeroProc = function(ptr: Pointer; cnt: NativeUInt): Pointer; stdcall;
-
-function ResolveSecureZeroProc: Pointer;
-var
-  LModule: HMODULE;
-begin
-  Result := nil;
-
-  // Some Windows builds do not export RtlSecureZeroMemory from kernel32.
-  // Resolve at runtime to avoid load-time STATUS_ENTRYPOINT_NOT_FOUND.
-  LModule := GetModuleHandle('kernel32.dll');
-  if LModule <> 0 then
-    Result := GetProcAddress(LModule, 'RtlSecureZeroMemory');
-
-  if Result = nil then
-  begin
-    LModule := GetModuleHandle('ntdll.dll');
-    if LModule <> 0 then
-      Result := GetProcAddress(LModule, 'RtlZeroMemory');
-  end;
-end;
-
-procedure ZeroMemorySecure(Ptr: Pointer; Count: NativeUInt);
-var
-  LProc: Pointer;
-begin
-  if (Ptr = nil) or (Count = 0) then
-    Exit;
-
-  LProc := ResolveSecureZeroProc;
-  if LProc <> nil then
-    TSecureZeroProc(LProc)(Ptr, Count)
-  else
-    FillChar(Ptr^, Count, 0);
-end;
-{$ENDIF}
-
-procedure SecureZeroMemory(var Data: TBytes);
-begin
-  if Length(Data) = 0 then
-    Exit;
-
-  {$IFDEF MSWINDOWS}
-  ZeroMemorySecure(@Data[0], Length(Data));
-  {$ELSE}
-  FillChar(Data[0], Length(Data), 0);
-  {$ENDIF}
-end;
-
-procedure SecureZeroMemory(var Data: string);
-begin
-  if Length(Data) > 0 then
-  begin
-    UniqueString(Data);
-    {$IFDEF MSWINDOWS}
-    ZeroMemorySecure(PChar(Data), Length(Data) * SizeOf(Char));
-    {$ELSE}
-    FillChar(PChar(Data)^, Length(Data) * SizeOf(Char), 0);
-    {$ENDIF}
-  end;
-end;
-
-procedure SecureClearBytes(var Data: TBytes);
-begin
-  SecureZeroMemory(Data);
-  SetLength(Data, 0);
-end;
+  DeepBase.Manager;
 
 {$IFDEF MSWINDOWS}
 // ============================================================================
@@ -278,204 +196,16 @@ function CryptUnprotectData(pDataIn: PDataBlob; ppszDataDescr: PPWideChar;
 
 {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
 // ============================================================================
-// Cross-Platform AES-256-GCM Encryption (macOS/Linux) using OpenSSL
+// UBS2 Key Material
 // ============================================================================
-// UBS2 Format: [Magic:4][Ver:1][KDF:1][Iter:4][Salt:16][IV:12][Cipher:N][Tag:16]
 
-const
-  UBS2_MAGIC: array[0..3] of Byte = ($55, $42, $53, $32); // 'UBS2'
-  UBS2_VERSION_V1 = $01;
-  UBS2_VERSION_CURRENT = UBS2_VERSION_V1;
-  UBS2_SUPPORTED_VERSIONS = '1';
-  UBS2_KDF_PBKDF2_SHA256 = $01;
-  UBS2_SALT_SIZE = 16;
-  UBS2_IV_SIZE = 12;   // GCM recommended nonce size
-  UBS2_KEY_SIZE = 32;  // AES-256
-  UBS2_TAG_SIZE = 16;  // GCM tag
-  UBS2_PBKDF2_ITERATIONS = 100000;
-  UBS2_HEADER_SIZE = 4 + 1 + 1 + 4 + 16 + 12; // 38 bytes before ciphertext
-  UBS2_MIN_PAYLOAD_SIZE = UBS2_HEADER_SIZE + UBS2_TAG_SIZE;
-
-function GetMachineEntropy: TBytes;
-var
-  Entropy, EnvKey: string;
-  {$IFDEF LINUX}
-  F: TextFile;
-  MachineId: string;
-  {$ENDIF}
+// The user secret is the only password entropy; machine identity only travels
+// through the AAD, so the binding authenticates a record without being a secret
+// an attacker could enumerate to rebuild the key.
+function BuildUBS2Key: TUBS2KeyMaterial;
 begin
-  // Check for explicit master key override (for CI/containers)
-  EnvKey := GetEnvironmentVariable('DeepBase_MASTER_KEY');
-  if EnvKey <> '' then
-  begin
-    Result := TEncoding.UTF8.GetBytes(EnvKey);
-    Exit;
-  end;
-  
-  // Collect machine-specific entropy
-  {$IFDEF MACOS}
-  Entropy := GetEnvironmentVariable('HOME') + ':' + 
-             GetEnvironmentVariable('USER') + ':macOS:DeepBase';
-  {$ENDIF}
-  
-  {$IFDEF LINUX}
-  MachineId := '';
-  if FileExists('/etc/machine-id') then
-  begin
-    try
-      AssignFile(F, '/etc/machine-id');
-      Reset(F);
-      ReadLn(F, MachineId);
-      CloseFile(F);
-    except
-      MachineId := '';
-    end;
-  end;
-  if MachineId = '' then
-    MachineId := GetEnvironmentVariable('HOSTNAME');
-  Entropy := MachineId + ':' + GetEnvironmentVariable('USER') + ':Linux:DeepBase';
-  {$ENDIF}
-  
-  Result := TEncoding.UTF8.GetBytes(Entropy);
-end;
-
-function UBS2MagicMatches(const AData: TBytes; const AMagic: string): Boolean;
-var
-  I: Integer;
-begin
-  if Length(AData) < Length(AMagic) then
-    Exit(False);
-
-  for I := 1 to Length(AMagic) do
-    if AData[I - 1] <> Ord(AMagic[I]) then
-      Exit(False);
-
-  Result := True;
-end;
-
-procedure RaiseInvalidUBS2Magic(const AData: TBytes);
-begin
-  if UBS2MagicMatches(AData, 'UBS1') then
-    raise EDecryptionException.Create(
-      'Unsupported legacy encrypted data format UBS1. ' +
-      'Migrate or re-save this secret to UBS2 before decrypting.');
-
-  raise EDecryptionException.Create(
-    'Unsupported encrypted data format: expected UBS2 magic. ' +
-    'Legacy formats must be migrated to UBS2 before decrypting.');
-end;
-
-function ReadUBS2Version(const AData: TBytes): Byte;
-begin
-  if Length(AData) < 5 then
-    raise EDecryptionException.CreateFmt(
-      'Invalid UBS2 encrypted data: too short to read version (got %d bytes)',
-      [Length(AData)]);
-
-  if not UBS2MagicMatches(AData, 'UBS2') then
-    RaiseInvalidUBS2Magic(AData);
-
-  Result := AData[4];
-end;
-
-procedure RaiseUnsupportedUBS2Version(AVersion: Byte);
-begin
-  raise EDecryptionException.CreateFmt(
-    'Unsupported UBS2 version: %d (supported: %s; current writer: %d). ' +
-    'Upgrade DeepBase or migrate/re-save this secret before decrypting. DeepBase=%s',
-    [AVersion, UBS2_SUPPORTED_VERSIONS, UBS2_VERSION_CURRENT,
-     DeepBase_VERSION_STRING]);
-end;
-
-function ReadUInt32LE(const AData: TBytes; AOffset: Integer): Cardinal;
-begin
-  Result := Cardinal(AData[AOffset]) or
-            (Cardinal(AData[AOffset + 1]) shl 8) or
-            (Cardinal(AData[AOffset + 2]) shl 16) or
-            (Cardinal(AData[AOffset + 3]) shl 24);
-end;
-
-function DecryptUBS2V1(const AData: TBytes): string;
-var
-  MachineKey, Salt, IV, Key, Ciphertext, Tag, Plaintext: TBytes;
-  Iterations: Cardinal;
-  Offset, CiphertextLen: Integer;
-begin
-  Result := '';
-
-  if Length(AData) < UBS2_MIN_PAYLOAD_SIZE then
-    raise EDecryptionException.CreateFmt(
-      'Invalid UBS2 v1 encrypted data: too short (got %d bytes, minimum %d)',
-      [Length(AData), UBS2_MIN_PAYLOAD_SIZE]);
-
-  Offset := 5; // Magic and version have already been validated.
-
-  if AData[Offset] <> UBS2_KDF_PBKDF2_SHA256 then
-    raise EDecryptionException.CreateFmt(
-      'Unsupported UBS2 v1 KDF type: %d (supported: %d/PBKDF2-SHA256)',
-      [AData[Offset], UBS2_KDF_PBKDF2_SHA256]);
-  Inc(Offset);
-
-  Iterations := ReadUInt32LE(AData, Offset);
-  Inc(Offset, 4);
-  if Iterations = 0 then
-    raise EDecryptionException.Create(
-      'Invalid UBS2 v1 encrypted data: PBKDF2 iterations must be greater than zero');
-
-  SetLength(Salt, UBS2_SALT_SIZE);
-  Move(AData[Offset], Salt[0], UBS2_SALT_SIZE);
-  Inc(Offset, UBS2_SALT_SIZE);
-
-  SetLength(IV, UBS2_IV_SIZE);
-  Move(AData[Offset], IV[0], UBS2_IV_SIZE);
-  Inc(Offset, UBS2_IV_SIZE);
-
-  CiphertextLen := Length(AData) - Offset - UBS2_TAG_SIZE;
-  if CiphertextLen < 0 then
-    raise EDecryptionException.Create('Invalid UBS2 v1 encrypted data: corrupted');
-  SetLength(Ciphertext, CiphertextLen);
-  if CiphertextLen > 0 then
-    Move(AData[Offset], Ciphertext[0], CiphertextLen);
-  Inc(Offset, CiphertextLen);
-
-  SetLength(Tag, UBS2_TAG_SIZE);
-  Move(AData[Offset], Tag[0], UBS2_TAG_SIZE);
-
-  OpenSSL_Init;
-
-  MachineKey := GetMachineEntropy;
-  try
-    Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
-    try
-      Plaintext := OpenSSL_AES256GCM_Decrypt(Key, IV, Ciphertext, nil, Tag);
-      try
-        Result := TEncoding.UTF8.GetString(Plaintext);
-      finally
-        // Zeroize decrypted plaintext so a memory dump cannot recover the
-        // cleartext secret (CORE-R3-004 fix).
-        SecureClearBytes(Plaintext);
-      end;
-    finally
-      // Zeroize the derived key and machine entropy material.
-      SecureClearBytes(Key);
-    end;
-  finally
-    SecureClearBytes(MachineKey);
-  end;
-end;
-
-function DecryptUBS2(const AData: TBytes): string;
-var
-  Version: Byte;
-begin
-  Version := ReadUBS2Version(AData);
-
-  case Version of
-    UBS2_VERSION_V1:
-      Result := DecryptUBS2V1(AData);
-  else
-    RaiseUnsupportedUBS2Version(Version);
-  end;
+  Result.MasterSecret := TUserMasterKey.LoadOrCreate;
+  Result.Binding := TMachineIdentityProvider.Binding;
 end;
 {$ENDIF}
 
@@ -509,81 +239,23 @@ begin
 end;
 {$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
 var
-  MachineKey, Salt, IV, Key, Plaintext, Ciphertext, Tag: TBytes;
-  Iterations: Cardinal;
-  Offset: Integer;
+  Key: TUBS2KeyMaterial;
+  Plaintext: TBytes;
 begin
   if AText = '' then
   begin
     SetLength(Result, 0);
     Exit;
   end;
-  
-  // Initialize OpenSSL if not already done
-  OpenSSL_Init;
-  
-  // Generate random salt and IV
-  Salt := OpenSSL_RandomBytes(UBS2_SALT_SIZE);
-  IV := OpenSSL_RandomBytes(UBS2_IV_SIZE);
-  
-  // Derive key from machine entropy using OpenSSL PBKDF2
-  MachineKey := GetMachineEntropy;
+
+  Key := BuildUBS2Key;
+  Plaintext := TEncoding.UTF8.GetBytes(AText);
   try
-    Iterations := UBS2_PBKDF2_ITERATIONS;
-    Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
-    try
-      // Encrypt using AES-256-GCM
-      Plaintext := TEncoding.UTF8.GetBytes(AText);
-      try
-        Ciphertext := OpenSSL_AES256GCM_Encrypt(Key, IV, Plaintext, nil, Tag);
-
-        // Build UBS2 format output
-        SetLength(Result, UBS2_HEADER_SIZE + Length(Ciphertext) + UBS2_TAG_SIZE);
-        Offset := 0;
-
-        // Magic
-        Move(UBS2_MAGIC[0], Result[Offset], 4);
-        Inc(Offset, 4);
-
-        // Version
-        Result[Offset] := UBS2_VERSION_CURRENT;
-        Inc(Offset);
-
-        // KDF type
-        Result[Offset] := UBS2_KDF_PBKDF2_SHA256;
-        Inc(Offset);
-
-        // Iterations (little-endian)
-        Result[Offset] := Byte(Iterations);
-        Result[Offset + 1] := Byte(Iterations shr 8);
-        Result[Offset + 2] := Byte(Iterations shr 16);
-        Result[Offset + 3] := Byte(Iterations shr 24);
-        Inc(Offset, 4);
-
-        // Salt
-        Move(Salt[0], Result[Offset], UBS2_SALT_SIZE);
-        Inc(Offset, UBS2_SALT_SIZE);
-
-        // IV
-        Move(IV[0], Result[Offset], UBS2_IV_SIZE);
-        Inc(Offset, UBS2_IV_SIZE);
-
-        // Ciphertext
-        if Length(Ciphertext) > 0 then
-          Move(Ciphertext[0], Result[Offset], Length(Ciphertext));
-        Inc(Offset, Length(Ciphertext));
-
-        // Tag
-        Move(Tag[0], Result[Offset], UBS2_TAG_SIZE);
-      finally
-        // Zeroize the UTF-8 plaintext bytes (CORE-R3-004 fix).
-        SecureClearBytes(Plaintext);
-      end;
-    finally
-      SecureClearBytes(Key);
-    end;
+    Result := TUBS2.Protect(Plaintext, Key);
   finally
-    SecureClearBytes(MachineKey);
+    SecureClearBytes(Plaintext);
+    SecureClearBytes(Key.MasterSecret);
+    SecureClearBytes(Key.Binding);
   end;
 end;
 {$ELSE}
@@ -614,8 +286,21 @@ begin
 end;
 {$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
 var
+  Key: TUBS2KeyMaterial;
+  PlainBytes: TBytes;
 begin
-  Result := DecryptUBS2(AData);
+  Key := BuildUBS2Key;
+  try
+    PlainBytes := TUBS2.Unprotect(AData, Key);
+  finally
+    SecureClearBytes(Key.MasterSecret);
+    SecureClearBytes(Key.Binding);
+  end;
+  try
+    Result := TEncoding.UTF8.GetString(PlainBytes);
+  finally
+    SecureClearBytes(PlainBytes);
+  end;
 end;
 {$ELSE}
 begin
@@ -717,7 +402,7 @@ end;
 
 function TDeepBaseSecurity.LoadSecret(const AName: string): string;
 var
-  CipherBase64: string;
+  Rec: TSecretRecord;
   CipherBytes: TBytes;
 begin
   Result := '';
@@ -729,12 +414,12 @@ begin
   try
     EnsureSecretsTable;
 
-    if not FStorage.TryReadCipherBlob(AName, CipherBase64) then
+    if not FStorage.TryReadSecret(AName, Rec) then
       Exit;
-    if CipherBase64 = '' then
+    if Rec.CipherBlobBase64 = '' then
       Exit;
 
-    CipherBytes := TNetEncoding.Base64.DecodeStringToBytes(CipherBase64);
+    CipherBytes := TNetEncoding.Base64.DecodeStringToBytes(Rec.CipherBlobBase64);
     Result := UnprotectString(CipherBytes);
   finally
     TMonitor.Exit(FLock);
@@ -748,7 +433,7 @@ var
   CipherBase64: string;
   NowStr: string;
 begin
-  // éªè¯å¯é¥åç§°ï¼é²æ­¢SQLæ³¨å¥åè·¯å¾éå?
+    // Secret names go into SQL parameters and file paths, so the format is validated first.
   if not IsValidSecretName(AName) then
     raise EArgumentException.Create('Invalid secret name format');
     
@@ -788,6 +473,62 @@ begin
     TMonitor.Exit(FLock);
   end;
 end;
+
+{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+function TDeepBaseSecurity.MigrateLegacyUBS2Secrets(
+  const ALegacyPassphrase: string): Integer;
+var
+  Names: TArray<string>;
+  Name: string;
+  Rec: TSecretRecord;
+  LegacyBlob, Migrated: TBytes;
+  Key: TUBS2KeyMaterial;
+begin
+  Result := 0;
+  if not Assigned(FStorage) then
+    Exit;
+
+  TMonitor.Enter(FLock);
+  try
+    EnsureSecretsTable;
+    Names := FStorage.ReadSecretNames;
+    Key := BuildUBS2Key;
+    try
+      for Name in Names do
+      begin
+        if not FStorage.TryReadSecret(Name, Rec) then
+          Continue;
+
+        LegacyBlob := TNetEncoding.Base64.DecodeStringToBytes(Rec.CipherBlobBase64);
+        try
+          if not TUBS2Migrator.NeedsMigration(LegacyBlob) then
+            Continue;
+
+          // Reencrypt throws before anything is written, so a record that cannot be
+          // opened under the legacy passphrase keeps its original v1 blob.
+          Migrated := TUBS2Migrator.Reencrypt(LegacyBlob, ALegacyPassphrase, Key);
+          try
+            FStorage.UpsertSecret(Name,
+              TNetEncoding.Base64.EncodeBytesToString(Migrated),
+              Rec.Description,
+              FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now));
+          finally
+            SecureClearBytes(Migrated);
+          end;
+          Inc(Result);
+        finally
+          SecureClearBytes(LegacyBlob);
+        end;
+      end;
+    finally
+      SecureClearBytes(Key.MasterSecret);
+      SecureClearBytes(Key.Binding);
+    end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+{$ENDIF}
 
 function TDeepBaseSecurity.SecretExists(const AName: string): Boolean;
 begin

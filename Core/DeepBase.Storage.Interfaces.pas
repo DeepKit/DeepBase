@@ -176,11 +176,19 @@ type
   /// <summary>
   /// Security secret storage contract.
   /// </summary>
+  /// <summary>One stored secret as the storage layer hands it over. CipherBlobBase64
+  /// is base64 of the platform envelope: DPAPI on Windows, UBS2 on macOS/Linux.</summary>
+  TSecretRecord = record
+    CipherBlobBase64: string;
+    Description: string;
+  end;
+
   ISecuritySecretStorage = interface
     ['{BB6B7D5A-6E07-4BF7-8F74-8DBD82F9170A}']
     procedure EnsureSecretsTable;
-    function TryReadCipherBlob(const AName: string;
-      out ACipherBlobBase64: string): Boolean;
+    /// <summary>Read cipher blob and description together: a caller that rewrites a
+    /// record must be able to preserve its description.</summary>
+    function TryReadSecret(const AName: string; out ARecord: TSecretRecord): Boolean;
     procedure UpsertSecret(const AName, ACipherBlobBase64, ADescription,
       AUpdatedAtIso8601: string);
     procedure DeleteSecret(const AName: string);

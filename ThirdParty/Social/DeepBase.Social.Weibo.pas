@@ -16,7 +16,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.JSON, System.DateUtils, System.NetEncoding,
-  DeepBase.Social, DeepBase.Security, DeepBase.Security.DPAPI;
+  DeepBase.Social, DeepBase.Security, DeepBase.Security.DPAPI, DeepBase.SecureMemory;
 
 type
   /// <summary>Weibo configuration</summary>
@@ -253,9 +253,9 @@ begin
     end;
   finally
     if PostData <> '' then
-      DeepBase.Security.SecureZeroMemory(PostData);
+      DeepBase.SecureMemory.SecureZeroMemory(PostData);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
     FreeAndNil(Params);
   end;
 end;
@@ -308,9 +308,9 @@ begin
     end;
   finally
     if PostData <> '' then
-      DeepBase.Security.SecureZeroMemory(PostData);
+      DeepBase.SecureMemory.SecureZeroMemory(PostData);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
     FreeAndNil(Params);
   end;
 end;

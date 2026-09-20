@@ -33,7 +33,7 @@ type
   public
     constructor Create(AConnection: TFDConnection);
     procedure EnsureSecretsTable;
-    function TryReadCipherBlob(const AName: string; out ACipherBlobBase64: string): Boolean;
+function TryReadSecret(const AName: string; out ARecord: TSecretRecord): Boolean;
     procedure UpsertSecret(const AName, ACipherBlobBase64, ADescription,
       AUpdatedAtIso8601: string);
     procedure DeleteSecret(const AName: string);
@@ -63,13 +63,14 @@ begin
   );
 end;
 
-function TFireDACSecuritySecretStorage.TryReadCipherBlob(const AName: string;
-  out ACipherBlobBase64: string): Boolean;
+function TFireDACSecuritySecretStorage.TryReadSecret(const AName: string;
+  out ARecord: TSecretRecord): Boolean;
 var
   Query: TFDQuery;
 begin
   Result := False;
-  ACipherBlobBase64 := '';
+  ARecord.CipherBlobBase64 := '';
+  ARecord.Description := '';
 
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
@@ -77,14 +78,17 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT CipherBlob FROM ' + STableSecrets +
+    Query.SQL.Text := 'SELECT CipherBlob, Description FROM ' + STableSecrets +
       ' WHERE Name = :Name';
     Query.ParamByName('Name').AsString := AName;
     Query.Open;
 
     Result := not Query.Eof;
     if Result then
-      ACipherBlobBase64 := Query.FieldByName('CipherBlob').AsString;
+    begin
+      ARecord.CipherBlobBase64 := Query.FieldByName('CipherBlob').AsString;
+      ARecord.Description := Query.FieldByName('Description').AsString;
+    end;
   finally
     Query.Free;
   end;

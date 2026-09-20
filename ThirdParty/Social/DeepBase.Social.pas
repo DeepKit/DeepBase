@@ -243,7 +243,8 @@ implementation
 uses
   System.Hash,
   DeepBase.Random,
-  DeepBase.Security;
+  DeepBase.Security,
+  DeepBase.SecureMemory;
 
 const
   STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -272,17 +273,17 @@ end;
 procedure TSocialToken.Clear;
 begin
   if AccessToken <> '' then
-    DeepBase.Security.SecureZeroMemory(AccessToken);
+    DeepBase.SecureMemory.SecureZeroMemory(AccessToken);
   if RefreshToken <> '' then
-    DeepBase.Security.SecureZeroMemory(RefreshToken);
+    DeepBase.SecureMemory.SecureZeroMemory(RefreshToken);
   if TokenType <> '' then
-    DeepBase.Security.SecureZeroMemory(TokenType);
+    DeepBase.SecureMemory.SecureZeroMemory(TokenType);
   if Scope <> '' then
-    DeepBase.Security.SecureZeroMemory(Scope);
+    DeepBase.SecureMemory.SecureZeroMemory(Scope);
   if OpenId <> '' then
-    DeepBase.Security.SecureZeroMemory(OpenId);
+    DeepBase.SecureMemory.SecureZeroMemory(OpenId);
   if UnionId <> '' then
-    DeepBase.Security.SecureZeroMemory(UnionId);
+    DeepBase.SecureMemory.SecureZeroMemory(UnionId);
 
   AccessToken := '';
   RefreshToken := '';

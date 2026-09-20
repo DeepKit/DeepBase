@@ -4,7 +4,7 @@
   Test Coverage:
     - TKeyPurpose / TKeyStatus enums and helpers
     - TKeyInfo helpers (IsExpired / DaysUntilExpiry)
-    - THardwareFingerprint basic behavior
+    - Machine binding: versioned full match, AAD-wrapped data keys, sealed header
     - TKeyDerivationParams presets
     - TMasterKey derivation and lock/unlock
     - TDataKey generation, encrypt/decrypt, rotate
@@ -19,11 +19,15 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
+  DeepBase.Crypto.Encoding,
+  DeepBase.Crypto.Platform,
   System.Classes,
   System.DateUtils,
   System.IOUtils,
   System.Generics.Collections,
-  DeepBase.KeyManager;
+  System.JSON,
+  DeepBase.KeyManager,
+  DeepBase.Security.MachineIdentity;
 
 type
   [TestFixture]
@@ -53,19 +57,6 @@ type
   end;
 
   [TestFixture]
-  TTestHardwareFingerprint = class
-  public
-    [Test]
-    procedure Test_Collect_NotEmpty;
-    [Test]
-    procedure Test_ToHash_StableForSameData;
-    [Test]
-    procedure Test_Matches_Same;
-    [Test]
-    procedure Test_Matches_Partial;
-  end;
-
-  [TestFixture]
   TTestKeyDerivationParams = class
   public
     [Test]
@@ -87,7 +78,7 @@ type
     [Test]
     procedure Test_DeriveFromPassword_SetsKeyData;
     [Test]
-    procedure Test_DeriveWithHardwareBinding_SetsFingerprint;
+    procedure Test_DeriveFromPassword_IsReproducible;
     [Test]
     procedure Test_Lock_ClearsKey;
     [Test]
@@ -99,16 +90,19 @@ type
   TTestDataKey = class
   private
     FKEK: TBytes;
+    FBindingAAD, FForeignBindingAAD: TBytes;
   public
     [Setup]
     procedure Setup;
-    
+
     [Test]
     procedure Test_Create_Defaults;
     [Test]
     procedure Test_Generate_Length;
     [Test]
     procedure Test_EncryptDecrypt_RoundTrip;
+    [Test]
+    procedure Test_UnwrapWithForeignBinding_Raises;
     [Test]
     procedure Test_Rotate_IncrementsVersion;
   end;
@@ -140,6 +134,34 @@ type
   end;
 
   [TestFixture]
+  TTestKeyStoreSealedState = class
+  private
+    FStorePath: string;
+    FMaster: TMasterKey;
+    FStore: TKeyStore;
+    function ReadSealedJson: TJSONObject;
+    procedure WriteSealedJson(const ARoot: TJSONObject);
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Save_SealsKdfParamsAndMachineBinding;
+    [Test]
+    procedure Test_LoadSealedState_ReproducesKdfParams;
+    [Test]
+    procedure Test_LoadSealedState_RejectsForeignFormatVersion;
+    [Test]
+    procedure Test_LoadSealedState_RejectsMissingBinding;
+    [Test]
+    procedure Test_LoadSealedState_RejectsMissingKdf;
+    [Test]
+    procedure Test_VerifyMachineBinding_RejectsForeignFingerprint;
+  end;
+
+  [TestFixture]
   TTestKeyManager = class
   private
     FStorePath: string;
@@ -163,7 +185,11 @@ type
     [Test]
     procedure Test_GetExpiringKeys;
     [Test]
-    procedure Test_ValidateHardwareBinding;
+    procedure Test_Initialize_ReopenWithSamePassword_ReturnsSameDEK;
+    [Test]
+    procedure Test_Initialize_WrongPassword_FailsFast;
+    [Test]
+    procedure Test_Initialize_ForeignMachineBinding_FailsClosed;
     [Test]
     procedure Test_GetMachineFingerprint_NotEmpty;
   end;
@@ -244,57 +270,6 @@ begin
   Assert.IsTrue(Info.DaysUntilExpiry >= 9);
 end;
 
-{ TTestHardwareFingerprint }
-
-procedure TTestHardwareFingerprint.Test_Collect_NotEmpty;
-var
-  FP: THardwareFingerprint;
-begin
-  FP := THardwareFingerprint.Collect;
-  Assert.IsNotEmpty(FP.Fingerprint);
-  Assert.IsNotEmpty(FP.ToHash);
-end;
-
-procedure TTestHardwareFingerprint.Test_ToHash_StableForSameData;
-var
-  FP1, FP2: THardwareFingerprint;
-begin
-  FP1.MachineId := 'MID';
-  FP1.ProcessorId := 'CPU';
-  FP1.BiosSerial := 'BIOS';
-  FP1.DiskSerial := 'DISK';
-  FP1.ComputerName := 'PC';
-  
-  FP2 := FP1;
-  
-  Assert.AreEqual(FP1.ToHash, FP2.ToHash);
-end;
-
-procedure TTestHardwareFingerprint.Test_Matches_Same;
-var
-  FP1, FP2: THardwareFingerprint;
-begin
-  FP1 := THardwareFingerprint.Collect;
-  FP2 := FP1;
-  Assert.IsTrue(FP1.Matches(FP2));
-end;
-
-procedure TTestHardwareFingerprint.Test_Matches_Partial;
-var
-  FP1, FP2: THardwareFingerprint;
-begin
-  FP1.MachineId := 'MID1';
-  FP1.ProcessorId := 'CPU1';
-  FP1.BiosSerial := 'BIOS1';
-  FP1.DiskSerial := 'DISK1';
-  FP1.ComputerName := 'PC1';
-  
-  FP2 := FP1;
-  FP2.DiskSerial := 'OTHER';
-  
-  Assert.IsTrue(FP1.Matches(FP2));
-end;
-
 { TTestKeyDerivationParams }
 
 procedure TTestKeyDerivationParams.Test_Default_Params;
@@ -342,11 +317,31 @@ begin
   Assert.AreEqual(Integer(Params.KeyLength), Integer(Length(Data)));
 end;
 
-procedure TTestMasterKey.Test_DeriveWithHardwareBinding_SetsFingerprint;
+procedure TTestMasterKey.Test_DeriveFromPassword_IsReproducible;
+var
+  Other: TMasterKey;
+  Params: TKeyDerivationParams;
+  First, Second: TBytes;
+  I: Integer;
 begin
-  FMaster.DeriveWithHardwareBinding('pwd');
-  Assert.IsTrue(FMaster.IsUnlocked);
-  Assert.IsNotEmpty(FMaster.Fingerprint.Fingerprint);
+  // The KEK is a pure function of the password and the persisted KDF parameters:
+  // machine identity must not leak into the derivation (Top20 #5).
+  Params := TKeyDerivationParams.High;
+  FMaster.DeriveFromPassword('same-password', Params);
+  First := FMaster.GetKeyData;
+
+  Other := TMasterKey.Create;
+  try
+    Other.DeriveFromPassword('same-password', Params);
+    Second := Other.GetKeyData;
+  finally
+    Other.Free;
+  end;
+
+  Assert.AreEqual(Length(First), Length(Second));
+  for I := 0 to High(First) do
+    if First[I] <> Second[I] then
+      Assert.Fail('Same password and KDF parameters must reproduce the same KEK');
 end;
 
 procedure TTestMasterKey.Test_Lock_ClearsKey;
@@ -385,6 +380,8 @@ begin
   // 32-byte KEK
   SetLength(FKEK, 32);
   FillChar(FKEK[0], Length(FKEK), 1);
+  FBindingAAD := TEncoding.UTF8.GetBytes('v1|machine_guid=afff3ce9|volume_serial=8EB53A74');
+  FForeignBindingAAD := TEncoding.UTF8.GetBytes('v1|machine_guid=0000000|volume_serial=8EB53A74');
 end;
 
 procedure TTestDataKey.Test_Create_Defaults;
@@ -424,10 +421,29 @@ begin
   try
     Key.Generate(32);
     Plain := Copy(Key.KeyData);
-    Key.EncryptWith(FKEK);
-    Key.DecryptWith(FKEK);
+    Key.EncryptWith(FKEK, FBindingAAD);
+    Key.DecryptWith(FKEK, FBindingAAD);
     Dek := Key.KeyData;
     Assert.AreEqual(Length(Plain), Length(Dek));
+  finally
+    Key.Free;
+  end;
+end;
+
+procedure TTestDataKey.Test_UnwrapWithForeignBinding_Raises;
+var
+  Key: TDataKey;
+begin
+  Key := TDataKey.Create(kpEncryption);
+  try
+    Key.Generate(32);
+    Key.EncryptWith(FKEK, FBindingAAD);
+    // Same KEK, another machine's binding: the wrap is authenticated, so it must fail.
+    Assert.WillRaise(
+      procedure
+      begin
+        Key.DecryptWith(FKEK, FForeignBindingAAD);
+      end, ECryptoException);
   finally
     Key.Free;
   end;
@@ -441,9 +457,9 @@ begin
   Key := TDataKey.Create(kpBackup);
   try
     Key.Generate(32);
-    Key.EncryptWith(FKEK);
+    Key.EncryptWith(FKEK, FBindingAAD);
     OldVersion := Key.Version;
-    Key.Rotate(FKEK);
+    Key.Rotate(FKEK, FBindingAAD);
     Assert.AreEqual(OldVersion + 1, Key.Version);
     Assert.AreEqual(ksActive, Key.Status);
   finally
@@ -557,6 +573,191 @@ begin
   end;
 end;
 
+procedure ExpectRaise(const AWhat: string; AAction: TTestLocalMethod;
+  const AMessageFragment: string);
+begin
+  try
+    AAction();
+    Assert.Fail(AWhat + ': expected EKeyManagerException, none raised');
+  except
+    on E: EKeyManagerException do
+      if (AMessageFragment <> '') and (Pos(AMessageFragment, E.Message) = 0) then
+        Assert.Fail(AWhat + ': unexpected message "' + E.Message + '"');
+  else
+    raise;
+  end;
+end;
+
+{ TTestKeyStoreSealedState }
+
+procedure TTestKeyStoreSealedState.Setup;
+var
+  Params: TKeyDerivationParams;
+begin
+  FStorePath := TPath.Combine(TPath.GetTempPath, 'DeepBase_keystore_sealed_test.json');
+  if TFile.Exists(FStorePath) then
+    TFile.Delete(FStorePath);
+  if TFile.Exists(FStorePath + '.bak') then
+    TFile.Delete(FStorePath + '.bak');
+
+  FMaster := TMasterKey.Create;
+  Params := TKeyDerivationParams.High;
+  FMaster.DeriveFromPassword('sealed-master', Params);
+
+  FStore := TKeyStore.Create(FStorePath);
+  FStore.Initialize(FMaster);
+  // CreateKey seals the store, which is what writes the persisted header.
+  FStore.CreateKey(kpConfig, 365);
+end;
+
+procedure TTestKeyStoreSealedState.TearDown;
+begin
+  FStore.Free;
+  FMaster.Free;
+  if TFile.Exists(FStorePath) then
+    TFile.Delete(FStorePath);
+  if TFile.Exists(FStorePath + '.bak') then
+    TFile.Delete(FStorePath + '.bak');
+end;
+
+function TTestKeyStoreSealedState.ReadSealedJson: TJSONObject;
+begin
+  Result := TJSONObject.ParseJSONValue(TFile.ReadAllText(FStorePath)) as TJSONObject;
+  Assert.IsNotNull(Result, 'Sealed keystore must be valid JSON');
+end;
+
+procedure TTestKeyStoreSealedState.WriteSealedJson(const ARoot: TJSONObject);
+begin
+  TFile.WriteAllText(FStorePath, ARoot.ToJSON);
+end;
+
+procedure TTestKeyStoreSealedState.Test_Save_SealsKdfParamsAndMachineBinding;
+var
+  Root, KdfObj, BindingObj: TJSONObject;
+begin
+  Root := ReadSealedJson;
+  try
+    Assert.AreEqual(Integer(KEYSTORE_FORMAT_VERSION), Root.GetValue<Integer>('version'));
+    KdfObj := Root.GetValue<TJSONObject>('kdf');
+    Assert.IsTrue(Length(TEncodingUtils.Base64Decode(KdfObj.GetValue<string>('salt'))) > 0);
+
+    BindingObj := Root.GetValue<TJSONObject>('binding');
+Assert.AreEqual(Integer(MACHINE_IDENTITY_SCHEME_VERSION), BindingObj.GetValue<Integer>('scheme'));
+    Assert.AreEqual(TMachineIdentityProvider.Fingerprint, BindingObj.GetValue<string>('hash'));
+  finally
+    Root.Free;
+  end;
+end;
+
+procedure TTestKeyStoreSealedState.Test_LoadSealedState_ReproducesKdfParams;
+var
+  Other: TKeyStore;
+begin
+  Other := TKeyStore.Create(FStorePath);
+  try
+    Other.LoadSealedState;
+    Assert.IsTrue(Other.HasSealedState);
+    Assert.AreEqual(Length(FMaster.Params.Salt), Length(Other.KdfParams.Salt));
+    Assert.AreEqual(FMaster.Params.Iterations, Other.KdfParams.Iterations);
+    Assert.AreEqual(FMaster.Params.KeyLength, Other.KdfParams.KeyLength);
+    Other.VerifyMachineBinding;
+  finally
+    Other.Free;
+  end;
+end;
+
+procedure TTestKeyStoreSealedState.Test_LoadSealedState_RejectsForeignFormatVersion;
+var
+  Root: TJSONObject;
+  Other: TKeyStore;
+begin
+  Root := ReadSealedJson;
+  try
+    Root.RemovePair('version').Free;
+    Root.AddPair('version', TJSONNumber.Create(KEYSTORE_FORMAT_VERSION - 1));
+    WriteSealedJson(Root);
+  finally
+    Root.Free;
+  end;
+
+  Other := TKeyStore.Create(FStorePath);
+  try
+    ExpectRaise('A keystore sealed in another format must not be read',
+      procedure begin Other.LoadSealedState; end, 're-key migration');
+  finally
+    Other.Free;
+  end;
+end;
+
+procedure TTestKeyStoreSealedState.Test_LoadSealedState_RejectsMissingBinding;
+var
+  Root: TJSONObject;
+  Other: TKeyStore;
+begin
+  Root := ReadSealedJson;
+  try
+    Root.RemovePair('binding').Free;
+    WriteSealedJson(Root);
+  finally
+    Root.Free;
+  end;
+
+  Other := TKeyStore.Create(FStorePath);
+  try
+    ExpectRaise('A keystore without a sealed binding must not be read',
+      procedure begin Other.LoadSealedState; end, 'machine binding');
+  finally
+    Other.Free;
+  end;
+end;
+
+procedure TTestKeyStoreSealedState.Test_LoadSealedState_RejectsMissingKdf;
+var
+  Root: TJSONObject;
+  Other: TKeyStore;
+begin
+  Root := ReadSealedJson;
+  try
+    Root.RemovePair('kdf').Free;
+    WriteSealedJson(Root);
+  finally
+    Root.Free;
+  end;
+
+  Other := TKeyStore.Create(FStorePath);
+  try
+    ExpectRaise('A keystore without KDF parameters must not be read',
+      procedure begin Other.LoadSealedState; end, 'KDF parameters');
+  finally
+    Other.Free;
+  end;
+end;
+
+procedure TTestKeyStoreSealedState.Test_VerifyMachineBinding_RejectsForeignFingerprint;
+var
+  Root, BindingObj: TJSONObject;
+  Other: TKeyStore;
+begin
+  Root := ReadSealedJson;
+  try
+    BindingObj := Root.GetValue<TJSONObject>('binding');
+    BindingObj.RemovePair('hash').Free;
+    BindingObj.AddPair('hash', StringOfChar('0', 64));
+    WriteSealedJson(Root);
+  finally
+    Root.Free;
+  end;
+
+  Other := TKeyStore.Create(FStorePath);
+  try
+    Other.LoadSealedState;
+    ExpectRaise('A foreign machine identity must not unlock the keystore',
+      procedure begin Other.VerifyMachineBinding; end, 'Machine identity does not match');
+  finally
+    Other.Free;
+  end;
+end;
+
 { TTestKeyManager }
 
 procedure TTestKeyManager.Setup;
@@ -564,8 +765,10 @@ begin
   FStorePath := TPath.Combine(TPath.GetTempPath, 'DeepBase_keymanager_test.json');
   if TFile.Exists(FStorePath) then
     TFile.Delete(FStorePath);
+  if TFile.Exists(FStorePath + '.bak') then
+    TFile.Delete(FStorePath + '.bak');
   FManager := TKeyManager.Create(FStorePath);
-  FManager.Initialize('test-password', False {no hardware binding});
+  FManager.Initialize('test-password');
 end;
 
 procedure TTestKeyManager.TearDown;
@@ -573,6 +776,8 @@ begin
   FManager.Free;
   if TFile.Exists(FStorePath) then
     TFile.Delete(FStorePath);
+  if TFile.Exists(FStorePath + '.bak') then
+    TFile.Delete(FStorePath + '.bak');
 end;
 
 procedure TTestKeyManager.Test_Initialize_And_IsUnlocked;
@@ -632,17 +837,68 @@ begin
   Assert.IsTrue(Length(Infos) >= 0);
 end;
 
-procedure TTestKeyManager.Test_ValidateHardwareBinding;
+procedure TTestKeyManager.Test_Initialize_ReopenWithSamePassword_ReturnsSameDEK;
 var
-  LocalManager: TKeyManager;
+  KeyId: string;
+  First, Second: TBytes;
+  I: Integer;
+  Again: TKeyManager;
 begin
-  // Use dedicated manager with hardware binding enabled
-  LocalManager := TKeyManager.Create(FStorePath + '.hw');
+  KeyId := FManager.CreateDataKey(kpEncryption, 365);
+  First := FManager.GetDataKey(KeyId);
+
+  Again := TKeyManager.Create(FStorePath);
   try
-    LocalManager.Initialize('pwd-hw', True {use hardware binding});
-    Assert.IsTrue(LocalManager.ValidateHardwareBinding or not LocalManager.ValidateHardwareBinding);
+    Again.Initialize('test-password');
+    Second := Again.GetDataKey(KeyId);
   finally
-    LocalManager.Free;
+    Again.Free;
+  end;
+
+  Assert.AreEqual(Length(First), Length(Second));
+  for I := 0 to High(First) do
+    if First[I] <> Second[I] then
+      Assert.Fail('Reopening the keystore must reproduce the same data key');
+end;
+
+procedure TTestKeyManager.Test_Initialize_WrongPassword_FailsFast;
+var
+  Again: TKeyManager;
+begin
+  Again := TKeyManager.Create(FStorePath);
+  try
+    ExpectRaise('A wrong master password must fail while unlocking',
+      procedure begin Again.Initialize('wrong-password'); end, '');
+  finally
+    Again.Free;
+  end;
+end;
+
+procedure TTestKeyManager.Test_Initialize_ForeignMachineBinding_FailsClosed;
+var
+  Root, BindingObj: TJSONObject;
+  Again: TKeyManager;
+begin
+  FManager.CreateDataKey(kpEncryption, 365);
+
+  // Simulate the keystore being opened on another machine: the sealed binding hash
+  // no longer matches what this host reports. The gate must refuse, not downgrade.
+  Root := TJSONObject.ParseJSONValue(TFile.ReadAllText(FStorePath)) as TJSONObject;
+  try
+    BindingObj := Root.GetValue<TJSONObject>('binding');
+    BindingObj.RemovePair('hash').Free;
+    BindingObj.AddPair('hash', StringOfChar('f', 64));
+    TFile.WriteAllText(FStorePath, Root.ToJSON);
+  finally
+    Root.Free;
+  end;
+
+  Again := TKeyManager.Create(FStorePath);
+  try
+    ExpectRaise('A keystore sealed on another machine must refuse to open',
+      procedure begin Again.Initialize('test-password'); end, '');
+  finally
+    Again.Free;
   end;
 end;
 
@@ -657,11 +913,11 @@ end;
 initialization
   TDUnitX.RegisterTestFixture(TTestKeyEnums);
   TDUnitX.RegisterTestFixture(TTestKeyInfoHelpers);
-  TDUnitX.RegisterTestFixture(TTestHardwareFingerprint);
   TDUnitX.RegisterTestFixture(TTestKeyDerivationParams);
   TDUnitX.RegisterTestFixture(TTestMasterKey);
   TDUnitX.RegisterTestFixture(TTestDataKey);
   TDUnitX.RegisterTestFixture(TTestKeyStore);
+  TDUnitX.RegisterTestFixture(TTestKeyStoreSealedState);
   TDUnitX.RegisterTestFixture(TTestKeyManager);
 
 end.

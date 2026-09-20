@@ -94,7 +94,8 @@ type
 implementation
 
 uses
-  DeepBase.Security;
+  DeepBase.Security,
+  DeepBase.SecureMemory;
 
 const
   // GitHub OAuth endpoints
@@ -261,9 +262,9 @@ begin
     Result := ParseTokenResponse(Response);
   finally
     if PostData <> '' then
-      DeepBase.Security.SecureZeroMemory(PostData);
+      DeepBase.SecureMemory.SecureZeroMemory(PostData);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
     Params.Free;
   end;
 end;
@@ -296,9 +297,9 @@ begin
       Result.RefreshToken := ARefreshToken;
   finally
     if PostData <> '' then
-      DeepBase.Security.SecureZeroMemory(PostData);
+      DeepBase.SecureMemory.SecureZeroMemory(PostData);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
     Params.Free;
   end;
 end;
@@ -388,9 +389,9 @@ begin
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';
     if AuthHeader <> '' then
-      DeepBase.Security.SecureZeroMemory(AuthHeader);
+      DeepBase.SecureMemory.SecureZeroMemory(AuthHeader);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
   end;
 end;
 
@@ -413,7 +414,7 @@ begin
     end;
   finally
     if PostData <> '' then
-      DeepBase.Security.SecureZeroMemory(PostData);
+      DeepBase.SecureMemory.SecureZeroMemory(PostData);
   end;
 end;
 
@@ -491,9 +492,9 @@ begin
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';
     if AuthHeader <> '' then
-      DeepBase.Security.SecureZeroMemory(AuthHeader);
+      DeepBase.SecureMemory.SecureZeroMemory(AuthHeader);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
   end;
 end;
 
@@ -560,9 +561,9 @@ begin
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';
     if AuthHeader <> '' then
-      DeepBase.Security.SecureZeroMemory(AuthHeader);
+      DeepBase.SecureMemory.SecureZeroMemory(AuthHeader);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
   end;
 end;
 
@@ -630,9 +631,9 @@ begin
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';
     if AuthHeader <> '' then
-      DeepBase.Security.SecureZeroMemory(AuthHeader);
+      DeepBase.SecureMemory.SecureZeroMemory(AuthHeader);
     if Response <> '' then
-      DeepBase.Security.SecureZeroMemory(Response);
+      DeepBase.SecureMemory.SecureZeroMemory(Response);
   end;
 end;
 

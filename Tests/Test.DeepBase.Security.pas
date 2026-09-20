@@ -2,10 +2,14 @@
   Test.DeepBase.Security - Cross-Platform Security Module Tests
   
   Tests:
-  - Windows: DPAPI encryption
-  - macOS/Linux: OpenSSL AES-256-GCM (UBS2 format)
+  - Platform secret protection (Windows DPAPI, macOS/Linux UBS2 envelope)
   - Secret management (all platforms)
   - Tamper detection
+  - OpenSSL backend primitives (macOS/Linux)
+
+  The envelope format and the machine binding are covered by
+  Test.DeepBase.Security.UBS2 and Test.DeepBase.Security.MachineIdentity;
+  secure wiping by Test.DeepBase.SecureMemory.
   ============================================================================ }
 
 unit Test.DeepBase.Security;
@@ -77,12 +81,6 @@ type
     [Test]
     procedure Test_GlobalLoadSaveSecret;
 
-    [Test]
-    procedure Test_SecureZeroMemory_Bytes;
-
-    [Test]
-    procedure Test_SecureZeroMemory_String;
-    
     // Tamper Detection Tests
     [Test]
     procedure Test_TamperDetection_ModifiedByte;
@@ -113,14 +111,6 @@ type
     procedure Test_AES256GCM_Roundtrip;
     [Test]
     procedure Test_AES256GCM_TagMismatch;
-    [Test]
-    procedure Test_UBS2_HeaderVersion_IsCurrent;
-    [Test]
-    procedure Test_UBS2_UnsupportedVersion_RaisesClearError;
-    [Test]
-    procedure Test_UBS2_UnsupportedKDF_RaisesClearError;
-    [Test]
-    procedure Test_UBS2_LegacyMagic_RaisesMigrationError;
   end;
 {$ENDIF}
 
@@ -342,34 +332,6 @@ begin
   Assert.AreEqual('global_value', Loaded);
 end;
 
-procedure TTestDeepBaseSecurity.Test_SecureZeroMemory_Bytes;
-var
-  Data: TBytes;
-  B: Byte;
-begin
-  Data := TEncoding.UTF8.GetBytes('sensitive-bytes');
-  Assert.IsTrue(Length(Data) > 0);
-
-  SecureZeroMemory(Data);
-
-  for B in Data do
-    Assert.AreEqual(Byte(0), B);
-end;
-
-procedure TTestDeepBaseSecurity.Test_SecureZeroMemory_String;
-var
-  Data: string;
-  I: Integer;
-begin
-  Data := 'sensitive-string';
-  Assert.IsTrue(Length(Data) > 0);
-
-  SecureZeroMemory(Data);
-
-  for I := 1 to Length(Data) do
-    Assert.AreEqual(#0, Data[I]);
-end;
-
 // ============================================================================
 // Tamper Detection Tests
 // ============================================================================
@@ -574,83 +536,6 @@ begin
   );
 end;
 
-procedure TTestOpenSSLBackend.Test_UBS2_HeaderVersion_IsCurrent;
-var
-  Encrypted: TBytes;
-begin
-  Encrypted := ProtectStringDpapi('versioned secret');
-
-  Assert.IsTrue(Length(Encrypted) > 5, 'UBS2 payload should include magic and version');
-  Assert.AreEqual(Ord('U'), Integer(Encrypted[0]));
-  Assert.AreEqual(Ord('B'), Integer(Encrypted[1]));
-  Assert.AreEqual(Ord('S'), Integer(Encrypted[2]));
-  Assert.AreEqual(Ord('2'), Integer(Encrypted[3]));
-  Assert.AreEqual(1, Integer(Encrypted[4]), 'UBS2 v1 should be the current writer version');
-  Assert.AreEqual('versioned secret', UnprotectStringDpapi(Encrypted));
-end;
-
-procedure TTestOpenSSLBackend.Test_UBS2_UnsupportedVersion_RaisesClearError;
-var
-  Encrypted: TBytes;
-begin
-  Encrypted := ProtectStringDpapi('unsupported version');
-  Encrypted[4] := $7F;
-
-  try
-    UnprotectStringDpapi(Encrypted);
-    Assert.Fail('Unsupported UBS2 version should raise EDecryptionException');
-  except
-    on E: EDecryptionException do
-    begin
-      Assert.Contains(E.Message, 'Unsupported UBS2 version');
-      Assert.Contains(E.Message, 'supported');
-      Assert.Contains(E.Message, 'migrate');
-    end;
-  end;
-end;
-
-procedure TTestOpenSSLBackend.Test_UBS2_UnsupportedKDF_RaisesClearError;
-var
-  Encrypted: TBytes;
-begin
-  Encrypted := ProtectStringDpapi('unsupported kdf');
-  Encrypted[5] := $7F;
-
-  try
-    UnprotectStringDpapi(Encrypted);
-    Assert.Fail('Unsupported UBS2 KDF should raise EDecryptionException');
-  except
-    on E: EDecryptionException do
-    begin
-      Assert.Contains(E.Message, 'Unsupported UBS2 v1 KDF type');
-      Assert.Contains(E.Message, 'PBKDF2-SHA256');
-    end;
-  end;
-end;
-
-procedure TTestOpenSSLBackend.Test_UBS2_LegacyMagic_RaisesMigrationError;
-var
-  LegacyData: TBytes;
-begin
-  SetLength(LegacyData, 64);
-  FillChar(LegacyData[0], Length(LegacyData), 0);
-  LegacyData[0] := Ord('U');
-  LegacyData[1] := Ord('B');
-  LegacyData[2] := Ord('S');
-  LegacyData[3] := Ord('1');
-
-  try
-    UnprotectStringDpapi(LegacyData);
-    Assert.Fail('Legacy UBS1 payload should raise EDecryptionException');
-  except
-    on E: EDecryptionException do
-    begin
-      Assert.Contains(E.Message, 'legacy');
-      Assert.Contains(E.Message, 'UBS1');
-      Assert.Contains(E.Message, 'Migrate');
-    end;
-  end;
-end;
 {$ENDIF}
 
 initialization

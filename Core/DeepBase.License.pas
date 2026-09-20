@@ -147,17 +147,15 @@ type
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
-  Winapi.Windows,
-  System.Win.Registry,
-  {$ENDIF}
-  System.IOUtils;
+  DeepBase.Security.MachineIdentity;
 
 const
   LICENSE_LEGACY_SECRET_ENV = 'DEEPBASE_LEGACY_LICENSE_SIGNING_KEY';
   LICENSE_CI_SECRET = 'DeepBase-License-CI-Only';
   LICENSE_TABLE = 'LicenseInfo';
   LICENSE_VERSION = '1.0';
+  /// <summary>Device ids are stored truncated; the length is part of the wire format.</summary>
+  DEVICE_ID_LENGTH = 32;
 
 function ResolveLegacyLicenseSecret: string;
 begin
@@ -267,63 +265,13 @@ begin
 end;
 
 function TDeepBaseLicense.GenerateDeviceFingerprint: string;
-var
-  Parts: TStringList;
-  {$IFDEF MSWINDOWS}
-  Reg: TRegistry;
-  {$ENDIF}
-  ComputerName: string;
-  RawFingerprint: string;
 begin
-  Parts := TStringList.Create;
-  try
-    // Get computer name
-    {$IFDEF MSWINDOWS}
-    SetLength(ComputerName, MAX_COMPUTERNAME_LENGTH + 1);
-    var Size: DWORD := MAX_COMPUTERNAME_LENGTH + 1;
-    if GetComputerName(PChar(ComputerName), Size) then
-      SetLength(ComputerName, Size)
-    else
-      ComputerName := 'Unknown';
-    
-    // Get Windows Product ID
-    Reg := TRegistry.Create(KEY_READ);
-    try
-      Reg.RootKey := HKEY_LOCAL_MACHINE;
-      if Reg.OpenKeyReadOnly('\SOFTWARE\Microsoft\Windows NT\CurrentVersion') then
-      begin
-        Parts.Add(Reg.ReadString('ProductId'));
-        Reg.CloseKey;
-      end;
-    finally
-      Reg.Free;
-    end;
-    
-    // Get processor info
-    Reg := TRegistry.Create(KEY_READ);
-    try
-      Reg.RootKey := HKEY_LOCAL_MACHINE;
-      if Reg.OpenKeyReadOnly('\HARDWARE\DESCRIPTION\System\CentralProcessor\0') then
-      begin
-        Parts.Add(Reg.ReadString('ProcessorNameString'));
-        Reg.CloseKey;
-      end;
-    finally
-      Reg.Free;
-    end;
-    {$ELSE}
-    ComputerName := 'Unknown';
-    {$ENDIF}
-    
-    Parts.Add(ComputerName);
-    
-    // Generate hash
-    RawFingerprint := Parts.Text;
-    Result := THashSHA2.GetHashString(RawFingerprint, THashSHA2.TSHA2Version.SHA256);
-    Result := Copy(Result, 1, 32); // Use first 32 chars
-  finally
-    Parts.Free;
-  end;
+  // A14-02 / Top20 #5: the device id shares the keystore's versioned machine identity
+  // sources. Computer name, product id and CPU string are deliberately out: they are
+  // renameable, fleet-identical or user-visible, and the old code fell back to
+  // 'Unknown' when a read failed, which let any installation claim a matching device.
+  // An unavailable source now raises instead (fail-closed).
+  Result := Copy(TMachineIdentityProvider.Collect.ToHash, 1, DEVICE_ID_LENGTH);
 end;
 
 function TDeepBaseLicense.GetDeviceId: string;

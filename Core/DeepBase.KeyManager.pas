@@ -1,33 +1,26 @@
 ﻿{ ============================================================================
   DeepBase.KeyManager - Advanced Key Management System
   
-  Version: 1.0
-  Description: Secure key management with machine-binding affinity and key rotation.
-  
-  Features:
-    - Machine-affinity key derivation (computer name, user, env)
-    - Master key derivation with PBKDF2
-    - Data encryption keys (DEK) management
-    - Key rotation support
-    - Secure key storage using DPAPI/Keychain
-    - Multi-level key hierarchy (Master -> Domain -> Data)
-  
+  Version: 2.0
+  Description: Key hierarchy (master -> KEK -> DEK) with rotation and a
+    machine-bound, fail-closed keystore.
+
+  Security model (Top20 #5):
+    - KEK = PBKDF2(user password, persisted salt). Machine identity is NOT
+      password entropy; the password is the only secret the user must remember.
+    - Machine identity is the AAD of every wrapped DEK and the gate persisted in
+      the keystore header, so a stolen keystore plus password still cannot be
+      opened on another machine.
+    - DEK: random 256-bit keys wrapped by the KEK, persisted as JSON.
+    - Keys are never stored in plain text.
+
+  Related SSOT units (do not restate their rules here):
+    - DeepBase.Security.MachineIdentity: which sources form the binding and its
+      scheme version.
+    - DeepBase.Security.MasterKey: the per-user secret entropy for UBS2.
+    - DeepBase.Security.UBS2: the authenticated secret envelope format.
+
   Thread Safety: All public methods are thread-safe.
-  
-  Security Model:
-    - Master Key: Derived from user password + machine affinity fingerprint
-    - Key Encryption Key (KEK): Encrypts other keys
-    - Data Encryption Key (DEK): Encrypts actual data
-    - Keys are never stored in plain text
-  
-  Important note (BASIC-017):
-    The "fingerprint" used here is currently a MACHINE-AFFINITY fingerprint
-    derived from environment variables and computer name. It is NOT a true
-    hardware identifier (it does not query BIOS serial, MAC, disk UUID).
-    Treat it as user-portable convenience, not a tamper-resistant binding.
-    Production hardware binding requires platform adapters (WMI / IOKit /
-    udev) that are not implemented yet. Migration paths must remain available
-    when the fingerprint changes (re-prompt for password etc.).
   ============================================================================ }
 
 unit DeepBase.KeyManager;
@@ -38,17 +31,23 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  System.Hash,
   System.SyncObjs,
   System.DateUtils,
-  {$IFDEF MSWINDOWS}
-  Winapi.Windows,
-  {$ENDIF}
-  DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Random;
+  DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Random,
+  DeepBase.Security.MachineIdentity;
 
 type
   EKeyManagerException = class(Exception);
 
+const
+  /// <summary>On-disk keystore format. v1 sealed the KEK with machine-fingerprint
+  /// password entropy and wrapped DEKs without a machine binding, so this build
+  /// refuses to read it: run the keystore re-key migration.</summary>
+  KEYSTORE_FORMAT_VERSION = 2;
+  /// <summary>Version byte prefixing a wrapped DEK: AES-256-GCM.</summary>
+  DEK_WRAP_VERSION_GCM = $01;
+
+type
   TKeyPurpose = (
     kpMaster,      // Master key - top of hierarchy
     kpEncryption,  // General encryption
@@ -81,20 +80,6 @@ type
     function DaysUntilExpiry: Integer;
   end;
 
-  THardwareFingerprint = record
-    MachineId: string;
-    ProcessorId: string;
-    BiosSerial: string;
-    DiskSerial: string;
-    MacAddress: string;
-    ComputerName: string;
-    Fingerprint: string;
-    
-    class function Collect: THardwareFingerprint; static;
-    function ToHash: string;
-    function Matches(const AOther: THardwareFingerprint): Boolean;
-  end;
-
   TKeyDerivationParams = record
     Salt: TBytes;
     Iterations: Integer;
@@ -105,34 +90,30 @@ type
     class function High: TKeyDerivationParams; static;
   end;
 
+  /// <summary>Key encryption key (KEK). Derived from the user password alone;
+  /// machine affinity is enforced by the keystore, not by the derived key
+  /// material (Top20 #5).</summary>
   TMasterKey = class
   private
     FKeyData: TBytes;
-    FFingerprint: THardwareFingerprint;
     FParams: TKeyDerivationParams;
     FCreatedAt: TDateTime;
     FIsUnlocked: Boolean;
-    
+
     procedure ClearKey;
-    
+
   public
     constructor Create;
     destructor Destroy; override;
-    
+
     procedure DeriveFromPassword(const APassword: string; const AParams: TKeyDerivationParams);
-    procedure DeriveWithHardwareBinding(const APassword: string); overload;
-    /// <summary>CR-001: APersistedKdf 含盐时复用（跨会话 KEK 可复现），
-    /// 否则生成新的 High 参数。</summary>
-    procedure DeriveWithHardwareBinding(const APassword: string;
-      const APersistedKdf: TKeyDerivationParams); overload;
     procedure Lock;
     function GetKeyData: TBytes;
-    
+
     property IsUnlocked: Boolean read FIsUnlocked;
     /// <summary>CR-001: 当前派生参数，供 keystore 持久化（盐不是机密）</summary>
     property Params: TKeyDerivationParams read FParams;
     property CreatedAt: TDateTime read FCreatedAt;
-    property Fingerprint: THardwareFingerprint read FFingerprint;
   end;
 
   TDataKey = class
@@ -151,13 +132,18 @@ type
     destructor Destroy; override;
     
     procedure Generate(AKeyLength: Integer = 32);
-    procedure EncryptWith(const AKEK: TBytes);
-    procedure DecryptWith(const AKEK: TBytes);
-    procedure Rotate(const AKEK: TBytes);
+    /// <summary>Wrap with the KEK; AAAD carries the machine binding so the
+    /// wrapped key cannot be unwrapped on another machine.</summary>
+    procedure EncryptWith(const AKEK: TBytes; const AAAD: TBytes);
+    procedure DecryptWith(const AKEK: TBytes; const AAAD: TBytes);
+    procedure Rotate(const AKEK: TBytes; const AAAD: TBytes);
     function GetInfo: TKeyInfo;
-    
+    /// <summary>Returns a copy: callers must not alias key material the store owns,
+    /// otherwise freeing the store wipes memory the caller still holds.</summary>
+    function GetKeyData: TBytes;
+
     property KeyId: string read FKeyId;
-    property KeyData: TBytes read FKeyData;
+    property KeyData: TBytes read GetKeyData;
     property EncryptedKeyData: TBytes read FEncryptedKeyData;
     property Purpose: TKeyPurpose read FPurpose;
     property Status: TKeyStatus read FStatus write FStatus;
@@ -171,15 +157,23 @@ type
     FStorePath: string;
     FMasterKey: TMasterKey;
     FKdfParams: TKeyDerivationParams;
-    
+    FSealedBindingScheme: Integer;
+    FSealedBindingHash: string;
+    FCurrentBinding: TMachineIdentity;
+    FBindingResolved: Boolean;
+    FHasSealedState: Boolean;
+
     function GetKEK: TBytes;
+    /// <summary>Current machine binding, collected once per store instance.
+    /// Raises when a mandatory identity source is unavailable.</summary>
+    function Binding: TMachineIdentity;
     procedure SaveToFile;
     procedure LoadFromFile;
-    
+
   public
     constructor Create(const AStorePath: string);
     destructor Destroy; override;
-    
+
     procedure Initialize(AMasterKey: TMasterKey);
     function CreateKey(APurpose: TKeyPurpose; AExpiryDays: Integer = 365): TDataKey;
     function GetKey(const AKeyId: string): TDataKey;
@@ -190,15 +184,18 @@ type
     procedure Save;
     procedure Load;
 
-    /// <summary>CR-001: 只从 keystore 读取 KDF 参数（盐不是机密），
-    /// 在派生 KEK 之前调用，保证跨会话可复现。</summary>
-    procedure LoadKdfParams;
+    /// <summary>CR-001: 读取 keystore 的非机密封存头（KDF 参数 + 机器绑定）。
+    /// 盐与绑定都不是机密，但必须在派生 KEK 之前拿到，否则跨会话无法复现 KEK。
+    /// 文件存在而封存头缺字段时一律 fail-closed 抛错，不回落到默认值。</summary>
+    procedure LoadSealedState;
+    /// <summary>机器绑定门禁：指纹方案版本与全量取值必须与封存时一致。</summary>
+    procedure VerifyMachineBinding;
     /// <summary>CR-001: 抽验一把存量密钥可用当前 KEK 解密，
     /// 密码错误时尽早失败，而不是推迟到业务首次加解密。</summary>
     procedure VerifyKeysDecryptable;
 
     property KdfParams: TKeyDerivationParams read FKdfParams;
-    function HasPersistedKdf: Boolean;
+    function HasSealedState: Boolean;
   end;
 
   TKeyManager = class
@@ -221,7 +218,9 @@ type
     class function Instance: TKeyManager;
     class procedure SetInstance(AInstance: TKeyManager);
     
-    procedure Initialize(const AMasterPassword: string; AUseHardwareBinding: Boolean = True);
+    /// <summary>Unlock the keystore. The password is the only secret entropy;
+    /// the machine binding is verified as a gate, never mixed into the key.</summary>
+    procedure Initialize(const AMasterPassword: string);
     procedure Lock;
     function IsUnlocked: Boolean;
     
@@ -242,8 +241,8 @@ type
     function EncryptConfig(const AValue: string): string;
     function DecryptConfig(const AValue: string): string;
     
-    // Hardware binding
-    function ValidateHardwareBinding: Boolean;
+    /// <summary>Hex fingerprint of the current machine identity. Opening the
+    /// keystore itself enforces the binding gate and raises with the reason.</summary>
     function GetMachineFingerprint: string;
     
     // Key info
@@ -267,7 +266,8 @@ implementation
 uses
   System.IOUtils,
   System.JSON,
-  System.NetEncoding;
+  System.NetEncoding,
+  DeepBase.SecureMemory;
 
 var
   GKeyManager: TKeyManager = nil;
@@ -324,72 +324,6 @@ begin
     Result := DaysBetween(Now, ExpiresAt);
 end;
 
-{ THardwareFingerprint }
-
-class function THardwareFingerprint.Collect: THardwareFingerprint;
-{$IFDEF MSWINDOWS}
-var
-  ComputerNameBuf: array[0..MAX_COMPUTERNAME_LENGTH] of Char;
-  Size: DWORD;
-{$ENDIF}
-begin
-  Result := Default(THardwareFingerprint);
-
-  // BASIC-017: This is a machine-affinity fingerprint derived from
-  // environment variables and computer name. It is NOT a true hardware
-  // identifier. Production hardware binding (BIOS serial, MAC, disk UUID)
-  // requires platform-specific adapters not implemented in this unit.
-
-  {$IFDEF MSWINDOWS}
-  // Computer name
-  Size := MAX_COMPUTERNAME_LENGTH + 1;
-  if GetComputerName(ComputerNameBuf, Size) then
-    Result.ComputerName := ComputerNameBuf;
-  
-  // Machine ID from registry
-  Result.MachineId := GetEnvironmentVariable('COMPUTERNAME') + '-' + 
-                      GetEnvironmentVariable('USERNAME');
-  
-  // For production hardware ID: add platform adapter that queries WMI
-  // (Win32_BIOS.SerialNumber, Win32_Processor.ProcessorId, Win32_DiskDrive.SerialNumber).
-  // Until then, the values below are placeholders derived from ComputerName.
-  Result.ProcessorId := GetEnvironmentVariable('PROCESSOR_IDENTIFIER');
-  Result.BiosSerial := 'BIOS-' + Result.ComputerName;
-  Result.DiskSerial := 'DISK-' + Result.ComputerName;
-  {$ELSE}
-  // macOS/Linux
-  Result.ComputerName := GetEnvironmentVariable('HOSTNAME');
-  if Result.ComputerName = '' then
-    Result.ComputerName := GetEnvironmentVariable('USER');
-  Result.MachineId := Result.ComputerName;
-  {$ENDIF}
-  
-  // Generate composite fingerprint
-  Result.Fingerprint := Result.ToHash;
-end;
-
-function THardwareFingerprint.ToHash: string;
-var
-  Data: string;
-begin
-  Data := MachineId + '|' + ProcessorId + '|' + BiosSerial + '|' + 
-          DiskSerial + '|' + ComputerName;
-  Result := THashUtils.SHA256(Data);
-end;
-
-function THardwareFingerprint.Matches(const AOther: THardwareFingerprint): Boolean;
-begin
-  // Allow some flexibility - match if at least 3 of 5 identifiers match
-  var MatchCount := 0;
-  if (MachineId <> '') and (MachineId = AOther.MachineId) then Inc(MatchCount);
-  if (ProcessorId <> '') and (ProcessorId = AOther.ProcessorId) then Inc(MatchCount);
-  if (BiosSerial <> '') and (BiosSerial = AOther.BiosSerial) then Inc(MatchCount);
-  if (DiskSerial <> '') and (DiskSerial = AOther.DiskSerial) then Inc(MatchCount);
-  if (ComputerName <> '') and (ComputerName = AOther.ComputerName) then Inc(MatchCount);
-  
-  Result := MatchCount >= 3;
-end;
-
 { TKeyDerivationParams }
 
 class function TKeyDerivationParams.Default: TKeyDerivationParams;
@@ -425,42 +359,17 @@ end;
 
 procedure TMasterKey.ClearKey;
 begin
-  if Length(FKeyData) > 0 then
-  begin
-    FillChar(FKeyData[0], Length(FKeyData), 0);
-    SetLength(FKeyData, 0);
-  end;
+  SecureClearBytes(FKeyData);
   FIsUnlocked := False;
 end;
 
 procedure TMasterKey.DeriveFromPassword(const APassword: string; const AParams: TKeyDerivationParams);
 begin
   FParams := AParams;
-  FKeyData := TPasswordUtils.PBKDF2(APassword, AParams.Salt, AParams.Iterations, 
+  FKeyData := TPasswordUtils.PBKDF2(APassword, AParams.Salt, AParams.Iterations,
                                     AParams.KeyLength, AParams.Algorithm);
   FIsUnlocked := True;
   FCreatedAt := Now;
-end;
-
-procedure TMasterKey.DeriveWithHardwareBinding(const APassword: string);
-begin
-  // CR-001: 无持久化参数时生成 High 参数；FParams 由 DeriveFromPassword 记录，
-  // 随后由 TKeyStore.SaveToFile 写入 keystore（盐不是机密）。
-  DeriveWithHardwareBinding(APassword, Default(TKeyDerivationParams));
-end;
-
-procedure TMasterKey.DeriveWithHardwareBinding(const APassword: string;
-  const APersistedKdf: TKeyDerivationParams);
-var
-  HWData: string;
-begin
-  FFingerprint := THardwareFingerprint.Collect;
-  HWData := APassword + '|' + FFingerprint.ToHash;
-  
-  if Length(APersistedKdf.Salt) > 0 then
-    DeriveFromPassword(HWData, APersistedKdf)
-  else
-    DeriveFromPassword(HWData, TKeyDerivationParams.High);
 end;
 
 procedure TMasterKey.Lock;
@@ -489,11 +398,7 @@ end;
 
 destructor TDataKey.Destroy;
 begin
-  if Length(FKeyData) > 0 then
-  begin
-    FillChar(FKeyData[0], Length(FKeyData), 0);
-    SetLength(FKeyData, 0);
-  end;
+  SecureClearBytes(FKeyData);
   inherited;
 end;
 
@@ -502,27 +407,28 @@ begin
   FKeyData := TRandomGenerator.RandomBytes(AKeyLength);
 end;
 
-procedure TDataKey.EncryptWith(const AKEK: TBytes);
+procedure TDataKey.EncryptWith(const AKEK: TBytes; const AAAD: TBytes);
 var
   AES: TAESCrypto;
   GCMData: TBytes;
 begin
-  // REVIEW5-CORE-005: Upgrade from CBC to AES-GCM (AEAD).
+  // REVIEW5-CORE-005: AES-256-GCM (AEAD).
   // Format: Version(1) + Nonce(12) + Cipher + Tag(16)
-  // Version byte 0x01 = AES-256-GCM authenticated encryption.
+  // The machine binding travels as AAD, so a wrapped DEK is bound to its machine
+  // cryptographically rather than by a flag an attacker can rewrite (Top20 #5).
   AES := TAESCrypto.Create(aes256, aesGCM);
   try
     AES.SetKey(AKEK);
-    GCMData := AES.Encrypt(FKeyData);
+    GCMData := AES.Encrypt(FKeyData, AAAD);
     SetLength(FEncryptedKeyData, 1 + Length(GCMData));
-    FEncryptedKeyData[0] := $01; // Version: AES-GCM
+    FEncryptedKeyData[0] := DEK_WRAP_VERSION_GCM;
     Move(GCMData[0], FEncryptedKeyData[1], Length(GCMData));
   finally
     AES.Free;
   end;
 end;
 
-procedure TDataKey.DecryptWith(const AKEK: TBytes);
+procedure TDataKey.DecryptWith(const AKEK: TBytes; const AAAD: TBytes);
 var
   AES: TAESCrypto;
   IV, Cipher, GCMData: TBytes;
@@ -530,23 +436,23 @@ begin
   if Length(FEncryptedKeyData) = 0 then
     Exit;
 
-  if (Length(FEncryptedKeyData) > 1) and (FEncryptedKeyData[0] = $01) then
+  if (Length(FEncryptedKeyData) > 1) and (FEncryptedKeyData[0] = DEK_WRAP_VERSION_GCM) then
   begin
-    // REVIEW5-CORE-005: New format — AES-256-GCM authenticated decryption.
     // Version(1) already consumed; rest is Nonce(12) + Cipher + Tag(16).
     GCMData := Copy(FEncryptedKeyData, 1, Length(FEncryptedKeyData) - 1);
     AES := TAESCrypto.Create(aes256, aesGCM);
     try
       AES.SetKey(AKEK);
-      FKeyData := AES.Decrypt(GCMData);
+      FKeyData := AES.Decrypt(GCMData, AAAD);
     finally
       AES.Free;
     end;
   end
   else
   begin
-    // Legacy format — AES-256-CBC (unauthenticated).
-    // Format: IV(16) + Cipher.
+    // Legacy format — AES-256-CBC (unauthenticated). Format: IV(16) + Cipher.
+    // CBC has no authenticated data and TAESCrypto rejects AAD outside GCM, so the
+    // machine binding cannot cover these records; their removal is Top20 #10 (A17).
     if Length(FEncryptedKeyData) <= 16 then
       raise EKeyManagerException.Create('Invalid encrypted data key');
 
@@ -563,13 +469,18 @@ begin
   end;
 end;
 
-procedure TDataKey.Rotate(const AKEK: TBytes);
+procedure TDataKey.Rotate(const AKEK: TBytes; const AAAD: TBytes);
 begin
   FStatus := ksRotating;
   Inc(FVersion);
   Generate(Length(FKeyData));
-  EncryptWith(AKEK);
+  EncryptWith(AKEK, AAAD);
   FStatus := ksActive;
+end;
+
+function TDataKey.GetKeyData: TBytes;
+begin
+  Result := Copy(FKeyData);
 end;
 
 function TDataKey.GetInfo: TKeyInfo;
@@ -584,7 +495,7 @@ begin
   // CORE-R2-007: Report actual encryption mode based on version byte.
   // EncryptWith writes version byte $01 for AES-256-GCM; legacy data
   // lacks this prefix and was encrypted with AES-256-CBC.
-  if (Length(FEncryptedKeyData) > 0) and (FEncryptedKeyData[0] = $01) then
+  if (Length(FEncryptedKeyData) > 0) and (FEncryptedKeyData[0] = DEK_WRAP_VERSION_GCM) then
     Result.Algorithm := 'AES-256-GCM'
   else
     Result.Algorithm := 'AES-256-CBC';
@@ -599,6 +510,18 @@ begin
   FKeys := TObjectDictionary<string, TDataKey>.Create([doOwnsValues]);
   FLock := TCriticalSection.Create;
   FStorePath := AStorePath;
+end;
+
+function TKeyStore.Binding: TMachineIdentity;
+begin
+  if not FBindingResolved then
+  begin
+    // Collected once per store: the sources are stable for the process lifetime and
+    // the collector is fail-closed, so an unreadable source raises on first use.
+    FCurrentBinding := TMachineIdentityProvider.Collect;
+    FBindingResolved := True;
+  end;
+  Result := FCurrentBinding;
 end;
 
 destructor TKeyStore.Destroy;
@@ -631,7 +554,7 @@ begin
     Key := TDataKey.Create(APurpose);
     Key.Generate(32);
     Key.FExpiresAt := IncDay(Now, AExpiryDays);
-    Key.EncryptWith(GetKEK);
+    Key.EncryptWith(GetKEK, Binding.ToBinding);
     FKeys.Add(Key.KeyId, Key);
     Save;
     Result := Key;
@@ -647,7 +570,7 @@ begin
     if not FKeys.TryGetValue(AKeyId, Result) then
       Result := nil
     else if Length(Result.FKeyData) = 0 then
-      Result.DecryptWith(GetKEK);
+      Result.DecryptWith(GetKEK, Binding.ToBinding);
   finally
     FLock.Leave;
   end;
@@ -665,7 +588,7 @@ begin
       if (Key.Purpose = APurpose) and (Key.Status = ksActive) and not Key.GetInfo.IsExpired then
       begin
         if Length(Key.FKeyData) = 0 then
-          Key.DecryptWith(GetKEK);
+          Key.DecryptWith(GetKEK, Binding.ToBinding);
         Result := Key;
         Break;
       end;
@@ -685,7 +608,7 @@ begin
   try
     if FKeys.TryGetValue(AKeyId, Key) then
     begin
-      Key.Rotate(GetKEK);
+      Key.Rotate(GetKEK, Binding.ToBinding);
       Save;
     end;
   finally
@@ -743,28 +666,37 @@ procedure TKeyStore.SaveToFile;
 var
   JSON: TJSONObject;
   KeysArray: TJSONArray;
-  KeyObj, KdfObj: TJSONObject;
+  KeyObj, KdfObj, BindingObj: TJSONObject;
   Key: TDataKey;
   LSerialized: string;
   LTmpPath, LBakPath: string;
   LStream: TFileStream;
   LBytes: TBytes;
+  LBinding: TMachineIdentity;
 begin
   JSON := TJSONObject.Create;
   try
-    JSON.AddPair('version', TJSONNumber.Create(1));
+    JSON.AddPair('version', TJSONNumber.Create(KEYSTORE_FORMAT_VERSION));
 
-    // CR-001: 持久化 KDF 参数（盐不是机密），否则下次会话无法复现 KEK
-    if (FMasterKey <> nil) and (Length(FMasterKey.Params.Salt) > 0) then
-    begin
-      FKdfParams := FMasterKey.Params;
-      KdfObj := TJSONObject.Create;
-      KdfObj.AddPair('salt', TEncodingUtils.Base64Encode(FKdfParams.Salt));
-      KdfObj.AddPair('iterations', TJSONNumber.Create(FKdfParams.Iterations));
-      KdfObj.AddPair('keylength', TJSONNumber.Create(FKdfParams.KeyLength));
-      KdfObj.AddPair('algorithm', TJSONNumber.Create(Ord(FKdfParams.Algorithm)));
-      JSON.AddPair('kdf', KdfObj);
-    end;
+    // 封存头 = KDF 参数（盐不是机密）+ 机器绑定指纹。缺任何一项，keystore 都无法
+    // 在下次会话中被正确打开，因此写侧同样拒绝产出不完整的封存头。
+    if FMasterKey = nil then
+      raise EKeyManagerException.Create('Keystore cannot be sealed without a master key');
+    FKdfParams := FMasterKey.Params;
+    if Length(FKdfParams.Salt) = 0 then
+      raise EKeyManagerException.Create('Keystore cannot be sealed without KDF parameters');
+    KdfObj := TJSONObject.Create;
+    KdfObj.AddPair('salt', TEncodingUtils.Base64Encode(FKdfParams.Salt));
+    KdfObj.AddPair('iterations', TJSONNumber.Create(FKdfParams.Iterations));
+    KdfObj.AddPair('keylength', TJSONNumber.Create(FKdfParams.KeyLength));
+    KdfObj.AddPair('algorithm', TJSONNumber.Create(Ord(FKdfParams.Algorithm)));
+    JSON.AddPair('kdf', KdfObj);
+
+    LBinding := Binding;
+    BindingObj := TJSONObject.Create;
+    BindingObj.AddPair('scheme', TJSONNumber.Create(LBinding.SchemeVersion));
+    BindingObj.AddPair('hash', LBinding.ToHash);
+    JSON.AddPair('binding', BindingObj);
 
     KeysArray := TJSONArray.Create;
     for Key in FKeys.Values do
@@ -798,7 +730,13 @@ begin
     LStream.Free; // CloseHandle flushes OS buffers
   end;
   if TFile.Exists(FStorePath) then
+  begin
     TFile.Copy(FStorePath, LBakPath, True);
+    // TFile.Move refuses to replace an existing destination (ERROR_ALREADY_EXISTS),
+    // which is why the live file is retired to .bak first: a crash inside this
+    // window still leaves a readable .bak plus a complete .tmp, never a half file.
+    TFile.Delete(FStorePath);
+  end;
   TFile.Move(LTmpPath, FStorePath);
 end;
 
@@ -818,8 +756,8 @@ begin
     Exit;
     
   try
-    // CR-001: 顺带读取 KDF 参数（旧格式文件无此节点，保持为空）
-    LoadKdfParams;
+    // 封存头（KDF 参数 + 机器绑定）只有一个解析入口，避免两套读法互相分叉
+    LoadSealedState;
 
     KeysArray := JSON.GetValue<TJSONArray>('keys');
     if KeysArray = nil then
@@ -843,35 +781,78 @@ begin
   end;
 end;
 
-procedure TKeyStore.LoadKdfParams;
+procedure TKeyStore.LoadSealedState;
 var
-  JSON, KdfObj: TJSONObject;
+  JSON, KdfObj, BindingObj: TJSONObject;
+  LVersion: Integer;
 begin
-  // CR-001: 仅解析 keystore 的 kdf 节点；文件不存在或为旧格式时保持为空
+  FHasSealedState := False;
   FKdfParams := Default(TKeyDerivationParams);
+  FSealedBindingScheme := 0;
+  FSealedBindingHash := '';
+
+  // 文件不存在 = 全新 keystore，没有门禁可校验；存在则字段必须齐全。
   if not TFile.Exists(FStorePath) then
     Exit;
 
   JSON := TJSONObject.ParseJSONValue(TFile.ReadAllText(FStorePath)) as TJSONObject;
   if JSON = nil then
-    Exit;
+    raise EKeyManagerException.Create('Keystore is not valid JSON: ' + FStorePath);
 
   try
-    if not JSON.TryGetValue<TJSONObject>('kdf', KdfObj) then
-      Exit;
+    LVersion := JSON.GetValue<Integer>('version', 0);
+    if LVersion <> KEYSTORE_FORMAT_VERSION then
+      raise EKeyManagerException.CreateFmt(
+        'Keystore format v%d is not readable by this build, which writes v%d; ' +
+        'run the keystore re-key migration.', [LVersion, KEYSTORE_FORMAT_VERSION]);
 
+    if not JSON.TryGetValue<TJSONObject>('kdf', KdfObj) then
+      raise EKeyManagerException.Create('Keystore has no sealed KDF parameters.');
     FKdfParams.Salt := TEncodingUtils.Base64Decode(KdfObj.GetValue<string>('salt'));
     FKdfParams.Iterations := KdfObj.GetValue<Integer>('iterations');
     FKdfParams.KeyLength := KdfObj.GetValue<Integer>('keylength');
     FKdfParams.Algorithm := THashAlgorithm(KdfObj.GetValue<Integer>('algorithm'));
+    if Length(FKdfParams.Salt) = 0 then
+      raise EKeyManagerException.Create('Keystore sealed KDF salt is empty.');
+
+    if not JSON.TryGetValue<TJSONObject>('binding', BindingObj) then
+      raise EKeyManagerException.Create(
+        'Keystore has no sealed machine binding; run the keystore re-key migration.');
+    FSealedBindingScheme := BindingObj.GetValue<Integer>('scheme');
+    FSealedBindingHash := BindingObj.GetValue<string>('hash');
+    if FSealedBindingHash = '' then
+      raise EKeyManagerException.Create('Keystore sealed machine binding hash is empty.');
+
+    FHasSealedState := True;
   finally
     JSON.Free;
   end;
 end;
 
-function TKeyStore.HasPersistedKdf: Boolean;
+procedure TKeyStore.VerifyMachineBinding;
+var
+  LCurrent: TMachineIdentity;
 begin
-  Result := Length(FKdfParams.Salt) > 0;
+  if not FHasSealedState then
+    Exit;
+
+  // 全量匹配 + 指纹版本化（替代旧的"5 中 3"）：任一绑定来源取值变化、或采集方案
+  // 版本变化，都不再是同一台机器，一律拒绝开启。
+  LCurrent := Binding;
+  if LCurrent.SchemeVersion <> FSealedBindingScheme then
+    raise EKeyManagerException.CreateFmt(
+      'Machine identity scheme changed: keystore sealed with v%d, this machine reports ' +
+      'v%d. Run the keystore re-key migration.',
+      [FSealedBindingScheme, LCurrent.SchemeVersion]);
+  if not SameText(LCurrent.ToHash, FSealedBindingHash) then
+    raise EKeyManagerException.Create(
+      'Machine identity does not match the binding this keystore was sealed with. ' +
+      'The store is machine-bound and cannot be opened elsewhere.');
+end;
+
+function TKeyStore.HasSealedState: Boolean;
+begin
+  Result := FHasSealedState;
 end;
 
 procedure TKeyStore.VerifyKeysDecryptable;
@@ -882,7 +863,7 @@ begin
     if Length(Key.EncryptedKeyData) > 0 then
     begin
       // 抽验第一把：失败即抛（GCM tag 校验），不修改 FKeyData
-      Key.DecryptWith(GetKEK);
+      Key.DecryptWith(GetKEK, Binding.ToBinding);
       Exit;
     end;
 end;
@@ -934,30 +915,32 @@ begin
   end;
 end;
 
-procedure TKeyManager.Initialize(const AMasterPassword: string; AUseHardwareBinding: Boolean);
+procedure TKeyManager.Initialize(const AMasterPassword: string);
 var
-  PersistedKdf: TKeyDerivationParams;
+  Params: TKeyDerivationParams;
 begin
   FLock.Enter;
   try
-    // CR-001: 先读持久化 KDF 参数再派生 KEK。盐不是机密；
+    // CR-001: 先读封存头再派生 KEK。盐不是机密；
     // 同一密码必须跨会话复现同一 KEK，否则存量数据密钥永久无法解密。
-    FKeyStore.LoadKdfParams;
-    PersistedKdf := FKeyStore.KdfParams;
+    FKeyStore.LoadSealedState;
+    // 门禁排在派生之前：机器不对时直接说出原因，
+    // 而不是让 GCM 校验失败伪装成"主密码错误"。
+    FKeyStore.VerifyMachineBinding;
 
-    if AUseHardwareBinding then
-      FMasterKey.DeriveWithHardwareBinding(AMasterPassword, PersistedKdf)
-    else if Length(PersistedKdf.Salt) > 0 then
-      FMasterKey.DeriveFromPassword(AMasterPassword, PersistedKdf)
-    else
-      FMasterKey.DeriveFromPassword(AMasterPassword, TKeyDerivationParams.Default);
+    Params := FKeyStore.KdfParams;
+    if Length(Params.Salt) = 0 then
+      Params := TKeyDerivationParams.High;
+
+    // Top20 #5: 用户口令是唯一机密熵源，机器绑定只做 AAD/门禁，不再参与派生。
+    FMasterKey.DeriveFromPassword(AMasterPassword, Params);
 
     FKeyStore.Initialize(FMasterKey);
     FIsInitialized := True;
 
-    // keystore 带有持久化参数时，密码错误应在此处立即失败，
+    // 已有封存头时，密码错误应在此处立即失败，
     // 而不是等到业务首次加解密才发现（此时可能已写入新数据）。
-    if FKeyStore.HasPersistedKdf then
+    if FKeyStore.HasSealedState then
     begin
       try
         FKeyStore.VerifyKeysDecryptable;
@@ -1151,17 +1134,9 @@ begin
   Result := DecryptString(AValue, kpConfig);
 end;
 
-function TKeyManager.ValidateHardwareBinding: Boolean;
-var
-  CurrentFP: THardwareFingerprint;
-begin
-  CurrentFP := THardwareFingerprint.Collect;
-  Result := FMasterKey.Fingerprint.Matches(CurrentFP);
-end;
-
 function TKeyManager.GetMachineFingerprint: string;
 begin
-  Result := THardwareFingerprint.Collect.ToHash;
+  Result := TMachineIdentityProvider.Fingerprint;
 end;
 
 function TKeyManager.GetKeyInfo(const AKeyId: string): TKeyInfo;
