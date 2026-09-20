@@ -1,0 +1,101 @@
+DeepBase 乙 R6 / N6-D4·D5·D7 —— 纯重复副本删除清单（待主控复核，本单未执行任何删除）
+工单：WO-20260920-AUDIT-乙-R6-归档卫生与门禁口径收口.md §N6
+主控裁定法源：老板 2026-09-20 15:12 第④项「授权删除纯重复副本」；删除预算 7 件（D4 1 + D5 4 + D7 2）
+取证基线：HEAD=317e6f06（N3 eol 收口之后）
+清单生成时间（本地）：2026-09-20 16:22
+状态：NOT DELETED —— 按删除作业规程第 1 步「先报主控复核，未经复核不得删」停在复核关口
+
+====================================================================
+一、授权删除 7 件（逐件：路径 + 字节数 + sha256 + 与之逐字节相同的保留件）
+====================================================================
+判重口径：sha256 全等（非仅 sha1 / 非仅字节数相等）。以下每一对均为「候选件 sha256 == 保留件 sha256」的实测结果。
+
+[D4-1] docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md
+        36330 B  f0c056f433c085952675808bff50b4ff55db5cfc44a221ff53943194d1498944
+        保留件：docs/DeepBase-General-AI-Interaction-Protocol-v1.md
+                36330 B  f0c056f433c085952675808bff50b4ff55db5cfc44a221ff53943194d1498944
+        件内头部自证：两份均为 `Status: SUPERSEDED / Historical Source`，(2) 系浏览器重复下载产物。
+
+[D5-1] docs/backup_20260909_l1_l7/DeepBase-AI-Human-Intervention-Principles-v1.md
+        47674 B  f7f9fcc37aaa36b8e9485ce208ebe834deaafd891c0926bf6adf579857095810
+        保留件：docs/DeepBase-AI-Human-Intervention-Principles-v1.md（同 47674 B / 同 sha256）
+        N6-D1③ 执行后保留件落点：docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md
+
+[D5-2] docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md
+        50601 B  18bd30bec847b5119307d3b79671feaf4e692586767f545ce2497776d635e0ae
+        保留件：docs/DeepBase-Product-Realization-Boundary-v1.md（同 50601 B / 同 sha256）
+        N6-D1③ 执行后保留件落点：docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md
+
+[D5-3] docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md
+        50601 B  18bd30bec847b5119307d3b79671feaf4e692586767f545ce2497776d635e0ae
+        保留件：docs/DeepBase-Product-Realization-Boundary-v1-r2.md（同 50601 B / 同 sha256）
+        注：顶层 -v1 与 -v1-r2 本身亦互为同 sha256 重复对，属预算外事项，见 §三。
+        N6-D1③ 执行后保留件落点：docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+
+[D5-4] docs/backup_20260909_l1_l7/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+        63167 B  c5c9eb2a72a37fada324747843fe360fadb201bad2e7639d69b00c6ba77b1d0f
+        保留件：docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure.原稿-20260908.md
+                63167 B  c5c9eb2a72a37fada324747843fe360fadb201bad2e7639d69b00c6ba77b1d0f
+
+[D7-1] docs/WO-20260830-HB-交付报告纠偏-开发甲-交付报告.md
+        10148 B  f2b66a15e68cc735fd7d10827d29baed1a31da08b355c675c04e1bce60adf5e5
+        保留件：docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md
+                10148 B  f2b66a15e68cc735fd7d10827d29baed1a31da08b355c675c04e1bce60adf5e5
+        取哪一份的判据：正文首行「工单编号：WO-20260830-003」为可追溯工单号，另一文件名只写「纠偏」无编号；
+        故保留带 WO 编号件。
+
+[D7-2] docs/WO-20260830-补修-开发甲-交付报告.md
+        5897 B   27f7dd7e55f129b138a2b856aa691bc6c5a2161e3d0202fdf8f520e8b98aa387
+        保留件：docs/WO-20260830-最终验证-开发甲-交付报告.md
+                5897 B   27f7dd7e55f129b138a2b856aa691bc6c5a2161e3d0202fdf8f520e8b98aa387
+        取哪一份的判据：正文结论落点为「全量门禁最终验证」（完成时间 2026-08-30 06:58:30），
+        语义覆盖「补修」阶段件；故保留 最终验证 件。
+
+合计：7 件，384,612 B。逐件 sha256 与重复对关系已在生成时以 sha256sum 实测，非按文件名或大小推断。
+
+====================================================================
+二、仓库外备份（删除作业规程第 2 步，已先行完成；备份不删除任何原件）
+====================================================================
+备份根目录（仓库外）：D:\_ProgData\DeepBase-R6-N6-backup-20260920-162216\
+备份方式：cp -p（保留 mtime），备份后逐件 sha256sum 复验与 §一 候选件全等：
+
+  docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md                        f0c056f433c0…  OK
+  docs/backup_20260909_l1_l7/DeepBase-AI-Human-Intervention-Principles-v1.md    f7f9fcc37aaa…  OK
+  docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md        18bd30bec847…  OK
+  docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md     18bd30bec847…  OK
+  docs/backup_20260909_l1_l7/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md  c5c9eb2a72a3…  OK
+  docs/WO-20260830-HB-交付报告纠偏-开发甲-交付报告.md                              f2b66a15e68c…  OK
+  docs/WO-20260830-补修-开发甲-交付报告.md                                        27f7dd7e55f1…  OK
+
+删除方式（待主控批准后执行）：走 Windows 回收站，禁止 rm / del，保证可二次恢复。
+不执行 rm 的原因：本 7 件全部为**未跟踪文件**，git 侧无任何副本，`rm` 后不可恢复。
+
+====================================================================
+三、复核前必须先看的两点（乙的独立判断，非工单原文）
+====================================================================
+3.1 执行时序：本清单在「移位 + 入库」之前生成。D5-1/2/3 的保留件当前在 docs/ 顶层且未跟踪，
+    N6-D1③/D2 之后才进入归档层并入库。若主控批准删除，请在**移位入库提交之后**执行，
+    使「保留件」在 git 里已存在，删除动作不再构成任何内容损失风险。
+
+3.2 预算外重复候选（**本单未列删除预算，故一件未删，只申报**）：
+    (a) docs/EHAI.05.D1-表述适配.md  49452 B  a489f49fca12a11d70dce5203f2a49dfd74eeafd05c974d335c32b3aa79afd3e
+        == docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md（同字节同 sha256）
+        该件用新命名 `EHAI.0x.` 但不属于工单点名的「新名集 6 件」，也不是旧名件 ⇒ D1①/D1③ 均不覆盖，
+        同时不属 D4/D5/D7 三笔删除预算 ⇒ 现状只能停在「顶层未跟踪 + 与归档封版件逐字节重复」。
+    (b) docs/DeepBase-Product-Realization-Boundary-v1.md 与 -v1-r2.md 同 sha256（18bd30be…）：
+        两份都在 D1③ 转归档名单内（无删除授权），转归档后归档层将出现 2 份逐字节相同件，
+        已在 D6 台账中标注该重复关系；是否追加删除授权请主控裁定。
+    (c) docs/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md（顶层旧名 L5，41565 B bac975e9…）
+        == 新名件 docs/EHAI.05.L5-极简人类交互适配.md == 归档层 EHAI.05.L5-极简人类交互适配.封版-20260911
+        三份逐字节相同。D1③ 要求旧名转归档，故归档层第 4 份同名内容会保留；标注见 D6 台账。
+    以上三项统一口径：**能标注的不删，不能标注的才报删除**，避免把「裁定未覆盖」变成乙的自行删除。
+
+====================================================================
+四、口径联动（与本清单同批生效的门禁事实）
+====================================================================
+eol-gate 的 `md_crlf_exceptions` 以**相对路径**为键，本批 7 件候选与 15 件移位件中有多件在该基线内。
+N6 的「移位」会让被豁免文件的相对路径改变 ⇒ 必须做**路径键 1:1 迁移**（同一文件换键，不是新增豁免文件），
+并对删除/新写 LF 件退役其死键。逐键映射与前后计数见：
+  CodeReview/_audit_recheck/乙-R6-N6-eol基线键迁移.txt
+本单不改任何 EHAI 文档正文字节（含行尾），因此不采用「把工作树行尾归一化为 LF 以退休豁免条」的做法；
+该做法可一次性真实下降基线，但会改动 FROZEN 件工作树字节，须主控另行授权，已在回执待裁清单登记。
