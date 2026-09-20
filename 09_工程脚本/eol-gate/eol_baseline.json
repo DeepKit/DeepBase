@@ -915,7 +915,5 @@
     "sql/README.md",
     "tasks.md"
   ],
-  "pas_multicr_exceptions": [
-    "Core/DeepBase.Schema.pas"
-  ]
+  "pas_multicr_exceptions": []
 }
