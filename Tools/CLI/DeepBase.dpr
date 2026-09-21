@@ -2,11 +2,12 @@
   DeepBase CLI Tool
   
   版本: 1.0
-  说明: DeepBase 命令行工�?
+  说明: DeepBase 命令行工具
   命令:
     - db init/upgrade/backup/check
     - i18n scan/sync/translate/export/import
     - config get/set/export/import
+    - security export/status/verify
   ============================================================================ }
 
 program DeepBase;
@@ -21,7 +22,8 @@ uses
   CLI.Commands in 'CLI.Commands.pas',
   CLI.DB in 'CLI.DB.pas',
   CLI.I18n in 'CLI.I18n.pas',
-  CLI.Config in 'CLI.Config.pas';
+  CLI.Config in 'CLI.Config.pas',
+  CLI.Security in 'CLI.Security.pas';
 
 begin
   try

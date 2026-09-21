@@ -28,7 +28,8 @@ implementation
 uses
   CLI.DB,
   CLI.I18n,
-  CLI.Config;
+  CLI.Config,
+  CLI.Security;
 
 const
   VERSION = '1.0.0';
@@ -67,6 +68,8 @@ begin
     Result := TI18nCommands.Execute
   else if Cmd = 'config' then
     Result := TConfigCommands.Execute
+  else if Cmd = 'security' then
+    Result := TSecurityCommands.Execute
   else
   begin
     Writeln('Unknown command: ', Cmd);
@@ -100,6 +103,11 @@ begin
   Writeln('            set       Set configuration value');
   Writeln('            export    Export configuration to file');
   Writeln('            import    Import configuration from file');
+  Writeln('');
+  Writeln('  security  Master key backup and reconciliation');
+  Writeln('            export    Write a verified backup of the master key');
+  Writeln('            status    Report the master key location and fingerprint');
+  Writeln('            verify    Check a backup against the current master key');
   Writeln('');
   Writeln('Options:');
   Writeln('  -h, --help      Show this help message');
