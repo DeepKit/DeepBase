@@ -1,0 +1,22 @@
+A-1 CLI 构建原始输出（UTC+8 2026-09-22 01:52，HEAD e268de0，工作树 .tmp/wt_a1_head）
+命令序列：call rsvars.bat -> brcc32 -fo DeepBase.res DeepBase.rc -> dcc64 -B -Q Tools/CLI/DeepBase.dpr
+注：Tools/CLI 无构建/门禁覆盖，.res 为 gitignore 产物，须先跑 brcc32，否则 dcc64 报资源缺失（已登记主控）。
+
+=== BRCC32 DeepBase.rc ===
+Borland Resource Compiler  Version 5.40
+Copyright (c) 1990, 1999 Inprise Corporation.  All rights reserved.
+BRCC32_EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+DeepBase.CLI.Interactive.pas(504) Hint: H2164 Variable 'Parts' is declared but never used in 'TCommandContext.Parse'
+DeepBase.CLI.Interactive.pas(1016) Hint: H2164 Variable 'Value' is declared but never used in 'TCSVFormatter.FormatTable'
+DeepBase.CLI.Interactive.pas(1233) Hint: H2164 Variable 'Line' is declared but never used in 'TInteractiveCLI.ExecuteScript'
+DeepBase.CLI.Interactive.pas(263) Hint: H2219 Private symbol 'ParseLine' declared but never used
+DeepBase.CLI.Interactive.pas(264) Hint: H2219 Private symbol 'GetCompletions' declared but never used
+CLI.I18n.pas(365) Hint: H2077 Value assigned to 'TI18nCommands.DoTranslate' never used
+CLI.Config.pas(144) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+CLI.Config.pas(145) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+CLI.Config.pas(365) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+7716 lines, 0.53 seconds, 4419064 bytes code, 516640 bytes data.
+CLI_BUILD_EXIT=0

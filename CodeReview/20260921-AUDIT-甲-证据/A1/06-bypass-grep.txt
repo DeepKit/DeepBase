@@ -1,0 +1,108 @@
+A-1 旁路扫描（H8：不得新增"以明文开关绕过"的运行时旁路；UTC+8 2026-09-22 01:57，HEAD e268de0）
+扫描面：Tools/CLI/、Core/DeepBase.Security.MasterKey.pas、Tests/Test.DeepBase.Security.MasterKey.pas
+
+=== grep: 明文开关/旁路候选（甲A-1 交付面） ===
+--- pattern: skip.*verify ---
+(no match)
+--- pattern: bypass ---
+(no match)
+--- pattern: force ---
+Tools/CLI/CLI.Commands.pas:289:      ForceDirectories(Path);
+Tools/CLI/CLI.DB.pas:157:  Writeln('  --force, -f         Overwrite existing database');
+Tools/CLI/CLI.DB.pas:263:  Force: Boolean;
+Tools/CLI/CLI.DB.pas:278:  Force := TCliUtils.HasOption('force') or TCliUtils.HasOption('f');
+Tools/CLI/CLI.DB.pas:289:    if Force then
+Tools/CLI/CLI.DB.pas:297:      TCliUtils.Info('Use --force to overwrite.');
+--- pattern: insecure ---
+(no match)
+--- pattern: allow.*plain ---
+(no match)
+--- pattern: no.?verify ---
+(no match)
+--- pattern: ignore.*hash ---
+(no match)
+--- pattern: DISABLE ---
+(no match)
+--- pattern: ENV.*OVERRIDE ---
+Core/DeepBase.Security.MasterKey.pas:48:    /// <summary>Env override when set, otherwise the per-user default path.</summary>
+Tests/Test.DeepBase.Security.MasterKey.pas:13:    - Key path resolution: environment override and per-user default
+Tests/Test.DeepBase.Security.MasterKey.pas:51:    procedure Test_KeyFilePath_UsesEnvironmentOverride;
+Tests/Test.DeepBase.Security.MasterKey.pas:165:procedure TTestUserMasterKey.Test_KeyFilePath_UsesEnvironmentOverride;
+--- pattern: plaintext ---
+(no match)
+
+=== git grep -n "ExportTo|FingerprintOf|LoadOrCreate" 调用点全仓 ===
+Core/DeepBase.FeatureFlags.pas:373:    function ExportToJSON: string;
+Core/DeepBase.FeatureFlags.pas:1972:function TFeatureFlagManager.ExportToJSON: string;
+Core/DeepBase.Hotkeys.Exchange.pas:25:    class function ExportToJson(AHotkeys: TDeepBaseHotkeys): string; static;
+Core/DeepBase.Hotkeys.Exchange.pas:26:    class procedure ExportToFile(AHotkeys: TDeepBaseHotkeys;
+Core/DeepBase.Hotkeys.Exchange.pas:119:class function TDeepBaseHotkeyExchange.ExportToJson(
+Core/DeepBase.Hotkeys.Exchange.pas:158:class procedure TDeepBaseHotkeyExchange.ExportToFile(AHotkeys: TDeepBaseHotkeys;
+Core/DeepBase.Hotkeys.Exchange.pas:166:  Json := ExportToJson(AHotkeys);
+Core/DeepBase.LLM.ImportExport.pas:98:    function ExportToString(Format: TExportFormat = efJSON): string;
+Core/DeepBase.LLM.ImportExport.pas:421:    Content := ExportToString(Format);
+Core/DeepBase.LLM.ImportExport.pas:512:function TLLMImportExport.ExportToString(Format: TExportFormat): string;
+Core/DeepBase.Security.MasterKey.pas:28:  that too: ExportTo writes a copy, restricts it to its owner (chmod 0600 on
+Core/DeepBase.Security.MasterKey.pas:51:    class function LoadOrCreate: TBytes; static;
+Core/DeepBase.Security.MasterKey.pas:61:    class procedure ExportTo(const ADestFile: string); static;
+Core/DeepBase.Security.MasterKey.pas:65:    class function FingerprintOf(const AKeyFile: string): string; static;
+Core/DeepBase.Security.MasterKey.pas:303:class function TUserMasterKey.LoadOrCreate: TBytes;
+Core/DeepBase.Security.MasterKey.pas:345:class procedure TUserMasterKey.ExportTo(const ADestFile: string);
+Core/DeepBase.Security.MasterKey.pas:432:class function TUserMasterKey.FingerprintOf(const AKeyFile: string): string;
+Core/DeepBase.Security.pas:207:  Result.MasterSecret := TUserMasterKey.LoadOrCreate;
+FMX/DeepBase.FMX.HotkeyEditor.pas:661:    TDeepBaseHotkeyExchange.ExportToFile(FHotkeys, SaveDialog.FileName);
+FMX/DeepBase.FMX.LLMChatFrame.pas:159:    procedure ExportToFile(const AFileName: string);
+FMX/DeepBase.FMX.LLMChatFrame.pas:728:procedure TFMXLLMChatFrame.ExportToFile(const AFileName: string);
+Governance/DeepBase.Governance.AI.SteeringExporter.pas:35:    procedure ExportToFile(const AFileName: string = 'governance-model.md');
+Governance/DeepBase.Governance.AI.SteeringExporter.pas:135:  ExportToFile;
+Governance/DeepBase.Governance.AI.SteeringExporter.pas:146:procedure TSteeringExporter.ExportToFile(const AFileName: string);
+Governance/DeepBase.Governance.Lifecycle.pas:280:    FSteeringExporter.ExportToFile('governance-model.md');
+Persistence/DeepBase.SQLLogger.pas:168:    class procedure ExportToFile(const AFilePath: string; 
+Persistence/DeepBase.SQLLogger.pas:811:class procedure TSQLLogger.ExportToFile(const AFilePath: string;
+ThirdParty/DB/DeepBase.DB.MySQL.pas:176:    procedure ExportToCSV(const ATable, AFileName: string; const ADelimiter: Char = ',');
+ThirdParty/DB/DeepBase.DB.MySQL.pas:179:    procedure ExportToSQL(const ATables: TArray<string>; const AFileName: string;
+ThirdParty/DB/DeepBase.DB.MySQL.pas:758:procedure TMySQLExportImport.ExportToCSV(const ATable, AFileName: string; const ADelimiter: Char);
+ThirdParty/DB/DeepBase.DB.MySQL.pas:773:procedure TMySQLExportImport.ExportToSQL(const ATables: TArray<string>; const AFileName: string;
+Tools/CLI/CLI.Security.pas:128:  // ExportTo restricts the copy to its owner and compares length and SHA-256
+Tools/CLI/CLI.Security.pas:131:  TUserMasterKey.ExportTo(Dest);
+Tools/CLI/CLI.Security.pas:134:  Writeln('Fingerprint (SHA-256): ', TUserMasterKey.FingerprintOf(Dest));
+Tools/CLI/CLI.Security.pas:160:  Writeln('Fingerprint      : ', TUserMasterKey.FingerprintOf(KeyPath));
+Tools/CLI/CLI.Security.pas:180:  LiveFp := TUserMasterKey.FingerprintOf(LivePath);
+Tools/CLI/CLI.Security.pas:181:  BackupFp := TUserMasterKey.FingerprintOf(BackupPath);
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:35:    class procedure ExportToCSV(const ALogs: TArray<TLogEntry>; const AFileName: string);
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:40:    class procedure ExportToJSON(const ALogs: TArray<TLogEntry>; const AFileName: string);
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:45:    class procedure ExportToHTML(const ALogs: TArray<TLogEntry>; const AFileName: string;
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:51:    class procedure ExportToText(const ALogs: TArray<TLogEntry>; const AFileName: string);
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:98:class procedure TLogExporter.ExportToCSV(const ALogs: TArray<TLogEntry>;
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:133:class procedure TLogExporter.ExportToJSON(const ALogs: TArray<TLogEntry>;
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:168:class procedure TLogExporter.ExportToHTML(const ALogs: TArray<TLogEntry>;
+Tools/LogAnalyzer/LogAnalyzer.Export.pas:287:class procedure TLogExporter.ExportToText(const ALogs: TArray<TLogEntry>;
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas:959:    TLogExporter.ExportToCSV(FLogs, dlgSave.FileName);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas:978:    TLogExporter.ExportToJSON(FLogs, dlgSave.FileName);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas:997:    TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '鏃ュ織瀵煎嚭 - ' + ExtractFileName(FCurrentDB));
+Tools/Studio/Frames/Studio.HotkeyFrame.pas:538:    TDeepBaseHotkeyExchange.ExportToFile(FHotkeys, SaveDialog.FileName);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:96:    procedure ExportToCSV(const ATableName, AFilePath: string);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:97:    procedure ExportToJSON(const ATableName, AFilePath: string);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:98:    procedure ExportToXML(const ATableName, AFilePath: string);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:612:          efCSV: ExportToCSV(Tables[I], FilePath);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:613:          efJSON: ExportToJSON(Tables[I], FilePath);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:614:          efXML: ExportToXML(Tables[I], FilePath);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:633:procedure TfraImportExport.ExportToCSV(const ATableName, AFilePath: string);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:690:procedure TfraImportExport.ExportToJSON(const ATableName, AFilePath: string);
+Tools/Studio/Frames/Studio.ImportExportFrame.pas:745:procedure TfraImportExport.ExportToXML(const ATableName, AFilePath: string);
+Tools/Tray/Forms/Tray.LogSearchForm.pas:53:    procedure ExportToMarkdown;
+Tools/Tray/Forms/Tray.LogSearchForm.pas:54:    procedure ExportToJSON;
+Tools/Tray/Forms/Tray.LogSearchForm.pas:318:procedure TLogSearchForm.ExportToMarkdown;
+Tools/Tray/Forms/Tray.LogSearchForm.pas:382:procedure TLogSearchForm.ExportToJSON;
+Tools/Tray/Forms/Tray.LogSearchForm.pas:436:  ExportToMarkdown;
+Tools/Tray/Forms/Tray.LogSearchForm.pas:441:  ExportToJSON;
+VCL/DeepBase.VCL.LLMChatFrame.pas:155:    procedure ExportToFile(const AFileName: string);
+VCL/DeepBase.VCL.LLMChatFrame.pas:811:procedure TLLMChatFrame.ExportToFile(const AFileName: string);
+
+### 结论
+- 本单交付面内 skip / bypass / insecure / allow-plain / no-verify / ignore-hash / disable / plaintext 命中 0 处；
+- force 命中项全部位于 CLI.DB（--force 覆盖数据库），属既有无关域；
+- ENV override 命中项是 DEEPBASE_MASTER_KEY_FILE（密钥文件路径来源，M2 既有），只决定"读哪个文件"，
+  不提供任何跳过自验/权限/告警的运行时开关；
+- ExportTo / FingerprintOf / LoadOrCreate 全仓调用点枚举可见：密钥导出唯一入口在
+  Tools/CLI/CLI.Security.pas:131；其余同名 ExportTo* 属热点/日志/表数据等非密钥域，无第二条密钥出封面。

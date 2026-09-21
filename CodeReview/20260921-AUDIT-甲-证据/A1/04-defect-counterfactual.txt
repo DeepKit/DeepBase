@@ -1,0 +1,65 @@
+A-1 实测暴露的存量缺陷与反事实对照（修复前 68d57cc / 修复后 e268de0）
+
+## 缺陷
+TUserMasterKey.Load 在长度校验分支里先 SecureClearBytes(Result) 再格式化 Length(Result)；
+动态数组清零并缩短后长度恒为 0，所以任何尺寸不符的密钥文件都报 "found 0"，
+把"文件被截断（可能还能找回）"和"文件为空（不可恢复）"说成同一件事。
+
+## 根因归属
+$ git blame -L 279,294 68d57cc -- Core/DeepBase.Security.MasterKey.pas
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 286)   Result := TFile.ReadAllBytes(AKeyFile);
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 287)   if Length(Result) <> UBS2_MASTER_SECRET_MIN_SIZE
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 288)   begin
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 289)     SecureClearBytes(Result);
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 290)     raise ESecurityException.CreateFmt(
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 291)       'Master key file "%s" must hold exactly %d r
+938722277 (fuyi4it 2026-09-20 19:24:38 +0800 292)       [AKeyFile, UBS2_MASTER_SECRET_MIN_SIZE, Leng
+引入提交：93872227 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁（甲 M2）
+发现方式：本单 P1 的 HEAD 级 CLI 实跑第 [8] 步（31 字节截断备份），非代码阅读发现。
+
+## 修复前实际输出（68d57cc，同一 15 步场景，同一 31 字节 fixture）
+```
+=== [8] verify a 31-byte truncated backup (expect hard reject on size) ===
+Error: Master key file "D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\short.key" must hold exactly 32 raw bytes, found 0.
+EXIT_8=1
+```
+
+## 修复后实际输出（e268de0，见 03-cli-scenario-15steps.txt 第 [8] 步）
+```
+=== [8] verify a 31-byte truncated backup (expect hard reject on size) ===
+Error: Master key file "D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\short.key" must hold exactly 32 raw bytes, found 31.
+EXIT_8=1
+```
+
+## TDD 网收紧（把报错数字写进契约，旧代码在断言下为红）
+$ git show e268de0 -- Tests/Test.DeepBase.Security.MasterKey.pas
+@@ -210,11 +210,14 @@ var
+ begin
+   Truncated := Copy(TestKey, 0, UBS2_MASTER_SECRET_MIN_SIZE - 1);
+   TFile.WriteAllBytes(TempPath('short.key'), Truncated);
+-  Assert.WillRaise(
++  // The reported size is part of the contract: it is what tells a user that the
++  // file was truncated rather than emptied, and the buffer is wiped before the
++  // message is built, so a message that says "found 0" is a bug, not a detail.
++  Assert.WillRaiseWithMessageRegex(
+     procedure
+     begin
+       TUserMasterKey.Load(TempPath('short.key'));
+-    end, ESecurityException);
++    end, ESecurityException, 'found 31');
+ end;
+ 
+ procedure TTestUserMasterKey.Test_Load_OversizedFile_Raises;
+@@ -228,11 +231,11 @@ begin
+   SetLength(Oversized, UBS2_MASTER_SECRET_MIN_SIZE + 1);
+   Oversized[UBS2_MASTER_SECRET_MIN_SIZE] := $FF;
+   TFile.WriteAllBytes(TempPath('long.key'), Oversized);
+-  Assert.WillRaise(
++  Assert.WillRaiseWithMessageRegex(
+     procedure
+     begin
+       TUserMasterKey.Load(TempPath('long.key'));
+-    end, ESecurityException);
++    end, ESecurityException, 'found 33');
+ end;
+ 

@@ -1,0 +1,48 @@
+A-1 安全测试网经统一入口执行（UTC+8 2026-09-22 01:56，HEAD e268de0，工作树 .tmp/wt_a1_head）
+$ powershell -File Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security.MasterKey.TTestUserMasterKey -OutputDir .tmp/a1_testout
+注：DUnitX 的 --run 只接受完整点分名 <unit>.<fixture>；短名/通配符（TTestUserMasterKey、*UserMasterKey*）匹配 0 条，
+    run_tests.ps1 的"执行数 >=1"校验会把它判为 FAILED（未 fail-open），已登记主控。
+
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+....................................
+Tests Found   : 18
+Tests Ignored : 0
+Tests Passed  : 18
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+SUCCESS: All Unit Tests tests passed
+Temporary sqlite3.dll removed from Tests directory.
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        PASSED
+==============================================
+All tests passed!
+
+### 18 用例清单（同名 XML）
+     1	"Test_KeyFilePath_UsesEnvironmentOverride"
+     2	"Test_KeyFilePath_DefaultsUnderUserHome"
+     3	"Test_Load_ReturnsRawKeyBytes"
+     4	"Test_Load_MissingFile_Raises"
+     5	"Test_Load_TruncatedFile_Raises"
+     6	"Test_Load_OversizedFile_Raises"
+     7	"Test_LoadOrCreate_ReusesExistingKey"
+     8	"Test_LoadOrCreate_ProvisionsAtomicKeyWhenAbsent"
+     9	"Test_ExportTo_WritesByteIdenticalCopy"
+    10	"Test_ExportTo_DestinationIsOwnerOnly"
+    11	"Test_ExportTo_RefusesExistingDestination"
+    12	"Test_ExportTo_RefusesMissingDirectory"
+    13	"Test_ExportTo_RefusesEmptyDestination"
+    14	"Test_ExportTo_RefusesLeftoverTempFile"
+    15	"Test_ExportTo_MissingKey_RaisesAndProvisionsNothing"
+    16	"Test_FingerprintOf_KnownAnswer"
+    17	"Test_FingerprintOf_StableAndKeySensitive"
+    18	"Test_FingerprintOf_MissingFile_Raises"
+
+### XML fixture 汇总行
+<test-suite type="Fixture" name="TTestUserMasterKey" executed="True" result="Success" success="True" time="0.143" 

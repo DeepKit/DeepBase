@@ -1,0 +1,276 @@
+A-1 CLI 15 步实测原始输出（UTC+8 2026-09-22 01:52，HEAD e268de0，工作树 .tmp/wt_a1_head）
+主密钥材料：合成 fixture（0x00..0x1F 共 32 字节，DEEPBASE_MASTER_KEY_FILE 指向临时目录），不含任何真实凭据。
+P1=导出/自验/权限（步 2/4/5/6/9/10/12）；P2=告警与存放建议与迁移窗口（步 2/11b 输出文案）；P3=只读存在性与指纹（步 1/3/7/8）。
+
+=== BRCC32 DeepBase.rc ===
+Borland Resource Compiler  Version 5.40
+Copyright (c) 1990, 1999 Inprise Corporation.  All rights reserved.
+BRCC32_EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+DeepBase.CLI.Interactive.pas(504) Hint: H2164 Variable 'Parts' is declared but never used in 'TCommandContext.Parse'
+DeepBase.CLI.Interactive.pas(1016) Hint: H2164 Variable 'Value' is declared but never used in 'TCSVFormatter.FormatTable'
+DeepBase.CLI.Interactive.pas(1233) Hint: H2164 Variable 'Line' is declared but never used in 'TInteractiveCLI.ExecuteScript'
+DeepBase.CLI.Interactive.pas(263) Hint: H2219 Private symbol 'ParseLine' declared but never used
+DeepBase.CLI.Interactive.pas(264) Hint: H2219 Private symbol 'GetCompletions' declared but never used
+CLI.I18n.pas(365) Hint: H2077 Value assigned to 'TI18nCommands.DoTranslate' never used
+CLI.Config.pas(144) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+CLI.Config.pas(145) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+CLI.Config.pas(365) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+7716 lines, 0.53 seconds, 4419064 bytes code, 516640 bytes data.
+CLI_BUILD_EXIT=0
+
+=== [0] fixture: synthetic 32-byte key stands in for the user master key ===
+fixture key file = D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key bytes = 32
+key file = D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+
+=== [1] security status (key present) ===
+Master key file  : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+Resolved from    : environment variable DEEPBASE_MASTER_KEY_FILE
+Size (bytes)     : 32
+Fingerprint      : 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+(One-way SHA-256 of the key material. Publishing it reveals nothing,
+but it lets any copy be checked with "security verify".)
+EXIT_1=0
+
+=== [2] security export --yes (first export: risk block + self-verify) ===
+
+[33m[WARN] You are about to write the DeepBase master key to a plain file.[0m
+  Source      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  Destination : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key
+
+  That file is the ONLY secret behind every credential DeepBase seals for
+  this user. Anyone who reads it can decrypt those records. If it is lost,
+  the records sealed with it can never be recovered again - there is no
+  server-side reset and no second copy on this machine.
+
+  Keep the export offline: an encrypted drive, a password manager, or a
+  removable medium in a drawer. Do not commit it to a repository, send it
+  by mail or chat, or leave it in a folder a cloud drive syncs.
+
+  Relation to the UBS2 v1 -> v2 migration window: migration re-seals
+  records and never rewrites the key file, so one backup is valid on both
+  sides of that window. Export before migrating, then run
+    DeepBase security verify --file <this backup>
+  afterwards. A fingerprint that no longer matches means a different
+  secret is in place, which is a lost key, not a failed migration.
+
+[32m[OK] Master key exported and verified: D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key[0m
+Fingerprint (SHA-256): 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+Record this fingerprint next to the backup; verify --file re-derives it.
+EXIT_2=0
+
+=== [3] security verify --file backup (expect match) ===
+Current key      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  fingerprint    : 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+Checked file     : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key
+  fingerprint    : 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+[32m[OK] Match. This file is a usable backup of the current master key.[0m
+EXIT_3=0
+
+=== [4] export to the SAME destination again (expect refusal, no overwrite) ===
+
+[33m[WARN] You are about to write the DeepBase master key to a plain file.[0m
+  Source      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  Destination : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key
+
+  That file is the ONLY secret behind every credential DeepBase seals for
+  this user. Anyone who reads it can decrypt those records. If it is lost,
+  the records sealed with it can never be recovered again - there is no
+  server-side reset and no second copy on this machine.
+
+  Keep the export offline: an encrypted drive, a password manager, or a
+  removable medium in a drawer. Do not commit it to a repository, send it
+  by mail or chat, or leave it in a folder a cloud drive syncs.
+
+  Relation to the UBS2 v1 -> v2 migration window: migration re-seals
+  records and never rewrites the key file, so one backup is valid on both
+  sides of that window. Export before migrating, then run
+    DeepBase security verify --file <this backup>
+  afterwards. A fingerprint that no longer matches means a different
+  secret is in place, which is a lost key, not a failed migration.
+
+Error: Export destination "D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key" already exists. Nothing was overwritten. Choose a new path, or remove the older backup once you have confirmed you no longer need it.
+EXIT_4=1
+--- 4b: the pre-existing backup must still verify clean ---
+Current key      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  fingerprint    : 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+Checked file     : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key
+  fingerprint    : 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+[32m[OK] Match. This file is a usable backup of the current master key.[0m
+EXIT_4B=0
+
+=== [5] export into a missing directory (expect fail-closed) ===
+
+[33m[WARN] You are about to write the DeepBase master key to a plain file.[0m
+  Source      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  Destination : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\no-such-dir\backup.key
+
+  That file is the ONLY secret behind every credential DeepBase seals for
+  this user. Anyone who reads it can decrypt those records. If it is lost,
+  the records sealed with it can never be recovered again - there is no
+  server-side reset and no second copy on this machine.
+
+  Keep the export offline: an encrypted drive, a password manager, or a
+  removable medium in a drawer. Do not commit it to a repository, send it
+  by mail or chat, or leave it in a folder a cloud drive syncs.
+
+  Relation to the UBS2 v1 -> v2 migration window: migration re-seals
+  records and never rewrites the key file, so one backup is valid on both
+  sides of that window. Export before migrating, then run
+    DeepBase security verify --file <this backup>
+  afterwards. A fingerprint that no longer matches means a different
+  secret is in place, which is a lost key, not a failed migration.
+
+Error: Export destination directory "D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\no-such-dir" does not exist. Create it first; this command will not guess where to put a copy of the master secret.
+EXIT_5=1
+
+=== [6] export with no destination at all (expect usage error) ===
+[31m[ERROR] export needs a destination: DeepBase security export --output <path>[0m
+EXIT_6=1
+
+=== [7] verify a byte-damaged backup (expect mismatch) ===
+prepped damaged.key (byte 7 flipped) and short.key (31 bytes)
+Current key      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  fingerprint    : 630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd
+Checked file     : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\damaged.key
+  fingerprint    : afee292307bb28e370e6e255c74e80309ae7b6c2fe4749259d452b5127e3c0fb
+[31m[ERROR] Mismatch. This file seals nothing that the current key seals. Either it belongs to another secret or it was damaged.[0m
+EXIT_7=1
+
+=== [8] verify a 31-byte truncated backup (expect hard reject on size) ===
+Error: Master key file "D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\short.key" must hold exactly 32 raw bytes, found 31.
+EXIT_8=1
+
+=== [9] export/status with no key file at all (expect fail-closed) ===
+Master key file  : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\absent.key
+Resolved from    : environment variable DEEPBASE_MASTER_KEY_FILE
+[33m[WARN] The master key does not exist yet. It is created on the first use that seals data; until then there is nothing to back up.[0m
+EXIT_9A=1
+
+[33m[WARN] You are about to write the DeepBase master key to a plain file.[0m
+  Source      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\absent.key
+  Destination : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\never.key
+
+  That file is the ONLY secret behind every credential DeepBase seals for
+  this user. Anyone who reads it can decrypt those records. If it is lost,
+  the records sealed with it can never be recovered again - there is no
+  server-side reset and no second copy on this machine.
+
+  Keep the export offline: an encrypted drive, a password manager, or a
+  removable medium in a drawer. Do not commit it to a repository, send it
+  by mail or chat, or leave it in a folder a cloud drive syncs.
+
+  Relation to the UBS2 v1 -> v2 migration window: migration re-seals
+  records and never rewrites the key file, so one backup is valid on both
+  sides of that window. Export before migrating, then run
+    DeepBase security verify --file <this backup>
+  afterwards. A fingerprint that no longer matches means a different
+  secret is in place, which is a lost key, not a failed migration.
+
+Error: Master key file "D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\absent.key" does not exist. Data sealed with it stays unreadable unless the file is restored from the user's own backup.
+EXIT_9B=1
+
+=== [10] interactive prompt answered "n" (expect nothing written) ===
+
+[33m[WARN] You are about to write the DeepBase master key to a plain file.[0m
+  Source      : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key
+  Destination : D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\declined.key
+
+  That file is the ONLY secret behind every credential DeepBase seals for
+  this user. Anyone who reads it can decrypt those records. If it is lost,
+  the records sealed with it can never be recovered again - there is no
+  server-side reset and no second copy on this machine.
+
+  Keep the export offline: an encrypted drive, a password manager, or a
+  removable medium in a drawer. Do not commit it to a repository, send it
+  by mail or chat, or leave it in a folder a cloud drive syncs.
+
+  Relation to the UBS2 v1 -> v2 migration window: migration re-seals
+  records and never rewrites the key file, so one backup is valid on both
+  sides of that window. Export before migrating, then run
+    DeepBase security verify --file <this backup>
+  afterwards. A fingerprint that no longer matches means a different
+  secret is in place, which is a lost key, not a failed migration.
+
+Write the export now? [y/N]: Cancelled. Nothing was written.
+EXIT_10=1
+
+=== [11] unknown subcommand (expect usage + exit 1) ===
+[31m[ERROR] Unknown security subcommand: bogus[0m
+Security Commands
+
+Usage: DeepBase security <subcommand> [options]
+
+Subcommands:
+  export      Write a verified backup of the master key to a file
+  status      Report where the master key lives and its fingerprint
+  verify      Compare a backup against the current master key
+
+Options:
+  --output, -o <path>   Destination file for export (must not exist)
+  --file, -f <path>     Backup file for verify
+  --yes                 Skip the interactive confirmation of export
+  --help                Show this help
+
+Examples:
+  DeepBase security export --output E:\deepbase-master-key-20260921.key
+  DeepBase security status
+  DeepBase security verify --file E:\deepbase-master-key-20260921.key
+EXIT_11=1
+
+=== [11b] help output (P2 warning text + command list) ===
+Security Commands
+
+Usage: DeepBase security <subcommand> [options]
+
+Subcommands:
+  export      Write a verified backup of the master key to a file
+  status      Report where the master key lives and its fingerprint
+  verify      Compare a backup against the current master key
+
+Options:
+  --output, -o <path>   Destination file for export (must not exist)
+  --file, -f <path>     Backup file for verify
+  --yes                 Skip the interactive confirmation of export
+  --help                Show this help
+
+Examples:
+  DeepBase security export --output E:\deepbase-master-key-20260921.key
+  DeepBase security status
+  DeepBase security verify --file E:\deepbase-master-key-20260921.key
+EXIT_11B=0
+
+=== [12] owner-only ACL on the exported backup ===
+D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\backup.key FY3700\fuyi.it:(F)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+ICACLS_EXIT=0
+
+=== [13] ACL on the source key file for comparison ===
+D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head\.tmp\a1_fixture\master.key S-1-5-21-17452405-757048079-2430367978-4111302023:(I)(M,DC)
+                                                                         S-1-5-21-806911548-2288407920-2332577828-2694129860:(I)(M)
+                                                                         S-1-5-21-164131091-2614192739-4145570582-3940640076:(I)(M,DC)
+                                                                         FY3700\fuyi.it:(I)(M,DC)
+                                                                         S-1-5-21-1460622082-605189620-1746128395-4267689499:(I)(M,DC)
+                                                                         FY3700\CodexSandboxUsers:(I)(M)
+                                                                         S-1-5-21-2290812369-1527564678-3498550124-1471097621:(I)(M)
+                                                                         S-1-5-21-689731835-3537074254-2911669727-2919541131:(I)(M,DC)
+                                                                         S-1-5-21-1762898124-693269680-903089967-3036144237:(I)(M,DC)
+                                                                         FY3700\CodexSandboxUsers:(I)(M,DC)
+                                                                         S-1-5-21-829547853-2268380283-968831208-784706939:(I)(M,DC)
+                                                                         BUILTIN\Administrators:(I)(F)
+                                                                         NT AUTHORITY\SYSTEM:(I)(F)
+                                                                         NT AUTHORITY\Authenticated Users:(I)(M)
+                                                                         BUILTIN\Users:(I)(RX)
+                                                                         S-1-5-21-2296007949-280594627-3757337337-1001:(I)(R)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+
+=== [14] leftover scan under the fixture directory ===
+backup.key
+damaged.key
+master.key
+short.key
+

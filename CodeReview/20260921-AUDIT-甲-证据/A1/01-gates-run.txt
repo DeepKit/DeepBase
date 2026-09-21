@@ -1,0 +1,31 @@
+A-1 提交前门禁原始输出（UTC+8 2026-09-22 01:56，HEAD e268de0，工作树 .tmp/wt_a1_head 为 detached 干净副本，无未提交改动）
+
+=== encoding-gate ===
+编码门禁通过：974 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+ENCODING_GATE_EXIT=0
+
+=== eol-gate ===
+行尾门禁通过：检查了 1426 个文件（.pas CRLF / .md LF）
+EOL_GATE_EXIT=0
+
+=== evidence-encoding-gate ===
+证据编码门禁通过：扫描 145 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EVIDENCE_GATE_EXIT=0
+
+### 探针：门禁非 fail-open（各 gate 的负样本自测）
+NEGATIVE-TEST: PASS
+NEG_ENCODING_EXIT=0
+NEGATIVE-TEST: PASS
+NEG_EOL_EXIT=0
+NEGATIVE-TEST: PASS
+NEG_EVIDENCE_EXIT=0
+
+### 覆盖交叉核对（证明新建两件在扫描范围内）
+$ git ls-files '*.pas' | wc -l
+974
+$ git ls-files '*.pas' | grep -c '^Tools/'
+67
+$ git ls-files '*.pas' | grep -E 'MasterKey|CLI.Security'
+Core/DeepBase.Security.MasterKey.pas
+Tests/Test.DeepBase.Security.MasterKey.pas
+Tools/CLI/CLI.Security.pas

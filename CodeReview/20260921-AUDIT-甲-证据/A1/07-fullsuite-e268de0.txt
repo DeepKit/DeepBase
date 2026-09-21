@@ -1,0 +1,111 @@
+A-1 交付前全库真跑（Unit + Integration）原始输出记录
+
+- 时刻：UTC+8 2026-09-22 01:57:06 起跑（xml `date/time` 属性），至 02:16 前后收口
+- 树：`.tmp/wt_a1_head` = `git worktree add --detach` 的**纯 commit 快照**，HEAD `e268de0`（甲 A-1 最后一个代码提交），工作树内 0 未提交改动
+- 调用：`Scripts/run_tests.ps1 -Type All -OutputDir .tmp\a1_fullout`，进程 CWD = 隔离工作树根目录（runner 头部回显 `Base Directory: D:\_Progs\02Business\DeepBase\.tmp\wt_a1_head`、`Platform: Win64`、`Skip Compile: False`、`No Rebuild: False`）
+- 原始日志：`.tmp/wt_a1_head/.tmp/a1_full_e268de0.log`（546 行，含 dcc64 全部 hint/warning）；NUnit xml：`.tmp/wt_a1_head/.tmp/a1_fullout/UnitTestResults.xml` + `IntegrationTestResults.xml`
+- 退出码：`FULL_RUN_EXIT=1`（因存在红项，runner 判 FAILED；非编译失败、非甲域用例失败）
+
+---
+
+## 1. 编译（全库 `.dpr`，非窄 runner）
+
+| 目标 | 结果 | 编译器回显 |
+| :--- | :--- | :--- |
+| `Tests/DeepBaseTests.dpr`（统一 runner，含 A-1 新测试单元） | `SUCCESS: Unit Tests compiled` | Delphi Win64 37.0，`386595 lines, 26.00 seconds, 38348972 bytes code, 3307000 bytes data`（日志 :273-274） |
+| `Tests/Integration/DeepBaseIntegrationTests.dpr` | `SUCCESS: Integration Tests compiled` | `75224 lines, 3.88 seconds, 11290008 bytes code, 1097352 bytes data`（:493-494） |
+
+`Tests/DeepBaseTests.dpr:220` 的 `Test.DeepBase.Security.MasterKey` 注册件在干净 HEAD 树内被拉到，编译期 0 error。
+
+## 2. Unit Tests 计数（console 汇总行与 xml 两侧一致）
+
+console（日志 :380-385）：
+
+```
+Tests Found   : 4671
+Tests Ignored : 4
+Tests Passed  : 4663
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 1
+```
+
+`UnitTestResults.xml` 根属性：`total="4667" errors="1" failures="3" ignored="4" inconclusive="0" not-run="4" skipped="0"`；4667 = 4671 − 4(ignored)，与 console 侧同一组数（4663+3+1 = 4667）。校验和：4663 + 3 + 1 + 4 = 4671 ✔
+
+## 3. 红项逐件点名（全库 3F + 1E，甲域 0 项）
+
+| # | 用例 | 消息（原样） | 域归属 |
+| :--- | :--- | :--- | :--- |
+| F1 | `Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.StaticPair_InjectedReplay_Unchanged` | `Condition is False when True expected. [second identical injected frame must short-circuit (Unchanged=True)]` | 乙域（HB/Perception） |
+| F2 | `Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.InjectedBitmap_FlowsThroughFrameDifferGate` | `Condition is False when True expected. [second static after seed]` | 乙域（HB/Perception） |
+| F3 | `Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate6_TenThousandInstances_ZeroGdiAndHeapLeak` | `... [HB Gate #6 VIOLATION: USER handle leak round 2 (before=31 after=32 delta=1)]` | 乙域（HB，已有甲 R5 登记的存量） |
+| E1 | `Test.DeepBase.Resilience.Timeout.PBT.TTimeoutPolicyPropertyTests.Property6_TimeoutCancelsBackgroundTask` | `Access violation at address ... Read of address 0000000000000000` | 乙域（Resilience，存量） |
+
+F1/F2 的 SUT 是 `DeepBase.Desktop.Perception.Engine`（`Tests/Test.DeepBase.Desktop.Perception.BitmapSource.pas:41` uses 表）。该文件在主工作树为 ` M`（他人未提交在制品），在本案隔离干净树内不存在该在制品 ⇒ 主工作树同口径跑为 4671/4665/**1F**+1E、干净 HEAD 树为 4671/4663/**3F**+1E。差值 2 件**只在乙域 Perception 面**出现，且两跑之间树内容不同 ⇒ 按「归因不明，禁推断执行方」只登记相关性、不推断谁写的、不声称甲修好或弄坏了任何一项。absolute failed/errored 因此不是跨运行可比的受控量（同 R8 已确立的 cwd/内容口径）。
+
+## 4. 甲域执行证明（本单新增用例在统一 runner 中被执行）
+
+`UnitTestResults.xml:6334` 起 `type="Fixture" name="TTestUserMasterKey" executed="True" result="Success" success="True" time="0.170"`，其下 18 个 `test-case` 全 `result="Success"`：
+
+```
+Test_KeyFilePath_UsesEnvironmentOverride        Test_ExportTo_WritesByteIdenticalCopy
+Test_KeyFilePath_DefaultsUnderHome               Test_ExportTo_DestinationIsOwnerOnly
+Test_Load_ReturnsRawKeyBytes                     Test_ExportTo_RefusesExistingDestination
+Test_Load_MissingFile_Raises                     Test_ExportTo_RefusesMissingDirectory
+Test_Load_TruncatedFile_Raises                   Test_ExportTo_RefusesEmptyDestination
+Test_Load_OversizedFile_Raises                   Test_ExportTo_RefusesLeftoverTempFile
+Test_LoadOrCreate_ReusesExistingKey              Test_ExportTo_MissingKey_RaisesAndProvisionsNothing
+Test_LoadOrCreate_ProvisionsAtomicKeyWhenAbsent  Test_FingerprintOf_KnownAnswer
+Test_FingerprintOf_StableAndKeySensitive         Test_FingerprintOf_MissingFile_Raises
+```
+
+⇒ A-1 的 18 个用例不仅在过滤跑（证据 `05`）里通过，也在**全库统一 runner** 里注册、执行、通过；`Tests/` 下无任何 `MasterKey` 相关红项。
+
+## 5. 进程级内存泄漏报告（如实登记，非甲域）
+
+日志 :406-418 有 DUnitX 的 `Unexpected Memory Leak` 汇总（`Tests Leaked : 0` 是断言级计数，进程级报告另算）。列出的类型全部属于 `TCR017Entity`/`TCR016Entity`/`TJSON*`/`TFeatureFlag`/`TBackupVersion`/`TAction`/`TCloudSync.TConfigItem`/`CreateIntentLLMBackend$ActRec` 等他人模块，**无 `TUserMasterKey`、无 `CLI.Security` 相关类型**。A-1 新增用例未引入泄漏条目。
+
+## 6. Integration Tests 计数
+
+console（:513-518）：`Found 10 / Ignored 0 / Passed 9 / Leaked 0 / Failed 0 / Errored 1`；唯一红项 `Test.Integration.CommerceE2E.TCommerceDesktopE2ETests.Test_FreeUser_UpgradeToPro_UnlocksFeatureAndPaidUpdateChannel`，消息 `License snapshot has expired`（存量环境性：本地 license 快照过期，与 A-1 无关，甲未改 `Core/DeepBase.License.pas`——该文件在主树为他人未提交在制品）。
+
+## 7. 结论（只报口径，不自报 PASS）
+
+* 全库在 HEAD `e268de0` **可编译**（双 `.dpr` SUCCESS），A-1 交付没有把库编坏。
+* 甲域用例：`TTestUserMasterKey` 18/18 `Success`，全库红项中 0 件属 A-1 面。
+* 3F+1E（Unit）与 1E（Integration）**全部落在乙域/存量**，甲不修复、不接手、不绕过（H1/H2），交主控按 WO 门禁行判定；本案门禁行（encoding/eol/evidence-encoding EXIT）见下节与证据 `01`。
+
+---
+
+## 8. 证据门禁复跑（本件 01–07 全部落盘后）
+
+裁判脚本用**隔离干净树的 HEAD 版**（`.tmp/wt_a1_head/09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js`，即 HEAD `e268de0` 的裁判），`--repo` 指向主工作树 `D:\_Progs\02Business\DeepBase`；原始输出：`.tmp/wt_a1_head/.tmp/a1_evidence_gate_main.log`。
+
+```
+=== [A] tracked 口径（默认 git ls-files 枚举） ===
+证据编码门禁通过：扫描 145 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EVID_GATE_TRACKED_EXIT=0
+
+=== [B] --all-worktree 口径（含未跟踪与 ignored） ===
+证据编码门禁通过：扫描 183 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EVID_GATE_WORKTREE_EXIT=0
+```
+
+### 8.1 145 → 183 的零残差拆解（不猜差值）
+
+| 集合 | 命令 | 计数 |
+| :--- | :--- | :---: |
+| 已跟踪 | `git -c core.quotePath=false ls-files -- CodeReview \| grep -Ei '\.(txt\|log\|csv\|xml)$'` | 145 |
+| 未跟踪且未忽略 | `git -c core.quotePath=false ls-files --others --exclude-standard -- CodeReview \| …同 EXT` | 12 |
+| ignored 命中 EXT | `git -c core.quotePath=false ls-files --others --ignored --exclude-standard -- CodeReview \| …同 EXT` | 26 |
+| 合计 | 145 + 12 + 26 | **183** ✔ 与 [B] 输出相等，无残差 |
+
+12 件未跟踪中属甲 A1 的 = **7 件**（`git ls-files --others --exclude-standard -- CodeReview \| grep -Ei '\.(txt\|log\|csv\|xml)$' \| grep -c 'A1/'` = 7），即证据 `01`–`07` 全在扫描集合内；余 5 件为他人的 `20260921-AUDIT-乙-P1-证据/`（4 件）与 `CodeReview/_audit_recheck/乙-R7-重复对删除清单.txt`（1 件）。`CodeReview/20260921-AUDIT-甲-A1-交付回执.md` 与 3 件他人 `.md` 不在该门禁 EXT 集合内（`.md` 由 `eol-gate` 管，见证据 `01`）。
+
+* **提交前后口径**：本次提交把 A1 的 7 件 `.txt` 从「未跟踪」移入「已跟踪」⇒ 提交后 tracked 口径应由 145 → **152**，`--all-worktree` 仍为 183（同一物理集合，只是枚举来源换侧）。甲不悄改数字，交主控复跑核对。
+* **与 R8 现场的差异登记（只报观察，不推断执行方）**：R8 证据 `29`/`30` 记录主树 `--all-worktree` 曾出现 **1 项违规**（他人 `p1-reporoot.xml`，EBUSY 现场）；本段同树复跑得 **0 违规 / 183** ⇒ 该命中项在本次已不复现。甲未改动他人文件，也未验证其成因。
+* **测量陷阱登记（口径债，供主控入门禁文档）**：`git ls-files`/`git status` 默认 `core.quotePath=true`，含中文的路径会输出成八进制转义并带首尾引号 ⇒ 直接 `grep '\.txt$'` 得到假计数（甲本次首跑误得「tracked 3 / A1 未跟踪 0」，加 `-c core.quotePath=false` 后才是 145/7）。任何用 shell 枚举证据集合的取证都必须显式关闭 quotePath。
+
+## 9. `.pas` 面门禁（本段提交不含源码，交叉引用证据 `01`）
+
+本段提交只含 `CodeReview/` 下 8 件（7 证据 `.txt` + 1 回执 `.md`），**0 件 `.pas`/`.dpr`**。HEAD `e268de0` 隔离干净树的 `encoding-gate` 974 `.pas` / `eol-gate` 1426 文件 / `evidence-encoding-gate` 145 全部 EXIT=0，且三门禁各自的负样本探针 `NEGATIVE-TEST: PASS`（证明非 fail-open）——原始输出与覆盖交叉核对见证据 `01`。
