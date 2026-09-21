@@ -210,11 +210,14 @@ var
 begin
   Truncated := Copy(TestKey, 0, UBS2_MASTER_SECRET_MIN_SIZE - 1);
   TFile.WriteAllBytes(TempPath('short.key'), Truncated);
-  Assert.WillRaise(
+  // The reported size is part of the contract: it is what tells a user that the
+  // file was truncated rather than emptied, and the buffer is wiped before the
+  // message is built, so a message that says "found 0" is a bug, not a detail.
+  Assert.WillRaiseWithMessageRegex(
     procedure
     begin
       TUserMasterKey.Load(TempPath('short.key'));
-    end, ESecurityException);
+    end, ESecurityException, 'found 31');
 end;
 
 procedure TTestUserMasterKey.Test_Load_OversizedFile_Raises;
@@ -228,11 +231,11 @@ begin
   SetLength(Oversized, UBS2_MASTER_SECRET_MIN_SIZE + 1);
   Oversized[UBS2_MASTER_SECRET_MIN_SIZE] := $FF;
   TFile.WriteAllBytes(TempPath('long.key'), Oversized);
-  Assert.WillRaise(
+  Assert.WillRaiseWithMessageRegex(
     procedure
     begin
       TUserMasterKey.Load(TempPath('long.key'));
-    end, ESecurityException);
+    end, ESecurityException, 'found 33');
 end;
 
 procedure TTestUserMasterKey.Test_LoadOrCreate_ReusesExistingKey;

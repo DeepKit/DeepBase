@@ -277,6 +277,8 @@ begin
 end;
 
 class function TUserMasterKey.Load(const AKeyFile: string): TBytes;
+var
+  Found: Integer;
 begin
   if not TFile.Exists(AKeyFile) then
     raise ESecurityException.CreateFmt(
@@ -284,12 +286,17 @@ begin
       'unless the file is restored from the user''s own backup.', [AKeyFile]);
 
   Result := TFile.ReadAllBytes(AKeyFile);
-  if Length(Result) <> UBS2_MASTER_SECRET_MIN_SIZE then
+  Found := Length(Result);
+  if Found <> UBS2_MASTER_SECRET_MIN_SIZE then
   begin
+    // The size has to be read before the buffer is wiped: SecureClearBytes zeroes
+    // and shrinks the array, so a message built afterwards would tell the user
+    // "found 0 bytes" about a file that is merely truncated - and a truncated key
+    // is recoverable by other means, an empty one is not.
     SecureClearBytes(Result);
     raise ESecurityException.CreateFmt(
       'Master key file "%s" must hold exactly %d raw bytes, found %d.',
-      [AKeyFile, UBS2_MASTER_SECRET_MIN_SIZE, Length(Result)]);
+      [AKeyFile, UBS2_MASTER_SECRET_MIN_SIZE, Found]);
   end;
 end;
 
