@@ -1,0 +1,23 @@
+[dcclinux64] Core/DeepBase.SecureMemory.pas EXIT=0 :: 103 lines, 0.08 seconds.
+[dcclinux64] Core/DeepBase.Crypto.OpenSSL.pas EXIT=0 :: 776 lines, 0.19 seconds.
+[dcclinux64] Core/DeepBase.Crypto.AES.pas EXIT=0 :: 2998 lines, 0.69 seconds.
+[dcclinux64] Core/DeepBase.Security.MachineIdentity.pas EXIT=0 :: 2200 lines, 0.42 seconds.
+[dcclinux64] Core/DeepBase.Security.MasterKey.pas EXIT=0 :: 4099 lines, 0.80 seconds.
+[dcclinux64] Core/DeepBase.Security.UBS2.pas EXIT=0 :: 3941 lines, 0.75 seconds.
+[dcclinux64] Core/DeepBase.Security.UBS2.Migration.pas EXIT=0 :: 4060 lines, 0.62 seconds.
+[dcclinux64] Core/DeepBase.Security.pas EXIT=1 :: Core\DeepBase.Logging.pas(352) Error: E2003 Undeclared identifier: 'DWORD'
+[dcclinux64] Core/DeepBase.KeyManager.pas EXIT=0 :: 5996 lines, 1.12 seconds.
+[dcclinux64] Core/DeepBase.License.pas EXIT=0 :: 3525 lines, 0.67 seconds.
+[dccosxarm64] Core/DeepBase.SecureMemory.pas EXIT=0 :: 103 lines, 0.11 seconds.
+[dccosxarm64] Core/DeepBase.Crypto.OpenSSL.pas EXIT=0 :: 776 lines, 0.27 seconds.
+[dccosxarm64] Core/DeepBase.Crypto.AES.pas EXIT=0 :: 2998 lines, 0.72 seconds.
+[dccosxarm64] Core/DeepBase.Security.MachineIdentity.pas EXIT=0 :: 2200 lines, 0.45 seconds.
+[dccosxarm64] Core/DeepBase.Security.MasterKey.pas EXIT=0 :: 4099 lines, 0.83 seconds.
+[dccosxarm64] Core/DeepBase.Security.UBS2.pas EXIT=0 :: 3941 lines, 0.61 seconds.
+[dccosxarm64] Core/DeepBase.Security.UBS2.Migration.pas EXIT=0 :: 4060 lines, 1.06 seconds.
+[dccosxarm64] Core/DeepBase.Security.pas EXIT=1 :: Core\DeepBase.Logging.pas(352) Error: E2003 Undeclared identifier: 'DWORD'
+[dccosxarm64] Core/DeepBase.KeyManager.pas EXIT=0 :: 5996 lines, 1.02 seconds.
+[dccosxarm64] Core/DeepBase.License.pas EXIT=0 :: 3525 lines, 0.94 seconds.
+---
+EXIT0_COUNT=18
+NONZERO_COUNT=2

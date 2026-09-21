@@ -1,0 +1,14 @@
+Embarcadero Delphi for Linux 64 bit compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Random.pas(66) Hint: H2164 Variable 'I' is declared but never used in 'TRandomGenerator.RandomBytes'
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Core\DeepBase.Crypto.OpenSSL.pas(685) Hint: H2077 Value assigned to 'MDCtx' never used
+Core\DeepBase.Crypto.OpenSSL.pas(684) Hint: H2077 Value assigned to 'Bio' never used
+Core\DeepBase.Crypto.OpenSSL.pas(683) Hint: H2077 Value assigned to 'PKey' never used
+Core\DeepBase.Logging.pas(352) Error: E2003 Undeclared identifier: 'DWORD'
+Core\DeepBase.Logging.pas(358) Error: E2003 Undeclared identifier: 'Handle'
+Core\DeepBase.Logging.pas(359) Error: E2003 Undeclared identifier: 'Handle'
+Core\DeepBase.Logging.pas(363) Error: E2003 Undeclared identifier: 'WaitForMultipleObjects'
+Core\DeepBase.Logging.pas(365) Error: E2003 Undeclared identifier: 'WAIT_OBJECT_0'
+Core\DeepBase.Logging.pas(546) Error: E2003 Undeclared identifier: 'OutputDebugString'
+Core\DeepBase.Theme.pas(23) Fatal: F2063 Could not compile used unit 'DeepBase.Logging.pas'

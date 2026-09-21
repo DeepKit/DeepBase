@@ -1,0 +1,13 @@
+[dcc64] Core/DeepBase.SecureMemory.pas EXIT=0 :: 103 lines, 0.05 seconds, 751 bytes code, 236 bytes data.
+[dcc64] Core/DeepBase.Crypto.OpenSSL.pas EXIT=0 :: 776 lines, 0.02 seconds, 62 bytes code, 76 bytes data.
+[dcc64] Core/DeepBase.Crypto.AES.pas EXIT=0 :: 2222 lines, 0.12 seconds, 21204 bytes code, 2316 bytes data.
+[dcc64] Core/DeepBase.Security.MachineIdentity.pas EXIT=0 :: 2200 lines, 0.16 seconds, 4833 bytes code, 972 bytes data.
+[dcc64] Core/DeepBase.Security.MasterKey.pas EXIT=0 :: 3323 lines, 0.19 seconds, 2563 bytes code, 364 bytes data.
+[dcc64] Core/DeepBase.Security.UBS2.pas EXIT=0 :: 3165 lines, 0.19 seconds, 8877 bytes code, 1356 bytes data.
+[dcc64] Core/DeepBase.Security.UBS2.Migration.pas EXIT=0 :: 3284 lines, 0.25 seconds, 1732 bytes code, 300 bytes data.
+[dcc64] Core/DeepBase.Security.pas EXIT=0 :: 12963 lines, 0.69 seconds, 8978 bytes code, 1804 bytes data.
+[dcc64] Core/DeepBase.KeyManager.pas EXIT=0 :: 5220 lines, 0.30 seconds, 112739 bytes code, 19384 bytes data.
+[dcc64] Core/DeepBase.License.pas EXIT=0 :: 3525 lines, 0.27 seconds, 38438 bytes code, 6956 bytes data.
+---
+EXIT0_COUNT=10
+NONZERO_COUNT=0
