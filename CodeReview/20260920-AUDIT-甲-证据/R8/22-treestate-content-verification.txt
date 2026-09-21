@@ -1,0 +1,99 @@
+### R8-P3 工作树内容级复验（判定「M」标记是否等于他人未提交内容）
+### 时刻: 2026-09-21 17:50:42 +0800 | HEAD: 20493c6
+### 背景: 本段之前，甲在 P2 申报 §四/§五 中把 `git status` 报出的 13 个 .pas 记为「乙有未提交改动」。
+### 本次用 blob 恒等式复验，结论需要更正，方法与命令全部留档如下，可逐条重跑。
+
+### 1) 工作树相对 HEAD 的未提交清单（plumbing；-z 以 NUL 分隔，经 tr 还原为逐行）
+$ git diff-files --name-only -z | tr '\0' '\n'
+Core/DeepBase.License.pas
+Core/DeepBase.SecureMemory.pas
+Core/DeepBase.Security.DPAPI.pas
+Core/DeepBase.Security.MachineIdentity.pas
+Core/DeepBase.Security.UBS2.Migration.pas
+Core/DeepBase.Security.UBS2.pas
+Core/DeepBase.Security.pas
+Core/DeepBase.Storage.Interfaces.pas
+Persistence/DeepBase.Persistence.Security.FireDAC.pas
+Tests/Test.DeepBase.SecureMemory.pas
+Tests/Test.DeepBase.Security.MachineIdentity.pas
+Tests/Test.DeepBase.Security.UBS2.pas
+ThirdParty/Social/DeepBase.Social.OAuth.pas
+docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
+docs/规范历史版本与对比库/README-版本对比台账.md
+
+### 2) 逐件内容判定：worktree 经 clean 过滤器后的 blob == HEAD blob ？
+$ 对每个路径比较 git hash-object --path <p> <p> 与 git rev-parse HEAD:<p>
+EQUAL-TO-HEAD  Core/DeepBase.License.pas  worktree=4f6c775e84 HEAD=4f6c775e84
+EQUAL-TO-HEAD  Core/DeepBase.SecureMemory.pas  worktree=2d1f659e96 HEAD=2d1f659e96
+EQUAL-TO-HEAD  Core/DeepBase.Security.DPAPI.pas  worktree=02c9228c5e HEAD=02c9228c5e
+EQUAL-TO-HEAD  Core/DeepBase.Security.MachineIdentity.pas  worktree=bceecaadb8 HEAD=bceecaadb8
+EQUAL-TO-HEAD  Core/DeepBase.Security.UBS2.Migration.pas  worktree=119f2fd7ad HEAD=119f2fd7ad
+EQUAL-TO-HEAD  Core/DeepBase.Security.UBS2.pas  worktree=a0fadc2924 HEAD=a0fadc2924
+EQUAL-TO-HEAD  Core/DeepBase.Security.pas  worktree=8ae2da6aa3 HEAD=8ae2da6aa3
+EQUAL-TO-HEAD  Core/DeepBase.Storage.Interfaces.pas  worktree=13c1591e9a HEAD=13c1591e9a
+EQUAL-TO-HEAD  Persistence/DeepBase.Persistence.Security.FireDAC.pas  worktree=b69a0c4a88 HEAD=b69a0c4a88
+EQUAL-TO-HEAD  Tests/Test.DeepBase.SecureMemory.pas  worktree=19481f3959 HEAD=19481f3959
+EQUAL-TO-HEAD  Tests/Test.DeepBase.Security.MachineIdentity.pas  worktree=1cdddd3279 HEAD=1cdddd3279
+EQUAL-TO-HEAD  Tests/Test.DeepBase.Security.UBS2.pas  worktree=65fd08c9e0 HEAD=65fd08c9e0
+EQUAL-TO-HEAD  ThirdParty/Social/DeepBase.Social.OAuth.pas  worktree=5e5bf28dd0 HEAD=5e5bf28dd0
+DELETED-IN-WORKTREE  docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md  (HEAD blob 68d0d8c4f8 仍在，工作树文件已删)
+DELETED-IN-WORKTREE  docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md  (HEAD blob 59c502988d 仍在，工作树文件已删)
+DELETED-IN-WORKTREE  docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md  (HEAD blob e3dc0d682d 仍在，工作树文件已删)
+REAL-CONTENT-DIFF docs/规范历史版本与对比库/README-版本对比台账.md  worktree=d437a98971 HEAD=562b3a56e3
+
+### 3) 「M 但内容相同」的成因取证：index 缓存 size（LF 长度）vs 工作树 size（CRLF 长度）vs LF 行数
+$ git ls-files --debug -s <p> 取 size；node 统计工作树字节数与 LF 行数
+Core/DeepBase.License.pas  index.size=17396  worktree.size=17407  delta=11  LF行数=603  ⇒ 差额小于 LF 行数（index 缓存于部分转换时刻，仍属 stat 陈旧）
+Core/DeepBase.SecureMemory.pas  index.size=2542  worktree.size=2643  delta=101  LF行数=101  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Core/DeepBase.Security.DPAPI.pas  index.size=16224  worktree.size=16786  delta=562  LF行数=562  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Core/DeepBase.Security.MachineIdentity.pas  index.size=9575  worktree.size=9888  delta=313  LF行数=313  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Core/DeepBase.Security.UBS2.Migration.pas  index.size=4010  worktree.size=4127  delta=117  LF行数=117  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Core/DeepBase.Security.UBS2.pas  index.size=13100  worktree.size=13483  delta=383  LF行数=383  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Core/DeepBase.Security.pas  index.size=18174  worktree.size=18790  delta=616  LF行数=617  ⇒ 差额小于 LF 行数（index 缓存于部分转换时刻，仍属 stat 陈旧）
+Core/DeepBase.Storage.Interfaces.pas  index.size=11582  worktree.size=11594  delta=12  LF行数=332  ⇒ 差额小于 LF 行数（index 缓存于部分转换时刻，仍属 stat 陈旧）
+Persistence/DeepBase.Persistence.Security.FireDAC.pas  index.size=6271  worktree.size=6300  delta=29  LF行数=222  ⇒ 差额小于 LF 行数（index 缓存于部分转换时刻，仍属 stat 陈旧）
+Tests/Test.DeepBase.SecureMemory.pas  index.size=2500  worktree.size=2614  delta=114  LF行数=114  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Tests/Test.DeepBase.Security.MachineIdentity.pas  index.size=5654  worktree.size=5835  delta=181  LF行数=181  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+Tests/Test.DeepBase.Security.UBS2.pas  index.size=14637  worktree.size=15124  delta=487  LF行数=487  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+ThirdParty/Social/DeepBase.Social.OAuth.pas  index.size=18606  worktree.size=19246  delta=640  LF行数=640  ⇒ 差额恰等于 CRLF 展开量（EOL 假脏）
+
+### 4) `git ls-files --eol` 抽样（i/lf w/crlf attr/text eol=crlf ⇒ 工作树为 CRLF 渲染形，index 为 LF blob）
+$ git ls-files --eol -- Core/DeepBase.SecureMemory.pas Tests/Test.DeepBase.Security.UBS2.pas
+i/lf    w/crlf  attr/text eol=crlf    	Core/DeepBase.SecureMemory.pas
+i/lf    w/crlf  attr/text eol=crlf    	Tests/Test.DeepBase.Security.UBS2.pas
+
+### 5) 曾经记为「仍在乙工作树未提交」的两件 Regression fixture：现内容干净，修复已落 commit
+$ git status --porcelain -- Tests/Regression/
+(空输出)
+
+$ git log --oneline -1 -- Tests/Regression/Test.Regression.CR20260824_P0Batch2.pas
+1c1c862 fix(test): align TKeyManager.Initialize call-sites with Top20#05 signature
+
+$ git log --oneline -1 -- Tests/Regression/Test.Regression.BUG327_KeyManagerAEAD.pas
+2e97d11 fix(test): supply AAD and drop stale 2-arg Initialize in BUG327 fixture
+
+### 6) 13 件 .pas 的内容最后一次落盘提交（说明其改动早已入库，非在制品）
+$ git log --oneline -1 -- Core/DeepBase.Security.UBS2.pas
+9387222 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁
+
+$ git log --oneline -1 -- Core/DeepBase.SecureMemory.pas
+9387222 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁
+
+$ git log --oneline -1 -- Tests/Test.DeepBase.Security.UBS2.pas
+9387222 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁
+
+$ git log --oneline -1 -- Core/DeepBase.License.pas
+9387222 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁
+
+### 7) 门禁口径影响复算：eol-gate walk 工作树 ⇒ 真实差异只有 3 件文档删除 + 1 件文档改动
+（1434 的构成见证据 20；本段补充：其中 .pas 部分与 HEAD 内容一致，不存在"他人未提交源码"混入门禁计数的问题）
+## 结论（对甲此前表述的更正，只读复验，本段未改任何 .pas/.dpr）
+
+1. **13 件 .pas 的 `M` 标记是 EOL/stat 假脏，不是他人未提交源码**：§2 显示其工作树内容经 clean 过滤器后的 blob 与 HEAD blob 逐件相等；§3 给出成因——`.gitattributes` 声明 `eol=crlf` 后，index 缓存的 size 仍是 LF 长度（例：`Core/DeepBase.SecureMemory.pas` index.size=2542 vs 工作树 2643，差额 101 == LF 行数 101），git 的 stat 比较因此判脏，而内容比较判等。
+   ⇒ 甲在 `CodeReview/20260921-AUDIT-甲-R8-P2-改动前申报与串行化请求.md` §四/§五 中「工作树内乙有未提交改动：这 13 件」的表述**自本刻起更正**为「工作树与 HEAD 内容一致，仅 index stat 缓存陈旧」。
+2. **两件 Regression fixture 的修复已入库**：`Test.Regression.CR20260824_P0Batch2.pas` 最后一次内容提交 `1c1c862`，`Test.Regression.BUG327_KeyManagerAEAD.pas` 为 `2e97d11`，现 `git status -- Tests/Regression/` 为空。申报 §一 中「P0Batch2 的修复至今仍在乙的工作树中未提交」记录的是 16:14 的历史现场，按不改写历史的原则保留原文，此处标注其已失效。
+3. **工作树相对 HEAD 的真实未提交内容只有文档**：3 件文档删除（`docs/规范历史版本与对比库/` 下 HB 适配基础设施 v1、产品实现边界 v1-r2、EHAI.05.D1 封版）+ 1 件文档真实内容改动（`README-版本对比台账.md` blob 562b3a56 → d437a989）。均非甲所改，甲不碰、不暂存。
+4. **对 P2 的后果（这条要交主控计入验收口径）**：并网后全库套件的 found/passed 不再受「乙源码在制品漂移」影响——甲在申报 §五 提的风险点前提消解。同时，`.tmp/wt_p2` 的 AFTER 预览基（纯 commit 内容 + 3 行 `uses`）与共享树当前 .pas 内容同基，所以窗口开启时甲只需在共享树复跑取真值，预期与证据 `18`/`19` 一致（found 4653 / passed 4646 / failed 2 / errored 1 / ignored 4 / leaked 0）。**落地仍以主控串行化裁定为准，甲不因前提消解而自行改 `.dpr`**。
+5. 判定方法本身可复用：`git hash-object --path <p> <p>` == `git rev-parse HEAD:<p>` 才是「内容是否真的不同」的判据；`git status` 的 `M` 只说明 stat 不匹配。

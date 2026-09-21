@@ -1,0 +1,151 @@
+# 证据 23 · 工作树定性更正段（证据 `22` + 申报 §五 更正）—— 三门禁复跑原始输出与计数口径
+
+- 交付方：开发 AI 甲（工单 `WO-20260920-AUDIT-甲-R8-POSIX构建缺口与安全测试网并网.md`，P3 补充段）
+- 本段改动范围：**0 件源码、0 件 `.dpr`、0 件 `.pas`/`.md` 新增或删除**；仅新增本证据 + 证据 `22`，仅修改申报文件与回执文件（均为已存在文件）
+- 结论：三门禁 EXIT 均为 0（证据编码门禁跑已跟踪与 `--all-worktree` 两个口径）
+
+---
+
+## 0) 门禁命令（逐字）
+
+```
+node "09_工程脚本/encoding-gate/check_pas_encoding.js"
+node "09_工程脚本/eol-gate/check_eol.js"
+node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js"
+node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js" --all-worktree
+```
+
+EXIT 用 `rc=$?` 直取 node 退出码（不经管道，避免 tail 的退出码冒充门禁结果）。
+
+## 1) 前置 HEAD
+
+```
+$ git rev-parse HEAD
+20493c684113f297f1a20f0f84f35670b1a4c13c
+```
+
+## 2) encoding-gate
+
+```
+编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+encoding-gate EXIT=0
+```
+
+## 3) eol-gate
+
+```
+行尾门禁通过：检查了 1435 个文件（.pas CRLF / .md LF）
+eol-gate EXIT=0
+```
+
+## 4) evidence-encoding-gate（已跟踪口径 = 默认枚举 `git ls-files`）
+
+```
+证据编码门禁通过：扫描 136 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+evidence-encoding-gate(tracked) EXIT=0
+```
+
+## 5) evidence-encoding-gate（`--all-worktree` 口径）
+
+```
+证据编码门禁通过：扫描 161 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+evidence-encoding-gate(--all-worktree) EXIT=0
+```
+
+已跟踪 136 = 证据 `21` 时的 135 **+1**，该 +1 逐项可查：`git diff --name-status 2fc1696..20493c6` 只有一件新增（`A CodeReview/20260920-AUDIT-甲-证据/R8/21-gates-run-p3-postcommit.txt`）与一件修改（`M` 回执）。本段新增的证据 `22`/`23` 尚未提交，故只进 `--all-worktree` 口径（161）；提交后该差值消解。
+
+---
+
+## 6) eol-gate 计数 1434 → 1435 的归因（不猜测，逐项测量）
+
+`check_eol.js` 的统计口径 = **walk 工作树**上扩展名为 `.pas`/`.md` 的所有实体文件，跳过 `SKIP` 目录集（`.git .claude __history BuildOutput DCUOutput bin dcu node_modules .tmp .superpowers .workbuddy TestResults`）；与是否被 git 跟踪无关。因此该数字反映的是**共享工作树现场**，不是 HEAD。
+
+同刻测量（`git -c core.quotepath=off`，否则中文路径被转义成 `"..."` 导致按后缀过滤漏计）：
+
+| 量 | 命令 | 结果 |
+| :--- | :--- | :--- |
+| HEAD 树中 `.pas`/`.md` 总数 | `git ls-tree -r --name-only HEAD \| grep -Ei '\.(pas\|md)$' \| wc -l` | 1425 |
+| 其中落在 `SKIP` 目录内（不被门禁计入） | 同上 + `grep -E '(^\|/)(\.git\|\.claude\|__history\|…\|TestResults)/'` | 5 |
+| 未跟踪且未忽略、且在 `SKIP` 之外 | `git ls-files --others \| grep -Ei '\.(pas\|md)$' \| grep -vE '(^\|/)(…SKIP…)/'` | 20 |
+| 其中 `git ls-files --others --exclude-standard` 口径 | 上一条加 `--exclude-standard` | 19（差额 1 件来自非标准 exclude 命中） |
+| 工作树中被删除（未提交） | `git diff-files --name-status \| grep -E '^D.*\.(pas\|md)$'` | 3（全为 `docs/规范历史版本与对比库/` 下他人删除） |
+| 独立复算：按门禁同款 walk 数文件 | `find . -type d \( -name .git -o … \) -prune -o -type f \( -iname '*.pas' -o -iname '*.md' \) -print \| wc -l` | **1435**（与门禁输出一致） |
+
+要点：
+1. `1425 − 5 = 1420` 是 HEAD 侧可扫描面；`+20` 未跟踪、`−3` 已删除后的残余差额来自「未跟踪但被 ignore 规则覆盖、门禁仍会读取」的文件，**该细分对本段结论无影响**，故不强行凑等式（避免给出不可复算的数字）。
+2. 与上一段（证据 `20`/`21`，1434）相比 **+1**：发生在**他人工作树**（未跟踪文档集合、`docs/规范历史版本与对比库/` 删除态在 17:37 与 17:55 之间变动），甲本段对 `.pas`/`.md` 的增减为 **0 件**——本段新增的两件证据均为 `.txt`，不在门禁扩展名内；修改的两件文档是已存在文件，不改变计数。
+3. 结论：门禁数字属**工作树口径**，跨段比较只能作趋势参考，不能当作「HEAD 行尾一致性」的分子。真正的 HEAD 级行尾核验一律用 `git ls-files --eol`（H14 前置）+ 隔离 `git worktree add --detach` @ 纯 commit 复跑。
+
+---
+
+## 7) H14 / H18 前置：本段四件的盘上与索引状态（提交前现场）
+
+```
+$ git -c core.quotepath=off ls-files --eol -- 回执.md 申报.md
+i/lf    w/lf    attr/text eol=lf       CodeReview/20260920-AUDIT-甲-R8-交付回执.md
+i/lf    w/lf    attr/text eol=lf       CodeReview/20260921-AUDIT-甲-R8-P2-改动前申报与串行化请求.md
+```
+
+盘上字节核验（脚本 `.tmp/eol_bytes.js`，输出逐字；**17:5x 中段快照**，本段最终快照见 §8）：
+
+```
+CodeReview/20260920-AUDIT-甲-证据/R8/22-treestate-content-verification.txt | bytes=9924 BOM=false CRLF=0 LF-only=99  NUL=0 utf8-valid=true
+CodeReview/20260920-AUDIT-甲-证据/R8/23-gate-rerun-correction-segment.txt  | bytes=5243 BOM=false CRLF=0 LF-only=92  NUL=0 utf8-valid=true
+CodeReview/20260921-AUDIT-甲-R8-P2-改动前申报与串行化请求.md               | bytes=17418 BOM=false CRLF=0 LF-only=136 NUL=0 utf8-valid=true
+CodeReview/20260920-AUDIT-甲-R8-交付回执.md                                | bytes=16609 BOM=false CRLF=0 LF-only=155 NUL=0 utf8-valid=true
+```
+
+`.gitattributes:30` = `*.txt text eol=lf`，两件证据 `.txt` 盘上已是 LF ⇒ 入库无 renormalize 漂移。
+`git check-ignore -v` 对两件 `.txt` **无命中**（rc=1）⇒ 本段**不需要** `git add -f`（与 `2fc1696` 段不同，那段含 `.log`/`.xml` 命中 `.gitignore:37`）。
+
+---
+
+## 8) 提交前最终快照（18:09:40 +0800，HEAD `b94d98ee0e87f06016ce37ce1e0920ae50568cae`）
+
+§1~§7 是 17:55 的中段快照；此后主控落了 `b94d98e`（乙 P0 验收结论），工作树现场变动，故本段四件在提交前重跑一次三门禁，原始输出逐字如下（EXIT 仍以 `rc=$?` 直取）：
+
+```
+编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+encoding-gate EXIT=0
+行尾门禁通过：检查了 1437 个文件（.pas CRLF / .md LF）
+eol-gate EXIT=0
+证据编码门禁通过：扫描 136 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+evidence-encoding-gate(tracked) EXIT=0
+证据编码门禁通过：扫描 162 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+evidence-encoding-gate(--all-worktree) EXIT=0
+```
+
+### 8.1 eol-gate 1435 → 1437 的**精确归因**（并更正 §6 第 2 点的模糊表述）
+
+§6 当时把上一段 +1 归为「发生在他人工作树的未跟踪文档集合」，属未穷尽测量。本次 1435 → 1437（18:03 首见、18:09 复跑同值）**可逐件点名**，不是残余差额：
+
+```
+$ git -c core.quotepath=off diff --name-status 20493c6..b94d98e
+M  .workbuddy/memory/2026-09-21.md            （SKIP 目录内，门禁不计）
+M  .workbuddy/memory/MEMORY.md                （SKIP 目录内，门禁不计）
+M  CodeReview/20260921-AUDIT-主控-Top20闭环台账.md
+A  CodeReview/20260921-AUDIT-主控-乙-P0-验收结论.md
+M  docs/ui/work-orders/WO-20260921-AUDIT-P3-HB性能门禁分离与Gate5修复-乙.md
+A  docs/ui/work-orders/WO-20260921-AUDIT-乙-P1-cwd裂缝与存量失败收口.md
+```
+
+独立反证（按门禁同款 walk 复算，排除 `.workbuddy`）：
+
+```
+$ find . -type d \( -name .git -o -name .claude -o -name __history -o -name BuildOutput -o -name DCUOutput \
+    -o -name bin -o -name dcu -o -name node_modules -o -name .tmp -o -name .workbuddy -o -name TestResults \) -prune \
+    -o -type f \( -iname '*.pas' -o -iname '*.md' \) -print | wc -l
+1437
+```
+
+⇒ 1435 + 2 件 `A`（主控新建的两份 `.md`，均在门禁扩展名与非 SKIP 路径内）= **1437，零残差闭合**。甲本段对 `.pas`/`.md` 的增减仍为 **0 件**（新增两件证据均为 `.txt`）。§6 第 1 点的 HEAD 侧分解不受影响；该段结论（数字是工作树口径，不能当 HEAD 行尾一致性的分子）由本次实测进一步坐实：**同一物理仓库内，该计数在 14 分钟里被第三方推进了 2，而甲一行未写。**
+
+### 8.2 四件盘上字节（18:09 快照，`.tmp/eol_bytes.js` 逐字输出）
+
+```
+CodeReview/20260920-AUDIT-甲-证据/R8/22-treestate-content-verification.txt | bytes=9924 BOM=false CRLF=0 LF-only=99  NUL=0 utf8-valid=true
+CodeReview/20260921-AUDIT-甲-R8-P2-改动前申报与串行化请求.md               | bytes=17418 BOM=false CRLF=0 LF-only=136 NUL=0 utf8-valid=true
+CodeReview/20260920-AUDIT-甲-R8-交付回执.md                                | bytes=21902 BOM=false CRLF=0 LF-only=166 NUL=0 utf8-valid=true
+```
+
+**自指例外（登记而非掩盖）**：本证据文件（`23`）自身的字节数无法在它内部给出确定值——写下这个数字就会使它失效，故不填；其最终形态以提交后 `git hash-object` / `git cat-file -s HEAD:<path>` 现场可查。其余三件数字为上表实测，探针命令与 §7 相同（H18：盘上 UTF-8、BOM=false、CRLF=0、NUL=0）。
