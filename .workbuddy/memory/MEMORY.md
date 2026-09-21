@@ -1,72 +1,50 @@
 # DeepBase 项目长期记忆
 
-> 第7次压缩 2026-09-20（主控）。**历史明细/硬锚点全文 → `MEMORY-ARCHIVE-20260920.md`（禁删；查历史读它）**。
+> **第8次压缩 2026-09-21 23:0x（主控）。历史明细/硬锚点全文 → `MEMORY-ARCHIVE-20260920.md`（禁删；查历史读它）**。日更 → `2026-09-XX.md`。
 
 ## 一、边界
 主管 EHAI 链：DeepBase/HB + AsWish（参考）+ DeepAxis/AXIS（独立）；兼 MEDIA 链独立审核（只审不开发）；兼全库审计（20260918）复核线。跨线（唤金商业/定价/传播/文学）移交 Amy。
 
-## 二、治理铁律（永久）
+## 二、治理铁律（永久，最高优先）
 - 禁自报 PASS：门禁数字须来自日志/产物。
 - 不等式四则：`Commit Claim ≤ Git Evidence`；`Regression Claim ≤ Executed Scope`；**`未提交的交付 = 未交付`**；`机读声明 ≤ 实测证据`。
-- 取证：路径取 `git ls-files`/实测；file:line 锚**字面符号名**；受控状态必实测；免责 ≠ 消解机读字段。
-- **H15 原子提交**：裸 commit 会带走他人 staged（前科 `ed50cfd`/`c0592ff`）⇒ 必带 `--only`/显式 pathspec，前后各跑 `git diff --cached --name-only`。
-- **H16**：staged 非空即停写报主控。
-- **行尾三教训**：① 整文件重写级 diff 先 `--ignore-cr-at-eol` 复验（只剥**单个**尾部 CR；多重 `\r\r\r\r\n` 无效 → 用剥 CR 字节指纹）② **`.gitattributes` 归一化让 CRLF↔LF 在 git 层彻底隐身**（`git status`/`diff` 看不见）⇒ 判行尾污染必用字节级 eol-gate ③ **层次错配**：HEAD blob 不可直接比工作树文件（LF 层 vs CRLF 层）。
-- **F3**：提交无法命名自身 ⇒ 自述 SHA 须 `git branch -a --contains` 非空。
+- 取证：路径取 `git ls-files`/实测；file:line 锚**字面符号名**；受控状态必实测。
+- **H15 原子提交**：裸 commit 会带走他人 staged（前科 `ed50cfd`/`c0592ff`）⇒ 必带 `--only`/显式 pathspec，前后各跑 `git diff --cached --name-only`。**H16**：staged 非空即停写报主控。
+- **行尾三教训**：① 整文件重写级 diff 先 `--ignore-cr-at-eol` 复验（只剥**单个**尾部 CR；多重 `\r\r\r\n` 无效 → 用剥 CR 字节指纹）② **`.gitattributes` 归一化让 CRLF↔LF 在 git 层彻底隐身** ⇒ 判行尾污染必用**字节级 eol-gate** ③ **层次错配**：HEAD blob 不可直接比工作树文件（LF 层 vs CRLF 层）。
+- **F3**：自述 SHA 须 `git branch -a --contains` 非空。
 - 整改五件套：文件:行／改法／验收标准／证据要求／是否阻塞他仓；禁 `checkout --`/`restore`/`clean`/`reset --hard` 处置非本工单改动。
-- **状态门 ≠ 争用门**：前置是**资源** ⇒ 资源空闲可开工；前置是**状态**（前单交付+验收）⇒ 资源空闲也**不**解锁。
-- **★ 保护老板注意力**（2026-09-20 20:42）：「得你保护我的注意力，这些小事要么你定，要么开会定，少来麻烦我」⇒ 调度/取舍/优先级**一律主控自决或召会议，不上推**；只战略/产品/跨仓/花钱才报老板。
-- **★ 质量优先于记账**（2026-09-20 20:36）：「记过有什么用，问题是开发出高质量的程序」⇒ 验收**物/序二分**：物合格即过，序有瑕记一笔即止，**不得升格为阻塞/待决**。注意力按质量影响排序：**真安全洞 > 真缺陷 > 告警消噪（BOM/去重）**。
-- **★ 质量优先，不是兼容优先**（2026-09-19）：允许 breaking change；禁为兼容保留缺陷/加兼容层/开关/fallback。
-- **★ 全库修复线 = 产品干预**（2026-09-19）：一切全库修复不得记作「纯内部优化」，须登记为产品干预。
-- **元规律**：引用（符号名/路径/hash/受控状态/覆盖率）持续不实 ⇒「逐条落地核验」为固定动作；先核锚点再采信结论。
+- **状态门 ≠ 争用门**：前置是**资源** ⇒ 空闲可开工；前置是**状态**（前单交付+验收）⇒ 资源空闲也**不**解锁。
+- **★ 保护老板注意力**（09-20 20:42）：「得你保护我的注意力，这些小事要么你定，要么开会定，少来麻烦我」⇒ 调度/取舍/优先级**一律主控自决或召会议，不上推**；只战略/产品/跨仓/花钱才报老板。
+- **★ 质量优先于记账**（09-20 20:36）：「记过有什么用，问题是开发出高质量的程序」⇒ 验收**物/序二分**：物合格即过，序有瑕记一笔即止，**不得升格为阻塞/待决**。排序按质量影响：**真安全洞 > 真缺陷 > 告警消噪**。
+- **★ 质量优先，不是兼容优先**（09-19）：允许 breaking change；禁为兼容保留缺陷/加兼容层/开关/fallback。
+- **★ 全库修复线 = 产品干预**（09-19）：须登记为产品干预，不得记作「纯内部优化」。
+- **元规律**：引用（符号名/路径/hash/受控状态/覆盖率）持续不实 ⇒「逐条落地核验」为固定动作；**先核锚点再采信结论**。
 
-## 三、EHAI 硬事实
-- SSOT = `D:\_Progs\一元论\90-跨层组合\高效AI人机交互体系-EHAI\common-contract\`；符号真相源 = `docs\EHAI-Delphi-Symbol-Baseline.md`（机械生成，禁手工）。
-- `TEhaiInvolvementProfile` 5 形态 = Inform/Provide/Judge/Authorize/Act；**L1–L8 是层号不是 Profile**；EHAI L1–L8 = **FROZEN v1.0**（正文零改写）。
-- 覆写四态 `eokNone/CandidateReject/AlternativeExpression/FrameRejection`（框架否定须显式 `SubmitFreeInputWithKind(..., eokFrameRejection)`）；fail-closed：`Covers()` 空 Scope = 无授权。
+## 三、硬锚点速查（全文 → ARCHIVE）
+- **EHAI**：SSOT = `D:\_Progs\一元论\90-跨层组合\高效AI人机交互体系-EHAI\common-contract\`；符号真相源 = `docs\EHAI-Delphi-Symbol-Baseline.md`（机械生成禁手工）。`TEhaiInvolvementProfile` 5 形态 = Inform/Provide/Judge/Authorize/Act（**L1–L8 是层号不是 Profile**，L1–L8 = **FROZEN v1.0**）。覆写四态 `eokNone/CandidateReject/AlternativeExpression/FrameRejection`；fail-closed：`Covers()` 空 Scope = 无授权。
+- **三仓锚点（DOWNSTREAM-001 = CLOSED，09-16）**：`Gate B / AXIS L7·Gate C`、`AsWish Gate C / Cross-Product` = PASS WITH NON-BLOCKING FINDINGS；`Common Contract = No Common Revision Needed`；上限 = `Cross-product engineering reuse evidence`，禁越线 L8；主控亲跑全绿 388 项。**⭐ `Audit Verdict is bound to Audited Git Objects`**。tag `audit/ehai-downstream-001-closed`：DeepBase `328be36`｜AsWish `0b22a52`｜DeepAxis `67034a5`。
+- **L8 Case 001 = `OBSERVATION ACTIVE`**（老板 09-18）。**唯一主任务 = `Collect Real Episodes.`** Protocol `docs/ui/work-orders/L8-E001-Observation-Protocol.md`（525 行，sha256 `747079c8…0de88`，FROZEN `8f3dbf2`）。START Anchor：Protocol `747079c8`｜DeepBase `339fe4a`｜AsWish `7624a1d`｜DeepAxis `f47c573`｜F4 = `EXCLUDED until Delta Closure`。干预 `INT-20260917-01/02/03`；**跨干预禁混池**。口径：Episode 必真实；`software_commit` 不确立 ⇒ `NOT ESTABLISHED`；ID 递增；结束六步顺序；**不做阶段结论**；下一检查点 `09-30 Midpoint Integrity Review`。措辞只允许 `Observation Started`；禁进入 L8 平台/统一埋点/AI 评估系统设计。Phase 2 CLOSED；Phase 3 SKIPPED。
+- **PG（受控进度台账，非 PostgreSQL）**：入口 `D:\_Progs\00Common\skills\ai-workbench-router\workbench.py`（`pg-query`/`pg-tag`，禁直接 SQL；须 `D:\ProgramData\Python313\python.exe`）。EHAI/L8/E001 全库 **0 命中**；「每日进 PG」= `HALF-OPERATIONAL`。**待老板裁定是否授权写 PG**。
+- **旁线/事故**：**F4 PASS**（`12dd4da`，强类型 mock/dryrun/real + `dsEngineVerified` + `dmReal` 下 mock 时钟 fail-closed）；**DA-131B 损失**（`HJValidateAndExecuteUiaPaste` +82 行被 `checkout HEAD` 销毁且未提交 ⇒ `BASELINED` + `PERMANENT EVIDENCE GAP`，**永久禁称 `Source-level faithful restoration proven`**；未提交代码先固化 sha256）；**双轨终裁**（生产真相源 = 旧轨 `Core\DeepBase.PluginManager.pas` BPL `WinVerifyTrust` fail-closed；新轨 `DeepBase.Plugins.*` **冻结隔离**）。
 
-## 四、三仓不可变锚点（DOWNSTREAM-001 = CLOSED，2026-09-16）
-裁定：`Gate B / AXIS L7·Gate C`、`AsWish Gate C / Cross-Product` = PASS WITH NON-BLOCKING FINDINGS；`Common Contract = No Common Revision Needed`；能力上限 = `Cross-product engineering reuse evidence`，严禁越线 L8。主控亲跑全绿 388 项。产物 `CodeReview\`。
-**⭐ `Audit Verdict is bound to Audited Git Objects`**（旧 Commit=已审计；新 Commit=未被旧裁定覆盖）。
-tag `audit/ehai-downstream-001-closed`：DeepBase `328be36`（tag `a73f088`）｜AsWish `0b22a52`（`4a21a0b`）｜DeepAxis `67034a5`（`70553c3`）。
+## 四、20260918 全库审计复核线
+- 审计本体 12 分包；主控复核：账不平、39 单元未覆盖、**编码损坏低估两个数量级**（实测 116 .pas 含 U+FFFD）、3 误判、加密栈三缺陷（CBC IV 复用 / `DeriveSalt` 确定性派生 / MacKey 单轮 HMAC）。归档 `8eb1aa3`。
+- **已闭环**：甲 R1–R6 + 乙 R1–R6（乙 R6 ACCEPTED WITH CORRECTIONS `f4cc7c5`）；K6（`Schema.pas` 961 处多重 CR 归一 + 剥 CR 指纹 47,773 B 逐字节一致）。
+- **行尾末态**：`i/lf` 1807 / `i/crlf` 143（142 `TestResults/**`+1 `HB.Benchmark.pas`）/ `i/mixed` 9 / `i/-text` 22；非 TestResults 纯行尾 = **0**。
+- **元教训**：「同型缺陷」登记不可照信 —— 须全库机械扫描调用点 + 逐点核守卫（须作用于**目标路径**且**同执行分支**）；层次错配须自查。
 
-## 五、L8 Empirical Case 001
-- 协议 `docs/ui/work-orders/L8-E001-Observation-Protocol.md`（525 行，sha256 `747079c8…0de88`）= FROZEN（`8f3dbf2`／治理件 `b518c3f`）。7 参数：Start 2026-09-17 / 28 天 → End 2026-10-14 / Midpoint 2026-09-30 / AsWish ≥20 + AXIS ≥20 / 每产品 ≥3 task types / Self-report VOLUNTARY / F4 Rule。
-- **Case 001 = `OBSERVATION ACTIVE`**（老板 2026-09-18）。**唯一主任务 = `Collect Real Episodes.`** START Anchor：Protocol `747079c8`｜DeepBase `339fe4a`｜AsWish `7624a1d`｜DeepAxis `f47c573`｜F4 = `EXCLUDED until Delta Closure`。干预 `INT-20260917-01 c3215d3 / 02 3b9f135 / 03 e389cd5`（`L8-E001-Intervention-Registry.md`）；**跨干预严禁混池**。
-- 口径：Episode 必真实（禁造/禁挑漂亮案例）；`software_commit` 不确立 ⇒ `NOT ESTABLISHED`；ID 递增；结束六步顺序（禁先写结论）；**不做阶段结论**；下一检查点 `2026-09-30 Midpoint Integrity Review`。措辞只允许 `Observation Started`；禁进入 L8 平台/数据平台/统一埋点/AI 评估系统设计。Phase 2 = CLOSED（`e1b2e93`）；Phase 3 = SKIPPED。
+## 五、Top20 闭环台账（权威进度源）
+- 台账 `CodeReview/20260921-AUDIT-主控-Top20闭环台账.md`；基准 = `20260918-全库审计-总报告.md` §三；有效 **19** 条（#13 撤回）。
+- **进度：✅ 17／🟠 排队 1（#08 Commerce 权益消费 → 乙）／⚠️ 保留 1（#04 Governance 端到端绕过）⇒ 17/19 = 89%**。
+- 甲 R5 欠账已清（`4c7ec5a`，M1/M2 ACCEPTED WITH CORRECTIONS；缺口 A 残差 = **A-1**）。#17 已闭环（`e86d3ff`+`28ff778`，`Net.pas:2182 GetSsrfAllowFlags` 单点 SSOT + `{$IFNDEF RELEASE}`，RELEASE DCU 0/0）。
+- **总教训**：`9387222` 实为 **26** 件（主控曾误记 25，甲反质疑成立 ⇒ 已自纠）。
 
-## 六、PG（受控进度台账，非 PostgreSQL）
-- 入口 `D:\_Progs\00Common\skills\ai-workbench-router\workbench.py`（`pg-query`/`pg-tag`，禁直接 SQL）；须系统 python `D:\ProgramData\Python313\python.exe`。四纪律：单 Skill / BCW 任务 PG-first / 完成必留痕 / 会议优先。实测 `bcw_runtime` 53 表、`universal_tag` 2599 行，EHAI/L8/E001 全库 **0 命中**；「每日进 PG」= `HALF-OPERATIONAL`（`5f4f9ee`）。**待老板裁定是否授权写 PG**。
-
-## 七、旁线与事故
-- **F4（2026-09-16 PASS）**：代码 `12dd4da`；强类型 `dmMock/dmDryRun/dmReal/dmEngineVerification` + 终态 `dsEngineVerified` + `dmReal` 下 mock 时钟 fail-closed。
-- **DA-131B 损失（2026-09-16）**：`HJValidateAndExecuteUiaPaste`（+82 行）被 `git checkout HEAD` 销毁且未提交 ⇒ `CONDITIONALLY ACCEPTED / BASELINED` + `PERMANENT EVIDENCE GAP`；**永久禁称 `Source-level faithful restoration proven`**。元教训：未提交代码先固化 sha256 再动。
-- **双轨终裁（2026-09-19 `2f011fd`）**：生产唯一真相源 = **旧轨 `Core\DeepBase.PluginManager.pas`（BPL，`WinVerifyTrust` fail-closed）**；新轨 `DeepBase.Plugins.*`（6 单元 2446 行）**冻结隔离**（同名类改名活雷／禁入生产+CI BLOCK／FROZEN／灰盒／复活四门槛）。卸载加固 = 甲 A8。
-
-## 八、20260918 全库审计复核线（明细 → ARCHIVE）
-- 审计本体 12 分包（声称 ~540 单元/1445 定级）。主控复核：账不平、39 单元未覆盖、**编码损坏低估两个数量级**（实测 116 .pas 含 U+FFFD vs 报告 1 文件 3 处）、3 误判、加密栈三缺陷（CBC IV 复用 / `DeriveSalt` 确定性派生 / MacKey 单轮 HMAC）。归档 `8eb1aa3`。
-- **已闭环**：甲 R1–R6（`32b0642`/`c4b96a9`；`c1052a2`+`6f39015`；R6 ACCEPTED `d32cf13`/`87caa5c`）；乙 R1–R6（`4f9a747`/`7366865`；`1a85e92`/`efc40cf`/`a0bbe52`；R6 ACCEPTED WITH CORRECTIONS `f4cc7c5`，授权删 7 件纯重复 `c0772f4`）；K6（`46ee3f0`/`5a14aae`/`f5e2d82`，`Schema.pas` 961 处多重 CR 归一 + 剥 CR 指纹 47,773 B 逐字节一致）。
-- **行尾末态**：`i/lf` 1807 / `i/crlf` 143（142 `TestResults/**` + 1 `HB.Benchmark.pas`）/ `i/mixed` 9 / `i/-text` 22；非 TestResults 纯行尾 = **0**。
-- **★ 现场定格（取数时 HEAD `4060630`，2026-09-20/21）**：staged = 乙 R7 的 3 件删除（`D `，主控未取，H15 安全）；脏 raw 3。
-  - **甲 R7**（`89cbaf4` + P5 `f4cc7c5`）= 安全质量立即优化：**P1** 删三段 legacy 弱解密（`Crypto.AES.pas`：v2 无盐单轮 / v1 确定性盐 / 无头；只留 v3，旧格式 `raise`，禁 fallback/开关；连带清 `SimpleCryptoMacKey`/`DeriveSalt`；负向测试；`PI-甲-R7-CRYPTO-LEGACY-REMOVAL`）/ **P2** SSRF 加固 / **P3** M4 卡死诊断 / **P4** M5 / **P5** 安全链 .pas 工作树行尾归一 CRLF（14 项 eol 违规=甲域 `9387222` 改动集，13 项无 baseline 豁免；**禁新增豁免**，验 `--ignore-cr-at-eol` diff=0）。**状态：在途未交付**。
-    - **★ P5 现况（2026-09-21 10:0x，`a77c436`）**：主控复跑 eol-gate = **EXIT=0 / 1419 件**；14 件全 `i/lf w/crlf eol=crlf`、diff 均 0、基线四键 `667/25/210/0` 未变 ⇒ **「物」已达标**；但 14 件 mtime **全为 `09:56:22`**（一次批量动作，落在主控乙 R7 结论文档落盘后 20 秒）、**无 commit 内容** ⇒ **无交付证据、归因不明** ⇒ P5 交付改判为「申报是否本方执行 + 三件套证据」。**永久纪律**：工作树字节态类工单**天生无 commit 内容**（`.gitattributes` 归一化 ⇒ diff 恒空）⇒ 验收基准 = **工作树字节 + 门禁 EXIT + 豁免基线计数**，非 commit diff；**非本方动作不得记为本方交付**（技能 `main-control-independent-audit` §33）。
-  - **甲 R8**（`c987465`/`ef1b414`，排队）= **P1** `Crypto.OpenSSL.pas:606-607` 硬编码 `libdl.dylib` ⇒ Linux/macOS `dlopen/RTLD_NOW` Undeclared（甲 R5 缺口 B）；**P2** `Tests/TestSecurityM2.dpr` 4 单元未并入 `DeepBaseTests.dpr`（H2 保护，仅授权加 `uses`）。**裁定：维持阻塞（状态门），走正 path，不开老板 override**；开工资格 = R7 P1–P5 全交付 + 主控验收 + 主控发开工令。
-  - **乙 R7**（`c987465`）= **P1** `CloudBackup.pas:1938` `TFile.Move` 目标守卫（同名重复备份失败；全库 9 处扫描唯一真缺陷）；**P2** 三组预算外重复对授权删除。**主控验收 = ACCEPTED WITH CORRECTIONS（`4060630`）**：P1 物合格（`GetBackupArchivePath`+删后移+`GenerateBackupId` protected/virtual+`EBackupInvalidIdException`）、P2 三组真重复零损失（HEAD blob 逐位相等）；未提交，改动留工作区。**C1–C4 待乙补**：C1 P1 测试证据落盘（硬）/ C2 index 口径（3 删除件是 **staged** 非工作区）/ C3 时间 00:20 vs 04:05 / C4 基线 `0c1b00b` vs `ef1b414`。
-  - **元教训**：①「同型缺陷」登记不可照信 —— 须全库机械扫描调用点 + 逐点核守卫（守卫须作用于**目标路径**且**同执行分支**）② 层次错配自查（主控曾拿 HEAD blob 比工作树文件误判乙，已自纠）。
-
-## 九、Top20 闭环台账（权威进度源）
-- **台账**：`CodeReview/20260921-AUDIT-主控-Top20闭环台账.md`（`a4034e8`）。基准 = `20260918-全库审计-总报告.md` §三 Top20；有效 **19** 条（#13 已撤回）。
-- **进度（2026-09-21 15:0x 实测）**：✅ 已闭环 **17**（#01 #02 #03 #05 #06 #07 #09 #10 #11 #12 #14 #15 #16 **#17** #18 #19 #20）／🟠 已派单排队 **1**（#08 Commerce 权益消费，资金类 → **乙**）／⚠️ 部分保留 **1**（#04 Governance 端到端绕过）。
-- ⇒ **17/19 = 89% 闭环**。
-- **★ 甲 R5 欠账已清（`4c7ec5a`）**：《甲 R5 验收结论》= **M1/M2 均 ACCEPTED WITH CORRECTIONS**；缺口 A（`master.key` 丢失）= APPROVED + 残差 **A-1**（已建单 `WO-20260921-AUDIT-M1-A1-masterkey导出入口-甲.md`，排甲 R8 后）；序侧 **C1–C6 已随甲 R7 闭环**（C1：`05` 改述「从未产出」+ `06` 真输出补落盘；**C4 甲主动认领漏报件**；**C3 甲反质疑成立 ⇒ 主控自纠**：`9387222` 实为 26 件、主控曾误记 25）。
-- **★ #17 已闭环（`e86d3ff` + `28ff778`）**：env 全局关闸已按 M1 同款收口 —— `Net.pas:2182 GetSsrfAllowFlags` 单点 SSOT，两 env 读取在 **`{$IFNDEF RELEASE}`（:2187-2189）**；**编译产物级实证** DEBUG DCU 各 1 / **RELEASE 0/0**；`-DRELEASE` 仍 47/47。
-
-## 十、待办（主控自决范围）
-- **甲 R7 = ✅ CLOSED**（`20260921-AUDIT-主控-甲-R7-验收结论.md`）：**ACCEPTED**（P1/P2/P4/P5 物成立且主控实测；P3 = ACCEPTED WITH CORRECTIONS）；P2-§八 env 收口有编译产物级实证；C1–C6 补遗齐备。**序侧发现**：S-1 证据 `R7-gates-run.txt` **内容级乱码**（合法 UTF-8 但双重编码，门禁抓不到）；S-2 `.gitattributes` 加 `*.bpl binary`（乙立法件、加法无害）；**S-3 `DeepBaseTests.dpr` 编译阻塞**（甲申报 E2034/E2250，主控未独立复编译 ⇒ 登记待复核，**归乙 P0 先复核**）。
-- **甲 R8 = 已发开工令**（`WO-20260920-AUDIT-甲-R8-POSIX构建缺口与安全测试网并网.md` §八 追加）。P2 验收依赖 S-3 结论；`.dpr` 改动 **H16 串行化**（甲乙改前均报主控，禁并发）。
-- **A-1 已独立建单**：`WO-20260921-AUDIT-M1-A1-masterkey导出入口-甲.md`（排甲 R8 后；形态=最小安全可用：显式导出/备份 + 强告诫 + 完整性校验）。
-- **甲 R7-P3 裁定补充**：**P3 修复已改派乙**（老板 14:2x 指定）：`WO-20260921-AUDIT-P3-HB性能门禁分离与Gate5修复-乙.md`（单一 owner；甲 §十 P6 改指针）。**域要点**：`Test.DeepBase.HB.Benchmark.pas` = **VCL ⇒ 甲域**（乙主责门禁分离；改该测试源码须经主控转甲）；`Tests/DeepBaseTests.dpr` 受 H2；既有 `WO-20260905-003-HB-GATE5-RESIZE-FIX`（甲）明文**禁调阈值**。
-- **乙队列**：R7（活跃，C1–C4 待补）→ **P3-HB（含新 P0 编译复核）** → Top20-08 ⇒ 解锁 **#08** 开工。
-- **甲队列**：R8（活跃）→ A-1（排队）。
-- **余下 Top20**：#08（乙，排队）+ #04（设计保留，维持观察）⇒ 余 2/19。
+## 六、当前态与待办（主控自决范围）
+- **甲 R7 = ✅ CLOSED**：ACCEPTED（P3 = ACCEPTED WITH CORRECTIONS）。序侧：S-1 `R7-gates-run.txt` **内容级乱码**（合法 UTF-8 双重编码，门禁抓不到）；S-2 `.gitattributes` 加 `*.bpl binary`。
+- **★ S-3 编译阻塞 = ✅ CLOSED**（`CodeReview/20260921-AUDIT-主控-乙-P0-验收结论.md`，**ACCEPTED**）：三 commit `a6ca329`/`1c1c862`/`2e97d11` 解 E2003/E2034/E2250/E2035；pristine HEAD 编译 **EXIT=0**、全量回归 **4617/4625**。**根因双源**：E2034/E2250/E2035 ← `9387222`（Top20#05，甲）；**E2003 ← `1a85e92`（乙 R5-N1，乙自身）**（自该 commit 起 HEAD 即不可编译，**R5 验收未含 DPR 编译门** = 过程缺口）。**⇒ 全量套件恢复可跑 + 甲 R8-P2 顺延解除**。
+  - 序侧：乙 P0 报告**承接工单引用不实**（乙-R6 无 §P0，#28/#29 本仓审计线不存在）；证据 `TestResults/*.log` **未入版本控制**（gitignore）⇒ 须固化哈希/转存。
+  - **存量失败**：BitmapSource 2 红**已有修复 `de8d989`**（BUG-449，`Engine.CaptureScreen` 闸门解耦），**仅 `feat/wyjx-colormatch-canary`，master 未并入**；PBT `Property6` 空指针 AV 无线索。
+- **甲 R8 = 活跃**（P1 POSIX `d95b522`；P2 安全测试网并网，改 `.dpr` 须 **H16 串行化**；P3 文档 `2fc1696`/`a82d09d`/`20493c6`）。队列 → A-1。
+- **乙队列**：R7 剩余（C3/C4 澄清 + 归档删除口径：3 件现为**未暂存** ` D`，README ` M`）→ **P1 新单**（`WO-20260921-AUDIT-乙-P1-cwd裂缝与存量失败收口.md`：cwd 裂缝 **15** 处 + 复用 `de8d989` + PBT AV）→ **P3-HB**（§九 P0 已 CLOSED）→ Top20-08 ⇒ 解锁 **#08**。
+- **余下 Top20**：#08 + #04。
+- **现场快照（`20493c6`）**：staged = **空**；工作树脏 = `docs/规范历史版本与对比库/` 3 删除（` D`）+ README（` M`）+ 甲 R8 域 `.pas` + 甲乙未跟踪交付件（**H2，勿动**）。
