@@ -21,6 +21,11 @@ uses
   DeepBase.Crypto, DeepBase.Crypto.Random,
   DeepBase.KeyManager;
 
+// Top20#05 后 TDataKey 的 EncryptWith/DecryptWith/Rotate 需要 AAD。
+// 本 fixture 在 TDataKey 层直接调用，不经 KeyStore，故用固定 AAD 验证
+// AEAD roundtrip 与版本字节，不依赖真实机器身份。
+function TestAAD: TBytes;
+
 type
   [TestFixture]
   [Category('regression')]
@@ -65,6 +70,11 @@ type
   end;
 
 implementation
+
+function TestAAD: TBytes;
+begin
+  Result := TEncoding.UTF8.GetBytes('bug327-fixed-aad');
+end;
 
 { TBUG327_KeyManagerAEADTest }
 
@@ -113,7 +123,7 @@ begin
   LKey := TDataKey.Create(kpEncryption);
   try
     LKey.Generate(32);
-    LKey.EncryptWith(FKEK);
+    LKey.EncryptWith(FKEK, TestAAD);
 
     // First byte must be version 0x01 (AES-GCM marker)
     Assert.IsTrue(Length(LKey.EncryptedKeyData) > 1,
@@ -140,8 +150,8 @@ begin
     LKey.Generate(32);
     LOriginalData := LKey.KeyData;
 
-    LKey.EncryptWith(FKEK);
-    LKey.DecryptWith(FKEK);
+    LKey.EncryptWith(FKEK, TestAAD);
+    LKey.DecryptWith(FKEK, TestAAD);
 
     LDecryptedData := LKey.KeyData;
 
@@ -162,7 +172,7 @@ begin
   LKey := TDataKey.Create(kpEncryption);
   try
     LKey.Generate(32);
-    LKey.EncryptWith(FKEK);
+    LKey.EncryptWith(FKEK, TestAAD);
 
     // Tamper with the ciphertext (flip a byte in the middle)
     Assert.IsTrue(Length(LKey.EncryptedKeyData) > 20,
@@ -196,7 +206,7 @@ begin
 
   KM := TKeyManager.Create(StorePath);
   try
-    KM.Initialize('test-master-password-wo20260902', False);
+    KM.Initialize('test-master-password-wo20260902');
 
     SetLength(Enc, 0);
     Enc := KM.Encrypt(Enc, kpEncryption);
@@ -221,10 +231,10 @@ begin
   LKey := TDataKey.Create(kpEncryption);
   try
     LKey.Generate(32);
-    LKey.EncryptWith(FKEK);
+    LKey.EncryptWith(FKEK, TestAAD);
 
     // Rotate should re-encrypt in GCM format
-    LKey.Rotate(FKEK);
+    LKey.Rotate(FKEK, TestAAD);
 
     Assert.IsTrue(Length(LKey.EncryptedKeyData) > 1,
       'Rotated data should not be empty');
@@ -232,7 +242,7 @@ begin
       'Rotated data should have version byte 0x01 (AES-GCM)');
 
     // Verify roundtrip after rotation
-    LKey.DecryptWith(FKEK);
+    LKey.DecryptWith(FKEK, TestAAD);
     Assert.IsTrue(Length(LKey.KeyData) = 32,
       'Decrypted key after rotation should be 32 bytes');
   finally
@@ -254,8 +264,8 @@ begin
     // Perform multiple encrypt/decrypt cycles
     for I := 0 to 4 do
     begin
-      LKey.EncryptWith(FKEK);
-      LKey.DecryptWith(FKEK);
+      LKey.EncryptWith(FKEK, TestAAD);
+      LKey.DecryptWith(FKEK, TestAAD);
     end;
 
     LDecryptedData := LKey.KeyData;
