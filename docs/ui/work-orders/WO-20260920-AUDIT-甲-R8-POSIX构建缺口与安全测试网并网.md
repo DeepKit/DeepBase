@@ -110,3 +110,13 @@
 ## 七、是否阻塞他仓
 
 **是（P1）**：POSIX 构建修复直接影响 **AsWish / DeepAxis 若在 Linux/macOS 复用该加密栈** ⇒ 须在回执申报平台支持面，由主控决定是否下发下游工单。
+
+---
+
+## 八、主控开工令（2026-09-21 15:0x）—— **发**
+
+- **前置达成**：甲 R7（P1–P5）**全交付并经验收 = ACCEPTED**（`CodeReview/20260921-AUDIT-主控-甲-R7-验收结论.md`）⇒ 依本单 §〇 主控裁定，**解除阻塞，即日开工**。
+- **开工范围**：P1（`Crypto.OpenSSL.pas:606-607` 硬编码 `libdl.dylib` ⇒ Linux/macOS `dlopen/RTLD_NOW` Undeclared）+ P2（安全测试网并网，`DeepBaseTests.dpr` **仅授权加 `uses`**，改动前报主控）。
+- **★ 依赖警告（P2 验收）**：主控已登记一项**待复核前置** —— 甲申报「`DeepBaseTests.dpr` 现不可编译」（`Tests/Regression/Test.Regression.CR20260824_P0Batch2.pas` E2034/E2250），已**归乙先复核**（乙 P3-HB 单 P0）。若阻塞成立 ⇒ **P2 的「验收」顺延**（编码可先行），并等乙回报。
+- **H2 协调**：`.dpr` 为乙本轮 P3-HB 单亦可能触碰的对象 ⇒ 双方改 `.dpr` **前均须报主控**，由主控串行化，**禁并发改同一文件**（H16）。
+- **交付**：按 §六（P1/P2 分次提交 + 回执 + 证据）；H9 结束时间 + commit hash；每段提交前跑双门禁申报 EXIT。
