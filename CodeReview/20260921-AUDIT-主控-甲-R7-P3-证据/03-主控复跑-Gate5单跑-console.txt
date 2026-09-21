@@ -1,0 +1,23 @@
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+.
+================================================================
+  HB Gate #5: Resize Interaction Budget
+================================================================
+  Steps : 500 (post warm-up)
+  Worst : 14.248 ms [Threshold <= 16.6 ms]
+================================================================
+.
+
+Tests Found   : 1
+Tests Ignored : 0
+Tests Passed  : 1
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0

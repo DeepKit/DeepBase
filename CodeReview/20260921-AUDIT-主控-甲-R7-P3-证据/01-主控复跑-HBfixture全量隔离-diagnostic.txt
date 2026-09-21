@@ -1,0 +1,22 @@
+﻿2026-09-21 12:08:49.242  === TestingStarts  total=7 active=7 ===
+2026-09-21 12:08:49.242  >> Fixture BEGIN  Test
+2026-09-21 12:08:49.242  >> Fixture BEGIN  DeepBase
+2026-09-21 12:08:49.243  >> Fixture BEGIN  HB
+2026-09-21 12:08:49.243  >> Fixture BEGIN  Benchmark
+2026-09-21 12:08:49.243  >> Fixture BEGIN  TTestHbBenchmark
+2026-09-21 12:08:49.244  >> Test BEGIN      Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate1_ColdStart_FirstPaint_P95Under800ms
+2026-09-21 12:08:57.828     Test PASS       Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate1_ColdStart_FirstPaint_P95Under800ms
+2026-09-21 12:08:57.828  << Test END        Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate1_ColdStart_FirstPaint_P95Under800ms
+2026-09-21 12:08:57.828  >> Test BEGIN      Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate2_DataGrid_100kScroll_AllFramesUnder16_6ms
+2026-09-21 12:09:02.052     Test PASS       Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate2_DataGrid_100kScroll_AllFramesUnder16_6ms
+2026-09-21 12:09:02.052  << Test END        Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate2_DataGrid_100kScroll_AllFramesUnder16_6ms
+2026-09-21 12:09:02.052  >> Test BEGIN      Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate3_ThemeSwitch_TenPalettes_EachUnder100ms
+2026-09-21 12:09:02.423     Test PASS       Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate3_ThemeSwitch_TenPalettes_EachUnder100ms
+2026-09-21 12:09:02.423  << Test END        Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate3_ThemeSwitch_TenPalettes_EachUnder100ms
+2026-09-21 12:09:02.423  >> Test BEGIN      Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate4_DpiSwitch_NoFlicker_NoJaggies_RelayoutUnder30ms
+2026-09-21 12:09:02.886     Test PASS       Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate4_DpiSwitch_NoFlicker_NoJaggies_RelayoutUnder30ms
+2026-09-21 12:09:02.886  << Test END        Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate4_DpiSwitch_NoFlicker_NoJaggies_RelayoutUnder30ms
+2026-09-21 12:09:02.886  >> Test BEGIN      Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate5_ResizeDrag_Composite_EachStepUnder16_6ms
+2026-09-21 12:10:24.875     Test FAIL       Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate5_ResizeDrag_Composite_EachStepUnder16_6ms -- Condition is False when True expected. [HB Gate #5 VIOLATION: step 181 = 19.808 ms > 16.6 ms]
+2026-09-21 12:10:24.875  << Test END        Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate5_ResizeDrag_Composite_EachStepUnder16_6ms
+2026-09-21 12:10:24.875  >> Test BEGIN      Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate6_TenThousandInstances_ZeroGdiAndHeapLeak
