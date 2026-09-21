@@ -84,7 +84,7 @@ begin
     // Session 1: initialize, encrypt, then "process exit"
     M1 := TKeyManager.Create(StorePath);
     try
-      M1.Initialize(Password, False); // skip hardware binding for determinism
+      M1.Initialize(Password); // Top20#05: 口令是唯一熵源，机器绑定只做门禁不参与派生
       Token := M1.EncryptString('cr001-secret-payload', kpConfig);
     finally
       M1.Free;
@@ -97,7 +97,7 @@ begin
     try
       // Pre-fix this Initialize derived a different KEK; with the fix the
       // persisted salt reproduces the original KEK.
-      M2.Initialize(Password, False);
+      M2.Initialize(Password);
       Decrypted := M2.DecryptString(Token, kpConfig);
     finally
       M2.Free;
@@ -123,7 +123,7 @@ begin
   try
     M1 := TKeyManager.Create(StorePath);
     try
-      M1.Initialize(Password, False);
+      M1.Initialize(Password);
       M1.EncryptString('payload', kpConfig);
     finally
       M1.Free;
@@ -137,7 +137,7 @@ begin
       Assert.WillRaise(
         procedure
         begin
-          M2.Initialize('definitely-wrong-password', False);
+          M2.Initialize('definitely-wrong-password');
         end,
         EKeyManagerException);
     finally
