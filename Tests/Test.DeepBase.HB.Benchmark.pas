@@ -270,6 +270,7 @@ begin
   try
     for I := 1 to C_GATE1_SAMPLES do
     begin
+      System.Writeln(Format('  HB Gate #1: sample %d/%d ...', [I, C_GATE1_SAMPLES]));
       if TFile.Exists(MarkerPath) then
         TFile.Delete(MarkerPath);
 
@@ -598,6 +599,9 @@ begin
 
     for I := 0 to C_GATE5_STEPS - 1 do
     begin
+      if (I mod 100) = 0 then
+        System.Writeln(Format('  HB Gate #5: step %d/%d ...',
+          [I, C_GATE5_STEPS]));
       W := 500 + (I mod 200);
       H := 400 + ((I * 3) mod 150);
       Form.SetBounds(Form.Left, Form.Top, W + (Form.Width - Form.ClientWidth),
@@ -678,6 +682,9 @@ begin
         N := BATCH;
         if Created + N > C_GATE6_INSTANCES then
           N := C_GATE6_INSTANCES - Created;
+        if (Created mod (BATCH * 5)) = 0 then
+          System.Writeln(Format('  HB Gate #6 round %d: created %d/%d ...',
+            [RoundIdx, Created, C_GATE6_INSTANCES]));
         List := TList<THbButton>.Create;
         try
           for I := 1 to N do
