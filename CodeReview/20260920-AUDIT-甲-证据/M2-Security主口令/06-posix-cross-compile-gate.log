@@ -1,0 +1,15 @@
+06-posix-cross-compile-gate.log -- R5-C1/C2 补落盘
+落盘时刻(真): 2026-09-21 12:06:15 +0800 (补跑, 非R5当时产物; R5当时该文件不存在, 见C1)
+取数基线: HEAD 347461c (甲R7末笔); 方法: dcc64系 dcclinux64.exe + dccosxarm64.exe -B 单文件编译,
+  作用域与R5回执§B同口径 (SecureMemory/MachineIdentity/License + Crypto.AES连带),
+  结论与R5申报一致: 3单元双目标EXIT=0; AES仍被Crypto.OpenSSL E2003阻断 (R8-P1待修, 非新问题)
+---
+R5-C1/C2 补跑: POSIX cross-compile gate (true re-run, current tree)
+[Linux64] Core/DeepBase.SecureMemory.pas EXIT=0 :: Copyright (c) 1983,2026 Embarcadero Technologies, Inc. | 103 lines, 1.31 seconds.
+[Linux64] Core/DeepBase.Security.MachineIdentity.pas EXIT=0 :: Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used | 2200 lines, 0.55 seconds.
+[Linux64] Core/DeepBase.License.pas EXIT=0 :: Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used | 3525 lines, 0.75 seconds.
+[Linux64] Core/DeepBase.Crypto.AES.pas EXIT=1 :: Core\DeepBase.Crypto.OpenSSL.pas(226) Error: E2003 Undeclared identifier: 'dlopen' | Core\DeepBase.Crypto.OpenSSL.pas(226) Error: E2003 Undeclared identifier: 'RTLD_NOW' | Core\DeepBase.Crypto.OpenSSL.pas(236) Error: E2003 Undeclared identifier: 'dlsym' | Core\DeepBase.Crypto.OpenSSL.pas(243) Error: E2003 Undeclared identifier: 'dlclose'
+[OSX-ARM64] Core/DeepBase.SecureMemory.pas EXIT=0 :: Copyright (c) 1983,2026 Embarcadero Technologies, Inc. | 103 lines, 0.27 seconds.
+[OSX-ARM64] Core/DeepBase.Security.MachineIdentity.pas EXIT=0 :: Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used | 2200 lines, 0.59 seconds.
+[OSX-ARM64] Core/DeepBase.License.pas EXIT=0 :: Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used | 3525 lines, 0.73 seconds.
+[OSX-ARM64] Core/DeepBase.Crypto.AES.pas EXIT=1 :: Core\DeepBase.Crypto.OpenSSL.pas(223) Error: E2003 Undeclared identifier: 'dlopen' | Core\DeepBase.Crypto.OpenSSL.pas(223) Error: E2003 Undeclared identifier: 'RTLD_NOW' | Core\DeepBase.Crypto.OpenSSL.pas(233) Error: E2003 Undeclared identifier: 'dlsym' | Core\DeepBase.Crypto.OpenSSL.pas(243) Error: E2003 Undeclared identifier: 'dlclose'
