@@ -363,14 +363,16 @@ type
     procedure DoProgress;
     procedure DoBackupComplete(Success: Boolean; const ABackupId, AErrorMsg: string);
     procedure DoRestoreComplete(Success: Boolean; const AErrorMsg: string);
-    
-    function GenerateBackupId: string;
+
     function GetBackupArchivePath(const ABackupId: string): string;
     function GetManifestPath(const ABackupId: string): string;
-    
+
+  protected
+    // virtual: 测试子类可固定 ID，逼近"同 ID 二次备份覆盖归档"缺陷路径
+    function GenerateBackupId: string; virtual;
     procedure InternalBackup(ABackupType: TBackupType; const ADescription: string);
     procedure InternalRestore(const ABackupId: string; const ATargetPath: string);
-    
+
     procedure LoadVersions;
     procedure SaveVersions;
     procedure CleanupOldVersions;
@@ -1934,7 +1936,13 @@ begin
       end
       else
       begin
-        LArchivePath := TPath.Combine(FConfig.LocalBackupPath, LBackupId + '.zip');
+        LArchivePath := GetBackupArchivePath(LBackupId);
+        // R7-P1: TFile.Move refuses to replace an existing destination
+        // (ERROR_ALREADY_EXISTS), so a second backup that reuses the same
+        // LBackupId would fail outright. Retire any stale archive first,
+        // matching the delete-then-move guard used by Guardian/HealthSignal.
+        if TFile.Exists(LArchivePath) then
+          TFile.Delete(LArchivePath);
         TFile.Move(LTempPath, LArchivePath);
       end;
       

@@ -169,6 +169,11 @@ type
   /// </summary>
   EBackupTransferException = class(EBackupException);
 
+  /// <summary>
+  /// 备份标识非法（Top20 #06：白名单校验 fail-closed）
+  /// </summary>
+  EBackupInvalidIdException = class(EBackupException);
+
   //============================================================================
   // 网络与服务异常
   //============================================================================

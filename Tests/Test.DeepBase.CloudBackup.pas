@@ -209,6 +209,45 @@ type
   end;
 
   /// <summary>
+  /// R7-P1 回归覆盖：非加密归档落盘在目标已存在时必须能覆盖。
+  /// TFile.Move 对已存在目标抛 ERROR_ALREADY_EXISTS，同 LBackupId
+  /// 二次备份曾因此直接失败；修法为 delete-then-move 守卫。
+  ///
+  /// 固定 ID 子类：GenerateBackupId 每次由时间戳+MD5 生成，公开 API
+  /// 下两次备份必然拿到不同 ID，覆盖分支无从触发。父类
+  /// GenerateBackupId 已声明 virtual，子类 override 固定 ID，
+  /// 走公开 BackupFull 真跑缺陷路径。
+  /// </summary>
+  TFixedIdBackupManager = class(TCloudBackupManager)
+  public
+    function GenerateBackupId: string; override;
+  end;
+
+  [TestFixture]
+  TTestBackupArchiveOverwrite = class
+  private
+    FSrcDir: string;
+    FBakDir: string;
+    FRestoreEventCount: Integer;
+    FRestoreSuccess: Boolean;
+    FRestoreError: string;
+    // TRestoreCompleteEvent 是 of object 事件，只能绑对象方法；
+    // 失败路径吞异常转事件，事件是唯一可观察出口
+    procedure HandleRestoreComplete(Sender: TObject; Success: Boolean;
+      const ErrorMsg: string);
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_SameIdSecondBackup_Succeeds;
+    [Test]
+    procedure Test_SameIdSecondBackup_ArchiveStaysReadable;
+  end;
+
+  /// <summary>
   /// T4 回归覆盖（WO-20260919-AUDIT-乙-R2 E7）：含 string 托管字段的
   /// TNetHeaders 组装必须逐元素赋值；若回退为 Move 裸拷贝，重复构建用例
   /// 会在释放阶段 double-free/AV。
@@ -1077,6 +1116,119 @@ begin
   end;
 end;
 
+{ TFixedIdBackupManager }
+
+function TFixedIdBackupManager.GenerateBackupId: string;
+begin
+  Result := 'r7_fixed_id';
+end;
+
+{ TTestBackupArchiveOverwrite }
+
+procedure TTestBackupArchiveOverwrite.Setup;
+begin
+  FSrcDir := TPath.Combine(TPath.GetTempPath, 'r7ovw_src_' + TGUID.NewGuid.ToString);
+  FBakDir := TPath.Combine(TPath.GetTempPath, 'r7ovw_bak_' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(FSrcDir);
+  TDirectory.CreateDirectory(FBakDir);
+  TFile.WriteAllText(TPath.Combine(FSrcDir, 'data.txt'), 'r7 overwrite fixture payload');
+  FRestoreEventCount := 0;
+  FRestoreSuccess := True;
+  FRestoreError := '';
+end;
+
+procedure TTestBackupArchiveOverwrite.TearDown;
+begin
+  try
+    TDirectory.Delete(FSrcDir, True);
+    TDirectory.Delete(FBakDir, True);
+  except
+  end;
+end;
+
+procedure TTestBackupArchiveOverwrite.Test_SameIdSecondBackup_Succeeds;
+var
+  LCfg: TBackupConfig;
+  LManager: TFixedIdBackupManager;
+  LId1, LId2: string;
+  LFirstSize: Int64;
+begin
+  LCfg := Default(TBackupConfig);
+  LCfg.SourcePaths := [FSrcDir];
+  LCfg.LocalBackupPath := FBakDir;
+  LCfg.EnableEncryption := False;
+  LCfg.MaxVersionsToKeep := 5;
+
+  LManager := TFixedIdBackupManager.Create(LCfg);
+  try
+    LManager.BackupFull('r7-overwrite');
+    Assert.AreEqual(1, Integer(LManager.GetVersions.Count), 'first backup must register one version');
+    LId1 := LManager.GetVersions[0].BackupId;
+    LFirstSize := TFile.GetSize(BackupFileUnderRoot(FBakDir, LId1, 'zip'));
+    Assert.IsTrue(LFirstSize > 0, 'first archive must be non-empty');
+
+    // 同 LBackupId 二次备份：修前此处抛 ERROR_ALREADY_EXISTS 直接失败
+    LManager.BackupFull('r7-overwrite');
+
+    Assert.IsTrue(TFile.Exists(BackupFileUnderRoot(FBakDir, LId1, 'zip')),
+      'archive for the reused backup id must still exist after second backup');
+    LId2 := LManager.GetVersions[0].BackupId;
+    Assert.AreEqual(LId1, LId2, 'backup id must remain stable across repeated backups');
+  finally
+    LManager.Free;
+  end;
+end;
+
+procedure TTestBackupArchiveOverwrite.Test_SameIdSecondBackup_ArchiveStaysReadable;
+var
+  LCfg: TBackupConfig;
+  LManager: TFixedIdBackupManager;
+  LId: string;
+  LRestoreDir, LTargetFile: string;
+begin
+  LCfg := Default(TBackupConfig);
+  LCfg.SourcePaths := [FSrcDir];
+  LCfg.LocalBackupPath := FBakDir;
+  LCfg.EnableEncryption := False;
+  LCfg.MaxVersionsToKeep := 5;
+
+  LManager := TFixedIdBackupManager.Create(LCfg);
+  try
+    LManager.BackupFull('r7-verify');
+    LManager.BackupFull('r7-verify');
+    LId := LManager.GetVersions[0].BackupId;
+
+    LManager.OnRestoreComplete := HandleRestoreComplete;
+
+    LRestoreDir := TPath.Combine(TPath.GetTempPath, 'r7ovw_rst_' + TGUID.NewGuid.ToString);
+    try
+      LManager.Restore(LId, LRestoreDir);
+
+      Assert.AreEqual(1, FRestoreEventCount, 'restore must report completion exactly once');
+      Assert.IsTrue(FRestoreSuccess,
+        'restore after overwrite must succeed; got: ' + FRestoreError);
+      LTargetFile := TPath.Combine(LRestoreDir, 'data.txt');
+      Assert.IsTrue(TFile.Exists(LTargetFile),
+        'archive left behind by the overwrite must still be extractable');
+    finally
+      try
+        TDirectory.Delete(LRestoreDir, True);
+      except
+      end;
+    end;
+  finally
+    LManager.Free;
+  end;
+end;
+
+procedure TTestBackupArchiveOverwrite.HandleRestoreComplete(Sender: TObject;
+  Success: Boolean; const ErrorMsg: string);
+begin
+  Inc(FRestoreEventCount);
+  FRestoreSuccess := Success;
+  FRestoreError := ErrorMsg;
+end;
+
 procedure TTestBuildRequestHeaders.Test_DefaultsOnly;
 var
   LH: TNetHeaders;
@@ -1137,6 +1289,7 @@ initialization
   TDUnitX.RegisterTestFixture(TTestBackupStatistics);
   TDUnitX.RegisterTestFixture(TTestBackupEnums);
   TDUnitX.RegisterTestFixture(TTestRestoreChainVerification);
+  TDUnitX.RegisterTestFixture(TTestBackupArchiveOverwrite);
   TDUnitX.RegisterTestFixture(TTestBackupIdPathTraversal);
   TDUnitX.RegisterTestFixture(TTestBuildRequestHeaders);
 
