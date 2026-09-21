@@ -1,0 +1,13 @@
+R7-P2 S8 env kill-switch收口实测证据
+tested BUILD: dcc64 (Studio 37.0, Win64), DeepBase.Net.pas @ 28ff778^ (same source both builds)
+method: compile unit-only with / without -DRELEASE to scratch DCU;
+  byte-scan DCU for the two env names (UTF-16 literals -> NUL-stripped ASCII search)
+Net-DEBUG.dcu   bytes=541352 PRIVATE_HITS=1 LOCALHOST_HITS=1
+Net-RELEASE.dcu bytes=540833 PRIVATE_HITS=0 LOCALHOST_HITS=0
+conclusion: RELEASE构建产物中两个env关闸字面量 0 命中,运行时开关不存在;
+  dev构建保留(测试与本地集成),由 GetSsrfAllowFlags 单点SSOT, {$IFNDEF RELEASE} 包裹。
+cross-check: TestNetR7P2 runner built -DRELEASE runs 47/47 green
+  (fail-closed everywhere; the e2e redirect test raises at hop 1 instead of hop 2,
+  still ENetException, assertion unchanged).
+note: full-runner EXE grep is polluted by the TEST's own SetEnvironmentVariable
+  literals; unit-DCU grep above is the clean product-code evidence (see S8).
