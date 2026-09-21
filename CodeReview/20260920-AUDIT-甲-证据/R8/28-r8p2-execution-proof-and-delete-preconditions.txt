@@ -1,0 +1,120 @@
+# 证据 28 —— R8-P2「3 单元确实被执行」的受控证明 + 裁定 2（删 `TestSecurityM2.dpr`）前置取证
+
+- 工单：`WO-20260920-AUDIT-甲-R8-POSIX构建缺口与安全测试网并网` §九-2（验证协议）/ §九-3（裁定 = 删）
+- 被验 commit：`e72d9f2`（`Tests/DeepBaseTests.dpr` 单文件 +3/−0）
+- 环境：隔离工作树 `D:\_Progs\02Business\DeepBase\.tmp\wt_e72d9f2`（`--detach` @ `e72d9f2`），exe = `<wt>\Tests\DeepBaseTests.exe`（49,039,872 字节，22:50:45，`BUILD_EXIT=0`，见证据 `25`）
+- 本段全部命令的 `--root` / cwd 一律 Windows 形式（`D:\...`）；POSIX 形式（`/d/...`）会命中门禁脚本的 `readdirSync` 吞错路径 ⇒ 0 文件扫描仍打印「通过」（该缺陷 = 乙 P0，WO §九-4，甲不改门禁脚本）。
+
+---
+
+## 1. 隔离过滤跑：只跑 3 个新并入单元，进程 EXIT = 0（受控量）
+
+命令（cwd = `<wt>` 工作树根）：
+
+```
+<wt>\Tests\DeepBaseTests.exe --run:Test.DeepBase.Security.UBS2,Test.DeepBase.Security.MachineIdentity,Test.DeepBase.SecureMemory --xmlfile:D:\_Progs\02Business\DeepBase\.tmp\r8p2\28-isolated-3units.xml
+```
+
+实测输出（GBK→UTF-8 转码，NUL=0）：
+
+```
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+Tests Found   : 28
+Tests Ignored : 0
+Tests Passed  : 28
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+```
+
+`RUN_EXIT=0`（该命令显式 `rc=$?` 采集，非管道尾状态）。
+
+**这就是 WO §九-2 要求的「3 个单元确实被执行」的直接证明**：在全库唯一编译入口 `Tests/DeepBaseTests.dpr` 产出的 exe 上，用 `--run:` 过滤器只圈这 3 个单元 ⇒ Found 恰为 28，与 §2 的 fixture 分解逐项相加一致（15+8+5），且 28/28 `Success`。窄口需求不需要第二个 `.dpr`（见 §4）。
+
+## 2. 三份 NUnit XML 的同口径对照（BEFORE / AFTER 预览 / AFTER 正式）
+
+机器可查解析（`node` 遍历 `type="Fixture"` / `<test-case `）：
+
+| XML | exe 路径 | total | failures | errors | ignored | not-run | Fixture 数 | test-case 数 | 3 个 fixture |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| `15`（BEFORE，脏共享树 16:15:58） | `.tmp\fullsuite_exe\DeepBaseTests.exe` | 4621 | 5 | 1 | 4 | 4 | **616** | **4625** | 三件均 **ABSENT** |
+| `19`（AFTER 预览，@ `2e97d11`+3 行，16:55:51） | `.tmp\wt_p2\.tmp_exe\DeepBaseTests.exe` | 4649 | 2 | 1 | 4 | 4 | **619** | **4653** | PRESENT：15 / 8 / 5，全 `Success` |
+| `27`（**AFTER 正式，@ `e72d9f2`**，22:51:13） | `.tmp\wt_e72d9f2\Tests\DeepBaseTests.exe` | **4649** | **2** | **1** | **4** | **4** | **619** | **4653** | PRESENT：15 / 8 / 5，全 `Success` |
+
+* **正式 AFTER == 预览**：9 个口径列全部相同 ⇒ §2.4 预览行的数字被落地复跑证实，不是外推。
+* **增量 = +3 fixture / +28 test-case**，与 3 行 `uses` 的作用域一一对应，无第三处渗入：
+  - `TTestUBS2Envelope` 15 例（含 4 个迁移演练用例，见 §4）
+  - `TTestMachineIdentity` 8 例
+  - `TTestSecureMemory` 5 例
+  - 三件 fixture 头属性均为 `executed="True" result="Success" success="True"`。
+* `total` 4621→4649 = +28 与 `test-case` 4625→4653 = +28 同源（差值 4 = `ignored/not-run` 那 4 例不计入 `total`，两列在前后两次运行中都不变，故不构成额外信号）。
+
+## 3. 正式 AFTER 的 2 failed + 1 errored 逐件点名（全部落乙域，非甲交付判据）
+
+控制台 `Failing Tests` / `Tests With Errors` 段原文（证据 `26` 末尾）：
+
+| # | 用例 | 域 | 说明 |
+| :--- | :--- | :--- | :--- |
+| 1 | `Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.StaticPair_InjectedReplay_Unchanged` | 乙 | `second identical injected frame must short-circuit (Unchanged=True)` 期望 True 得 False |
+| 2 | `Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.InjectedBitmap_FlowsThroughFrameDifferGate` | 乙 | `second static after seed` 同上 |
+| 3 | `Test.DeepBase.Resilience.Timeout.PBT.TTimeoutPolicyPropertyTests.Property6_TimeoutCancelsBackgroundTask` | 乙 | `Access violation ... Read of address 0000000000000000` |
+
+* 与预览（证据 `18`/`19`）**同名同数量**：2F+1E，且 BEFORE 侧的另外 3 项失败（`TTestConfigPerformance`×2、`Resilience` 超时×1）在两次干净快照跑中都不在 ⇒ 计时敏感项，甲不声称修好任何一项，也不接受把这三件记为甲的交付缺陷。
+* 三件均与 `Tests/` 网关注册无因果关系：甲本单只往 `.dpr` 加了 3 行 `uses`（`git show e72d9f2 --numstat` = 1 文件 +3/−0），未触碰任何用例逻辑。
+* 甲域（`Core/DeepBase.*` 加密/安全链 + 本次 3 单元）在正式 AFTER 中 **0 failed / 0 errored**。
+
+## 4. 裁定 2 前置取证：删 `Tests/TestSecurityM2.dpr` 不产生覆盖缺口、不产生孤儿引用
+
+### 4.1 覆盖无缺口（窄 runner 的 5 个测试单元 → 唯一入口逐行定位）
+
+`Tests/TestSecurityM2.dpr`（1617 B）`uses` 的测试单元共 5 件，全部已在 `Tests/DeepBaseTests.dpr`（@ `e72d9f2`）注册：
+
+| M2 runner 引用的单元 | `Tests/DeepBaseTests.dpr` 行号 |
+| :--- | :--- |
+| `Test.DeepBase.Security` | `:115` |
+| `Test.DeepBase.KeyManager` | `:151` |
+| `Test.DeepBase.Security.UBS2` | `:217`（本单新增） |
+| `Test.DeepBase.Security.MachineIdentity` | `:218`（本单新增） |
+| `Test.DeepBase.SecureMemory` | `:219`（本单新增） |
+
+⇒ 删除窄 runner 的用例覆盖损失 = 0；§2 的 +28 与证据 `26` 的 Found 4653 是同一批用例在唯一入口下被执行的证明。
+
+### 4.2 唯一消费者已改指唯一入口，并真跑通过
+
+`Scripts/r5_m2_ubs2_migration_drill.ps1` 是该 runner 的唯一消费者（`git grep TestSecurityM2` 除文档/历史证据外仅命中该文件 `:19`）。改法（本段第二笔原子提交的内容之一）：
+
+```diff
+-$exe = Join-Path $repo '.tmp\exe\TestSecurityM2.exe'
++$exe = Join-Path $repo 'Tests\DeepBaseTests.exe'
+```
+
+并把头注中失实的「builds the M2 security runner」更正为「该脚本只筛用例、从不编译；exe 由 `Scripts/run_tests.ps1`（唯一编译入口）产出」——`Tests\DeepBaseTests.exe` 正是 `run_tests.ps1:845` `$unitExe = Join-Path $TestsDir "DeepBaseTests.exe"` 的位置（`dcc64` 无 `-E` 时 exe 落在 `.dpr` 同目录），与唯一入口保持一致，不新造第二条产物路径。
+
+**改后真跑验证**（在隔离工作树内以同一份脚本副本执行，`$repo` 解析为 `<wt>`，命中的是 `e72d9f2` 产物）：
+
+```
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+drill_exit=0
+raw_output=D:\_Progs\02Business\DeepBase\.tmp\wt_e72d9f2\TestResults\20260920-AUDIT-M2-migration-drill.log
+```
+
+4 例 = 脚本 `$cases` 里点名的 `TTestUBS2Envelope` 迁移四连（`Test_Reencrypt_LegacyV1_BecomesReadableV2` / `Test_Reencrypt_WrongLegacyPassphrase_LeavesRecordUntouched` / `Test_NeedsMigration_ClassifiesRecords` / `Test_Unprotect_ForeignFormatVersion_RaisesMigrationHint`），全 `Success` ⇒ 迁移演练链路在唯一入口下等价可用，删除动作可执行。
+
+### 4.3 无构建/CI 引用与残留件点名
+
+* `git ls-files | grep -i testsecuritym2` → 仅 `Tests/TestSecurityM2.dpr` 一件（无 `.dproj`、无 `.res`）。
+* `grep -rln TestSecurityM2 Scripts/ *.dproj Tests/*.dproj` → **0 命中**（§4.2 改指之后）。
+* 未跟踪残留：`.tmp/exe/TestSecurityM2.exe`（`*.exe` 被 `.gitignore:3` 忽略的历史构建产物，非甲本段所建，登记不动）；`.tmp/head-blocker/Tests/TestSecurityM2.dpr`、`.tmp/wt_e72d9f2/Tests/TestSecurityM2.dpr` 分别属他人目录与甲本段隔离树（后者随 `git worktree remove` 一并消失）。
+
+## 5. 结论（交主控验收）
+
+1. WO §九-2 三件套全部到位：隔离工作树编译 **`BUILD_EXIT=0`**（证据 `25`）+ 全量套件计数（证据 `26`/`27`：Found 4653 / Passed 4646 / Failed 2 / Errored 1 / Ignored 4 / Leaked 0，与预览逐项相同）+ **3 单元确实被执行**（本件 §1 过滤跑 `RUN_EXIT=0`、28/28 Success；§2 fixture 616→619、用例 4625→4653、三件 ABSENT→PRESENT）。
+2. 本单受控判据成立：**+28 个新并入用例全 `Success`**，缺口 D（安全链不在全库回归内）在 HEAD 级消解。
+3. 裁定 2 的前置「3 单元已注册 + 隔离复跑确认被执行」已满足，且删除无覆盖缺口、无孤儿引用、演练脚本已改指唯一入口并真跑 `drill_exit=0` ⇒ 甲按裁定执行 `git rm Tests/TestSecurityM2.dpr`（与 `Scripts/r5_m2_ubs2_migration_drill.ps1` 改指同一笔原子提交，保证提交后仓库仍可编译可运行）。
+4. 全量跑进程 EXIT 未被采集这一取证缺口已如实登记（证据 `26` §0.1），并以 §1 的受控过滤跑 EXIT=0 补上甲交付范围的退出码；不以推断补齐全量跑的退出码。

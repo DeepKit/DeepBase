@@ -1,0 +1,172 @@
+=== R8-P2 删除窄口 runner 后的隔离复证（证据 29）===
+
+工单：WO-20260920-AUDIT-甲-R8-POSIX构建缺口与安全测试网并网.md §九-3（裁定 2：删 TestSecurityM2.dpr，第二个原子提交）
+法源：CodeReview/20260921-AUDIT-主控-甲-R8-P3追加段-验收与停等点裁定.md §四-2
+口径：§九-4（复跑证据不得只报 EXIT，须同报扫描计数）/ §九-5（提交段门禁判定 = 隔离 `--detach` 工作树 @ 目标 commit）
+时刻：2026-09-21 23:24 +0800（本节所有数字取自 23:20:39 提交 bad01fa 之后的隔离复跑）
+
+--------------------------------------------------------------------
+§1  第二个原子提交本身（H14/H15/H16）
+--------------------------------------------------------------------
+  commit     = bad01fab
+  作者/提交时间 = 2026-09-21T23:20:39+08:00（AI 与 CI 同刻，无 amend）
+  subject    = chore(r8-p2): 删除窄口 runner Tests/TestSecurityM2.dpr 并把 M2 迁移演练重定向到统一入口
+
+  内容（`git show --numstat --format=` bad01fa）：
+    5   2   Scripts/r5_m2_ubs2_migration_drill.ps1
+    0   56  Tests/TestSecurityM2.dpr
+
+  H14 双口径：`git show --numstat --ignore-cr-at-eol --format=` bad01fa 输出与上表**逐字相同**
+    ⇒ 0 处行尾假差异。
+  H14 前置核验：`git ls-files --eol -- Scripts/r5_m2_ubs2_migration_drill.ps1` = `i/lf w/lf attr/text eol=crlf`
+    （与 HEAD 内该文件的历史存储形态一致：仓库侧存 LF，签出时按属性展开为 CRLF；甲未改行尾策略）。
+    删除前 `Tests/TestSecurityM2.dpr` 同为 `i/lf w/lf attr/text eol=crlf`。
+  为什么删除与改脚本放进**同一次**提交：脚本 `$exe` 已从 `.tmp\exe\TestSecurityM2.exe` 改为
+    `Tests\DeepBaseTests.exe`。若只提交删除，仓库里会留下一条指向已废弃 runner 的活引用；
+    若只提交脚本，窄 runner 仍在。合为一次原子提交 = 任意时刻仓库都「可编译 / 演练可跑」，无中间坏态。
+  H16：提交前 `git diff --cached --name-status` = 恰好 2 行（M 脚本 / D .dpr）；
+    他人在制的 ` M`/` D` 文件（含 `Core/`、`Tests/`、`09_工程脚本/` 下多条）保持未暂存、未被夹带；
+    提交后 `git diff --cached --name-only` 计数 = 0。未使用 `add -A` / `.` / amend。
+  H1：未对任何非本单改动做 `checkout --` / restore / reset。
+
+--------------------------------------------------------------------
+§2  隔离工作树 @ bad01fa：全库编译
+--------------------------------------------------------------------
+  方法：`git worktree add --detach .tmp/wt_bad01fa bad01fa`（纯 commit 快照，不碰共享工作树）
+        根目录以 **Windows 形式** `D:\_Progs\02Business\DeepBase\.tmp\wt_bad01fa` 传入（POSIX `/d/...` 禁用，见证据 25 §5 quotepath/路径裂缝）。
+  编译：CWD = `<wt>/Tests`，argv = `DeepBaseTests.dpr`，`dcc64 -B -Q -U"%SP%" -I"%SP%" -N0<wt>\.tmp\dcu_e72d9f2`，无 `-E`
+        （`.dpr` 内 `in '<rel>'` 相对**进程 CWD** 解析，故 CWD 必须是 Tests；口径与证据 25 §3 一致）
+  结果（原始尾行，`BUILD_EXIT` 由 cmd 内 `%ERRORLEVEL%` 直接回显、非管道后取）：
+        385662 lines, 28.36 seconds, 38302620 bytes code, 3304536 bytes data.
+        BUILD_EXIT=0
+  与 e72d9f2（并网提交）对比：
+        行数 385662 = 385662；code 字节 38302620 = 38302620；data 3304536 = 3304536
+        产出 exe 49,039,872 字节（`ls -l` 实测，23:22 生成）= 证据 25 §2 的 49,039,872 字节
+  ⇒ 机器级结论：删除 `TestSecurityM2.dpr` 对**统一入口编译产物零影响**（该 `.dpr` 从未被 `DeepBaseTests.dpr` 引用，
+    见 §4.3），因此证据 26/27 的 AFTER 全库数字（Found 4653 / Passed 4646 / Failed 2 / Errored 1 / Ignored 4 / Leaked 0）
+    在 exe 字节完全一致的前提下适用于 bad01fa。
+  限制申报（不夸大）：甲**没有**在 bad01fa 上重跑 19m40s 的全库真跑。上句的适用性依据是「编译产物逐字节等长」这一
+    机器事实 + 「用例注册面（`DeepBaseTests.dpr`）在 e72d9f2→bad01fa 之间未变」，属推断而非第二次实测；
+    若主控要求 bad01fa 上再跑一遍全库，甲按裁定窗口补测。
+
+--------------------------------------------------------------------
+§3  隔离工作树 @ bad01fa：三项门禁（HEAD 版脚本 + 扫描计数）
+--------------------------------------------------------------------
+  脚本法源：一律使用**隔离工作树自身**的 `09_工程脚本/…`（= bad01fa 内已提交版本），不用主工作树的未提交在制品
+    （证据 25 §4.1/§4.2 的方法论更正：否则测得的是「HEAD 数据 × 他人裁判」）。
+  每条同报 EXIT 与扫描计数（§九-4），EXIT 由 `rc=$?` 在 node 退出后直接取，不经管道。
+
+  (1) encoding-gate  `node 09_工程脚本/encoding-gate/check_pas_encoding.js --root D:\...\wt_bad01fa`
+      输出：编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+      EXIT=0   扫描计数 = 972（> 0）
+      对比：e72d9f2 隔离树同口径 = 972（证据 25 §4.3）⇒ 不变（本次删除的是 `.dpr`，不在 `.pas` 统计面内）。
+
+  (2) eol-gate       `node 09_工程脚本/eol-gate/check_eol.js --root D:\...\wt_bad01fa`
+      输出：行尾门禁通过：检查了 1423 个文件（.pas CRLF / .md LF）
+      EXIT=0   扫描计数 = 1423（> 0）
+      对比：e72d9f2 隔离树同口径 = 1423（证据 25 §4.3，漂移归因见 §4.4）⇒ 不变。
+      注：主工作树在证据 25 §4.3 同段测得 1440（含他人未跟踪文档与在制 `.pas`），再次说明该计数是**工作树口径**，跨段只作趋势参考。
+
+  (3) evidence-encoding-gate
+      ★★ 本项发现一个**门禁接口缺陷**（详见 §5.1）：该脚本只认 `--repo`，不认 `--root`；而 encoding-gate / eol-gate 只认 `--root`。
+         甲第一次用 `--root` 调它时，参数被静默忽略、REPO 回落到「脚本自身所在树」，两次不同目标的调用打出**完全相同**的 139 ——
+         甲据此自查并改用 `--repo` 重测。下列数字均为**正确参数**下的复测值。
+
+      node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --repo D:/_Progs/02Business/DeepBase/.tmp/wt_bad01fa
+        输出：证据编码门禁通过：扫描 139 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+        EXIT=0   扫描计数 = 139（> 0）
+      同上 + `--all-worktree`：同样 139，EXIT=0
+        ⇒ 隔离树是纯 commit 快照、无未跟踪证据文件，故两个口径在本节**必然等值**（该等值本身即 §5.1 缺陷的判别实验：
+          若参数被忽略，两口径也会等值 ⇒ 单看结果无法分辨，必须交叉核对，见 §5.2）。
+      同一条 HEAD 版脚本改指主工作树（`--repo D:/_Progs/02Business/DeepBase`，只登记、不作提交段判定）：
+        已跟踪口径：扫描 **139**，EXIT=0
+        --all-worktree：扫描 **174**，**EXIT=1**，唯一违规逐件点名：
+          `E0 读取失败: CodeReview/20260921-AUDIT-乙-P1-证据/p1-reporoot.xml (EBUSY: resource busy or locked)`
+          ⇒ 该件属**乙 P1 单**的证据目录、且正被他人进程占用（乙在跑），非甲所建、非甲所改、非甲可修（H1/H2）。
+             按 §九-5 口径「主树红项须逐件点名归属」，此处只登记归属，不构成对 bad01fa 的判定。
+        174 相对证据 25 §4.3(e) 的 163 增长 +11：发生在 22:5x 之后的他人/甲证据写盘（甲本段新增 4 件：`26`/`27`/`28`/`29`），
+        未逐件点名（该差值不影响 §九-5 的 HEAD 级判定，甲不做无证据归因）。
+
+  小结：bad01fa 的 **HEAD 级**三门禁全部 EXIT=0，且三项扫描计数均 > 0（排除「0 文件静默判绿」的 fail-open 假绿）。
+  该结论按 §九-5 口径构成对本提交段的判定；主工作树在制品的红/绿不改变它（主树现状另见 §5）。
+
+--------------------------------------------------------------------
+§4  M2 迁移演练脚本重定向后的真跑（隔离树 @ bad01fa）
+--------------------------------------------------------------------
+  (1) 真跑：`powershell -NoProfile -ExecutionPolicy Bypass -File D:\...\wt_bad01fa\Scripts\r5_m2_ubs2_migration_drill.ps1`
+      原始输出（CP936→UTF-8 转码后归档，`.tmp/r8p2/29-drill.utf8.txt`）：
+        DUnitX - [DeepBaseTests.exe] - Starting Tests.
+        Tests Found   : 4
+        Tests Ignored : 0
+        Tests Passed  : 4
+        Tests Leaked  : 0
+        Tests Failed  : 0
+        Tests Errored : 0
+        drill_exit=0
+        raw_output=D:\_Progs\02Business\DeepBase\.tmp\wt_bad01fa\TestResults\20260920-AUDIT-M2-migration-drill.log
+      外壳 RC（`$?`，node/powershell 直接返回）= 0；脚本自身回显 `drill_exit=0`。
+      ⇒ 演练指向的 4 个 v1→v2 迁移用例（`TTestUBS2Envelope.Test_Reencrypt_LegacyV1_BecomesReadableV2` 等）
+        在**统一 runner** 上全部真实执行且通过。这 4 个 case 原先只能在窄 runner 上跑（R5-M2 现场），
+        现在由 §九-1 并网的 `Test.DeepBase.Security.UBS2` 承接 ⇒ 删除窄口不丢演练能力。
+
+  (2) `-DryRun` 一致性：输出 `DRY-RUN: would execute against D:\...\wt_bad01fa\Tests\DeepBaseTests.exe` + 4 条 case，
+      证明重定向后的路径拼接（`Split-Path -Parent $PSScriptRoot` + `Tests\DeepBaseTests.exe`）正确，不依赖甲手工改的工作目录。
+
+  (3) 残留引用扫描（在隔离树 @ bad01fa 内，排除 `.git`）：
+      `grep -rIl "TestSecurityM2" .` 命中文件 15 个，全部位于 `CodeReview/`、`docs/`、`.workbuddy/`（历史记录/台账/记忆）。
+      再排除这三类目录后命中数 = **0** ⇒ 无任何构建脚本、CI 配置、`.dproj`、源码仍引用被删的窄 runner。
+      （`.tmp\exe\TestSecurityM2.exe` 属 gitignore 的本地构建产物，非本单删除对象；见证据 28 §4.3 登记，甲未动他人产物。）
+
+--------------------------------------------------------------------
+§5  本段新发现：三套门禁的「指定被测根」接口不一致，且未识别参数被静默忽略（fail-open 第三形态）
+--------------------------------------------------------------------
+§5.1 事实（逐条可在 bad01fa 树内复核，甲未改任何门禁脚本）
+  a) `09_工程脚本/encoding-gate/check_pas_encoding.js:20`   `const ROOT = path.resolve(arg('root', process.cwd()))`
+  b) `09_工程脚本/eol-gate/check_eol.js:16`                 `const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')))`
+  c) `09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js:21`
+                                                          `const REPO = path.resolve(arg('repo', path.join(__dirname, '../..')))`
+     该文件 `:11` 的用法注释亦只写 `[--repo <dir>]`。
+  ⇒ 三套门禁里两套用 `--root`、一套用 `--repo`；`arg()` 只做 `indexOf('--'+name)`，**未识别的 `--xxx` 一律静默丢弃**，
+    既不报错也不警告，直接回落到默认根（`process.cwd()` 或「脚本自身所在仓库根」）。
+
+§5.2 实测后果（不是理论担忧，甲本段真的踩到了）
+  * 甲按 encoding/eol 的习惯给 evidence gate 传 `--root D:\...\wt_bad01fa`：
+      - 被测目标 = 隔离树时：输出 139 / EXIT=0
+      - 被测目标 = 主工作树时：输出 **同样是 139 / EXIT=0**，`--all-worktree` 也同样是 139
+    两次不同目标的调用打出逐字相同的结果 ⇒ 甲起疑，读脚本后确认参数根本没生效，实际两次都在测「脚本所在的那棵树」。
+  * 危害定级（供主控并入乙的门禁 P0）：
+      - 它不会「扫 0 个文件还判绿」（那类已被 §九-4/§九-5 覆盖，且乙的在制版已加 0 扫描 fail-closed）；
+      - 它会**扫了别的树并判绿**：调用者以为在验收 commit A，实际验收的是脚本所在的 commit B。
+        若 B 干净而 A 脏，就是一条**看起来完全合法、带真实扫描计数的假 PASS**——比 0 扫描更难发现，
+        因为它通过了「必须同报扫描计数」这条针对性加固（§九-4）。
+  * 交叉核对方法（本节采用的判别实验，建议写进门禁使用口径）：
+      改目标根后**计数必须变**（隔离树 139 vs 主树 all-worktree 174）；两口径等值本身不能作为「参数生效」的证据。
+      或用与门禁无关的独立枚举对数（证据 25 §4.3(e) 的 `git ls-files` + `find` 双核对正是这个用途）。
+  * 处置边界：门禁脚本正由他人整改中（主工作树 `09_工程脚本/` 4 件 ` M` 即其产物）⇒ **甲不接手、不修改**（H1/H2、§九-4），
+    只把该形态登记为产品干预候选，交主控并入乙的门禁单。
+
+§5.3 主工作树现状与本段边界（只登记，不处置）
+  * 甲在本段只写了 2 个文件：`Scripts/r5_m2_ubs2_migration_drill.ps1`（改）与 `Tests/TestSecurityM2.dpr`（删，按裁定 2），
+    均已入库于 bad01fa；另写 1 件证据（本文件）。
+  * 主工作树仍含他人在制品（`Core/`、`Features/`、`Persistence/`、`Tests/`、`ThirdParty/`、`09_工程脚本/` 下的 ` M`，
+    以及 `docs/规范历史版本与对比库/` 的 ` D`）。这些**不属于**本单，甲未改、未暂存、未提交、未还原（H1/H2/H16）。
+  * 主树侧 HEAD 版脚本同刻复测（`--root` 对这两套是生效的，且已按 §5.2 换目标验证过计数会变）：
+      encoding-gate：973 个 .pas，EXIT=0（隔离树 972 + 他人未跟踪件 `Tests/Test.DeepBase.TestPaths.pas`）
+      eol-gate：1440 个文件，EXIT=0
+      ⇒ 证据 24 记录过的两件主树红项（`Test.DeepBase.TestPaths.pas` / `Test.DeepBase.HB.Benchmark.pas`）**当前已不再触发门禁**，
+        说明该 cwd 整改的在制文件已被其收口方按规范重写；甲未参与、未打开、未还原，只登记现场变化。
+  * 按 §九-5 口径，本段对 bad01fa 的判定只由 §3 的隔离 EXIT + 扫描计数构成；§5.2/§5.3 属现场取证与缺陷登记。
+  * 沿用上一段的产品干预候选（甲不改脚本，仅登记）：
+    「§九-5 的隔离判定必须**同时隔离门禁脚本本身**——用主树未提交的裁判脚本去扫隔离快照，测得的是『HEAD 数据 × 他人裁判』。
+     本段再补一条同源要求：裁判脚本的**被测根参数必须显式生效并自报**，否则『隔离』只是调用者的信念。」
+
+--------------------------------------------------------------------
+§6  结论
+--------------------------------------------------------------------
+  1. 裁定 2 已按「先并网验证、后删除」的顺序落地：`e72d9f2`（3 单元注册 + 隔离全库真跑 + 被执行证明，证据 25/26/27/28）
+     → `bad01fa`（删除窄 runner + 演练重定向，本证据）。零覆盖损失（证据 28 §4.1）。
+  2. bad01fa 隔离编译 BUILD_EXIT=0，统一 exe 与 e72d9f2 逐字节等长（49,039,872）⇒ 删除动作对全库套件无副作用。
+  3. bad01fa 隔离三门禁 EXIT=0 / 计数 972、1423、139（均 > 0，evidence gate 用正确的 `--repo` 复测）；
+     M2 演练在统一 runner 上 Found 4 / Passed 4 / drill_exit=0；被删 runner 在构建面（脚本/CI/.dproj/源码）残留引用 = 0。
+  4. R8-P2 的两个原子提交全部落地 ⇒ 按「未提交的交付 = 未交付」，P2 状态从「编码就绪」变为「已交付·可验收」。
+  5. 附带产出：§5 登记的门禁根参数缺陷（带真实扫描计数的假 PASS 形态），建议主控并入乙的门禁 P0 一并收口。

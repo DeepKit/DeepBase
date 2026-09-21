@@ -1,0 +1,183 @@
+================================================================================
+R8-P2 并网落地（HEAD e72d9f2）· 隔离工作树编译 + 三套门禁复跑
+================================================================================
+法源：WO-20260920-AUDIT-甲-R8 §九-1（窗口授予甲，scope 更正为 3 单元）/ §九-2（隔离 --detach 工作树验证协议）
+      / §九-4（复跑证据不得只报 EXIT，须同报扫描计数）/ §九-5（提交段门禁判定口径）
+      主控裁定书《20260921-AUDIT-主控-甲-R8-P3追加段-验收与停等点裁定》§四 裁定 1、§二、§四 裁定 3
+被测对象：本仓 HEAD `e72d9f2c32aa64882e3f8d74aecc9640252f7804`
+          （= 甲在 Tests/DeepBaseTests.dpr 的 uses 段 :216 之后新增 3 行的唯一一笔提交，1 file changed, 3 insertions(+)）
+取证时刻：2026-09-21 22:50:45 ~ 22:53:55 +0800（墙钟取自本机系统时钟，与 git commit 时刻独立）
+执行方：甲（开发 AI 甲）。本段未改动任何生产源码、未改动任何门禁脚本（H2 / §九-4「甲本单动作：无需改门禁」）。
+
+--------------------------------------------------------------------------------
+§1 隔离工作树的建立与「干净」前提
+--------------------------------------------------------------------------------
+cmd：
+  git worktree add --detach .tmp/wt_e72d9f2 e72d9f2
+结果：
+  Preparing worktree (detached HEAD e72d9f2c)
+  Updating files: 100% (2024/2024), done.
+  HEAD is now at e72d9f2c test(r8-p2): 安全测试网并网 ...
+复验：
+  git -C .tmp/wt_e72d9f2 rev-parse HEAD                => e72d9f2c32aa64882e3f8d74aecc9640252f7804
+  git -C .tmp/wt_e72d9f2 status --porcelain            => （空输出）
+⇒ 该工作树是 e72d9f2 的 commit 快照，不含任何在制品（构建产物 .exe/.dcu 命中 .gitignore，故 status 仍为空）。
+⇒ 主控 §四 裁定 1 的强制前提成立：编译与运行均不在共享工作树内进行，乙的 cwd 整改在制品无法污染本次构建。
+
+--------------------------------------------------------------------------------
+§2 dcc64 全库编译（Win64 / Delphi 37.0）
+--------------------------------------------------------------------------------
+最终成功命令（CWD=<worktree>/Tests，工程文件按裸名传给 dcc64）：
+  call "D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
+  cd /d D:\_Progs\02Business\DeepBase\.tmp\wt_e72d9f2\Tests
+  dcc64 -B -Q -U"%SP%" -I"%SP%" -N0"<worktree>\.tmp\dcu_e72d9f2" DeepBaseTests.dpr
+  %SP% = <worktree>\{Core;Features;Persistence;VCL;FMX;ThirdParty\Payment;ThirdParty\Social;
+         Tools\CLI;Tools\WebService};.;.\Regression;.\Integration;D:\ProgramData\delphi\DUnitX\Source
+  （搜索路径集合与 Scripts/run_tests.ps1:527-542 的 $UnitPaths 同源，只是把根换成 worktree 路径）
+
+编译输出摘要（原文，非复述）：
+  Embarcadero Delphi for Win64 compiler version 37.0
+  Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+  ...
+  385662 lines, 27.86 seconds, 38302620 bytes code, 3304536 bytes data.
+  BUILD_EXIT=0
+
+计数与产物（全部实测）：
+  BUILD_EXIT（ERRORLEVEL）        = 0
+  日志行数                        = 257
+  `Error:` / `Fatal:` 命中行数    = 0（grep -nE "(Error|Fatal):" 无输出）
+  产物                            = <worktree>\Tests\DeepBaseTests.exe，49,039,872 字节，22:50:45
+  产物旁 .map                     = 不存在（未开 -GD，未请求覆盖率，符合甲本单范围）
+
+与同源基线的可比性（不猜测，逐位对照）：
+  证据 17（隔离工作树 @ 2e97d11，并网前 HEAD）  384367 lines / 28.66 s / exe 48,987,648 字节 / build_exit=0
+  本段  （隔离工作树 @ e72d9f2，并网后 HEAD）    385662 lines / 27.86 s / exe 49,039,872 字节 / BUILD_EXIT=0
+  证据 18（AFTER 预览：2e97d11 + 手工插入同 3 行）exe 49,039,872 字节
+  ⇒ 本段 exe 字节数与「插入 3 行」的 AFTER 预览值逐位相同（49,039,872），
+    行数 +1295（385662-384367）来自 3 个单元及其依赖被纳入编译。
+
+--------------------------------------------------------------------------------
+§3 两次失败尝试的如实登记（口径更正，非隐藏）
+--------------------------------------------------------------------------------
+证据 11/12/16/17 的头注把方法写成「cmd: dcc64 ... Tests\DeepBaseTests.dpr, CWD=<worktree>/Tests」。
+本段按该字面写法执行，两次都失败，证明**该行注把 CWD 与工程文件路径写在了互斥的组合里**：
+
+  尝试 1：CWD=<worktree>/Tests，argv=Tests\DeepBaseTests.dpr
+          => Fatal: F1026 File not found: 'Tests\DeepBaseTests.dpr'            （BUILD_EXIT=1）
+  尝试 2：CWD=<worktree>（根），argv=Tests\DeepBaseTests.dpr
+          => Tests\DeepBaseTests.dpr(459) Fatal: F1026 File not found:
+             'Architecture\Test.Arch.PackageBoundaries.pas'                    （BUILD_EXIT=1）
+  尝试 3：CWD=<worktree>/Tests，argv=DeepBaseTests.dpr
+          => BUILD_EXIT=0（即 §2）
+
+⇒ 尝试 2 是**机器可查的证据**：它说明 .dpr 里的 `in '<rel>'` 单元路径是相对**进程 CWD**解析、
+  而非相对 .dpr 自身所在目录解析，所以「CWD 必须是 Tests 目录」这一条是对的，
+  错的是历史头注里同时写的 `Tests\` 前缀。§2 的命令是唯一能重现历史 build_exit=0 的写法。
+⇒ 后续证据头注统一按本段写法（CWD=<worktree>/Tests + argv=DeepBaseTests.dpr），
+  历史 11/12/16/17 四件的该行注由甲在回执里点名更正，不回改已提交的证据文件。
+
+--------------------------------------------------------------------------------
+§4 三套门禁复跑 —— 含一次「差点用了别人脚本」的自纠（H7，主动申报）
+--------------------------------------------------------------------------------
+§4.1 先发现的问题：主工作树的三个门禁脚本本身正被他人在制品修改
+
+  git status --porcelain（主工作树，22:53 快照）显示：
+     M 09_工程脚本/encoding-gate/check_pas_encoding.js
+     M 09_工程脚本/eol-gate/check_eol.js
+     M 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+
+  内容级核验（git hash-object --path <p> <p> vs git rev-parse HEAD:<p>）：
+     check_pas_encoding.js        wt=b4be4acd  HEAD=c8bf4525   ⇒ 真改动
+     check_eol.js                 wt=b3bf7b32  HEAD=8b74edaf   ⇒ 真改动
+     check_evidence_encoding.js   wt=6faa9822  HEAD=db8d061e   ⇒ 真改动
+  双口径 numstat（raw 与 --ignore-cr-at-eol 完全相同 ⇒ 内容级，不是行尾假脏）：
+     encoding-gate/check_pas_encoding.js         +18 / -4
+     eol-gate/check_eol.js                       +18 / -3
+     evidence-encoding-gate/check_evidence_encoding.js  +13 / -2
+  语义方向：与主控 §二 登记给乙的「双门禁 fail-open（readdir 失败静默放行 / 0 扫描仍判绿）」
+  P0 修复单吻合。**该改动归属乙，甲未参与、未接手、未还原**（H1/H2；归因不明处禁推断执行方，
+  此处只登记「非甲」与「方向吻合」两件事）。
+
+§4.2 自纠：甲最初两次门禁复跑用的是主工作树里那份**未提交的乙版脚本**
+
+  甲在 22:52 先跑了两轮，两轮的 EXIT 都是 0，但脚本解释器路径分别是
+  主工作树的 `09_工程脚本/...`（一次 --root 指向隔离树，一次不带 --root 跑主树）。
+  ⇒ 由 §4.1 可知那两份脚本 ≠ HEAD 版 ⇒ 该两轮**不能作为 e72d9f2 提交段的门禁判定**，
+    甲不采用，全部作废重跑（本节结论一律以 §4.3 为准）。
+  ⇒ 登记为一条口径推论：§九-5 的「隔离工作树 @ 目标 commit」口径**必须同时隔离脚本本身**，
+    只把 --root 指到隔离树而仍从主树执行脚本，判定的其实是「HEAD 数据 × 他人的在制品判据」。
+    这条对本审计线所有历史/后续门禁复跑都成立，属主控 §四 裁定 3 的收紧项，登记为产品干预候选，
+    由主控裁定是否入 §九-5。
+
+§4.3 重跑：从隔离工作树执行该树自带的 HEAD 版脚本（脚本 blob 已核验）
+
+  前置核验（脚本本身必须等于 HEAD）：
+    git hash-object --path 09_工程脚本/encoding-gate/check_pas_encoding.js  => c8bf4525d75e...
+    git rev-parse HEAD:09_工程脚本/encoding-gate/check_pas_encoding.js       => c8bf4525d75e...  一致
+
+  运行位置：CWD = D:\_Progs\02Business\DeepBase\.tmp\wt_e72d9f2（脚本与被扫根同树）
+  ★ 所有 --root 一律传 Windows 形式路径（D:/...）。§九-4 与主控 §二 的 fail-open 教训：
+    传 POSIX 形式 /d/... 会扫 0 个文件却 EXIT=0。本段每一条都同时报 **扫描计数**，计数 > 0 才算数。
+
+  (a) 编码门禁 @ 隔离工作树 e72d9f2  —— 提交段判定
+      node 09_工程脚本/encoding-gate/check_pas_encoding.js --root D:/_Progs/02Business/DeepBase/.tmp/wt_e72d9f2
+      输出：编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+      enc_rc = 0        扫描计数 = 972（> 0）
+
+  (b) 行尾门禁 @ 隔离工作树 e72d9f2  —— 提交段判定
+      node 09_工程脚本/eol-gate/check_eol.js --root D:/_Progs/02Business/DeepBase/.tmp/wt_e72d9f2
+      输出：行尾门禁通过：检查了 1423 个文件（.pas CRLF / .md LF）
+      eol_rc = 0        扫描计数 = 1423（> 0）
+
+  (c) 编码门禁 @ 主工作树（同一条 HEAD 版脚本，--root 指向主树）—— 现场定性，不作提交段判定
+      输出：编码门禁通过：973 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+      enc_rc = 0        扫描计数 = 973
+      ⇒ 与 22:5x 之前甲/主控测到的 enc EXIT=1（G3 缺 BOM: Tests/Test.DeepBase.TestPaths.pas）相比**已转绿**；
+        主树 .pas 计数 973 = 隔离树 972 + 1（Tests/Test.DeepBase.TestPaths.pas 仍是未跟踪新件，
+        git cat-file -e HEAD:Tests/Test.DeepBase.TestPaths.pas 失败 ⇒ 不在 HEAD）。
+
+  (d) 行尾门禁 @ 主工作树
+      输出：行尾门禁通过：检查了 1440 个文件（.pas CRLF / .md LF）
+      eol_rc = 0        扫描计数 = 1440
+      ⇒ 相对上一段（18:2x 的 eol EXIT=1，红项 = TestPaths.pas + HB.Benchmark.pas 纯 LF）**已转绿**。
+        两件当前现场：
+          Tests/Test.DeepBase.TestPaths.pas       ??  （未跟踪，仍不在 HEAD）
+          Tests/Test.DeepBase.HB.Benchmark.pas    M   （已跟踪，被改）
+        甲只登记状态，未打开、未修改、未还原（H1/H2）。
+
+  (e) 证据编码门禁 @ 主工作树（HEAD 版脚本）
+      已跟踪口径：      扫描 139 个 CodeReview 证据文件，NUL 违规 0，EXIT=0
+      --all-worktree： 扫描 163 个 CodeReview 证据文件，NUL 违规 0，EXIT=0
+      独立枚举交叉核对（同款 EXT 集合 txt|log|csv|xml，git -c core.quotepath=off）：
+          git ls-files -- CodeReview | grep -cE '\.(txt|log|csv|xml)$'  = 139  ✔ 与门禁一致
+          find CodeReview -type f \( -name '*.txt' -o ... \) | wc -l   = 163  ✔ 与门禁一致
+      ⇒ 计数与 69e9792 时点（139 / 163）持平：e72d9f2 只改 1 个 .dpr，0 件证据文件入库，符合预期。
+
+§4.4 门禁计数漂移的零残差归因（eol：1422 → 1423）
+--------------------------------------------------------------------------------
+  上一段（主控裁定书 §一 第 8 项）在 69e9792 的隔离树测得 eol = 1422；本段在 e72d9f2 测得 1423。
+  69e9792..e72d9f2 区间只有两笔提交：1e8c078（主控）与 e72d9f2（甲，仅 1 个 .dpr）。
+  .dpr 不在 eol-gate 的扩展名集合内 ⇒ 差值来自主控那笔新增的 .md。
+  实测（git -c core.quotepath=off ls-tree -r --name-only <c> | grep -c '\.md$'）：
+      69e9792 = 455 个已跟踪 .md      e72d9f2 = 456 个已跟踪 .md      ⇒ +1，与门禁差值逐位吻合
+  ★ 反面教材（同一测量陷阱第二次踩）：甲第一次做这个核对时漏加 `-c core.quotepath=off`，
+    中文路径被转义成带引号的形式，`grep '\.md$'` 静默少算，得到 152 / 152 的假相等。
+    与证据 24 §5 记录的是同一个坑：**凡把 git 路径输出喂给按后缀过滤的工具，必须先关 quotepath。**
+
+--------------------------------------------------------------------------------
+§5 本节结论
+--------------------------------------------------------------------------------
+  1. e72d9f2（3 个 M2 安全单元并入 DeepBaseTests.dpr）在隔离工作树下 **全库 dcc64 编译 EXIT=0，
+     Error/Fatal 0 行**，产物 49,039,872 字节，与「手工插入同 3 行」的 AFTER 预览逐位一致。
+  2. 按 §九-5 口径（且脚本自身也取自该 commit）：**e72d9f2 提交段门禁 = enc 0（972）/ eol 0（1423）**，
+     两项扫描计数均 > 0，满足 §九-4「不得只报 EXIT」。
+  3. 主工作树两条门禁在本段复跑时同刻转绿（enc 973 / eol 1440），上一段的两个红项已不在；
+     红项消失的原因属乙的在制品推进，甲未参与，只登记现场（§4.3 (c)(d)）。
+  4. 甲本段对仓库的写入 = 0 件（本证据文件除外，落在 §6）；对主工作树的他人改动未使用任何
+     checkout/restore/reset（H1）。
+  5. 全库真跑（found/passed/failed/errored 双数字 + 3 单元被执行证明）见同段证据 `26`（console）
+     与 `27`（NUnit XML）；e72d9f2 提交信息预告的是「25、26」，实际按 R8 段内 18/19 的
+     console/xml 分件惯例落为 25/26/27 三件，该差值在回执里点名更正，不改写已提交信息。
+  6. 本段新增落盘（甲域，全部待精确 pathspec 提交）：
+       CodeReview/20260920-AUDIT-甲-证据/R8/25-r8p2-isolated-compile-and-gates-e72d9f2.txt   （本文件）
+================================================================================
