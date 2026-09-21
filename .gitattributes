@@ -37,6 +37,7 @@
 # Binaries
 *.exe binary
 *.dll binary
+*.bpl binary
 *.so binary
 *.dylib binary
 *.dcu binary

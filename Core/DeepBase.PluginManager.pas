@@ -252,11 +252,11 @@ type
     dwUIChoice: DWORD;
     fdwRevocationChecks: DWORD;
     dwUnionChoice: DWORD;
+    // R7-P4: the SDK declares the five union members overlapped in ONE
+    // pointer slot. The previous declaration listed them as five sequential
+    // fields, shifting dwStateAction et al. by 32 bytes (wintrust AV).
+    // dwUnionChoice is always WTD_CHOICE_FILE here, so only pFile exists.
     pFile: PWINTRUST_FILE_INFO;
-    pCatalog: Pointer;
-    pBlob: Pointer;
-    pSgnr: Pointer;
-    pCert: Pointer;
     dwStateAction: DWORD;
     hWVTStateData: THandle;
     pwszURLReference: PWideChar;
@@ -1120,13 +1120,18 @@ var
   TrustData: WINTRUST_DATA;
   ActionId: TGUID;
   Status: Longint;
+  // R7-P4: the path buffer must outlive both WinVerifyTrust calls.
+  // PWideChar(WideString(Path)) took the address of a statement temporary
+  // that the compiler frees immediately (use-after-free -> AV in wintrust).
+  LPathW: WideString;
 begin
   if not FileExists(Path) then
     Exit(False);
 
+  LPathW := WideString(Path);
   FillChar(FileInfo, SizeOf(FileInfo), 0);
   FileInfo.cbStruct := SizeOf(FileInfo);
-  FileInfo.pcwszFilePath := PWideChar(WideString(Path));
+  FileInfo.pcwszFilePath := PWideChar(LPathW);
 
   FillChar(TrustData, SizeOf(TrustData), 0);
   TrustData.cbStruct := SizeOf(TrustData);

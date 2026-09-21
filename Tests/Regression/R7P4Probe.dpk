@@ -1,0 +1,12 @@
+package R7P4Probe;
+
+{ R7-P4 (A18) fixture package. Build: dcc64 R7P4Probe.dpk (Win64).
+  Output R7P4Probe.bpl is a committed test fixture (see .gitattributes *.bpl binary). }
+
+requires
+  rtl;
+
+contains
+  R7P4ProbeUnit in 'R7P4ProbeUnit.pas';
+
+end.
