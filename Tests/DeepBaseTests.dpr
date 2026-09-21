@@ -214,6 +214,9 @@ uses
   // P0/P1/P2 bug-fix property tests (deepbase-bug-fixes-p0p1p2)
   Test.DeepBase.LLM.Schema.PBT in 'Test.DeepBase.LLM.Schema.PBT.pas',
   Test.DeepBase.Security.SecretStore in 'Test.DeepBase.Security.SecretStore.pas',
+  Test.DeepBase.Security.UBS2 in 'Test.DeepBase.Security.UBS2.pas',
+  Test.DeepBase.Security.MachineIdentity in 'Test.DeepBase.Security.MachineIdentity.pas',
+  Test.DeepBase.SecureMemory in 'Test.DeepBase.SecureMemory.pas',
   Test.DeepBase.IntentClarification.PBT in 'Test.DeepBase.IntentClarification.PBT.pas',
   Test.DeepBase.Graph.PBT in 'Test.DeepBase.Graph.PBT.pas',
   Test.DeepBase.Encoding.Fix.PBT in 'Test.DeepBase.Encoding.Fix.PBT.pas',
