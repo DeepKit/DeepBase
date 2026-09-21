@@ -217,6 +217,7 @@ uses
   Test.DeepBase.Security.UBS2 in 'Test.DeepBase.Security.UBS2.pas',
   Test.DeepBase.Security.MachineIdentity in 'Test.DeepBase.Security.MachineIdentity.pas',
   Test.DeepBase.SecureMemory in 'Test.DeepBase.SecureMemory.pas',
+  Test.DeepBase.Security.MasterKey in 'Test.DeepBase.Security.MasterKey.pas',
   Test.DeepBase.IntentClarification.PBT in 'Test.DeepBase.IntentClarification.PBT.pas',
   Test.DeepBase.Graph.PBT in 'Test.DeepBase.Graph.PBT.pas',
   Test.DeepBase.Encoding.Fix.PBT in 'Test.DeepBase.Encoding.Fix.PBT.pas',
