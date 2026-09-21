@@ -1,0 +1,159 @@
+# 证据 24 · 甲 R8 更正段提交（`2930fa1`）后复跑 —— 共享工作树门禁因**他人在制品**转红，HEAD 级复证仍全绿
+
+- 交付方：开发 AI 甲（工单 `WO-20260920-AUDIT-甲-R8-POSIX构建缺口与安全测试网并网.md`，P3 提交后复跑段）
+- 时刻：2026-09-21 18:14:56 +0800（主工作树）/ 18:1x（隔离工作树复证）
+- 前置 HEAD：`2930fa19393afae7c6a657d995052777d265ff64`（甲本段提交，4 件，全部在 `CodeReview/`）
+
+## 0) 结论先行（不掩盖，也不误归责）
+
+| 口径 | encoding-gate | eol-gate | evidence-encoding(tracked) | evidence-encoding(--all-worktree) |
+| :--- | :---: | :---: | :---: | :---: |
+| **主工作树**（含他人在制品） | **1** | **1** | 0（138） | 0（162） |
+| **隔离 HEAD `2930fa1`**（`git worktree add --detach`） | **0** | **0**（1422 文件） | — | — |
+
+⇒ 甲的提交**没有**破坏任何门禁；主工作树的两个红项来自**甲未创建、未修改、未处置**的 `Tests/` 在制品。按 H1/H2 与主控「归因不明，禁推断执行方」口径：甲只登记现场，不改他人文件、不 `checkout --`、不代偿提交。
+
+## 1) 主工作树原始输出（18:14:56，EXIT 用 `rc=$?` 直取）
+
+```
+编码门禁失败，违规 1 项:
+  G3 缺UTF-8 BOM: Tests/Test.DeepBase.TestPaths.pas
+enc rc=1
+行尾门禁失败，违规 2 项:
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.HB.Benchmark.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.TestPaths.pas
+证据编码门禁通过：扫描 138 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+证据编码门禁通过：扫描 162 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+```
+
+已跟踪证据 136 → **138** = +2，与提交内容逐项对应（`22`、`23` 入库）；`--all-worktree` 162 不变（这两件此前已在_worktree_口径内）。⇒ 证据 `23` §7 与回执 §三 预告的「提交后差值消解」成立。
+
+## 2) 红项逐件取证（全为甲外文件）
+
+| 路径 | git 状态 | blob 对比 | mtime | 甲是否触碰 |
+| :--- | :--- | :--- | :--- | :---: |
+| `Tests/Test.DeepBase.TestPaths.pas` | `??`（未跟踪，新建） | HEAD 无此路径（`git cat-file -e HEAD:<p>` 失败） | 18:10:39 | **否** |
+| `Tests/Test.DeepBase.HB.Benchmark.pas` | ` M`（内容级改动） | HEAD `5275cdb…` → 工作树 `53984de…`，`diff --numstat` 与 `--ignore-cr-at-eol` 同为 **5/4**（真改动，非行尾假脏） | 18:12:27 | **否** |
+
+内容摘要（`git diff` 前若干行，逐字）：
+
+```
++  DeepBase.VCL.HB.Waterfall,
++  Test.DeepBase.TestPaths;
+-  FProbeExe := TPath.GetFullPath('Examples\HbColdStartProbe\Win64\HbColdStartProbe.exe');
++  FProbeExe := TTestPaths.RepoPath('Examples\HbColdStartProbe\Win64\HbColdStartProbe.exe');
+```
+
+⇒ 语义是把基准用例的绝对路径解析改为仓库根相对解析——正是主控《乙 P0 验收结论》§三/新工单 `WO-20260921-AUDIT-乙-P1-cwd裂缝与存量失败收口.md` 的 **cwd 裂缝**整改方向（`HB.Benchmark.*` 7 项在 15 项清单内）。甲据此**只登记不接手**：该单属他人范围，且 `Tests/DeepBaseTests.dpr` 一旦因新单元被改动即进入 H2/主控串行化范围。
+
+盘上字节（同一探针 `.tmp/eol_bytes.js`）：
+
+```
+Tests/Test.DeepBase.TestPaths.pas      | bytes=3470  BOM=false CRLF=0 LF-only=120 NUL=0 utf8-valid=true
+Tests/Test.DeepBase.HB.Benchmark.pas   | bytes=26693 BOM=true  CRLF=0 LF-only=819 NUL=0 utf8-valid=true
+```
+
+两件均为**纯 LF**写盘；`HB.Benchmark.pas` 的 BOM 还在（故 encoding-gate 不报它，只被 eol-gate 报）。与证据 `22` 的机制一致但方向相反：那 13 件是「假脏真同」，这两件是「真改且不合门禁」。
+
+补充口径：`TestPaths.pas` 未跟踪 ⇒ 它**不在 HEAD**，只在工作树；encoding-gate 与 eol-gate 走工作树枚举，因此把它计为违规。这再次印证证据 `23` §6 的结论——**门禁数字与红绿都是工作树口径，HEAD 级判定必须用隔离工作树。**
+
+## 3) 隔离 HEAD 复证（证明甲提交无副作用）
+
+```
+$ git worktree add --detach .tmp/wt_head_2930fa1 2930fa1
+HEAD is now at 2930fa19 docs(audit): 甲R8 工作树定性更正段 …
+$ node "D:/_Progs/02Business/DeepBase/09_工程脚本/encoding-gate/check_pas_encoding.js" --root <wt>
+编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）      rc=0
+$ node "D:/_Progs/02Business/DeepBase/09_工程脚本/eol-gate/check_eol.js" --root <wt>
+行尾门禁通过：检查了 1422 个文件（.pas CRLF / .md LF）                                  rc=0
+```
+
+脚本根目录解析实测：`check_pas_encoding.js:20` `const ROOT = path.resolve(arg('root', process.cwd()))` ⇒ 门禁支持 `--root`，隔离复证须显式传参（甲本段命令已显式）。
+
+1422（隔离 HEAD）vs 1437（主树 18:09 那次通过时打印的计数）差 15：来自「未跟踪 `.pas`/`.md`」与「工作树已删除但未提交」两类文件——同刻实测 `HEAD 树 1427 − 5（落在 SKIP 目录内）+ 19（未跟踪且未忽略，SKIP 外）− 3（工作树删除）= 1438`，与门禁的 1437 差 1，差额来自 ignore 规则与门禁 walk 的边界差异；**甲不跨刻强行凑等式**（18:10 之后主树又多了未跟踪的 `TestPaths.pas`，且门禁转红后不再打印计数）。该分解的完整口径与命令见证据 `23` §6。本段只取用其中**可确定的部分**：隔离 HEAD = 1422 且全绿。
+
+## 4) 处置与请求
+
+1. 甲**不改、不还原、不提交**上述两件他人文件（H1/H2），仅登记现场与取证。
+2. 请主控知悉：**共享工作树当前 encoding-gate/eol-gate 为红**，源头是在制的 cwd 裂缝整改；该单收口方需按《UTF-8 BOM 编码规范》以 CRLF+BOM 重写 `TestPaths.pas`，并把 `HB.Benchmark.pas` 的行尾恢复为 `eol=crlf` 展开态，否则任何人的提交段复跑门禁都会被这两件挡住。
+3. 该现场同时是**门禁口径缺陷的实例**：门禁只看工作树，无法区分「HEAD 已破」与「他人未提交在制品」。建议在门禁口径里固定「提交段判定 = 隔离 `--detach` 工作树 @ 目标 commit 的 EXIT，主树红项须逐件点名归属」——与甲请求的「签名变更类提交须附全库 `.dpr` 编译证据」同属一类（把「基线可比性」写进门禁，而不是靠事后口头澄清）。
+4. 清理申报：本段所建 `.tmp/wt_head_2930fa1` 已删除。过程实录——`git worktree remove .tmp/wt_head_2930fa1` 解除注册成功但物理目录报 `error: failed to delete ...: Permission denied`（Windows 句柄占用）；随后 `rm -rf .tmp/wt_head_2930fa1` 成功，复验 `ls -d` 返回 No such file or directory，`git worktree list` 只剩主工作树 + 他人 4 处（`.claude/worktrees/*` ×2、`.tmp/b1-before`、`.tmp/head-blocker`）。
+
+---
+
+## 5) 本段（证据 `24` + 回执 两件）提交前现场与门禁原始输出
+
+前置 HEAD：
+
+```
+$ git rev-parse HEAD
+2930fa19393afae7c6a657d995052777d265ff64
+```
+
+四门禁逐字（18:22 +0800，EXIT 用 `rc=$?` 直取，不经管道）：
+
+```
+编码门禁失败，违规 1 项:
+  G3 缺UTF-8 BOM: Tests/Test.DeepBase.TestPaths.pas
+enc EXIT=1
+
+行尾门禁失败，违规 2 项:
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.HB.Benchmark.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.TestPaths.pas
+eol EXIT=1
+
+证据编码门禁通过：扫描 138 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+ev-tracked EXIT=0
+
+证据编码门禁通过：扫描 163 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+ev-all EXIT=0
+```
+
+红项与本段改动的关系：**0**。两件红文件均为 §2 已逐件取证定性的他人 cwd 整改在制品；本段新增/修改的两件都在 `CodeReview/` 下，一件 `.txt`、一件 `.md`，不落在 encoding-gate（只扫 `.pas`）与 eol-gate 的 `.pas` 违规面上。
+
+`--all-worktree` 计数 162 → 163（+1）：三段快照 + 本段独立枚举：
+
+```
+18:09（证据 23 §8）  tracked 136 / all-worktree 162   ⇒ 未跟踪侧推得 26
+提交 2930fa1 后      tracked 138 / all-worktree 162   ⇒ 未跟踪侧推得 24   （22/23 由未跟踪转跟踪）
+18:22（本段）        tracked 138 / all-worktree 163   ⇒ 未跟踪侧推得 25   （+1 = 本证据 24）
+```
+
+同刻独立枚举（三条命令互相印证，非由汇总数反推）：
+
+```
+git -c core.quotepath=off ls-files -- CodeReview | grep -Ei '\.(txt|log|csv|xml)$' | wc -l  → 138  （= 门禁 tracked 口径输出）
+git -c core.quotepath=off ls-files --others -- CodeReview | grep -Ei '…' | wc -l            → 25   （含本证据 24 与他人 `_audit_recheck/乙-R7-重复对删除清单.txt`）
+find CodeReview -type f \( -iname '*.txt' -o -iname '*.log' -o -iname '*.csv' -o -iname '*.xml' \) | wc -l → 163 （= 门禁 --all-worktree 输出）
+```
+
+`138 + 25 = 163` 与门禁两个口径各自吻合，且三段的位移只涉及甲自己的三件文件（`22`/`23` 转跟踪、`24` 新增）。**口径声明**：这是汇总数一致性校验——若他人在同窗口内恰好「+1 且 −1」，聚合数字看不出来；甲在此窗口内未做逐件清单快照，故不给「他人零变动」的断言，只给「位移量与甲的文件一一对得上」的实测。测量陷阱一并记下：首次枚举漏计到只剩 3 件，原因是未加 `core.quotepath=off` 时中文路径被转义成 `"…"` 结尾、按 `\.txt$` 过滤直接落空；复现该表必须带上该 `-c` 参数。
+
+本段两件的盘上与索引状态：
+
+```
+$ git -c core.quotepath=off ls-files --eol -- 回执.md
+i/lf    w/lf    attr/text eol=lf       CodeReview/20260920-AUDIT-甲-R8-交付回执.md
+
+$ git check-ignore -v "…/R8/24-postcommit-gates-and-thirdparty-red.txt"   → 无命中，EXIT=1
+⇒ 本段不需要 git add -f
+
+$ node .tmp/eol_bytes.js 证据24 回执
+CodeReview/20260920-AUDIT-甲-证据/R8/24-postcommit-gates-and-thirdparty-red.txt | bytes=7078 BOM=false CRLF=0 LF-only=80  NUL=0 utf8-valid=true
+CodeReview/20260920-AUDIT-甲-R8-交付回执.md                                     | bytes=26120 BOM=false CRLF=0 LF-only=170 NUL=0 utf8-valid=true
+```
+
+自指例外（同 `23` §8.2 口径，**覆盖本段两件**）：上表 `bytes`/`LF-only` 是 18:22 那次探测的快照；此后本文件追加了 §5、回执又改了 §三表格与 §四第 7 条，故两件的尺寸均为**中段快照而非提交终值**。行尾与编码属性不因此失去证明力：`CRLF=0 / NUL=0 / 合法 UTF-8 / 无 BOM` 由「追加的也是同一段纯文本」这一事实延续，且提交前定稿复跑的两个证据门禁 EXIT 与三门禁原始输出随提交信息落盘（`git log -1 --format=%B`），不在此处重复写数。
+
+`.gitattributes:30` = `*.txt text eol=lf`，本证据盘上已是 LF（`CRLF=0`）⇒ 入库无 renormalize 漂移；回执侧 `git ls-files --eol` 实测 `i/lf w/lf attr/text eol=lf`（索引与工作树一致）。
+
+同刻 `git status --porcelain -- CodeReview/` 现场（证明甲只暂存本段两件、他人新增在制品未夹带）：
+
+```
+ M CodeReview/20260920-AUDIT-甲-R8-交付回执.md
+?? CodeReview/20260920-AUDIT-甲-证据/R8/24-postcommit-gates-and-thirdparty-red.txt
+?? CodeReview/20260921-AUDIT-乙-P0-HEAD编译断裂修复-请求审核报告.md
+?? CodeReview/_audit_recheck/乙-R7-重复对删除清单.txt
+```
+
+后两件为他人的新增在制品（其中 `.txt` 那件已计入上面 163 的 untracked 侧），甲未改、未暂存、未提交。
