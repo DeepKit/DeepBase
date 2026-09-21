@@ -345,6 +345,11 @@ type
     class function IsValidHttpHeader(const AName, AValue: string): Boolean; static;
     class function IsSafeUrl(const AUrl: string): Boolean; static;
     class procedure ValidateResolvedUrlForHttp(const AUrl: string); static;
+    // R7-P2 S8: single SSOT for the SSRF allow-flags. The env kill-switches
+    // are DEV-ONLY (M1 InsecureDevMode precedent): RELEASE builds hard-force
+    // both flags False, so no runtime switch can open the intranet door.
+    class procedure GetSsrfAllowFlags(out AAllowPrivateNet,
+      AAllowLocalHost: Boolean); static;
   end;
 
   /// <summary>IP address utilities</summary>
@@ -2171,6 +2176,20 @@ begin
   end;
 end;
 
+// R7-P2 S8: the ONLY place that reads the SSRF env kill-switches (SSOT).
+// M1 InsecureDevMode precedent: dev bypasses live under {$IFNDEF RELEASE};
+// RELEASE builds force both flags False, so no runtime switch exists there.
+class procedure TNetworkUtils.GetSsrfAllowFlags(out AAllowPrivateNet,
+  AAllowLocalHost: Boolean);
+begin
+  AAllowPrivateNet := False;
+  AAllowLocalHost := False;
+  {$IFNDEF RELEASE}
+  AAllowPrivateNet := SameText(GetEnvironmentVariable('DeepBase_ALLOW_PRIVATE_NET_HTTP'), '1');
+  AAllowLocalHost := SameText(GetEnvironmentVariable('DeepBase_ALLOW_LOCALHOST_HTTP'), '1');
+  {$ENDIF}
+end;
+
 class procedure TNetworkUtils.ValidateResolvedUrlForHttp(const AUrl: string);
 var
   URI: TURI;
@@ -2180,8 +2199,7 @@ var
 begin
   URI := TURI.Create(AUrl);
   Host := URI.Host;
-  AllowPrivateNet := SameText(GetEnvironmentVariable('DeepBase_ALLOW_PRIVATE_NET_HTTP'), '1');
-  AllowLocalHost := SameText(GetEnvironmentVariable('DeepBase_ALLOW_LOCALHOST_HTTP'), '1');
+  GetSsrfAllowFlags(AllowPrivateNet, AllowLocalHost);
   ValidateResolvedHostForHttp(Host, AllowPrivateNet, AllowLocalHost);
 end;
 
@@ -2205,8 +2223,7 @@ begin
     if Host = '' then
       Exit;
 
-    AllowPrivateNet := SameText(GetEnvironmentVariable('DeepBase_ALLOW_PRIVATE_NET_HTTP'), '1');
-    AllowLocalHost := SameText(GetEnvironmentVariable('DeepBase_ALLOW_LOCALHOST_HTTP'), '1');
+    GetSsrfAllowFlags(AllowPrivateNet, AllowLocalHost);
     
     // 防止SSRF攻击 - 默认禁止内网地址（可通过环境变量显式放开）
     if (TIPUtils.IsPrivateIP(Host) or TIPUtils.IsLinkLocalIP(Host)) and (not AllowPrivateNet) then
