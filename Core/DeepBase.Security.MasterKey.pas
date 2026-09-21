@@ -72,7 +72,10 @@ procedure ApplyOwnerOnlyMode(const APath: string; AIsDirectory: Boolean);
 var
   LMode: Cardinal;
 begin
-  LMode := IIf(AIsDirectory, OWNER_ONLY_DIR_MODE, OWNER_ONLY_FILE_MODE);
+  if AIsDirectory then
+    LMode := OWNER_ONLY_DIR_MODE
+  else
+    LMode := OWNER_ONLY_FILE_MODE;
   if Posix.SysStat.chmod(PAnsiChar(AnsiString(APath)), LMode) <> 0 then
     raise ESecurityException.CreateFmt(
       'Cannot restrict %s to its owner (chmod 0%o failed). The master secret must not ' +

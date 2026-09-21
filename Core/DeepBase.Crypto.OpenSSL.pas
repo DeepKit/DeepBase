@@ -99,6 +99,12 @@ uses
   {$IFDEF MACOS}
   Macapi.Helpers,
   {$ENDIF}
+  // dlopen/dlsym/dlclose/RTLD_NOW are taken from the RTL so each POSIX target
+  // links the library name the platform actually ships (glibc >= 2.34 folds
+  // libdl into libc, macOS has no libdl.dylib); a hand-written external
+  // declaration here breaks the other target.
+  Posix.Base,
+  Posix.Dlfcn,
   System.IOUtils,
   System.SyncObjs,
   System.NetEncoding;
@@ -219,28 +225,18 @@ const
 
 function LoadLib(const APath: string): NativeUInt;
 begin
-  {$IFDEF MACOS}
-  Result := NativeUInt(dlopen(MarshaledAString(UTF8String(APath)), RTLD_NOW));
-  {$ENDIF}
-  {$IFDEF LINUX}
-  Result := NativeUInt(dlopen(PAnsiChar(AnsiString(APath)), RTLD_NOW));
-  {$ENDIF}
+  Result := dlopen(MarshaledAString(UTF8String(APath)), RTLD_NOW);
 end;
 
 function GetProc(ALib: NativeUInt; const AName: string): Pointer;
 begin
-  {$IFDEF MACOS}
-  Result := dlsym(Pointer(ALib), MarshaledAString(UTF8String(AName)));
-  {$ENDIF}
-  {$IFDEF LINUX}
-  Result := dlsym(Pointer(ALib), PAnsiChar(AnsiString(AName)));
-  {$ENDIF}
+  Result := dlsym(ALib, MarshaledAString(UTF8String(AName)));
 end;
 
 procedure FreeLib(ALib: NativeUInt);
 begin
   if ALib <> 0 then
-    dlclose(Pointer(ALib));
+    dlclose(ALib);
 end;
 
 function TryLoadLibrary: Boolean;
@@ -601,15 +597,6 @@ begin
     _EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
-
-{$IFDEF POSIX}
-function dlopen(filename: MarshaledAString; flag: Integer): Pointer; cdecl;
-  external 'libdl.dylib' name 'dlopen';
-function dlsym(handle: Pointer; symbol: MarshaledAString): Pointer; cdecl;
-  external 'libdl.dylib' name 'dlsym';
-function dlclose(handle: Pointer): Integer; cdecl;
-  external 'libdl.dylib' name 'dlclose';
-{$ENDIF}
 
 function OpenSSL_AES256CBC_Encrypt(const AKey, AIV, APlaintext: TBytes): TBytes;
 var
