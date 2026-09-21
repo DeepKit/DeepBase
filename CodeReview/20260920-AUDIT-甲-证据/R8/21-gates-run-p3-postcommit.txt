@@ -1,0 +1,25 @@
+### R8-P3 提交后复跑段（`2fc1696` 落地、甲的 5 件临时隔离工作树清理后）门禁原始输出
+### 时刻: 2026-09-21 17:37:06 | HEAD: 2fc1696
+### 目的: 证明证据 20 所申报的「evidence-gate 窄口径」问题已被消解——本段第 3 行 135 = 提交前 115 + 本单 20 件证据，
+###       即 R8 全部证据已进入门禁的已跟踪扫描集；第 4 行 `--all-worktree` 159 与提交前一致（工作树文件未增减）。
+### 工作树计数口径复核: eol-gate 仍 1434，与提交前相同（提交只改变 index/HEAD，不增减磁盘 .pas/.md；
+###       1434 = 干净 HEAD 1418 + 19 件未跟踪 .md − 3 件乙删除未提交文档，推导见证据 `20` 头部）。
+### 清理申报: 甲本次所建 `.tmp/wt_d95b522`、`.tmp/wt_a6ca329`、`.tmp/wt_1c1c862`、`.tmp/wt_2e97d11`、`.tmp/wt_p2`
+###       已逐一 `git worktree remove`；`.tmp/head-blocker`、`.tmp/b1-before`、`.claude/worktrees/*` 非甲所建，未动
+###       （`git worktree list` 现仅剩主工作树 + 上述 3 处他人工作树）。
+编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+ENCODING_GATE_EXIT=0
+行尾门禁通过：检查了 1434 个文件（.pas CRLF / .md LF）
+EOL_GATE_EXIT=0
+证据编码门禁通过：扫描 135 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EVIDENCE_GATE_EXIT=0
+证据编码门禁通过：扫描 159 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EVIDENCE_GATE_ALLWORKTREE_EXIT=0
+### 补跑（覆盖自指）: 本文件 21 与回执 §三 订正写盘之后再跑一轮，--all-worktree 口径把工作树内本单未提交件全部纳入
+### 时刻: 2026-09-21 17:37:52 | HEAD: 2fc1696
+编码门禁通过：972 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+ENCODING_GATE_EXIT=0
+行尾门禁通过：检查了 1434 个文件（.pas CRLF / .md LF）
+EOL_GATE_EXIT=0
+证据编码门禁通过：扫描 160 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EVIDENCE_GATE_ALLWORKTREE_EXIT=0
