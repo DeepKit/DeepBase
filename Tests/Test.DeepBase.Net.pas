@@ -7,11 +7,16 @@
 
 interface
 uses
-  DUnitX.TestFramework;
+  DUnitX.TestFramework,
+  IdHTTPServer, IdContext, IdCustomHTTPServer, IdSocketHandle;
 
 type
   [TestFixture]
   TTestDeepBaseNet = class
+  private
+    // R7-P2: Indy handler serving 302 -> cloud metadata for the redirect test.
+    procedure HandleRedirect302(AContext: TIdContext;
+      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
   public
     [Setup]
     procedure Setup;
@@ -107,6 +112,13 @@ type
     procedure TestIsValidPort;
     [Test]
     procedure TestIsSafeUrl;
+    // R7-P2: redirect gate + intranet reject coverage.
+    [Test]
+    procedure TestIsSafeUrl_RejectsIntranet;
+    [Test]
+    procedure TestResolveRedirectUrl;
+    [Test]
+    procedure TestRedirectToMetadata_Raises;
     [Test]
     procedure TestGetServiceName;
     [Test]
@@ -128,7 +140,7 @@ type
   end;
 implementation
 uses
-  System.SysUtils, System.Generics.Collections,
+  System.SysUtils, System.Generics.Collections, Winapi.Windows,
   DeepBase.Net;
 
 procedure TTestDeepBaseNet.Setup;
@@ -574,6 +586,88 @@ begin
   Assert.IsTrue(TNetworkUtils.IsSafeUrl('https://example.com/api'));
   Assert.IsFalse(TNetworkUtils.IsSafeUrl('ftp://example.com/resource'));
   Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://169.254.169.254/latest/meta-data'));
+end;
+
+// R7-P2: intranet doors stay shut by default (no allow-flags set in CI).
+procedure TTestDeepBaseNet.TestIsSafeUrl_RejectsIntranet;
+begin
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://127.0.0.1/'), 'loopback');
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://10.0.0.5/'), '10/8');
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://172.16.0.9/'), '172.16/12');
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://192.168.1.1/'), '192.168/16');
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://169.254.10.20/'), 'link-local');
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://localhost/'), 'localhost');
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://[::1]/'), 'ipv6 loopback');
+  Assert.IsTrue(TNetworkUtils.IsSafeUrl('https://example.com/api'), 'public stays open');
+end;
+
+// R7-P2: redirect target resolution (pure: no network).
+procedure TTestDeepBaseNet.TestResolveRedirectUrl;
+begin
+  Assert.AreEqual('https://b.com/y',
+    TNetworkUtils.ResolveRedirectUrl('https://a.com/x', 'https://b.com/y'));
+  Assert.AreEqual('http://a.com:8080/z',
+    TNetworkUtils.ResolveRedirectUrl('http://a.com:8080/x/y', '/z'));
+  Assert.AreEqual('https://a.com/x/z',
+    TNetworkUtils.ResolveRedirectUrl('https://a.com/x/y', 'z'));
+  Assert.AreEqual('https://a.com/x?a=1',
+    TNetworkUtils.ResolveRedirectUrl('https://a.com/x', '?a=1'));
+  // Non-http absolute passes through here and is rejected on the next hop.
+  Assert.AreEqual('ftp://b.com/f',
+    TNetworkUtils.ResolveRedirectUrl('https://a.com/', 'ftp://b.com/f'));
+end;
+
+procedure TTestDeepBaseNet.HandleRedirect302(AContext: TIdContext;
+  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+begin
+  AResponseInfo.ResponseNo := 302;
+  AResponseInfo.Location := 'http://169.254.169.254/latest/meta-data';
+  AResponseInfo.ContentText := '';
+end;
+
+// R7-P2 end-to-end: a benign localhost URL that 302-bounces to cloud
+// metadata must RAISE ENetException (fail-closed), never follow through.
+// Localhost is opened for this test only via env flag, restored after.
+procedure TTestDeepBaseNet.TestRedirectToMetadata_Raises;
+var
+  LServer: TIdHTTPServer;
+  LBinding: TIdSocketHandle;
+  LRequest: THttpRequest;
+  LOldAllow: string;
+  Raised: Boolean;
+begin
+  LOldAllow := GetEnvironmentVariable('DeepBase_ALLOW_LOCALHOST_HTTP');
+  SetEnvironmentVariable(PChar('DeepBase_ALLOW_LOCALHOST_HTTP'), PChar('1'));
+  LServer := TIdHTTPServer.Create(nil);
+  try
+    LServer.Bindings.Clear;
+    LBinding := LServer.Bindings.Add;
+    LBinding.IP := '127.0.0.1';
+    LBinding.Port := 18080;
+    LServer.OnCommandGet := HandleRedirect302;
+    LServer.Active := True;
+    try
+      LRequest := THttpRequest.Create('http://127.0.0.1:18080/start');
+      try
+        LRequest.Timeout(5000);
+        Raised := False;
+        try
+          LRequest.Execute;
+        except
+          on ENetException do
+            Raised := True;
+        end;
+        Assert.IsTrue(Raised, 'redirect to metadata must raise ENetException');
+      finally
+        LRequest.Free;
+      end;
+    finally
+      LServer.Active := False;
+    end;
+  finally
+    LServer.Free;
+    SetEnvironmentVariable(PChar('DeepBase_ALLOW_LOCALHOST_HTTP'), PChar(LOldAllow));
+  end;
 end;
 
 procedure TTestDeepBaseNet.TestGetServiceName;

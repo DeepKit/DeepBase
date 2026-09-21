@@ -326,6 +326,10 @@ type
     class function BuildUrl(const ABase: string; const AParams: array of TPair<string, string>): string; static;
     class function ParseUrl(const AUrl: string; out AScheme, AHost, APath: string; out APort: Integer): Boolean; static;
     class function JoinUrl(const ABase, ARelative: string): string; static;
+    // R7-P2: resolve an HTTP redirect Location against the current URL.
+    // Absolute targets pass through (re-validated on the next hop); other
+    // targets merge with the base scheme/host/port/path. Never allow-lists.
+    class function ResolveRedirectUrl(const ABaseUrl, ALocation: string): string; static;
     
     /// <summary>IP validation</summary>
     class function IsValidIPv4(const AAddress: string): Boolean; static;
@@ -544,6 +548,26 @@ var
   LStartTime: TDateTime;
   LStream: TStringStream;
   LFormData: TStringList;
+  LEffectiveMethod: THttpMethod;
+  LRedirectCount: Integer;
+  LLocation: string;
+
+  // R7-P2: Location header lookup for the manual redirect loop.
+  function GetRedirectLocation(const AResp: IHTTPResponse): string;
+  begin
+    Result := '';
+    if AResp = nil then
+      Exit;
+    for var LHeader in AResp.Headers do
+      if SameText(LHeader.Name, 'Location') then
+        Exit(LHeader.Value);
+  end;
+  // R7-P2: exact redirect set (Delphi sets cap at ord 255, so no `in [301..]`).
+  function IsFollowableRedirect(ACode: Integer): Boolean;
+  begin
+    Result := (ACode = 301) or (ACode = 302) or (ACode = 303) or
+      (ACode = 307) or (ACode = 308);
+  end;
 begin
   Result.Headers := TDictionary<string, string>.Create;
   
@@ -568,7 +592,10 @@ begin
   try
     LClient.ConnectionTimeout := FTimeout;
     LClient.ResponseTimeout := FTimeout;
-    LClient.HandleRedirects := FFollowRedirects;
+    // R7-P2: NEVER auto-follow redirects. Each hop is fetched with
+    // HandleRedirects=False and re-validated in the loop below, so a benign
+    // URL cannot bounce into loopback/private/link-local/metadata targets.
+    LClient.HandleRedirects := False;
     LClient.MaxRedirects := FMaxRedirects;
     
     // Set headers with validation
@@ -593,15 +620,23 @@ begin
       LClient.CustomHeaders['Authorization'] := 'Bearer ' + FBearerToken;
     
     LStartTime := Now;
-    
-    // 验证URL安全性，防止SSRF攻击
-    if not TNetworkUtils.IsSafeUrl(LUrl) then
-      raise ENetException.CreateFmt('Unsafe URL detected: %s', [LUrl]);
-    // 在发起连接前再次解析并校验目标IP，降低DNS rebinding风险
-    TNetworkUtils.ValidateResolvedUrlForHttp(LUrl);
-    
-    try
-      case FMethod of
+    LEffectiveMethod := FMethod;
+    LRedirectCount := 0;
+
+    // R7-P2: manual redirect loop. Per-hop SSRF validation below runs OUTSIDE
+    // the request try/except, so ENetException fail-closes (propagates) instead
+    // of being swallowed into StatusCode=-1.
+    while True do
+    begin
+      LResponse := nil;
+      // 验证URL安全性，防止SSRF攻击（逐跳复检）
+      if not TNetworkUtils.IsSafeUrl(LUrl) then
+        raise ENetException.CreateFmt('Unsafe URL detected: %s', [LUrl]);
+      // 在发起连接前再次解析并校验目标IP，降低DNS rebinding风险
+      TNetworkUtils.ValidateResolvedUrlForHttp(LUrl);
+
+      try
+      case LEffectiveMethod of
         hmGet:
           LResponse := LClient.Get(LUrl);
         hmPost:
@@ -681,6 +716,25 @@ begin
         Result.Body := '';
         Result.Elapsed := Round((Now - LStartTime) * 86400000);
       end;
+    end;
+
+      // R7-P2: per-hop redirect gate. Follow only when explicitly enabled;
+      // the resolved Location is re-validated at the top of the next hop.
+      if LResponse = nil then
+        Break;
+      if (not FFollowRedirects) or (not IsFollowableRedirect(LResponse.StatusCode)) then
+        Break;
+      Inc(LRedirectCount);
+      if LRedirectCount > FMaxRedirects then
+        raise ENetException.CreateFmt('Too many redirects (max %d): %s',
+          [FMaxRedirects, LUrl]);
+      LLocation := GetRedirectLocation(LResponse);
+      if LLocation = '' then
+        Break;
+      // RFC 7231: 303 always converts to GET; 301/302/307/308 keep the method.
+      if LResponse.StatusCode = 303 then
+        LEffectiveMethod := hmGet;
+      LUrl := TNetworkUtils.ResolveRedirectUrl(LUrl, LLocation);
     end;
   finally
     LClient.Free;
@@ -1668,6 +1722,37 @@ begin
     else
       Result := ABase + '/' + ARelative;
   end;
+end;
+
+class function TNetworkUtils.ResolveRedirectUrl(const ABaseUrl, ALocation: string): string;
+var
+  LUri: TURI;
+  LBase, LPath, LDir: string;
+  LSlash: Integer;
+begin
+  // Absolute target: pass through (the next hop re-validates it; a non-http
+  // scheme is rejected there, fail-closed).
+  if ALocation.StartsWith('http://') or ALocation.StartsWith('https://') or
+     (Pos('://', ALocation) > 1) then
+    Exit(ALocation);
+  LUri := TURI.Create(ABaseUrl);
+  LBase := LUri.Scheme + '://' + LUri.Host;
+  if (LUri.Port <> 0) and
+     not (((LUri.Scheme = 'http') and (LUri.Port = 80)) or
+          ((LUri.Scheme = 'https') and (LUri.Port = 443))) then
+    LBase := LBase + ':' + LUri.Port.ToString;
+  if ALocation.StartsWith('/') then
+    Exit(LBase + ALocation);
+  if ALocation.StartsWith('?') then
+    Exit(LBase + LUri.Path + ALocation);
+  // Relative reference: merge with the base path directory.
+  LPath := LUri.Path;
+  LSlash := LPath.LastIndexOf('/');
+  if LSlash < 0 then
+    LDir := '/'
+  else
+    LDir := LPath.Substring(0, LSlash + 1);
+  Result := LBase + LDir + ALocation;
 end;
 
 class function TNetworkUtils.IsValidIPv4(const AAddress: string): Boolean;
