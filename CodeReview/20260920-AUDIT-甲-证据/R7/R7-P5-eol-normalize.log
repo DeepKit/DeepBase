@@ -1,0 +1,15 @@
+P5 eol-normalize: all line breaks -> CRLF, zero semantic change
+Core/DeepBase.License.pas crlf=592 loneLF=11 loneCR=0 bytes 17396->17407 sha 87bf7636f0c4->007d5fea589d
+Core/DeepBase.SecureMemory.pas crlf=0 loneLF=101 loneCR=0 bytes 2542->2643 sha 99c52404d794->76a82cc4f883
+Core/DeepBase.Security.DPAPI.pas crlf=0 loneLF=562 loneCR=0 bytes 16224->16786 sha 056c6f98f1dc->e745d90daa80
+Core/DeepBase.Security.MachineIdentity.pas crlf=0 loneLF=313 loneCR=0 bytes 9575->9888 sha 0e7b843a434f->6bc27a0845fc
+Core/DeepBase.Security.MasterKey.pas crlf=0 loneLF=153 loneCR=0 bytes 5183->5336 sha 5739ed14abaa->d97770b98e31
+Core/DeepBase.Security.pas crlf=1 loneLF=616 loneCR=0 bytes 18174->18790 sha 94d890e198b0->dd572260ee1f
+Core/DeepBase.Security.UBS2.Migration.pas crlf=0 loneLF=117 loneCR=0 bytes 4010->4127 sha efe0391fc835->dafc7945ea89
+Core/DeepBase.Security.UBS2.pas crlf=0 loneLF=383 loneCR=0 bytes 13100->13483 sha 35f53c94763e->89b50ec6b903
+Core/DeepBase.Storage.Interfaces.pas crlf=320 loneLF=12 loneCR=0 bytes 11582->11594 sha 44620a0555eb->c99805f4cda9
+Persistence/DeepBase.Persistence.Security.FireDAC.pas crlf=193 loneLF=29 loneCR=0 bytes 6271->6300 sha 3c25e3357b63->1b453f1058ee
+Tests/Test.DeepBase.SecureMemory.pas crlf=0 loneLF=114 loneCR=0 bytes 2500->2614 sha d6b30061f8ae->8bb104989426
+Tests/Test.DeepBase.Security.MachineIdentity.pas crlf=0 loneLF=181 loneCR=0 bytes 5654->5835 sha 93c6b424d909->5e6a7b7a31cf
+Tests/Test.DeepBase.Security.UBS2.pas crlf=0 loneLF=487 loneCR=0 bytes 14637->15124 sha be1002e2b7cb->ff534f2cfb18
+ThirdParty/Social/DeepBase.Social.OAuth.pas crlf=0 loneLF=640 loneCR=0 bytes 18606->19246 sha 267d4c959e1b->4a92c5042e6f

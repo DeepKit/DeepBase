@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="E:\Scratch\temp\r7p1\TestNetR7P2.exe" total="47" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-21" time="11:24:08">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="TestNetR7P2.exe" executed="true" result="Success" success="True" time="11:24:08" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.040" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TTestDeepBaseNet" executed="True" result="Success" success="True" time="0.040" >
+                <results>
+                  <test-case name="TestHttpResponseIsSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpResponseIsRedirect" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpResponseIsClientError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpResponseIsServerError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpRequestCreate" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpRequestHeaders" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpRequestQueryParams" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpRequestBasicAuth" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpRequestBearerToken" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpClientCreate" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpClientDefaultHeaders" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestHttpClientRequest" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestWebSocketCreate" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestWebSocketState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestDnsRecordToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestDnsResolverCreate" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                  <test-case name="TestIPv4Parse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4ToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4ToInteger" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4IsPrivate" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4IsLoopback" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4IsMulticast" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4Operators" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4SubnetParse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4SubnetContains" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4SubnetBroadcast" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4SubnetHostCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestUrlEncode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestUrlDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestBuildUrl" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestParseUrl" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestJoinUrl" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="TestIsValidIPv4" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsValidHostname" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsValidPort" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsSafeUrl" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsSafeUrl_RejectsIntranet" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestResolveRedirectUrl" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestRedirectToMetadata_Raises" executed="True" result="Success" success="True" time="0.030" asserts="0" />
+                  <test-case name="TestGetServiceName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestGetServicePort" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIPv4ToInteger2" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIntegerToIPv4" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsInSubnet" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsPrivateIP" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestIsLoopbackIP" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestCompareIPv4" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

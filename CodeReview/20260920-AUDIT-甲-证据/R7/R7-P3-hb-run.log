@@ -1,0 +1,73 @@
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [TestHBRun.exe] - Starting Tests.
+
+.
+================================================================
+  HB Gate #1: Cold Start First Paint
+================================================================
+  Samples : 20
+  P50     : 285.96 ms
+  P95     : 362.14 ms [Threshold <= 800 ms]
+  Max     : 2209.67 ms
+================================================================
+..
+================================================================
+  HB Gate #2: 100k Grid Scroll Frame Budget
+================================================================
+  Frames  : 500 (paint-only)
+  Worst   : 3.065 ms [Threshold <= 16.6 ms]
+  P95     : 2.178 ms
+================================================================
+..
+================================================================
+  HB Gate #3: Theme Switch Broadcast
+================================================================
+  Palette 1 : 14.364 ms [Threshold <= 100 ms]
+  Palette 2 : 8.654 ms [Threshold <= 100 ms]
+  Palette 3 : 2.531 ms [Threshold <= 100 ms]
+  Palette 4 : 1.617 ms [Threshold <= 100 ms]
+  Palette 5 : 2.021 ms [Threshold <= 100 ms]
+  Palette 6 : 3.743 ms [Threshold <= 100 ms]
+  Palette 7 : 3.690 ms [Threshold <= 100 ms]
+  Palette 8 : 1.963 ms [Threshold <= 100 ms]
+  Palette 9 : 2.871 ms [Threshold <= 100 ms]
+  Palette 10 : 1.877 ms [Threshold <= 100 ms]
+================================================================
+..
+================================================================
+  HB Gate #4: DPI Switch Relayout
+================================================================
+  Step 1 : 0.002 ms [Threshold <= 30 ms]
+  Step 2 : 5.094 ms [Threshold <= 30 ms]
+================================================================
+..
+================================================================
+  HB Gate #5: Resize Interaction Budget
+================================================================
+  Steps : 500 (post warm-up)
+  Worst : 13.280 ms [Threshold <= 16.6 ms]
+================================================================
+..  Gate #6 round 1: GDI 42->42 USER 34->33 Heap 0->0 (created 10000)
+  Gate #6 round 2: GDI 42->42 USER 33->33 Heap 0->0 (created 10000)
+..
+================================================================
+  HB Gate #7: Touchpoint Evidence Write Latency Benchmark
+================================================================
+  Total Interactions : 100000
+  Latency P95        : 0.0041 ms [Threshold <= 2.0 ms]
+  Latency Max        : 0.0767 ms
+================================================================
+.
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER-EXIT=0

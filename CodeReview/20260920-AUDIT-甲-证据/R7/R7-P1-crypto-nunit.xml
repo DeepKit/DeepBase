@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="E:\Scratch\temp\r7p1\TestCryptoR7P1.exe" total="119" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-21" time="11:23:51">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="TestCryptoR7P1.exe" executed="true" result="Success" success="True" time="11:23:51" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="16.196" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Crypto" executed="true" result="Success" success="True" time="16.196" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TAESCryptoTests" executed="True" result="Success" success="True" time="0.386" >
+                      <results>
+                        <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GenerateKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GenerateIV" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SetKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SetKeyFromPassword" executed="True" result="Success" success="True" time="0.380" asserts="0" />
+                        <test-case name="Test_Encrypt_Decrypt_Bytes" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                        <test-case name="Test_EncryptString_DecryptString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Encrypt_Decrypt_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_KeySizes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DifferentKeys_DifferentResults" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_CBC_Encrypt_DoesNotReuseIV" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TCRCUtilsTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_CRC32_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CRC32_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CRC32_Deterministic" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CRC32_DifferentInput_DifferentOutput" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Adler32_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Adler32_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TCryptoHelperTests" executed="True" result="Success" success="True" time="3.082" >
+                      <results>
+                        <test-case name="Test_MD5" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA1" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA256" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA512" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64Encode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64Decode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HexEncode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HexDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HashPassword" executed="True" result="Success" success="True" time="0.361" asserts="0" />
+                        <test-case name="Test_VerifyPassword" executed="True" result="Success" success="True" time="1.245" asserts="0" />
+                        <test-case name="Test_Encrypt_Decrypt" executed="True" result="Success" success="True" time="1.476" asserts="0" />
+                        <test-case name="Test_RandomString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_NewGuid" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TCryptoServiceImplTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_EncryptWithIV_DecryptWithIV_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_EncryptWithIV_DifferentIV_ProducesDifferentCiphertext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_EncryptWithIV_InvalidIVLength_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TEncodingUtilsTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Base64Encode_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64Encode_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64Decode" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_Base64DecodeString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64UrlEncode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64UrlDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Base64Url_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HexEncode_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HexEncode_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HexDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HexDecodeString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Hex_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_UrlEncode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_UrlDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Url_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HtmlEncode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HtmlDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Html_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="THashUtilsTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_HashBytes_SHA256" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HashString_SHA256" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HashToHex_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HashToHex_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_MD5_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_MD5_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA1_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA1_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA256_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA256_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA512_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SHA512_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HMAC_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HMAC_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DifferentAlgorithms_DifferentLengths" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SameInput_SameOutput" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DifferentInput_DifferentOutput" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TPasswordUtilsTests" executed="True" result="Success" success="True" time="1.905" >
+                      <results>
+                        <test-case name="Test_HashPassword" executed="True" result="Success" success="True" time="0.386" asserts="0" />
+                        <test-case name="Test_VerifyPassword_Correct" executed="True" result="Success" success="True" time="0.739" asserts="0" />
+                        <test-case name="Test_VerifyPassword_Incorrect" executed="True" result="Success" success="True" time="0.720" asserts="0" />
+                        <test-case name="Test_GenerateSalt_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GenerateSalt_Unique" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PBKDF2" executed="True" result="Success" success="True" time="0.032" asserts="0" />
+                        <test-case name="Test_PBKDF2_DifferentSalts" executed="True" result="Success" success="True" time="0.007" asserts="0" />
+                        <test-case name="Test_PBKDF2_DifferentIterations" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                        <test-case name="Test_PBKDF2_HMAC_SHA256_KAT" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                        <test-case name="Test_CheckStrength_Weak" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CheckStrength_Medium" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CheckStrength_Strong" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GeneratePassword_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GeneratePassword_WithUppercase" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GeneratePassword_WithDigits" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GeneratePassword_WithSpecial" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PasswordHashOptions_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TRSASignerTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_LoadPrivateKeyPEM_Pkcs8_Rejected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TRSAVerifierTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_LoadPublicKeyPEM_Valid" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_LoadPublicKeyPEM_Invalid" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_LoadPublicKeyPEM_Empty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_LoadPublicKeyPEM_Pkcs1PublicKey_Rejected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_VerifySignature_KeyNotLoaded" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_VerifySignature_EmptySignature" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsKeyLoaded_Initial" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_LastError_AfterFailure" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TRandomGeneratorTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_RandomBytes_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomBytes_NotAllZeros" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomString_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomString_Alphanumeric" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomHex_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomHex_ValidChars" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RandomInt_InRange" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_NewGuid_Format" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_NewGuidNoDashes_Format" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SecureToken_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GenerateOTP_Digits" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GenerateOTP_OnlyDigits" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Uniqueness" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TSimpleCryptoTests" executed="True" result="Success" success="True" time="10.821" >
+                      <results>
+                        <test-case name="Test_Encrypt_Decrypt_String" executed="True" result="Success" success="True" time="1.677" asserts="0" />
+                        <test-case name="Test_Encrypt_Decrypt_Bytes" executed="True" result="Success" success="True" time="1.827" asserts="0" />
+                        <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="1.727" asserts="0" />
+                        <test-case name="Test_DifferentPasswords_DifferentResults" executed="True" result="Success" success="True" time="1.600" asserts="0" />
+                        <test-case name="Test_WrongPassword_Fails" executed="True" result="Success" success="True" time="1.160" asserts="0" />
+                        <test-case name="Test_Envelope_IsV3_And_SaltIsRandom" executed="True" result="Success" success="True" time="2.830" asserts="0" />
+                        <test-case name="Test_Decrypt_V1Envelope_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Decrypt_V2Envelope_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Decrypt_HeadlessEnvelope_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="E:\Scratch\temp\r7p1\TestBplR7P4.exe" total="3" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-21" time="11:24:08">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="TestBplR7P4.exe" executed="true" result="Success" success="True" time="11:24:08" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.220" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TPluginBplUnloadTests" executed="True" result="Success" success="True" time="0.220" >
+                <results>
+                  <test-case name="Test_RealBpl_LoadCallUnload" executed="True" result="Success" success="True" time="0.068" asserts="0" />
+                  <test-case name="Test_RealBpl_ReloadAfterUnload" executed="True" result="Success" success="True" time="0.142" asserts="0" />
+                  <test-case name="Test_LoadPlugin_UnsignedFixture_FailClosed" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>
