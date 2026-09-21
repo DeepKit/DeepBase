@@ -235,6 +235,13 @@ type
     procedure Test_WrongPassword_Fails;
     [Test]
     procedure Test_Envelope_IsV3_And_SaltIsRandom;
+    // R7-P1: legacy formats (v1/v2/headerless) must raise; no fallback remains.
+    [Test]
+    procedure Test_Decrypt_V1Envelope_Raises;
+    [Test]
+    procedure Test_Decrypt_V2Envelope_Raises;
+    [Test]
+    procedure Test_Decrypt_HeadlessEnvelope_Raises;
   end;
 
   /// <summary>
@@ -1050,7 +1057,7 @@ end;
 
 procedure TAESCryptoTests.Test_SetKeyFromPassword;
 begin
-  FAES.SetKeyFromPassword('testPassword', TSimpleCrypto.DeriveSalt('testPassword'));
+  FAES.SetKeyFromPassword('testPassword', TRandomGenerator.RandomBytes(16));
   Assert.AreEqual(32, Integer(Length(FAES.Key)));
 end;
 
@@ -1232,6 +1239,65 @@ begin
     TEncoding.UTF8.GetString(TSimpleCrypto.DecryptBytes(E1, 'same-password')));
   Assert.AreEqual('envelope payload',
     TEncoding.UTF8.GetString(TSimpleCrypto.DecryptBytes(E2, 'same-password')));
+end;
+
+// R7-P1: legacy envelopes must raise ECryptoException. The V1/headerless
+// fixtures below are REAL old-format envelopes: a fixture generator built
+// against the pre-R7 reader verified TSimpleCrypto.DecryptBytes returned the
+// plaintext for both (preDecryptOK=True), so these tests prove genuinely
+// decryptable old data is now rejected, not just malformed input. The V2
+// envelope is gate-level (magic + version byte): the version gate fires
+// before any length/MAC check, so no v2 input can reach crypto.
+procedure TSimpleCryptoTests.Test_Decrypt_V1Envelope_Raises;
+const
+  // 101-byte v1 envelope (DBSC magic, version 1, CBC, legacy MAC).
+  V1_HEX = '4442534301185CF9139F91D9F6D7068A351EC58486740238DA605121FD51018902533A900B72649EC34BD10DBB7902BF1FF0E106BFA257E402B53A838DCE072328CF7C1B63DFA24FCC6B46DC3675B81FCF1F8C756EE2CD656BB1E55ED219A0D1CA6B927B91';
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    TSimpleCrypto.DecryptBytes(TEncodingUtils.HexDecode(V1_HEX), 'r7-p1-fixture-password');
+  except
+    on ECryptoException do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'v1 legacy envelope must raise ECryptoException');
+end;
+
+procedure TSimpleCryptoTests.Test_Decrypt_V2Envelope_Raises;
+var
+  Env: TBytes;
+  Raised: Boolean;
+begin
+  // Magic + version 2 + full-length framing; the version gate must fire first.
+  SetLength(Env, 5 + 16 + 16 + 16 + 32);
+  Env[0] := $44; Env[1] := $42; Env[2] := $53; Env[3] := $43; Env[4] := 2;
+  Raised := False;
+  try
+    TSimpleCrypto.DecryptBytes(Env, 'any-password');
+  except
+    on ECryptoException do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'v2 legacy envelope must raise ECryptoException');
+end;
+
+procedure TSimpleCryptoTests.Test_Decrypt_HeadlessEnvelope_Raises;
+const
+  // 64-byte headerless envelope (IV + CBC cipher, no MAC).
+  HEADLESS_HEX = '185CF9139F91D9F6D7068A351EC58486740238DA605121FD51018902533A900B72649EC34BD10DBB7902BF1FF0E106BFA257E402B53A838DCE072328CF7C1B63';
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    TSimpleCrypto.DecryptBytes(TEncodingUtils.HexDecode(HEADLESS_HEX), 'r7-p1-fixture-password');
+  except
+    on ECryptoException do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'headerless legacy envelope must raise ECryptoException');
 end;
 
 // ============================================================================

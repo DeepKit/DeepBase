@@ -108,8 +108,6 @@ type
   /// <summary>Simple encryption helper (password-based)</summary>
   TSimpleCrypto = class
   public
-    class function DeriveSalt(const APassword: string): TBytes; static;
-
     /// <summary>Encrypt string with password</summary>
     class function Encrypt(const AData, APassword: string): string; static;
 
@@ -145,17 +143,13 @@ const
   SIMPLE_CRYPTO_MAGIC_3 = $43; // C
   // SIMPLE_CRYPTO_VERSION is the envelope version for all NEW writes.
   // v3 derives the MAC key from the per-message salt via PBKDF2 (A4-3), closing
-  // the strength gap vs the encryption key. v2/v1 are retained READ-ONLY so
-  // envelopes already on disk stay decryptable; they are never written again.
+  // the strength gap vs the encryption key. R7-P1: v1/v2/headless READ paths
+  // were removed per owner ruling ("old locks off"); only v3 is readable.
   SIMPLE_CRYPTO_VERSION = 3;
-  SIMPLE_CRYPTO_VERSION_V2 = 2;    // read-only: GCM + single-round HMAC MAC key
-  SIMPLE_CRYPTO_VERSION_V1 = 1;    // read-only: CBC + salt derived from password
   SIMPLE_CRYPTO_HEADER_SIZE = 5;
   SIMPLE_CRYPTO_AES_BLOCK_SIZE = 16;
   SIMPLE_CRYPTO_SALT_SIZE = 16;
   SIMPLE_CRYPTO_MAC_SIZE = 32; // SHA-256
-  // Legacy single-round HMAC context. READ path only (v1/v2 envelopes).
-  SIMPLE_CRYPTO_MAC_CONTEXT = 'DeepBase.SimpleCrypto.MAC.v1';
   // v3 MAC-key domain-separation label, mixed into the PBKDF2 salt so the MAC
   // key and the encryption key stay independent even for the same password+salt.
   SIMPLE_CRYPTO_MAC_KDF_INFO = 'DeepBase.SimpleCrypto.MACKey.v3';
@@ -183,17 +177,6 @@ begin
     (AData[1] = SIMPLE_CRYPTO_MAGIC_1) and
     (AData[2] = SIMPLE_CRYPTO_MAGIC_2) and
     (AData[3] = SIMPLE_CRYPTO_MAGIC_3);
-end;
-
-// Legacy MAC key (single-round HMAC, no salt). Retained ONLY so v1/v2
-// envelopes already on disk can still be authenticated; never used for new
-// writes. See SimpleCryptoMacKeyV3 for the v3 write path.
-function SimpleCryptoMacKey(const APassword: string): TBytes;
-begin
-  Result := THashUtils.HMAC(
-    TEncoding.UTF8.GetBytes(APassword),
-    TEncoding.UTF8.GetBytes(SIMPLE_CRYPTO_MAC_CONTEXT),
-    haSHA256);
 end;
 
 // A4-3: v3 MAC key. Same PBKDF2 strength as the encryption key (100k rounds,
@@ -272,11 +255,6 @@ begin
     raise ECryptoException.Create('Salt is required for key derivation. Pass a cryptographically random salt.');
 
   FKey := TPasswordUtils.PBKDF2(APassword, ASalt, 100000, GetKeyLength, haSHA256);
-end;
-
-class function TSimpleCrypto.DeriveSalt(const APassword: string): TBytes;
-begin
-  Result := System.Hash.THashSHA2.GetHashBytes(APassword + '_salt_v1', System.Hash.THashSHA2.TSHA2Version.SHA256);
 end;
 
 procedure TAESCrypto.SetIV(const AIV: TBytes);
@@ -855,112 +833,54 @@ var
   LSalt, IV, Cipher, MacKey, MacInput, ExpectedMac, ActualMac: TBytes;
   MacInputLen, CipherLen: Integer;
   LVersion: Byte;
-  LUseGCM: Boolean;
 begin
   if Length(AData) = 0 then
     Exit(nil);
 
-  // LUseGCM selects the AES mode the data was originally written with:
-  // v3/v2 use AES-GCM; v1 and legacy (no header) use AES-CBC and must be
-  // decrypted with CBC or the data is unrecoverable after the GCM upgrade.
-  LUseGCM := False;
+  // R7-P1: v3 is the ONLY readable envelope. v1/v2/headless READ paths were
+  // removed per owner ruling ("old locks off"); such inputs raise here. There
+  // is deliberately no fallback, downgrade switch, or compat branch (H8).
+  if not SimpleCryptoHasHeader(AData) then
+    raise ECryptoException.Create(
+      'Unsupported encrypted data format: legacy headerless envelopes ' +
+      'were removed by security policy and are no longer readable');
 
-  if SimpleCryptoHasHeader(AData) then
-  begin
-    LVersion := AData[4];
-    if (LVersion <> SIMPLE_CRYPTO_VERSION) and
-       (LVersion <> SIMPLE_CRYPTO_VERSION_V2) and
-       (LVersion <> SIMPLE_CRYPTO_VERSION_V1) then
-      raise ECryptoException.Create('Unsupported encrypted data version');
+  LVersion := AData[4];
+  if LVersion <> SIMPLE_CRYPTO_VERSION then
+    raise ECryptoException.Create(
+      'Unsupported encrypted data version: only v3 envelopes are readable; ' +
+      'v1/v2 envelopes were removed by security policy');
 
-    if (LVersion = SIMPLE_CRYPTO_VERSION) or (LVersion = SIMPLE_CRYPTO_VERSION_V2) then
-    begin
-      LUseGCM := True;
-      // v3/v2 framing: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
-      if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
-        raise ECryptoException.Create('Invalid encrypted data (too short)');
+  // v3 framing: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
+  if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
+    raise ECryptoException.Create('Invalid encrypted data (too short)');
 
-      MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
-      SetLength(MacInput, MacInputLen);
-      Move(AData[0], MacInput[0], MacInputLen);
+  MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
+  SetLength(MacInput, MacInputLen);
+  Move(AData[0], MacInput[0], MacInputLen);
 
-      SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
-      Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
+  SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
+  Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
 
-      SetLength(LSalt, SIMPLE_CRYPTO_SALT_SIZE);
-      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], LSalt[0], SIMPLE_CRYPTO_SALT_SIZE);
+  SetLength(LSalt, SIMPLE_CRYPTO_SALT_SIZE);
+  Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], LSalt[0], SIMPLE_CRYPTO_SALT_SIZE);
 
-      // A4-3: MAC-key derivation is version-bound — v3 uses PBKDF2(salt),
-      // v2 used the legacy single-round HMAC. Verify with the method the
-      // writer actually used, otherwise authenticated data would be rejected.
-      if LVersion = SIMPLE_CRYPTO_VERSION then
-        MacKey := SimpleCryptoMacKeyV3(APassword, LSalt)
-      else
-        MacKey := SimpleCryptoMacKey(APassword);
-      ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
-      if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
-        raise ECryptoException.Create('Invalid encrypted data or password');
+  // A4-3: v3 binds the MAC key to the per-message salt via PBKDF2.
+  MacKey := SimpleCryptoMacKeyV3(APassword, LSalt);
+  ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
+  if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
+    raise ECryptoException.Create('Invalid encrypted data or password');
 
-      SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+  SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+  Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
 
-      CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_SALT_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
-      SetLength(Cipher, CipherLen);
-      if CipherLen > 0 then
-        Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
-    end
-    else
-    begin
-      // v1 format (backward compat): Header(5) + IV(16) + Cipher + MAC(32)
-      if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
-        raise ECryptoException.Create('Invalid encrypted data (too short)');
+  CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_SALT_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
+  SetLength(Cipher, CipherLen);
+  if CipherLen > 0 then
+    Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
 
-      MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
-      SetLength(MacInput, MacInputLen);
-      Move(AData[0], MacInput[0], MacInputLen);
-
-      SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
-      Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
-
-      MacKey := SimpleCryptoMacKey(APassword);
-      ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
-      if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
-        raise ECryptoException.Create('Invalid encrypted data or password');
-
-      LSalt := DeriveSalt(APassword);
-
-      SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-
-      CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
-      SetLength(Cipher, CipherLen);
-      if CipherLen > 0 then
-        Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
-    end;
-  end
-  else
-  begin
-    // Legacy format (no header): IV(16) + Cipher
-    if Length(AData) < SIMPLE_CRYPTO_AES_BLOCK_SIZE then
-      raise ECryptoException.Create('Invalid encrypted data (too short)');
-
-    LSalt := DeriveSalt(APassword);
-
-    SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-    Move(AData[0], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-
-    SetLength(Cipher, Length(AData) - SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-    if Length(Cipher) > 0 then
-      Move(AData[SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], Length(Cipher));
-  end;
-
-  // Use the AES mode that matches how this data was originally encrypted.
-  // GCM for v3/v2 data; CBC for v1 and legacy data (the CBC path consumes the
-  // 16-byte IV set below — GCM instead reads a 12-byte nonce from Cipher).
-  if LUseGCM then
-    LAES := TAESCrypto.Create(aes256, aesGCM)
-  else
-    LAES := TAESCrypto.Create(aes256, aesCBC);
+  // v3 envelopes are always AES-GCM (the only mode ever written or readable).
+  LAES := TAESCrypto.Create(aes256, aesGCM);
   try
     LAES.SetKeyFromPassword(APassword, LSalt);
     LAES.SetIV(IV);
