@@ -88,6 +88,16 @@ Core/DeepBase.Security.pas:495    Key := BuildUBS2Key;   <-- 迁移路径经此�
 - **不动**其他 owner 在制品（现场 `Tests/**` 的乙 P1 未提交改动、`docs/规范历史版本与对比库/` 删除态，均**非甲所有**）;
 - `Tests/DeepBaseTests.dpr` 写入槽位：**本单不开 R8-P2 窗口**（R8-P2 为独立顺延项，另按主控授予的串行化窗口执行）。
 
+### 五.1 交叉引用：R5-M1 遗留的 build-ownership O1 孤儿（归甲，随本单处理）
+
+`build-ownership` 门禁 O1 报 `Features/DeepBase.Update.Contracts.pas` 为**新增孤儿单元**。
+
+- **主控实测归属**：该文件由 **`1a6807b`（甲 R5-M1 Top20#01 更新验签链加固，2026-09-20）引入，+381 行**；全仓 `*.json/*.yml/*.yaml/*.ps1/*.js` 未搜到任何 build 清单对其的引用；
+- **不是乙的问题**（乙 P2 只动 `09_工程脚本/encoding-gate/`，已核 `git status`）；
+- **要求**：把该单元登记进对应的 build-ownership / 编译清单（或说明其豁免理由），使 O1 归零。若判定该文件本就不该存在，走删除路径并说明。
+
+> 之所以挂在本单而不另开单：同一 owner（甲）、同一交付批次，且它是 R5-M1 的收尾欠账 —— 避免为一件小事增加单量。
+
 ---
 
 ## 六、队列
