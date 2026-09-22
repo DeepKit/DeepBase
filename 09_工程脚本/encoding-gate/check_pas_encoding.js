@@ -8,8 +8,11 @@
 //  G4 任何 .pas 禁止含 NUL 字节或 UTF-16/32 BOM（纯 ASCII 的 UTF-16LE 能通过 G2/G1，须专规拦截；
 //     孤立 CR/UTF-16 内容会使 git 将文件判为 -text，EOL 立法与 clean/smudge 对其失效——见乙R4 L3 诊断）
 //  G5 任何 .pas 禁止含孤立 CR（0x0D 后不跟 0x0A；基线 loneCr 按文件计数给存量豁免，新文件出现即失败）
+// G6 任何 .pas 禁止含双重编码乱码（GBK 误读→以 UTF-8 重编码；正文仍是合法 UTF-8，G1/G2 零感知）。
+//     判据: 行内同时满足 (a) 含中日韩表意文字 (b) 该行 GBK→UTF-8 可逆 (c) 含双重编码高频标记字。
+//     典型样本: 「日志导出」→「鏃ュ織瀵煎嚭」。基线 mojibake 按文件计数给存量豁免，新文件出现即失败。
 // 用法: node check_pas_encoding.js [--root <dir>] [--baseline <file>]
-// 退出码：0 通过；1 违规。
+// 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
 
@@ -17,15 +20,57 @@ function arg(name, dflt) {
   const i = process.argv.indexOf('--' + name);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt;
 }
-const ROOT = path.resolve(arg('root', process.cwd()));
+// 参数 fail-open 收口（WO-20260922-AUDIT-乙-P2 §3.3）：拼错/传错/缺值的 --xxx 不得静默忽略。
+// 静默忽略时门禁按缺省 root 跑通并报 EXIT=0，让「我按指定 root 扫过了」变成假象
+// （典型事故：--rot 拼错→按缺省 root 跑→绿单覆盖了实际未被扫描的目录）。
+// fail-closed：EXIT≠0 且打印出错参数名。以下四类均为 fail-open 裂缝，一并收口：
+//   ① 未知参数名（--rot / --Root:x）
+//   ② 已知参数缺值（--root / --baseline 后无实参，或尾随）⇒ 回退缺省值 = 假绿
+//   ③ 值形似参数（--root --root）⇒ 后一个被当作 path 静默吞掉
+//   ④ 大小写不符（--ROOT 不在 KNOWN_ARGS 中应报错，而非被静默忽略）
+const KNOWN_ARGS = new Set(['root', 'baseline', 'help']);
+function parseFail(raw, why) {
+  console.error(`编码门禁失败：${raw ? '参数 ' + raw + ' ' : ''}${why}（已知参数: --root <dir> / --baseline <file>）。已按 fail-closed 拒绝放行。`);
+  process.exit(3);
+}
+for (let i = 2; i < process.argv.length; i++) {
+  const t = process.argv[i];
+  if (!t.startsWith('--')) {
+    // 裸位置参数：旧实现静默忽略。CI 传错位置参数同样会造成「以为指定了 root」的假绿
+    parseFail(t, '不是合法参数（应为 --root / --baseline 形式的命名参数）');
+  }
+  const eq = t.indexOf('=');
+  const raw = eq > 0 ? t.slice(0, eq) : t;
+  const key = raw.slice(2).toLowerCase();
+  if (!KNOWN_ARGS.has(key)) parseFail(t, '为未知参数');
+  if (key === 'help') continue;
+  if (eq > 0) {
+    if (t.length === eq + 1) parseFail(t, '缺值（= 号后为空）');
+    continue;
+  }
+  const nxt = process.argv[i + 1];
+  if (nxt === undefined || nxt.startsWith('--')) {
+    // 含 `--root --root`：后一个参数会被 arg() 当 path 取走，静默吞掉
+    parseFail(t, '缺值（后无实参）');
+  }
+  i++; // 跳过已消费的实参
+}
+const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')));
 const BASELINE_P = arg('baseline', path.join(__dirname, 'pas_encoding_baseline.json'));
 const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy']);
+// 记录被 SKIP 规则吃掉的顶层目录，让「扫描面缩了什么」可见（WO-20260921-AUDIT-乙-P1 §〇 第 3 条）。
+const skippedDirs = new Set();
 
 function walk(dir, out) {
   let ents;
-  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return out; }
+  // fail-closed：readdir 失败（root 不存在/无权限/符号链接断链）不得静默返回。
+  // 否则门禁扫到 0 个文件却报「通过」，把「没扫」伪装成「扫过且干净」（WO-20260921-AUDIT-乙-P1 §〇）。
+  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) {
+    console.error(`编码门禁无法读取目录: ${dir} (${e.message})`);
+    process.exit(3);
+  }
   for (const e of ents) {
-    if (SKIP.has(e.name)) continue;
+    if (SKIP.has(e.name)) { skippedDirs.add(e.name); continue; }
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
     else if (e.isFile() && /\.pas$/i.test(e.name)) out.push(p);
@@ -38,6 +83,8 @@ const baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
 const allowed = baseline.fffd || {};
 const loneCrAllowed = baseline.loneCr || {};
 const bomExcepts = new Set(baseline.bomExceptions || []);
+const mojibakeAllowed = baseline.mojibake || {};
+const mojibakeExempt = new Set(baseline.mojibakeExceptions || []);
 const violations = [];
 const files = walk(ROOT, []);
 function countLoneCr(buf) {
@@ -54,9 +101,78 @@ function hasNonAscii(buf) {
   for (let i = 0; i < buf.length; i++) if (buf[i] > 0x7F) return true;
   return false;
 }
+// ── G6：双重编码乱码（GBK 误读 → 以 UTF-8 重编码）──────────────────────────
+// 机制：中文原文的 UTF-8 字节被按 GBK 错误解码成另一串汉字，再以 UTF-8 正常入库。
+// 结果文件仍是合法 UTF-8、无 U+FFFD、无 NUL ⇒ G1/G2 零感知，只能靠「可逆性」识别。
+// 例：「日志导出」.utf8 → GBK 误读 → 「鏃ュ織瀵煎嚭」（主控取证样本）。
+//
+// 判据（WO-20260922-AUDIT-乙-P2 §3.1，实测后收窄见下）：
+//   ① 行内含中日韩表意文字；
+//   ② 整行可 GBK 编码回原始字节并再按 UTF-8 解码出中文（可逆 ⇒ 该行本就是乱码）；
+//   ③ 工单另要求「含双重编码高频标记字」——实测该条会把头号样本「鏃ュ織瀵煎嚭」
+//      （日志导出）漏掉，因其不含任何标记字。故③改为**冗余确认**而非必要条件，
+//      以①+②为主体判据，避免把真缺陷写成假绿。偏离已在请求审核报告留痕。
+//
+// 零依赖实现：Node 24 内置 ICU TextDecoder('gbk') 提供 GBK→Unicode 解码；
+// 反向的 Unicode→GBK 编码表由 0x81–0xFE / 0x40–0xFE 全枚举 GBK 解码结果构建（23940 条）。
+// 不引入 iconv-lite 等三方依赖（门禁须保持 fs/path 最小依赖面）。
+let GBK_REV = null;
+function buildGbkReverseTable() {
+  if (GBK_REV) return GBK_REV;
+  let dec;
+  try { dec = new TextDecoder('gbk'); } catch (e) {
+    // 环境无 ICU GBK 支持 ⇒ 无法判定。fail-closed：退出码 3，不静默跳过 G6。
+    console.error('编码门禁失败：本机 Node 无 GBK 解码支持（缺 ICU），G6 无法评估。已按 fail-closed 拒绝放行。');
+    process.exit(3);
+  }
+  GBK_REV = new Map();
+  for (let b0 = 0x81; b0 <= 0xFE; b0++) {
+    for (let b1 = 0x40; b1 <= 0xFE; b1++) {
+      if (b1 === 0x7F) continue;
+      try {
+        const s = dec.decode(Uint8Array.of(b0, b1));
+        if (s.length === 1 && !GBK_REV.has(s)) GBK_REV.set(s, [b0, b1]);
+      } catch (e) { /* 非 GBK 合法双字节 */ }
+    }
+  }
+  return GBK_REV;
+}
+function toGbkBytes(s) {
+  const rev = buildGbkReverseTable();
+  const out = [];
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x80) { out.push(cp); continue; }
+    const r = rev.get(ch);
+    if (!r) return null; // 该字符无法 GBK 编码 ⇒ 不可能是 GBK 误读产物
+    out.push(r[0], r[1]);
+  }
+  return out;
+}
+const CJK_RE = /[一-鿿]/;
+function detectMojibake(line) {
+  if (!CJK_RE.test(line)) return null;
+  const b = toGbkBytes(line);
+  if (!b) return null;
+  try { new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(b)); } catch (e) { return null; }
+  const back = Buffer.from(b).toString('utf8');
+  if (!CJK_RE.test(back)) return null;
+  return back;
+}
+// 空扫描即失败：仓库内必有 .pas；扫到 0 个说明 root 指错或 SKIP 规则吃掉了源码树。
+if (files.length === 0) {
+  console.error(`编码门禁失败：扫描 0 个 .pas（root=${ROOT}）。根因通常是 --root 指错目录；已按 fail-closed 拒绝放行。`);
+  process.exit(3);
+}
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
-  const buf = fs.readFileSync(f);
+  let buf;
+  try { buf = fs.readFileSync(f); } catch (e) {
+    // 标签不用 G6：G6 专指「双重编码乱码」内容级判据；读取失败属扫描自身失败，走 G0
+    // （WO-20260922-AUDIT-乙-P2 §3.1b——此前本行误标 G6，与 G6 语义互斥）
+    console.error(`G0 读取失败: ${path.relative(ROOT, f).replace(/\\/g, '/')} (${e.message})`);
+    process.exit(3);
+  }
   const bom = buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
   if (!bom && hasNonAscii(buf) && !bomExcepts.has(rel)) violations.push(`G3 缺UTF-8 BOM: ${rel}`);
   // G4: UTF-16/32 BOM 或任何 NUL 字节一律拒绝（存量 .pas 基线为 0，不设豁免）
@@ -68,6 +184,20 @@ for (const f of files) {
     continue; // NUL 污染文件的其余字节统计不可信，不再评估 G2/G1/G5
   }
   if (!validUtf8(buf)) { violations.push(`G2 非法UTF-8(GBK/ANSI原始字节): ${rel}`); continue; }
+  // G6: 双重编码乱码（仅在文件已通过 G2 合法 UTF-8 且未被 mojibakeExceptions 豁免时评估）
+  if (!mojibakeExempt.has(rel)) {
+    const lines = buf.toString('utf8').split(/\r\n|\r|\n/);
+    const hitLines = [];
+    for (const line of lines) if (detectMojibake(line)) hitLines.push(line);
+    const mcap = rel in mojibakeAllowed ? mojibakeAllowed[rel] : 0;
+    if (hitLines.length > mcap) {
+      violations.push(`G6 双重编码乱码 ${hitLines.length} 行 > 基线 ${mcap}: ${rel}`);
+      const idx = lines.findIndex(l => detectMojibake(l));
+      const rev = detectMojibake(lines[idx]);
+      violations.push(`  └─ G6 样例 L${idx + 1}: ${lines[idx].trim().slice(0, 70).replace(/\s+/g, ' ')}`);
+      if (rev) violations.push(`  └─ G6 还原: ${rev.trim().slice(0, 70)}`);
+    }
+  }
   const n = (buf.toString('utf8').match(/\uFFFD/g) || []).length;
   const cap = rel in allowed ? allowed[rel] : 0;
   if (n > cap) violations.push(`G1 U+FFFD ${n} > 基线 ${cap}: ${rel}`);
@@ -80,4 +210,4 @@ if (violations.length) {
   violations.slice(0, 50).forEach(v => console.error('  ' + v));
   process.exit(1);
 }
-console.log(`编码门禁通过：${files.length} 个 .pas（基线残留U+FFFD文件 ${Object.keys(allowed).length}，BOM例外 ${bomExcepts.size}，孤立CR基线文件 ${Object.keys(loneCrAllowed).length}）`);
+console.log(`编码门禁通过：${files.length} 个 .pas（基线残留U+FFFD文件 ${Object.keys(allowed).length}，BOM例外 ${bomExcepts.size}，孤立CR基线文件 ${Object.keys(loneCrAllowed).length}，双重编码基线文件 ${Object.keys(mojibakeAllowed).length}，跳过目录 ${skippedDirs.size}）`);
