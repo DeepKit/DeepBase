@@ -9,7 +9,7 @@
 // 扫描口径：默认只扫 git 已跟踪的证据文件（CI checkout 内即全量；本地 gitignored 的临时
 //     log 不参与，避免把未入库的本地产物当成仓库违规）；--all-worktree 改走工作树枚举。
 // 用法: node check_evidence_encoding.js [--repo <dir>] [--baseline <file>] [--all-worktree]
-// 退出码：0 通过；1 违规；2 自身执行失败。
+// 退出码：0 通过；1 违规；2 自身执行失败（基线不可读/枚举失败）；3 扫描自身失败（扫到 0 个证据文件）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -47,7 +47,12 @@ function trackedFiles() {
 
 function walkFiles(dir, acc) {
   let ents;
-  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return acc; }
+  // fail-closed：同 WO-20260921-AUDIT-乙-P1 §〇。readdir 失败不得静默返回空数组，
+  // 否则扫到 0 个证据文件却报「通过」。
+  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) {
+    console.error(`证据编码门禁无法读取目录: ${dir} (${e.message})`);
+    process.exit(3);
+  }
   for (const e of ents) {
     if (SKIP_DIRS.has(e.name)) continue;
     const p = path.join(dir, e.name);
@@ -74,6 +79,12 @@ try {
 } catch (e) {
   console.error('证据编码门禁无法枚举文件: ' + e.message);
   process.exit(2);
+}
+// 空扫描即失败：CodeReview/ 下必有 .txt/.log/.xml 证据；扫到 0 个说明 repo 指错、
+// git 不可用或 pathspec 口径失效。fail-closed，绝不放行（WO-20260921-AUDIT-乙-P1 §〇）。
+if (files.length === 0) {
+  console.error(`证据编码门禁失败：扫描 0 个 ${SUBDIR} 证据文件（repo=${REPO}, all-worktree=${ALL_WORKTREE}）。已按 fail-closed 拒绝放行。`);
+  process.exit(3);
 }
 
 const violations = [];

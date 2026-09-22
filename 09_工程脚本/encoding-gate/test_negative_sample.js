@@ -104,21 +104,35 @@ try {
     else console.log('G6 负样本通过：MojibakeOnly.pas 被 G6 拦下并还原出「日志导出」');
 
     // (b) 修前假绿：拖空 G6 判据的同源拷贝须放行 — 证明旧门禁确实是绿的
+    // 副本必须能 require 到真实的 gate-args.js：门禁源码里是 require('../gate-args')，
+    // 按脚本自身位置解析——副本落在 g6Root（tmp）内时该路径必然 MODULE_NOT_FOUND，
+    // 于是「按预期放行」被误读成引擎崩溃。故把副本里的相对 require 改写为绝对路径，
+    // 副本即可落在任何位置（本单 §七 把参数解析外置成共享模块后新增的约束）。
     const noG6 = path.join(g6Root, 'check_pas_encoding_nog6.js');
     const src = fs.readFileSync(path.join(HERE, 'check_pas_encoding.js'), 'utf8');
+    const gateArgsAbs = path.resolve(HERE, '../gate-args.js');
     if (!src.includes('function detectMojibake')) {
       console.error('G6 负样本异常：门禁源码中找不到 detectMojibake，无法构造「修前」对照'); failed = true;
+    } else if (!fs.existsSync(gateArgsAbs)) {
+      console.error('G6 负样本异常：共享参数模块缺失（' + gateArgsAbs + '），无法构造「修前」对照'); failed = true;
     } else {
-      // 把 G6 判据恒为 null ⇒ 等价于「加 G6 之前」的门禁
-      const patched = src.replace('function detectMojibake(line) {', 'function detectMojibake(line) {\n  return null; // 「修前」对照：G6 判据失效');
-      fs.writeFileSync(noG6, patched);
-      let green = false;
-      try {
-        execFileSync(process.execPath, [noG6, '--root', g6Root, '--baseline', emptyBase], { stdio: 'pipe' });
-        green = true;
-      } catch (e) { /* 仍红 */ }
-      if (!green) { console.error('G6 双向留证失败：「修前」对照仍报红，无法证明该样本在旧门禁下是假绿'); failed = true; }
-      else console.log('G6 双向留证通过：「修前」对照放行同一文件 ⇒ 确证旧门禁假绿');
+      // 两处改写互不相干：G6 判据恒为 null ⇒ 等价于「加 G6 之前」的门禁；
+      // 相对 require → 绝对路径 ⇒ 副本可跨目录执行。
+      const patched = src
+        .replace("require('../gate-args')", 'require(' + JSON.stringify(gateArgsAbs) + ')')
+        .replace('function detectMojibake(line) {', 'function detectMojibake(line) {\n  return null; // 「修前」对照：G6 判据失效');
+      if (patched === src) {
+        console.error('G6 负样本异常：源码两处改写均未命中，「修前」对照与现行门禁无异'); failed = true;
+      } else {
+        fs.writeFileSync(noG6, patched);
+        let green = false;
+        try {
+          execFileSync(process.execPath, [noG6, '--root', g6Root, '--baseline', emptyBase], { stdio: 'pipe' });
+          green = true;
+        } catch (e) { /* 仍红 */ }
+        if (!green) { console.error('G6 双向留证失败：「修前」对照仍报红，无法证明该样本在旧门禁下是假绿'); failed = true; }
+        else console.log('G6 双向留证通过：「修前」对照放行同一文件 ⇒ 确证旧门禁假绿');
+      }
     }
     fs.rmSync(g6Root, { recursive: true, force: true });
   }
@@ -144,6 +158,50 @@ try {
   fs.rmSync(emptyRoot, { recursive: true, force: true });
   if (!red) { console.error('负向样本②失败：空目录（0 个 .pas）门禁仍报通过（真空绿未修复）'); failed = true; }
   else console.log('负向样本②通过：空扫描被 fail-closed 拦截');
+}
+// 决定性判据 §7.3#2：--root 指向存在目录时必须真的按该目录扫描，不得回落默认根。
+// 用「扫描计数 ≠ 全仓量级」反证。tmp 内注入的是违规样本，门禁会走违规分支而非打印计数，
+// 故改用一份干净的只读子目录取计数；全仓 .pas 量级 975，干净子目录仅 1 个，差三个数量级。
+{
+  const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'pasenc-clean-'));
+  fs.mkdirSync(path.join(clean, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(clean, 'src', 'Ok.pas'), Buffer.from('unit Ok;\ninterface\nimplementation\nend.\n', 'utf8'));
+  let out = '';
+  try {
+    out = execFileSync(process.execPath, [path.join(HERE, 'check_pas_encoding.js'), '--root', clean], { stdio: 'pipe' }).toString('utf8');
+  } catch (e) { out = (e.stdout || Buffer.alloc(0)).toString('utf8'); }
+  fs.rmSync(clean, { recursive: true, force: true });
+  const m = out.match(/(\d+)\s*个\s*\.pas/);
+  const scanned = m ? Number(m[1]) : -1;
+  if (scanned <= 0 || scanned > 100) {
+    console.error('决定性判据2失败：--root <存在目录> 扫描计数异常（' + scanned + '），疑似回落默认根');
+    failed = true;
+  } else {
+    console.log('决定性判据2通过：--root <存在目录> 真按该目录扫描（' + scanned + ' 个 .pas，非全仓 975 量级）');
+  }
+}
+// WO-20260922-AUDIT-乙-P2 §七：5 类参数 fail-open 负样本（每类必须 EXIT=3，不是 0）。
+// 旧裂根因：校验侧把 --ROOT 小写归一后当已知参数放行，取值侧 arg() 大小写敏感取空，
+// 于是静默回落默认 root 扫全仓 975 个 .pas 报 EXIT=0——「我按指定 root 扫过了」的假象。
+// 取值侧现已与校验侧共用 09_工程脚本/gate-args.js 同一份归一结果，该裂缝在实现层不存在。
+const ARG_CASES = [
+  ['未知参数',     ['--rot', '.']],
+  ['已知参数缺值', ['--root']],
+  ['裸位置参数',   ['stray']],
+  ['大小写不符',   ['--ROOT', '/nonexistent']],
+  ['值形似参数',   ['--root', '--root']],
+];
+for (const [label, argv] of ARG_CASES) {
+  let code = null;
+  try {
+    execFileSync(process.execPath, [path.join(HERE, 'check_pas_encoding.js'), ...argv], { stdio: 'pipe' });
+  } catch (e) { code = e.status; }
+  if (code !== 3) {
+    console.error('参数负样本失败(' + label + ')：期望 EXIT=3，实际 ' + code);
+    failed = true;
+  } else {
+    console.log('参数负样本通过(' + label + ')：[' + argv.join(' ') + '] => EXIT=3');
+  }
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failed ? 'NEGATIVE-TEST: FAIL' : 'NEGATIVE-TEST: PASS');

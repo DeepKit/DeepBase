@@ -5,24 +5,43 @@
 //  L3 混用规则：*.pas 禁止在同一文件内混用单CR行尾（CRLF）与纯 LF；含多重CR的文件归 L4，不进 L3。
 //  L4 多重CR规则：*.pas 禁止出现 \r\r\n 及以上的多重 CR 行尾（Delphi 按每个 CR 计行号，行号全部错位）。历史存量由 baseline 豁免，禁止新增违规。
 // 用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline]
-// 退出码：0 通过；1 违规。
+// 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个文件/参数解析失败）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
+const { parseGateArgs } = require('../gate-args');
 
-function arg(name, dflt) {
-  const i = process.argv.indexOf('--' + name);
-  return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt;
+// 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
+// 本门禁此前零参数校验（--ROOT / --rot 被静默忽略，回落默认根后照常报 EXIT=0），
+// 而 check_pas_encoding.js 另有一份内联校验——两份等价物各自维护，正是被禁止的形态。
+{
+  const opts = parseGateArgs(process.argv.slice(2), {
+    label: '行尾',
+    root: path.join(__dirname, '../..'),
+    baseline: path.join(__dirname, 'eol_baseline.json'),
+    extra: ['emit-baseline'],
+  });
+  if (opts.flags.has('help')) {
+    console.log('用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline]');
+    process.exit(0);
+  }
+  var ROOT = opts.root;
+  var BASELINE_P = opts.baseline;
+  var EMIT = opts.flags.has('emit-baseline');
 }
-const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')));
-const BASELINE_P = arg('baseline', path.join(__dirname, 'eol_baseline.json'));
-const EMIT = process.argv.includes('--emit-baseline');
 const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+// 记录被 SKIP 规则吃掉的顶层目录，让「扫描面缩了什么」可见（WO-20260921-AUDIT-乙-P1 §〇 第 3 条）。
+const skippedDirs = new Set();
 
 function walk(dir, out) {
   let ents;
-  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return out; }
+  // fail-closed：readdir 失败不得静默返回空数组，否则门禁扫到 0 个文件却报「通过」，
+  // 把「没扫」伪装成「扫过且干净」（WO-20260921-AUDIT-乙-P1 §〇 主控实测缺陷）。
+  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) {
+    console.error(`行尾门禁无法读取目录: ${dir} (${e.message})`);
+    process.exit(3);
+  }
   for (const e of ents) {
-    if (SKIP.has(e.name)) continue;
+    if (SKIP.has(e.name)) { skippedDirs.add(e.name); continue; }
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
     else if (e.isFile()) {
@@ -34,6 +53,11 @@ function walk(dir, out) {
 }
 
 const files = walk(ROOT, []);
+// 空扫描即失败：仓库内必有 .pas/.md；扫到 0 个说明 root 指错或 SKIP 规则吃掉了源码树。
+if (files.length === 0) {
+  console.error(`行尾门禁失败：扫描 0 个文件（root=${ROOT}）。根因通常是 --root 指错目录；已按 fail-closed 拒绝放行。`);
+  process.exit(3);
+}
 let baseline = { pas_lf_exceptions: [], pas_mixed_exceptions: [], md_crlf_exceptions: [] };
 if (fs.existsSync(BASELINE_P)) {
   try { baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8')); } catch (e) {}
@@ -90,7 +114,12 @@ if (EMIT) {
 const violations = [];
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
-  const { crlf, lf, multicr } = countTerms(fs.readFileSync(f));
+  let buf;
+  try { buf = fs.readFileSync(f); } catch (e) {
+    console.error(`行尾门禁无法读取文件: ${rel} (${e.message})`);
+    process.exit(3);
+  }
+  const { crlf, lf, multicr } = countTerms(buf);
   const ext = path.extname(f).toLowerCase();
   if (ext === '.pas') {
     if (multicr > 0) {
@@ -114,4 +143,4 @@ if (violations.length) {
   violations.slice(0, 50).forEach(v => console.error('  ' + v));
   process.exit(1);
 }
-console.log('行尾门禁通过：检查了 ' + files.length + ' 个文件（.pas CRLF / .md LF）');
+console.log('行尾门禁通过：检查了 ' + files.length + ' 个文件（.pas CRLF / .md LF），跳过目录 ' + skippedDirs.size);

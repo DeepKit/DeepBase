@@ -15,48 +15,24 @@
 // 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
+const { parseGateArgs } = require('../gate-args');
 
-function arg(name, dflt) {
-  const i = process.argv.indexOf('--' + name);
-  return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt;
-}
-// 参数 fail-open 收口（WO-20260922-AUDIT-乙-P2 §3.3）：拼错/传错/缺值的 --xxx 不得静默忽略。
-// 静默忽略时门禁按缺省 root 跑通并报 EXIT=0，让「我按指定 root 扫过了」变成假象
-// （典型事故：--rot 拼错→按缺省 root 跑→绿单覆盖了实际未被扫描的目录）。
-// fail-closed：EXIT≠0 且打印出错参数名。以下四类均为 fail-open 裂缝，一并收口：
-//   ① 未知参数名（--rot / --Root:x）
-//   ② 已知参数缺值（--root / --baseline 后无实参，或尾随）⇒ 回退缺省值 = 假绿
-//   ③ 值形似参数（--root --root）⇒ 后一个被当作 path 静默吞掉
-//   ④ 大小写不符（--ROOT 不在 KNOWN_ARGS 中应报错，而非被静默忽略）
-const KNOWN_ARGS = new Set(['root', 'baseline', 'help']);
-function parseFail(raw, why) {
-  console.error(`编码门禁失败：${raw ? '参数 ' + raw + ' ' : ''}${why}（已知参数: --root <dir> / --baseline <file>）。已按 fail-closed 拒绝放行。`);
-  process.exit(3);
-}
-for (let i = 2; i < process.argv.length; i++) {
-  const t = process.argv[i];
-  if (!t.startsWith('--')) {
-    // 裸位置参数：旧实现静默忽略。CI 传错位置参数同样会造成「以为指定了 root」的假绿
-    parseFail(t, '不是合法参数（应为 --root / --baseline 形式的命名参数）');
+// 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
+// 此前本文件与 eol 门禁各写一份内联校验，且裂成「校验侧归一放行 / 取值侧大小写敏感取空」
+// 两半，导致 --ROOT 被静默忽略并回落默认 root ⇒ 假绿。共用实现后该裂缝在物理上不存在。
+{
+  const opts = parseGateArgs(process.argv.slice(2), {
+    label: '编码',
+    root: path.join(__dirname, '../..'),
+    baseline: path.join(__dirname, 'pas_encoding_baseline.json'),
+  });
+  if (opts.flags.has('help')) {
+    console.log('用法: node check_pas_encoding.js [--root <dir>] [--baseline <file>]');
+    process.exit(0);
   }
-  const eq = t.indexOf('=');
-  const raw = eq > 0 ? t.slice(0, eq) : t;
-  const key = raw.slice(2).toLowerCase();
-  if (!KNOWN_ARGS.has(key)) parseFail(t, '为未知参数');
-  if (key === 'help') continue;
-  if (eq > 0) {
-    if (t.length === eq + 1) parseFail(t, '缺值（= 号后为空）');
-    continue;
-  }
-  const nxt = process.argv[i + 1];
-  if (nxt === undefined || nxt.startsWith('--')) {
-    // 含 `--root --root`：后一个参数会被 arg() 当 path 取走，静默吞掉
-    parseFail(t, '缺值（后无实参）');
-  }
-  i++; // 跳过已消费的实参
+  var ROOT = opts.root;
+  var BASELINE_P = opts.baseline;
 }
-const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')));
-const BASELINE_P = arg('baseline', path.join(__dirname, 'pas_encoding_baseline.json'));
 const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy']);
 // 记录被 SKIP 规则吃掉的顶层目录，让「扫描面缩了什么」可见（WO-20260921-AUDIT-乙-P1 §〇 第 3 条）。
 const skippedDirs = new Set();
