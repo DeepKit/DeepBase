@@ -107,8 +107,11 @@ type
     {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
     /// <summary>迁移窗口：把库中仍为 UBS2 v1 的凭据逐条用旧口令熵解出、以当前用户
     /// 密钥重新封存为 v2 后写回（名称与描述不变），返回迁移条数。旧熵公式只存在于
-    /// 迁移器中，正常读取路径仍然拒绝 v1。</summary>
-    function MigrateLegacyUBS2Secrets(const ALegacyPassphrase: string): Integer;
+    /// 迁移器中，正常读取路径仍然拒绝 v1。取钥前默认拒绝建钥：密钥文件不存在时
+    /// LoadOrCreate 会静默新建一把，那会让用户手上的既有备份全部对不上，因此只有
+    /// 调用方显式放行（AAllowProvisioning=True）才允许本次新建。</summary>
+    function MigrateLegacyUBS2Secrets(const ALegacyPassphrase: string;
+      const AAllowProvisioning: Boolean = False): Integer;
     {$ENDIF}
     
     /// <summary>
@@ -166,6 +169,7 @@ uses
   DeepBase.Security.UBS2.Migration,
   DeepBase.Security.MasterKey,
   DeepBase.Security.MachineIdentity,
+  DeepBase.Logging,
   {$ENDIF}
   System.NetEncoding,
   DeepBase.Manager;
@@ -202,9 +206,24 @@ function CryptUnprotectData(pDataIn: PDataBlob; ppszDataDescr: PPWideChar;
 // The user secret is the only password entropy; machine identity only travels
 // through the AAD, so the binding authenticates a record without being a secret
 // an attacker could enumerate to rebuild the key.
+//
+// The notice sink exists because this is the call that can mint that secret: a key
+// that appears without a word is exactly how a user ends up holding backups that
+// match nothing. It reaches the application log; before the manager exists there is
+// no log to write to, which is why the same facts are readable from
+// "DeepBase security status" and are refused by RequireExistingKey on the migration
+// path instead of being announced only here.
 function BuildUBS2Key: TUBS2KeyMaterial;
 begin
-  Result.MasterSecret := TUserMasterKey.LoadOrCreate;
+  Result.MasterSecret := TUserMasterKey.LoadOrCreate(
+    procedure(const AMessage: string)
+    var
+      AppLogger: TDeepBaseLogger;
+    begin
+      AppLogger := DeepBase.Manager.DeepBase.Logger;
+      if Assigned(AppLogger) then
+        AppLogger.Warn(AMessage, 'DeepBase.Security');
+    end);
   Result.Binding := TMachineIdentityProvider.Binding;
 end;
 {$ENDIF}
@@ -476,7 +495,8 @@ end;
 
 {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
 function TDeepBaseSecurity.MigrateLegacyUBS2Secrets(
-  const ALegacyPassphrase: string): Integer;
+  const ALegacyPassphrase: string;
+  const AAllowProvisioning: Boolean): Integer;
 var
   Names: TArray<string>;
   Name: string;
@@ -485,6 +505,13 @@ var
   Key: TUBS2KeyMaterial;
 begin
   Result := 0;
+
+  // Ahead of the storage check and ahead of taking key material: BuildUBS2Key
+  // provisions when the key file is absent, and a migration that minted a key
+  // would invalidate every backup the user holds while still reporting success.
+  TUserMasterKey.RequireExistingKey('the UBS2 v1 to v2 secret migration',
+    AAllowProvisioning);
+
   if not Assigned(FStorage) then
     Exit;
 

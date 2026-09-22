@@ -68,7 +68,7 @@ begin
   Writeln('');
   Writeln('Subcommands:');
   Writeln('  export      Write a verified backup of the master key to a file');
-  Writeln('  status      Report where the master key lives and its fingerprint');
+  Writeln('  status      Report the master key path, its source and access policy');
   Writeln('  verify      Compare a backup against the current master key');
   Writeln('');
   Writeln('Options:');
@@ -148,14 +148,28 @@ begin
     Writeln('Resolved from    : environment variable ', MASTER_KEY_FILE_ENV);
 
   // Read-only by design: status must never provision a key, because a query that
-  // creates the secret would hide the very loss it is meant to report.
+  // creates the secret would hide the very loss it is meant to report. Neither line
+  // below says anything about the access an existing file carries: status reads it
+  // nowhere, and a key predating this restriction keeps the ACL it was created with
+  // until its owner sets one (icacls / ls -l).
+  if TUserMasterKey.AccessManagedExternally then
+    TCliUtils.Warning('Access policy    : newly provisioned keys are NOT restricted to ' +
+      'their owner, because ' + MASTER_KEY_EXTERNAL_ACL_ENV + ' declares that somebody ' +
+      'else administers access to the path held in ' + MASTER_KEY_FILE_ENV)
+  else
+    Writeln('Access policy    : newly provisioned keys are restricted to their owner; ' +
+      'this command changes nothing about a file that already exists');
+
   if not TFile.Exists(KeyPath) then
   begin
+    Writeln('Key source       : no key file yet - the first use that seals data ' +
+      'provisions one at the path above');
     TCliUtils.Warning('The master key does not exist yet. It is created on the first ' +
       'use that seals data; until then there is nothing to back up.');
     Exit;
   end;
 
+  Writeln('Key source       : existing key file, read as it is');
   Writeln('Size (bytes)     : ', TFile.GetSize(KeyPath):0);
   Writeln('Fingerprint      : ', TUserMasterKey.FingerprintOf(KeyPath));
   Writeln('(One-way SHA-256 of the key material. Publishing it reveals nothing,');

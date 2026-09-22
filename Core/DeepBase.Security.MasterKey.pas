@@ -6,9 +6,9 @@ unit DeepBase.Security.MasterKey;
   UBS2 v2 derives its key from this secret alone (see DeepBase.Security.UBS2);
   machine identity travels through the AAD. That split is what makes "same
   machine, different user" decryption impossible: the secret lives in the user's
-  own home directory (mode 0700 / 0600 on macOS and Linux, and on Windows inside a
-  profile directory that is itself per-user), while the binding value is readable
-  by anyone on the box.
+  own home directory behind an owner-only file ACL (chmod 0600 on macOS and Linux,
+  a single-entry current-user DACL on Windows), while the binding value is
+  readable by anyone on the box.
 
   Resolution order (there is no third source and no fallback):
     1. DEEPBASE_MASTER_KEY_FILE  - path to a file holding exactly 32 raw bytes.
@@ -20,6 +20,13 @@ unit DeepBase.Security.MasterKey;
   Deleting the key file is indistinguishable from a first run: a new secret is
   created and previously sealed records stop authenticating. That is the intended
   fail-closed behaviour, not a bug to work around.
+
+  The file this unit writes is the only entropy source in the product, so both
+  faces that create one are held to the same guarantee: a provisioned key and an
+  exported backup are each restricted to their owner and read back to prove it.
+  The single declared exception is a key path whose access somebody else manages
+  (DEEPBASE_MASTER_KEY_EXTERNAL_ACL below), which is default-off, applies to an
+  override path only, and is announced so it can never pass unnoticed.
 
   The returned bytes are live key material: the caller must hand them to
   SecureClearBytes as soon as the derived key is no longer needed.
@@ -42,13 +49,41 @@ uses
   System.SysUtils;
 
 type
+  /// <summary>Announcement channel for the facts about this store that a user has
+  /// to see: who provisioned a key, and whether an ACL restriction was declared
+  /// away. Kept as a host-supplied sink so the security unit stays free of any
+  /// console, log or UI dependency, which is what lets it be a leaf unit that
+  /// everything else may use.</summary>
+  TMasterKeyNotice = reference to procedure(const AMessage: string);
+
   /// <summary>Per-user secret store used as the only password entropy of UBS2.</summary>
   TUserMasterKey = class
   public
     /// <summary>Env override when set, otherwise the per-user default path.</summary>
     class function KeyFilePath: string; static;
-    /// <summary>Read the secret, creating it on first run.</summary>
-    class function LoadOrCreate: TBytes; static;
+    /// <summary>True when the path this process uses already holds a key. Asking
+    /// never provisions: that distinction is what lets a caller refuse to create
+    /// a secret instead of minting one silently.</summary>
+    class function KeyFileExists: Boolean; static;
+    /// <summary>True when DEEPBASE_MASTER_KEY_EXTERNAL_ACL declares that access to
+    /// an override key path is managed outside this program, which is the only
+    /// grounds on which provisioning may leave the file unrestricted.</summary>
+    class function AccessManagedExternally: Boolean; static;
+    /// <summary>Read the secret, creating it on first run. A file this call
+    /// creates is restricted to its owner and read back to prove it, unless
+    /// AccessManagedExternally holds; either outcome is announced through
+    /// ANotice, since a secret that appears without a word is the failure mode
+    /// this store exists to avoid.</summary>
+    class function LoadOrCreate(
+      const ANotice: TMasterKeyNotice = nil): TBytes; static;
+    /// <summary>Raise unless a key file is already there. An operation that reads
+    /// records sealed with the user's existing secret has no business creating a
+    /// new one, because a fresh secret opens nothing that was sealed before it
+    /// and quietly invalidates every backup taken against the old one.
+    /// AAllowProvisioning is the caller's record that the user authorised exactly
+    /// that in this run.</summary>
+    class procedure RequireExistingKey(const AOperation: string;
+      const AAllowProvisioning: Boolean); static;
     /// <summary>Read a specific key file. Raises when it is missing or not exactly
     /// UBS2_MASTER_SECRET_MIN_SIZE raw bytes.</summary>
     class function Load(const AKeyFile: string): TBytes; static;
@@ -69,6 +104,12 @@ const
   MASTER_KEY_FILE_ENV = 'DEEPBASE_MASTER_KEY_FILE';
   MASTER_KEY_DIR_NAME = '.deepbase';
   MASTER_KEY_FILE_NAME = 'master.key';
+  // Declares that access to a DEEPBASE_MASTER_KEY_FILE path is administered
+  // outside this program (a shared or managed location whose ACL the operator
+  // owns). Honouring it is what keeps first-run provisioning usable there; it
+  // never applies to the per-user default path, and never to an export.
+  MASTER_KEY_EXTERNAL_ACL_ENV = 'DEEPBASE_MASTER_KEY_EXTERNAL_ACL';
+  MASTER_KEY_EXTERNAL_ACL_YES = 'YES';
 
 implementation
 
@@ -129,7 +170,7 @@ begin
   if not OpenProcessToken(GetCurrentProcess, TOKEN_READ, Token) then
     raise ESecurityException.CreateFmt(
       'Cannot open this process'' token to determine its owner (Win32 error %d). ' +
-      'The master key must not be exported to a file nobody owns.',
+      'A master key file must not be written where nobody owns it.',
       [GetLastError]);
   try
     Required := 0;
@@ -155,8 +196,8 @@ end;
   A caller-provided path is outside the per-user profile directory, so it inherits
   no protection worth trusting; and unlike the POSIX chmod, a Windows ACL has to be
   read back to know it took effect. The read-back is therefore part of the contract:
-  a volume without ACL support, or a destination whose DACL cannot be replaced,
-  fails closed here instead of leaving an open copy of the secret behind.
+  a volume without ACL support, or a file whose DACL cannot be replaced, fails
+  closed here instead of leaving an open secret behind.
 
   Two details of the Win32 security model decide the shape of this call, both
   measured rather than assumed:
@@ -200,9 +241,9 @@ begin
       nil, nil, WrittenAcl, nil);
     if ErrorCode <> ERROR_SUCCESS then
       raise ESecurityException.CreateFmt(
-        'Cannot restrict "%s" to its owner (%s). The destination volume must ' +
-        'support NTFS ACLs; a master key copy that anyone on the machine can read ' +
-        'is not a backup.', [AFile, SysErrorMessage(ErrorCode)]);
+        'Cannot restrict "%s" to its owner (%s). The volume holding it must support ' +
+        'NTFS ACLs; a master key that anyone on the machine can read must not be ' +
+        'left behind.', [AFile, SysErrorMessage(ErrorCode)]);
     ErrorCode := GetNamedSecurityInfoW(PWideChar(AFile), SE_FILE_OBJECT,
       DACL_SECURITY_INFORMATION, nil, nil, nil, nil, @SecurityDescriptor);
     if ErrorCode <> ERROR_SUCCESS then
@@ -218,8 +259,8 @@ begin
       (StoredAcl.AclSize <> WrittenAcl.AclSize) or
       (not CompareMem(WrittenAcl, StoredAcl, WrittenAcl.AclSize)) then
       raise ESecurityException.CreateFmt(
-        'The ACL of "%s" is not the single owner entry that was written to it. ' +
-        'The copy was refused because its readability cannot be proven.', [AFile]);
+        'The ACL of "%s" is not the single owner entry that was written to it. The ' +
+        'file is refused because its readability cannot be proven.', [AFile]);
   finally
     LocalFree(WrittenAcl);
     LocalFree(SecurityDescriptor);
@@ -248,10 +289,11 @@ begin
 end;
 {$ENDIF}
 
-{ Restrict a file to its owner and prove the restriction took effect. Provisioning is
-  deliberately not routed through here: the key file may sit at a shared
-  DEEPBASE_MASTER_KEY_FILE path whose access is managed outside this program, while
-  an export destination is always a path somebody just chose for a copy. }
+{ Restrict a file to its owner and prove the restriction took effect. Every file
+  this unit creates carries key material, so both faces route through here; the
+  only thing that keeps a provisioning path from doing so is the operator's
+  declaration that somebody else administers that path's access (see
+  AccessManagedExternally), which an export destination can never claim. }
 procedure ApplyOwnerOnlyToFile(const APath: string);
 begin
   {$IF DEFINED(MSWINDOWS)}
@@ -274,6 +316,36 @@ begin
     Exit(Override);
   Result := TPath.Combine(TPath.Combine(TPath.GetHomePath, MASTER_KEY_DIR_NAME),
     MASTER_KEY_FILE_NAME);
+end;
+
+class function TUserMasterKey.KeyFileExists: Boolean;
+begin
+  Result := TFile.Exists(KeyFilePath);
+end;
+
+class function TUserMasterKey.AccessManagedExternally: Boolean;
+begin
+  // The per-user default sits inside the user's own profile, where "somebody else
+  // administers this" is never a claim to accept, so the declaration is honoured
+  // for an override path only. Anything but the one accepted value counts as no
+  // declaration: a typo'd exemption restricts the key, it does not open it.
+  if Trim(GetEnvironmentVariable(MASTER_KEY_FILE_ENV)) = '' then
+    Exit(False);
+  Result := SameText(Trim(GetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV)),
+    MASTER_KEY_EXTERNAL_ACL_YES);
+end;
+
+class procedure TUserMasterKey.RequireExistingKey(const AOperation: string;
+  const AAllowProvisioning: Boolean);
+begin
+  if AAllowProvisioning or KeyFileExists then
+    Exit;
+  raise ESecurityException.CreateFmt(
+    'Refusing to provision a master key for %s: no key file exists at "%s" yet. ' +
+    'A key created now seals records that no earlier backup can open, and it leaves ' +
+    'the backups that were taken against the old key matching nothing. Restore the ' +
+    'key file first, or authorise creating a new one in this run if you have no ' +
+    'data sealed with another key.', [AOperation, KeyFilePath]);
 end;
 
 class function TUserMasterKey.Load(const AKeyFile: string): TBytes;
@@ -300,15 +372,20 @@ begin
   end;
 end;
 
-class function TUserMasterKey.LoadOrCreate: TBytes;
+class function TUserMasterKey.LoadOrCreate(
+  const ANotice: TMasterKeyNotice): TBytes;
 var
   Path, TmpPath: string;
   Dir: string;
   Secret: TBytes;
+  Notice: string;
+  ExternalAcl: Boolean;
 begin
   Path := KeyFilePath;
   if TFile.Exists(Path) then
     Exit(Load(Path));
+
+  ExternalAcl := AccessManagedExternally;
 
   Dir := TPath.GetDirectoryName(Path);
   TDirectory.CreateDirectory(Dir);
@@ -323,9 +400,8 @@ begin
   Secret := TRandomGenerator.RandomBytes(UBS2_MASTER_SECRET_MIN_SIZE);
   try
     TFile.WriteAllBytes(TmpPath, Secret);
-    {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
-    ApplyOwnerOnlyMode(TmpPath, False);
-    {$ENDIF}
+    if not ExternalAcl then
+      ApplyOwnerOnlyToFile(TmpPath);
   finally
     SecureClearBytes(Secret);
   end;
@@ -338,6 +414,46 @@ begin
         raise ESecurityException.CreateFmt(
           'Cannot provision master key file "%s": %s', [Path, E.Message]);
   end;
+
+  if ExternalAcl then
+    Notice := 'Master key provisioned at "' + Path + '" without restricting it to ' +
+      'its owner, because ' + MASTER_KEY_EXTERNAL_ACL_ENV + ' declares that access to ' +
+      'this path is managed externally.'
+  else
+  begin
+    // The rename is where the file takes the name every later run trusts, and a
+    // move is also where a volume may re-evaluate inherited access, so the same
+    // read-back proof the export path runs has to run here as well: the key that
+    // seals this user's data going forward is the one file, not the copy of it.
+    try
+      ApplyOwnerOnlyToFile(Path);
+    except
+      on E: Exception do
+      begin
+        // A key that cannot be restricted must not stay: it seals nothing yet, so
+        // removing it costs no data and leaves no readable secret behind.
+        try
+          TFile.Delete(Path);
+        except
+          on CleanupError: Exception do
+            raise ESecurityException.Create(
+              'The newly provisioned master key at "' + Path + '" is live key material ' +
+              'that could not be restricted to its owner and could not be removed ' +
+              'either. Remove it by hand. Restriction failed: ' + E.Message +
+              ' Removal failed: ' + CleanupError.Message);
+        end;
+        raise ESecurityException.CreateFmt(
+          'Cannot restrict the newly provisioned master key at "%s" to its owner: %s ' +
+          'Nothing was created. Set ' + MASTER_KEY_EXTERNAL_ACL_ENV + '=' +
+          MASTER_KEY_EXTERNAL_ACL_YES + ' when the access to that path is administered ' +
+          'outside this program.', [Path, E.Message]);
+      end;
+    end;
+    Notice := 'Master key provisioned at "' + Path + '" and restricted to its owner.';
+  end;
+
+  if Assigned(ANotice) then
+    ANotice(Notice);
 
   Result := Load(Path);
 end;

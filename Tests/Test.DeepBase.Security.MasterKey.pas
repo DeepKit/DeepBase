@@ -2,17 +2,23 @@
   Test.DeepBase.Security.MasterKey - Unit tests for the user master key store
 
   UBS2 v2 derives every sealed record from this single 32-byte file, so the net
-  below covers both halves of its contract: the secret is only ever readable by
-  its owner, and a backup is delivered byte-identical and owner-restricted or
-  not delivered at all.
+  below covers the three halves of its contract: a key this store creates is
+  readable only by its owner unless that is declared away out loud, a backup is
+  delivered byte-identical and owner-restricted or not delivered at all, and an
+  operation that needs the user's existing secret refuses to mint a new one.
 
   DEEPBASE_MASTER_KEY_FILE points at a private temporary directory for the
   duration of every case, so the real per-user key file is never opened.
 
   Test Coverage:
     - Key path resolution: environment override and per-user default
+    - KeyFileExists: answers without provisioning
     - Load: exact bytes, missing file, wrong size in both directions
-    - LoadOrCreate: reuse of an existing secret, atomic provisioning
+    - LoadOrCreate: reuse of an existing secret, atomic provisioning, owner-only
+      access on the file provisioning leaves behind, the declared exemption and
+      what each branch announces
+    - RequireExistingKey: refusal on an absent key, pass-through on a present one,
+      and the caller's authorisation
     - ExportTo: byte-identical copy, owner-only destination, and every refusal
       (existing destination, missing directory, empty destination, leftover
       sibling, absent key)
@@ -37,9 +43,16 @@ type
     FDir: string;
     FKeyFile: string;
     FPriorEnv: string;
+    FPriorAclEnv: string;
+    FNotices: string;
     function TempPath(const AName: string): string;
     function TestKey: TBytes;
     function BytesEqual(const ALeft, ARight: TBytes): Boolean;
+    function NoticeSink: TMasterKeyNotice;
+    function AccessReport(const AFile, ARole: string;
+      out OwnerOnly: Boolean): string;
+    procedure AssertOwnerOnlyAccess(const AFile, ARole: string);
+    procedure AssertAccessNotOwnerOnly(const AFile, ARole: string);
   public
     [Setup]
     procedure Setup;
@@ -52,6 +65,10 @@ type
     [Test]
     procedure Test_KeyFilePath_DefaultsUnderUserHome;
     [Test]
+    procedure Test_KeyFileExists_AnswersWithoutProvisioning;
+    [Test]
+    procedure Test_AccessManagedExternally_NeedsOverrideAndDeclaration;
+    [Test]
     procedure Test_Load_ReturnsRawKeyBytes;
     [Test]
     procedure Test_Load_MissingFile_Raises;
@@ -63,6 +80,18 @@ type
     procedure Test_LoadOrCreate_ReusesExistingKey;
     [Test]
     procedure Test_LoadOrCreate_ProvisionsAtomicKeyWhenAbsent;
+    [Test]
+    procedure Test_LoadOrCreate_ProvisionedFileIsOwnerOnly;
+    [Test]
+    procedure Test_LoadOrCreate_DeclaredExemptionLeavesFileUnrestricted;
+    [Test]
+    procedure Test_LoadOrCreate_NoticesOnlyWhatItProvisioned;
+    [Test]
+    procedure Test_RequireExistingKey_MissingKey_RaisesAndProvisionsNothing;
+    [Test]
+    procedure Test_RequireExistingKey_ExistingKey_Returns;
+    [Test]
+    procedure Test_RequireExistingKey_AuthorisedByUser_Returns;
     [Test]
     procedure Test_ExportTo_WritesByteIdenticalCopy;
     [Test]
@@ -92,6 +121,8 @@ uses
   Winapi.Windows,
   Winapi.AccCtrl,
   Winapi.AclAPI,
+  {$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
+  Posix.SysStat,
   {$ENDIF}
   DeepBase.Exceptions;
 
@@ -118,6 +149,12 @@ begin
   FKeyFile := TPath.Combine(FDir, MASTER_KEY_FILE_NAME);
   SetEnvironmentVariable(MASTER_KEY_FILE_ENV, PChar(FKeyFile));
 
+  // The exemption is a declared, per-run fact; leaving it set by a previous case
+  // would let the next one provision a readable key and still call it a pass.
+  FPriorAclEnv := GetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV);
+  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, nil);
+  FNotices := '';
+
   // Each case starts from a fixed, already-provisioned secret so the export and
   // fingerprint assertions are exact and no case depends on random first-run
   // material. Cases that want the provisioning path delete this file first.
@@ -130,6 +167,10 @@ begin
     SetEnvironmentVariable(MASTER_KEY_FILE_ENV, nil)
   else
     SetEnvironmentVariable(MASTER_KEY_FILE_ENV, PChar(FPriorEnv));
+  if FPriorAclEnv = '' then
+    SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, nil)
+  else
+    SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar(FPriorAclEnv));
   if TDirectory.Exists(FDir) then
     TDirectory.Delete(FDir, True);
 end;
@@ -160,6 +201,148 @@ begin
       Exit(False);
 end;
 
+function TTestUserMasterKey.NoticeSink: TMasterKeyNotice;
+begin
+  Result :=
+    procedure(const AMessage: string)
+    begin
+      FNotices := FNotices + AMessage + sLineBreak;
+    end;
+end;
+
+{ What the file's access really is, and whether that amounts to "readable by its
+  owner and nobody else". Read straight from the securable object -- the DACL on
+  Windows, the mode bits on macOS and Linux -- rather than through anything the
+  product exposes, so the guarantee is verified against the operating system's own
+  answer. A file whose access cannot be read fails the case outright: an
+  unreadable ACL is what a "not owner-only" assertion would otherwise mistake for
+  success. }
+function TTestUserMasterKey.AccessReport(const AFile, ARole: string;
+  out OwnerOnly: Boolean): string;
+{$IF DEFINED(MSWINDOWS)}
+const
+  // ACCESS_ALLOWED_ACE and ACCESS_DENIED_ACE in the public ACE layout: a 4-byte
+  // header (type, flags, size) followed by a 4-byte access mask, so the trustee
+  // SID starts at offset 8. The RTL declares neither the records nor their type
+  // constants, and reading the stored ACL through the documented layout is what
+  // keeps this independent of how the product builds it.
+  ACE_TYPE_ACCESS_ALLOWED = 0;
+  ACE_FLAGS_INHERITED = $10;  // INHERITED_ACE; icacls prints it as (I)
+  ACE_SID_OFFSET = 8;
+  // TOKEN_USER is 8 bytes and the SID behind it is capped at 68 by the format,
+  // so one buffer covering both is enough.
+  TOKEN_USER_PROBE_SIZE = 256;
+var
+  Token: THandle;
+  TokenBuffer: array [0 .. TOKEN_USER_PROBE_SIZE - 1] of Byte;
+  Required: Cardinal;
+  UserSid: Pointer;
+  SecurityDescriptor: PSECURITY_DESCRIPTOR;
+  Dacl: PACL;
+  DaclPresent, DaclDefaulted: BOOL;
+  Ace: Pointer;
+  I: Integer;
+  Flags: Byte;
+  Mask: DWORD;
+  Kind: string;
+  Trustee: string;
+  TrusteeIsThisUser: Boolean;
+{$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
+var
+  StatBuffer: _stat;
+  Mode: Cardinal;
+{$ENDIF}
+begin
+  OwnerOnly := False;
+  {$IF DEFINED(MSWINDOWS)}
+  if not OpenProcessToken(GetCurrentProcess, TOKEN_READ, Token) then
+    Assert.FailFmt('Test cannot read this process token (Win32 error %d).', [GetLastError]);
+  try
+    if not GetTokenInformation(Token, TokenUser, @TokenBuffer,
+      SizeOf(TokenBuffer), Required) then
+      Assert.FailFmt('Test cannot read the current user SID (Win32 error %d).', [GetLastError]);
+    UserSid := PTokenUser(@TokenBuffer).User.Sid;
+
+    SecurityDescriptor := nil;
+    Assert.AreEqual(DWORD(ERROR_SUCCESS),
+      GetNamedSecurityInfoW(PWideChar(AFile), SE_FILE_OBJECT,
+        DACL_SECURITY_INFORMATION, nil, nil, nil, nil, @SecurityDescriptor),
+      'Test cannot read back the ACL of the ' + ARole + '.');
+    try
+      Assert.IsTrue(GetSecurityDescriptorDacl(SecurityDescriptor, DaclPresent, Dacl,
+        DaclDefaulted), 'Test cannot inspect the ACL of the ' + ARole + '.');
+      if not DaclPresent then
+        Exit('the ' + ARole + ' has no explicit DACL, so its access comes from elsewhere');
+      if DaclDefaulted then
+        Exit('the ' + ARole + ' has a defaulted DACL inherited from its directory');
+      if (Dacl = nil) or (not IsValidAcl(Dacl)) then
+        Exit('the ' + ARole + ' reports a DACL that cannot be parsed');
+
+      Result := Format('%d entries', [Dacl.AceCount]);
+      for I := 0 to Dacl.AceCount - 1 do
+      begin
+        Assert.IsTrue(GetAce(Dacl, I, Ace),
+          'Test cannot read ACE ' + I.ToString + ' of the ' + ARole + '.');
+        Flags := PByte(NativeUInt(Ace) + 1)^;
+        Mask := PDWORD(NativeUInt(Ace) + 4)^;
+        TrusteeIsThisUser := EqualSid(Pointer(NativeUInt(Ace) + ACE_SID_OFFSET), UserSid);
+        if PByte(Ace)^ = ACE_TYPE_ACCESS_ALLOWED then
+          Kind := 'grant'
+        else
+          Kind := 'deny';
+        if TrusteeIsThisUser then
+          Trustee := 'this user'
+        else
+          Trustee := 'someone else';
+        Result := Result + sLineBreak + Format('[%d] %s flags=$%.2X mask=$%.8X trustee=%s',
+          [I, Kind, Flags, Mask, Trustee]);
+      end;
+
+      if Dacl.AceCount <> 1 then
+        Exit(Result);
+      OwnerOnly := (PByte(Ace)^ = ACE_TYPE_ACCESS_ALLOWED)
+        and (Flags = 0)  // neither inherited nor an object/callback variant
+        and TrusteeIsThisUser
+        and IsValidSid(Pointer(NativeUInt(Ace) + ACE_SID_OFFSET));
+    finally
+      LocalFree(SecurityDescriptor);
+    end;
+  finally
+    CloseHandle(Token);
+  end;
+  {$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
+  if Posix.SysStat.stat(PAnsiChar(AnsiString(AFile)), StatBuffer) <> 0 then
+    Assert.Fail('Test cannot read the mode of the ' + ARole + '.');
+  Mode := StatBuffer.st_mode and $7777;
+  Result := Format('mode 0%o', [Mode]);
+  OwnerOnly := Mode = $180;  // 0600
+  {$ELSE}
+  Assert.Fail('This platform has no owner-only access assertion implemented for the ' + ARole + '.');
+  {$ENDIF}
+end;
+
+procedure TTestUserMasterKey.AssertOwnerOnlyAccess(const AFile, ARole: string);
+var
+  OwnerOnly: Boolean;
+  Report: string;
+begin
+  Report := AccessReport(AFile, ARole, OwnerOnly);
+  Assert.IsTrue(OwnerOnly,
+    'The ' + ARole + ' must be restricted to its owner; any further entry is ' +
+    'someone else holding a readable copy. Actual access: ' + Report);
+end;
+
+procedure TTestUserMasterKey.AssertAccessNotOwnerOnly(const AFile, ARole: string);
+var
+  OwnerOnly: Boolean;
+  Report: string;
+begin
+  Report := AccessReport(AFile, ARole, OwnerOnly);
+  Assert.IsFalse(OwnerOnly,
+    'The ' + ARole + ' must not carry the single owner entry, because this case ' +
+    'declared that somebody else administers its access. Actual access: ' + Report);
+end;
+
 { TTestUserMasterKey }
 
 procedure TTestUserMasterKey.Test_KeyFilePath_UsesEnvironmentOverride;
@@ -181,6 +364,38 @@ begin
     'The default file lives in the per-user .deepbase directory.');
   Assert.AreNotEqual(FKeyFile, Path,
     'The temporary fixture path must not leak into the default resolution.');
+end;
+
+procedure TTestUserMasterKey.Test_KeyFileExists_AnswersWithoutProvisioning;
+begin
+  Assert.IsTrue(TUserMasterKey.KeyFileExists,
+    'A key that is already there must answer as existing.');
+  TFile.Delete(FKeyFile);
+  Assert.IsFalse(TUserMasterKey.KeyFileExists,
+    'A user with no key yet must be able to ask without getting one.');
+  Assert.IsFalse(TFile.Exists(FKeyFile),
+    'KeyFileExists must never create the file it is only asked about.');
+end;
+
+procedure TTestUserMasterKey.Test_AccessManagedExternally_NeedsOverrideAndDeclaration;
+begin
+  Assert.IsFalse(TUserMasterKey.AccessManagedExternally,
+    'No declaration means no exemption: provisioning must restrict the key.');
+  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar('MAYBE'));
+  Assert.IsFalse(TUserMasterKey.AccessManagedExternally,
+    'A value other than the one accepted token is not a declaration. A mis-typed ' +
+    'exemption has to restrict the key, not open it.');
+  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar(MASTER_KEY_EXTERNAL_ACL_YES));
+  Assert.IsTrue(TUserMasterKey.AccessManagedExternally,
+    'The accepted declaration on an override path is what exempts the owner-only ' +
+    'restriction.');
+
+  // The per-user default sits inside the user's own profile, where "somebody else
+  // administers this path" is never a claim worth accepting, so the declaration is
+  // honoured for an override only.
+  SetEnvironmentVariable(MASTER_KEY_FILE_ENV, nil);
+  Assert.IsFalse(TUserMasterKey.AccessManagedExternally,
+    'The default per-user key path can never be declared away.');
 end;
 
 procedure TTestUserMasterKey.Test_Load_ReturnsRawKeyBytes;
@@ -267,6 +482,97 @@ begin
     'The second run must read the secret the first one created.');
 end;
 
+procedure TTestUserMasterKey.Test_LoadOrCreate_ProvisionedFileIsOwnerOnly;
+begin
+  // Provisioning is the face that mints the only entropy source in the product,
+  // so it must land behind the same single-entry DACL as a backup does: an
+  // inherited ACL on the live key leaves the whole secret set readable by
+  // whoever the parent folder happens to grant.
+  TFile.Delete(FKeyFile);
+  TUserMasterKey.LoadOrCreate;
+  AssertOwnerOnlyAccess(FKeyFile, 'provisioned master key');
+end;
+
+procedure TTestUserMasterKey.Test_LoadOrCreate_DeclaredExemptionLeavesFileUnrestricted;
+begin
+  // A key path somebody else administers is the one case where writing a
+  // single-entry DACL would fight the operator's own policy. The exemption is
+  // declarative and must be visible: no declaration, no exemption.
+  TFile.Delete(FKeyFile);
+  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar(MASTER_KEY_EXTERNAL_ACL_YES));
+  Assert.AreEqual<Integer>(UBS2_MASTER_SECRET_MIN_SIZE,
+    Length(TUserMasterKey.LoadOrCreate(NoticeSink())));
+  Assert.IsTrue(TFile.Exists(FKeyFile),
+    'The exemption covers how access is set, not whether the key is created.');
+  AssertAccessNotOwnerOnly(FKeyFile, 'exempted master key');
+  Assert.Contains(FNotices, MASTER_KEY_EXTERNAL_ACL_ENV,
+    'An exemption that quietly skipped the owner-only restriction is the silent ' +
+    'failure this ticket exists to remove: the announcement has to name the ' +
+    'declaration it honoured.');
+  Assert.IsFalse(FNotices.Contains('restricted to its owner.'),
+    'The announcement must not claim a restriction the file does not carry.');
+end;
+
+procedure TTestUserMasterKey.Test_LoadOrCreate_NoticesOnlyWhatItProvisioned;
+begin
+  TUserMasterKey.LoadOrCreate(NoticeSink());
+  Assert.AreEqual('', FNotices,
+    'Reading the secret that already seals this user''s data is not an event worth ' +
+    'announcing; noise here would train the user to ignore the one that matters.');
+
+  FNotices := '';
+  TFile.Delete(FKeyFile);
+  TUserMasterKey.LoadOrCreate;  // a caller with nowhere to announce must still work
+  Assert.AreEqual('', FNotices, 'The sink is optional, not a precondition.');
+
+  FNotices := '';
+  TFile.Delete(FKeyFile);
+  TUserMasterKey.LoadOrCreate(NoticeSink());
+  Assert.IsTrue(TFile.Exists(FKeyFile));
+  Assert.Contains(FNotices, 'provisioned',
+    'A key this call creates has to be announced, because the user who never sees ' +
+    'it is the user whose later backups match nothing.');
+  Assert.Contains(FNotices, 'restricted to its owner',
+    'The announcement has to state what happened to access on the file it just made.');
+end;
+
+procedure TTestUserMasterKey.Test_RequireExistingKey_MissingKey_RaisesAndProvisionsNothing;
+begin
+  // The migration path is the caller this gate exists for: minting a key there
+  // would seal the records it just rewrote against a secret no earlier backup
+  // holds, and still report success.
+  TFile.Delete(FKeyFile);
+  Assert.WillRaiseWithMessageRegex(
+    procedure
+    begin
+      TUserMasterKey.RequireExistingKey('a test operation', False);
+    end, ESecurityException, 'Refusing to provision');
+  Assert.IsFalse(TFile.Exists(FKeyFile),
+    'Refusing means refusing: no key file may survive the refusal.');
+  Assert.IsFalse(TFile.Exists(FKeyFile + TMP_SUFFIX),
+    'A refusal must not leave a half-written sibling behind either.');
+end;
+
+procedure TTestUserMasterKey.Test_RequireExistingKey_ExistingKey_Returns;
+begin
+  TUserMasterKey.RequireExistingKey('a test operation', False);
+  Assert.IsTrue(TFile.Exists(FKeyFile));
+  Assert.IsTrue(BytesEqual(TestKey, TFile.ReadAllBytes(FKeyFile)),
+    'An existing key must be left exactly as the records that seal against it ' +
+    'expect it.');
+end;
+
+procedure TTestUserMasterKey.Test_RequireExistingKey_AuthorisedByUser_Returns;
+begin
+  // The gate is a default, not a wall: the caller passes True only when the user
+  // authorised a new secret in this run, and authorising still creates nothing.
+  TFile.Delete(FKeyFile);
+  TUserMasterKey.RequireExistingKey('a test operation', True);
+  Assert.IsFalse(TFile.Exists(FKeyFile),
+    'Authorising a new key is the caller''s record of consent, not a reason to ' +
+    'provision one here.');
+end;
+
 procedure TTestUserMasterKey.Test_ExportTo_WritesByteIdenticalCopy;
 var
   Dest: string;
@@ -284,82 +590,16 @@ begin
 end;
 
 procedure TTestUserMasterKey.Test_ExportTo_DestinationIsOwnerOnly;
-{$IF DEFINED(MSWINDOWS)}
-const
-  // ACCESS_ALLOWED_ACE in the public ACE layout: a 4-byte header (type, flags,
-  // size) followed by a 4-byte access mask, so the trustee SID starts at offset
-  // 8. The RTL declares neither the record nor its type constant, and reading
-  // the stored ACL through the documented layout is what keeps the owner-only
-  // guarantee asserted independently of how the product builds it.
-  ACE_TYPE_ACCESS_ALLOWED = 0;
-  ACE_SID_OFFSET = 8;
-  // TOKEN_USER is 8 bytes and the SID behind it is capped at 68 by the format,
-  // so one buffer covering both is enough.
-  TOKEN_USER_PROBE_SIZE = 256;
-{$ENDIF}
 var
   Dest: string;
-  {$IF DEFINED(MSWINDOWS)}
-  Token: THandle;
-  TokenBuffer: array [0 .. TOKEN_USER_PROBE_SIZE - 1] of Byte;
-  Required: Cardinal;
-  UserSid: Pointer;
-  SecurityDescriptor: PSECURITY_DESCRIPTOR;
-  Dacl: PACL;
-  DaclPresent, DaclDefaulted: BOOL;
-  Ace: Pointer;
-  ErrorCode: DWORD;
-  {$ENDIF}
 begin
   Dest := TempPath('owner-only.key');
   TUserMasterKey.ExportTo(Dest);
   Assert.IsTrue(TFile.Exists(Dest));
 
-  {$IF DEFINED(MSWINDOWS)}
   // Asserted on the destination, after the rename: restricting the temporary
   // sibling alone would say nothing about the file the user ends up trusting.
-  if not OpenProcessToken(GetCurrentProcess, TOKEN_READ, Token) then
-    Assert.FailFmt('Test cannot read this process token (Win32 error %d).', [GetLastError]);
-  try
-    if not GetTokenInformation(Token, TokenUser, @TokenBuffer,
-      SizeOf(TokenBuffer), Required) then
-      Assert.FailFmt('Test cannot read the current user SID (Win32 error %d).', [GetLastError]);
-    UserSid := PTokenUser(@TokenBuffer).User.Sid;
-
-    SecurityDescriptor := nil;
-    ErrorCode := GetNamedSecurityInfoW(PWideChar(Dest), SE_FILE_OBJECT,
-      DACL_SECURITY_INFORMATION, nil, nil, nil, nil, @SecurityDescriptor);
-    Assert.AreEqual(DWORD(ERROR_SUCCESS), ErrorCode,
-      'Test cannot read back the ACL of the exported backup.');
-    try
-      Assert.IsTrue(GetSecurityDescriptorDacl(SecurityDescriptor, DaclPresent, Dacl,
-        DaclDefaulted), 'Test cannot inspect the ACL of the exported backup.');
-      Assert.IsTrue(DaclPresent, 'The backup must carry an explicit DACL.');
-      Assert.IsFalse(DaclDefaulted,
-        'A defaulted DACL means the copy inherited its access from the directory.');
-      Assert.IsTrue(Dacl <> nil, 'The backup reports a DACL but none was returned.');
-      Assert.IsTrue(IsValidAcl(Dacl), 'The DACL of the backup is not a valid ACL.');
-      Assert.AreEqual(Word(1), Dacl.AceCount,
-        'The backup must be restricted to its owner; any further entry is someone ' +
-        'else holding a readable copy.');
-      Assert.IsTrue(GetAce(Dacl, 0, Ace), 'Test cannot read the single ACE.');
-      Assert.AreEqual(Byte(ACE_TYPE_ACCESS_ALLOWED), PByte(Ace)^,
-        'The one entry must be a grant, not a deny.');
-      // A flags byte of zero rules out both inheritance and the object/callback
-      // ACE variants, which is what makes the offset below land on a SID.
-      Assert.AreEqual(Byte(0), PByte(NativeUInt(Ace) + 1)^,
-        'The one entry must not be inherited from the parent folder.');
-      Assert.IsTrue(IsValidSid(Pointer(NativeUInt(Ace) + ACE_SID_OFFSET)),
-        'The one entry must name a valid SID.');
-      Assert.IsTrue(EqualSid(Pointer(NativeUInt(Ace) + ACE_SID_OFFSET), UserSid),
-        'The one entry must name the user this process runs as.');
-    finally
-      LocalFree(SecurityDescriptor);
-    end;
-  finally
-    CloseHandle(Token);
-  end;
-  {$ENDIF}
+  AssertOwnerOnlyAccess(Dest, 'exported backup');
 end;
 
 procedure TTestUserMasterKey.Test_ExportTo_RefusesExistingDestination;
