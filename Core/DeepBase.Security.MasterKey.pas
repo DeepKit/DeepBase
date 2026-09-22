@@ -444,9 +444,9 @@ begin
         end;
         raise ESecurityException.CreateFmt(
           'Cannot restrict the newly provisioned master key at "%s" to its owner: %s ' +
-          'Nothing was created. Set ' + MASTER_KEY_EXTERNAL_ACL_ENV + '=' +
-          MASTER_KEY_EXTERNAL_ACL_YES + ' when the access to that path is administered ' +
-          'outside this program.', [Path, E.Message]);
+          'Nothing was created. Set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=YES when ' +
+          'the access to that path is administered outside this program.',
+          [Path, E.Message]);
       end;
     end;
     Notice := 'Master key provisioned at "' + Path + '" and restricted to its owner.';
