@@ -112,7 +112,7 @@ CodeReview/_audit_recheck/乙-R7-* 等），本件不触碰、不提交、不改
   2c3f579  手册新增 security 章节（+175/-4，另笔，满足判据 4「两笔分开」）
   5a37028  A2-1 + A2-2 + 测试（4 文件 +495/-98）
   65b68fb  一处 CreateFmt 文案改字面量拼接（无行为差异）
-  本笔      docs(audit)：A2 证据包 01~13 + 交付回执
+  本笔      docs(audit)：A2 证据包 01~13 + 交付回执 —— 实测 commit 45ce1d7 / 13:15:13（见 §6）
 
 ================================== 5. 读取本件时的两个陷阱（登记以免复算出错） ==================================
 注 1：U+FFFD 计数用 `grep -c` 是「含该字节的行数」，不是出现次数；本包 13 件该值为 0，
@@ -121,3 +121,29 @@ CodeReview/_audit_recheck/乙-R7-* 等），本件不触碰、不提交、不改
       （实测：13 件的该计数与其 `wc -l` 逐一相等，而逐字节计数 CR 字节数为 0）。
       原因是命令串里的 `\r` 在传参环节丢失。复算 CR 请用 §1 的 `tr -dc '\r' | wc -c`
       或直接逐字节计数，不要以 `grep -c $'\r'` 的结果推翻本件结论。
+
+================================== 6. 提交后复算（实测，非预测） ==================================
+本节写于 commit 45ce1d7 之后，因此 §1~§4 中所有「提交后应……」的预测在此转为实测值。
+
+  git commit --only -m '...' -- CodeReview/20260922-AUDIT-甲-证据/A2 CodeReview/20260922-AUDIT-甲-A2-交付回执.md
+  [master 45ce1d7] 14 files changed, 1582 insertions(+) —— 14 行全为 create mode，无 modify
+
+  git diff --cached --name-only | wc -l
+  0                      # §4 的「提交后回到 0」成立 ⇒ 未残留、未夹带他人内容（H15/H16）
+
+  git show --name-only --format= HEAD | grep -c .
+  14                     # 恰为 13 证据 + 1 回执，无第 15 项
+
+  git log -1 --format='%H %cd' --date=format:'%Y-%m-%d %H:%M:%S'
+  45ce1d74f73a0c592654b33bb0e0fe1c5d726e7f 2026-09-22 13:15:13   # H9 结束时刻取此
+
+  git -c core.quotePath=false ls-files --eol -- CodeReview/20260922-AUDIT-甲-证据/A2 CodeReview/20260922-AUDIT-甲-A2-交付回执.md
+  14 行，逐行为 `i/lf  w/lf  attr/text eol=lf`   # §2 预言的第三口径实测成立：入库零转换
+
+  node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js          # 口径 A（已跟踪）
+  证据编码门禁通过：扫描 165 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  EXIT=0                     # 152 + 13 = 165，与 §3 的「口径 A 不含未跟踪 A2 证据」互为反证
+
+注：主树此刻仍有他人 in-flight 的 ` M` 改动（Core/DeepBase.License.pas、Core/DeepBase.SecureMemory.pas、
+Tests/Test.DeepBase.Security.UBS2.pas 等）与多个未跟踪乙组路径，本笔提交未触碰、未纳入，
+提交后它们仍原样留在工作树（`git status --porcelain` 可查）。归因不推断（主控口径）。
