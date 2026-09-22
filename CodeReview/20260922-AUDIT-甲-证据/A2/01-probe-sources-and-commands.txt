@@ -1,0 +1,245 @@
+A2 证据探针源码与命令序列（WO-20260922-AUDIT-甲-A2，受控锚点 HEAD f6b7212，实跑时间 UTC+8 2026-09-22 10:40–11:57）
+
+本单三条判据都要「旧代码下测到红」，所以探针不引用 A2 新增符号之外的东西：
+A2OwnerOnlyProbe.dpr 只用 f6b7212 就已存在的 LoadOrCreate（无参）/ ExportTo / KeyFilePath，
+因此同一个源文件能分别对 pre-A2 单元和当前工作树编译，旧行为是被量出来的、不是被描述的。
+编译命令中 %WT% = .tmp\wt_a2_head，由 `git worktree add .tmp\wt_a2_head f6b7212` 得到（收尾时删除）。
+icacls 必须在 .bat 内先 `chcp 65001 >nul` 再执行：Git Bash 里内联 `cmd //c "chcp ... & icacls"`
+会以 GBK 码页报「系统找不到指定的路径」；65001 下 icacls 输出英文串，日志即为合规 UTF-8。
+本目录所有日志的 CRLF 已归一为 LF，内容逐字未改。
+
+================================== A2OwnerOnlyProbe.dpr（判据 1：建钥面 vs 导出面同形）==================================
+{ Evidence probe for WO-20260922-AUDIT-甲-A2: runs both key-writing paths of
+  TUserMasterKey in one process so that icacls can be read back on each file.
+  The source deliberately avoids every symbol the A2 ticket adds, so the exact
+  same program builds against the pre-A2 unit too: the old behaviour is then
+  measured instead of described. }
+program A2OwnerOnlyProbe;
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DeepBase.SecureMemory,
+  DeepBase.Security.MasterKey;
+
+var
+  Secret: TBytes;
+begin
+  try
+    Secret := TUserMasterKey.LoadOrCreate;
+    Writeln('PROBE LoadOrCreate: key bytes = ', Length(Secret));
+    SecureClearBytes(Secret);
+    if ParamCount >= 1 then
+    begin
+      TUserMasterKey.ExportTo(ParamStr(1));
+      Writeln('PROBE ExportTo: backup written = ', ParamStr(1));
+    end;
+    Writeln('PROBE KeyFilePath = ', TUserMasterKey.KeyFilePath);
+  except
+    on E: Exception do
+    begin
+      Writeln('PROBE FAILED: ', E.Message);
+      Halt(1);
+    end;
+  end;
+end.
+
+================================== A2NoticeProbe.dpr（判据 1/2：跳过收紧必须可观测）==================================
+{ Evidence probe for WO-20260922-AUDIT-甲-A2 / A2-1: prints the notice that
+  provisioning hands to its host sink, for the default path and for the declared
+  external-access path, so the "skipped restriction must be observable" rule can be
+  read from output rather than from code. Builds against the A2 unit only, because
+  the sink parameter is what A2 adds. }
+program A2NoticeProbe;
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DeepBase.SecureMemory,
+  DeepBase.Security.MasterKey;
+
+var
+  Secret: TBytes;
+begin
+  try
+    Secret := TUserMasterKey.LoadOrCreate(
+      procedure(const AMessage: string)
+      begin
+        Writeln('PROBE NOTICE: ', AMessage);
+      end);
+    Writeln('PROBE LoadOrCreate: key bytes = ', Length(Secret));
+    SecureClearBytes(Secret);
+    Writeln('PROBE KeyFilePath = ', TUserMasterKey.KeyFilePath);
+  except
+    on E: Exception do
+    begin
+      Writeln('PROBE FAILED: ', E.Message);
+      Halt(1);
+    end;
+  end;
+end.
+
+================================== A2RequireKeyProbe.dpr（判据 3：迁移取钥门禁）==================================
+{ Evidence probe for WO-20260922-AUDIT-甲-A2 / A2-2: calls the cross-platform gate
+  that the UBS2 v1 -> v2 migration runs ahead of taking key material, with the same
+  operation name and the same default, and reports the process exit code. The
+  migration method itself is compiled only on macOS/Linux, so this probe is what can
+  be measured on this host; the call site is quoted separately from the source. }
+program A2RequireKeyProbe;
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DeepBase.SecureMemory,
+  DeepBase.Security.MasterKey;
+
+const
+  MIGRATION_OP = 'the UBS2 v1 to v2 secret migration';
+
+var
+  Mode: string;
+  Secret: TBytes;
+begin
+  Mode := LowerCase(ParamStr(1));
+  try
+    if Mode = 'refuse' then
+    begin
+      TUserMasterKey.RequireExistingKey(MIGRATION_OP, False);
+      Writeln('PROBE UNEXPECTED: RequireExistingKey returned without a key file.');
+      Halt(2);
+    end;
+
+    if Mode = 'allow' then
+    begin
+      TUserMasterKey.RequireExistingKey(MIGRATION_OP, True);
+      Writeln('PROBE gate accepted explicit authorisation, now provisioning');
+      Secret := TUserMasterKey.LoadOrCreate;
+      Writeln('PROBE provisioned after explicit authorisation: ',
+        TUserMasterKey.KeyFilePath);
+      SecureClearBytes(Secret);
+      Halt(0);
+    end;
+
+    if Mode = 'existing' then
+    begin
+      Secret := TUserMasterKey.LoadOrCreate;
+      SecureClearBytes(Secret);
+      TUserMasterKey.RequireExistingKey(MIGRATION_OP, False);
+      Writeln('PROBE existing key accepted without provisioning: ',
+        TUserMasterKey.KeyFilePath);
+      Halt(0);
+    end;
+
+    Writeln('PROBE usage: A2RequireKeyProbe <refuse|allow|existing>');
+    Halt(3);
+  except
+    on E: Exception do
+    begin
+      Writeln('PROBE REFUSED (' + E.ClassName + '): ', E.Message);
+      Halt(1);
+    end;
+  end;
+end.
+
+================================== capture_acl.bat（判据 1 实跑序列，逐字）==================================
+@echo off
+rem A2 evidence capture: build the same provisioning probe against the pre-A2 unit (RED)
+rem and against the working tree (GREEN), then read the ACL back with icacls.
+chcp 65001 >nul
+call "D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
+cd /d d:\_Progs\02Business\DeepBase
+
+set P=.tmp\a2_probe
+set WT=.tmp\wt_a2_head
+set SRC=%P%\A2OwnerOnlyProbe.dpr
+
+if not exist %P%\dcu_red mkdir %P%\dcu_red
+if not exist %P%\bin_red mkdir %P%\bin_red
+if not exist %P%\dcu_green mkdir %P%\dcu_green
+if not exist %P%\bin_green mkdir %P%\bin_green
+if not exist %P%\run mkdir %P%\run
+
+echo === BUILD RED (pre-A2 unit from %WT%) ===
+dcc64 -B -Q -N0%P%\dcu_red -E%P%\bin_red\ -U"%P%\dcu_red;%WT%\Core;%WT%\Features;%WT%\Persistence;%WT%\VCL;%WT%\FMX;%WT%\ThirdParty\Payment;%WT%\ThirdParty\Social" %SRC%
+echo RED_BUILD_EXIT=%ERRORLEVEL%
+
+echo === BUILD GREEN (working tree) ===
+dcc64 -B -Q -N0%P%\dcu_green -E%P%\bin_green\ -U"%P%\dcu_green;Core;Features;Persistence;VCL;FMX;ThirdParty\Payment;ThirdParty\Social" %SRC%
+echo GREEN_BUILD_EXIT=%ERRORLEVEL%
+
+dcc64 -B -Q -N0%P%\dcu_green -E%P%\bin_green\ -U"%P%\dcu_green;Core;Features;Persistence;VCL;FMX;ThirdParty\Payment;ThirdParty\Social" %P%\A2NoticeProbe.dpr
+echo NOTICE_BUILD_EXIT=%ERRORLEVEL%
+
+echo.
+echo === RUN RED ===
+if exist %P%\run\red rd /s /q %P%\run\red
+set DEEPBASE_MASTER_KEY_FILE=d:\_Progs\02Business\DeepBase\%P%\run\red\master.key
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=
+%P%\bin_red\A2OwnerOnlyProbe.exe d:\_Progs\02Business\DeepBase\%P%\run\red\backup.key
+echo RED_RUN_EXIT=%ERRORLEVEL%
+echo --- icacls RED provisioned key ---
+icacls %P%\run\red\master.key
+echo ICACLS_RED_KEY_EXIT=%ERRORLEVEL%
+echo --- icacls RED exported backup ---
+icacls %P%\run\red\backup.key
+echo ICACLS_RED_BACKUP_EXIT=%ERRORLEVEL%
+
+echo.
+echo === RUN GREEN ===
+if exist %P%\run\green rd /s /q %P%\run\green
+set DEEPBASE_MASTER_KEY_FILE=d:\_Progs\02Business\DeepBase\%P%\run\green\master.key
+%P%\bin_green\A2OwnerOnlyProbe.exe d:\_Progs\02Business\DeepBase\%P%\run\green\backup.key
+echo GREEN_RUN_EXIT=%ERRORLEVEL%
+echo --- icacls GREEN provisioned key ---
+icacls %P%\run\green\master.key
+echo ICACLS_GREEN_KEY_EXIT=%ERRORLEVEL%
+echo --- icacls GREEN exported backup ---
+icacls %P%\run\green\backup.key
+echo ICACLS_GREEN_BACKUP_EXIT=%ERRORLEVEL%
+
+echo.
+echo === RUN GREEN + notice sink, default policy (no external declaration) ===
+if exist %P%\run\notice_a rd /s /q %P%\run\notice_a
+set DEEPBASE_MASTER_KEY_FILE=d:\_Progs\02Business\DeepBase\%P%\run\notice_a\master.key
+%P%\bin_green\A2NoticeProbe.exe
+echo NOTICE_A_RUN_EXIT=%ERRORLEVEL%
+icacls %P%\run\notice_a\master.key
+echo ICACLS_NOTICE_A_EXIT=%ERRORLEVEL%
+
+echo.
+echo === RUN GREEN + notice sink, DEEPBASE_MASTER_KEY_EXTERNAL_ACL=YES ===
+if exist %P%\run\notice_b rd /s /q %P%\run\notice_b
+set DEEPBASE_MASTER_KEY_FILE=d:\_Progs\02Business\DeepBase\%P%\run\notice_b\master.key
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=YES
+%P%\bin_green\A2NoticeProbe.exe
+echo NOTICE_B_RUN_EXIT=%ERRORLEVEL%
+icacls %P%\run\notice_b\master.key
+echo ICACLS_NOTICE_B_EXIT=%ERRORLEVEL%
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=
+
+echo === RUN GREEN + notice sink, undeclared external value (must stay restricted) ===
+if exist %P%\run\notice_c rd /s /q %P%\run\notice_c
+set DEEPBASE_MASTER_KEY_FILE=d:\_Progs\02Business\DeepBase\%P%\run\notice_c\master.key
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=1
+%P%\bin_green\A2NoticeProbe.exe
+echo NOTICE_C_RUN_EXIT=%ERRORLEVEL%
+icacls %P%\run\notice_c\master.key
+echo ICACLS_NOTICE_C_EXIT=%ERRORLEVEL%
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=
+
+
+================================== compile_red.bat（判据 5 接口级 RED：对 pre-A2 单元编译测试单元，逐字）==================================
+@echo off
+rem A2 evidence: the A2 negative test cases cannot even be expressed against the
+rem pre-A2 unit, because the symbols they assert on do not exist there yet.
+chcp 65001 >nul
+call "D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
+cd /d d:\_Progs\02Business\DeepBase
+set P=.tmp\a2_probe
+set WT=.tmp\wt_a2_head
+if not exist %P%\dcu_red_only mkdir %P%\dcu_red_only
+dcc64 -B -Q -N0%P%\dcu_red_only -U"%P%\dcu_red_only;%WT%\Core;%WT%\Features;%WT%\Persistence;%WT%\Tools\CLI;Tests;D:\ProgramData\delphi\DUnitX\Source" Tests\Test.DeepBase.Security.MasterKey.pas
+echo RED_COMPILE_EXIT=%ERRORLEVEL%
+
+
+================================== capture_status.bat 见 03 文件头（判据 2/3 CLI 实跑序列）==================================

@@ -1,0 +1,123 @@
+================================== 锚点与口径 ==================================
+工单：WO-20260922-AUDIT-甲-A2（建钥 DACL 收敛 + 迁移建钥可观测 + CLI 手册清障）
+本件用途：验收判据 6 的后半句——「证据…全部合规 UTF-8（NUL=0 / U+FFFD=0），按 H15 原子提交
+（--only / 显式 pathspec，前后各跑 git diff --cached --name-only）」。本件只做两件事：
+(a) 逐件量化 A2 证据包与回执的编码事实（BOM / CR / NUL / U+FFFD），(b) 记录原子提交的口径与
+提交前后 index 状态。结论全部由下方命令可原地复算。
+采集时点：主树 HEAD = 65b68fb（甲 A2 最后一笔代码 commit）。§1 的逐件表与 §3 的门禁运行采集于
+本件写盘之前（当时盘上为 12 证据 + 回执）；§2 的 check-ignore / status 复算与 §4 的 index 检查
+采集于本件写盘之后（同一集合变为 14 件）。两处差一个文件是本件自指导致的，已逐处标明。
+采集树：主树（本件只读取甲自己刚写的文件，不跑门禁/测试结论，故不违反主控「共享树不作门禁结论」
+的零级口径；该口径约束的是 build/test/gate 结论，见 10 / 11 / 12 三件的隔离工作树锚点）。
+
+================================== 1. 口径一：磁盘字节（逐件实测） ==================================
+命令（转义安全版，见 §5 注 2 关于 $'\r' 的陷阱）：
+  for f in CodeReview/20260922-AUDIT-甲-证据/A2/*.txt CodeReview/20260922-AUDIT-甲-A2-交付回执.md; do
+    printf '%s\tBYTES=%s\tCR=%s\tNUL=%s\tU+FFFD=%s\tFIRST3=%s\n' "$(basename "$f")" \
+      "$(wc -c <"$f")" "$(tr -dc '\r' <"$f" | wc -c)" "$(tr -dc '\000' <"$f" | wc -c)" \
+      "$(LC_ALL=C grep -c "$(printf '\357\277\275')" "$f")" "$(od -An -tx1 -N3 "$f" | tr -d ' \n')"
+  done
+
+FILE                                    BYTES   CR  NUL  U+FFFD  FIRST3(=efbbbf 才是 BOM)
+01-probe-sources-and-commands.txt        9648    0    0       0   413220
+02-acl-red-green.txt                     7315    0    0       0   413220
+03-migration-gate-and-cli-status.txt    17069    0    0       0   413220
+04-tdd-red-behaviour-run.txt             2959    0    0       0   413220
+05-tdd-green-26cases.txt                 2780    0    0       0   413220
+06-tdd-red-interface-compile.txt         5089    0    0       0   413220
+07-manual-ufffd-counts.txt                946    0    0       0   41322d
+08-bypass-grep.txt                       6926    0    0       0   413220
+09-manual-security-chapter.txt           7227    0    0       0   e794b2
+10-isolated-worktree-gates.txt           4235    0    0       0   e588a4
+11-isolated-worktree-tests.txt           5470    0    0       0   3d3d3d
+12-final-commit-smoke.txt                8741    0    0       0   3d3d3d
+20260922-AUDIT-甲-A2-交付回执.md         11260    0    0       0   2320e7
+（另存原始机器可读输出：.tmp/a2_pack_audit.txt，为 node 逐字节计数器版本，
+ 与本表在 BYTES / BOM / CRLF / loneCR / NUL / U+FFFD 六列上逐项一致；两法互不依赖。）
+
+结论 1：13 件（12 证据 + 1 回执）全部无 BOM、CR 字节数为 0、NUL 为 0、U+FFFD 为 0。
+CR=0 即「行尾只有 LF」——既是 H18 要求的 UTF-8 无 NUL，也是 §2 的仓库属性要求。
+
+================================== 2. 口径二：仓库属性（.gitattributes 应然） ==================================
+.gitattributes 相关规则（.gitattributes:22 与 :30）：
+  22:*.md text eol=lf
+  30:*.txt text eol=lf
+
+命令与逐件结果（12 件 .txt 结果完全相同，故折叠为一行并给出展开命令）：
+  for f in CodeReview/20260922-AUDIT-甲-证据/A2/*.txt; do
+    git -c core.quotePath=false check-attr text eol -- "$f"; done
+  git -c core.quotePath=false check-attr text eol -- CodeReview/20260922-AUDIT-甲-A2-交付回执.md
+
+  A2/*.txt                -> text: set   eol: lf   （12/12 命中，无 unspecified / 无 CRLF 例外）
+  交付回执.md              -> text: set   eol: lf
+
+结论 2：应然（仓库规则）与实然（磁盘字节）两口径一致 ⇒ 提交时不产生行尾转换，
+`git ls-files --eol` 提交后应报 `w/lf i/lf`。
+
+口径局限（如实登记，不当作已验证）：提交前 `git ls-files --eol -- CodeReview/20260922-AUDIT-甲-证据
+CodeReview/20260922-AUDIT-甲-A2-交付回执.md` 输出为 0 行——这些路径全部是新增未跟踪文件
+（`git status --porcelain -uall` 对 §1 表的 13 件逐件报 `??`，本件写盘后该集合为 14 件），
+索引里没有它们，所以第三口径（索引 EOL）在本次提交前不可采集。提交后的复算命令：
+  git ls-files --eol -- CodeReview/20260922-AUDIT-甲-证据/A2 CodeReview/20260922-AUDIT-甲-A2-交付回执.md
+  # 期望 14 行（12 证据 + 本件 + 回执），每行 w/lf i/lf（.txt 与 .md 均为 text eol=lf）
+另：`git check-ignore -v CodeReview/20260922-AUDIT-甲-证据/A2/*.txt
+CodeReview/20260922-AUDIT-甲-A2-交付回执.md` 对 14 个路径 EXIT=1（无一命中 .gitignore），
+`git status --porcelain -uall` 同集合报 14 件 `??` ⇒ 无需 `-f` 强加，证据入库走的是正常跟踪路径，
+不是绕过忽略规则。
+
+================================== 3. 证据编码门禁：两口径必须分开读 ==================================
+门禁自身的扫描口径写在脚本头部（check_evidence_encoding.js:9-11）：默认只扫 **git 已跟踪**的证据
+文件，`--all-worktree` 才改走工作树枚举。这一条决定了下面两次运行的数字为什么不同，也决定了哪一次
+才算覆盖本单证据包。
+
+口径 A（默认，= 已跟踪集合）：
+  node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+  证据编码门禁通过：扫描 152 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  EVID_GATE_EXIT=0                                    日志 .tmp/a2_gate_evidence.log
+  本单 14 个路径全部尚未跟踪（§2），因此 152 里一件 A2 证据都不含；且本件写盘前后该数字不变
+  （实测两次均为 152），这反证了口径 A 与「新文件是否落盘」无关，只与「是否已入库」有关。
+  门禁在扫到 0 个文件时按 fail-closed 拒绝放行（脚本 :83-86），所以 EXIT=0 本身是有效信号。
+
+口径 B（--all-worktree，= 工作树集合，覆盖未入库新文件）：
+  node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --all-worktree
+  证据编码门禁通过：扫描 196 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  EVID_GATE_WORKTREE_EXIT=0                           日志 .tmp/a2_gate_evidence_worktree.log
+  196 这一集合包含本单 13 件 A2 证据（.txt 参与枚举；回执是 .md，不在该门禁的
+  *.txt/*.log/*.csv/*.xml 四类之内，故其 UTF-8 合规由 §1 逐件口径覆盖，不在此处冒充门禁结论）。
+
+判据 6 的「提交前跑 …… 证据集复核」按口径 B 交付：它是唯一能在入库前看到新证据件的口径。
+工单原文写的 `--repo <dir>` 是门禁支持的仓库定位参数（脚本 :11 用法行），本单在主树运行，
+故省略；`--repo` 对 check_eol.js 才是未知参数并被 fail-closed 收口（见 10 号证据），两者不要混读。
+门禁只判 UTF-8 合法性与 NUL，不判 CR / 不判 U+FFFD；后两项由 §1 的逐件口径覆盖，互补而非互替。
+
+================================== 4. H15 / H16 原子提交口径 ==================================
+提交前 index 状态（主树，HEAD=65b68fb）：
+  git diff --cached --name-only | wc -l
+  0                      # 暂存区为空 ⇒ 本次提交不会携带任何他人 in-flight 改动（H16）
+
+显式 pathspec 入暂存后复跑（原始输出 .tmp/a2_staged.txt）：
+  git add -- CodeReview/20260922-AUDIT-甲-证据/A2 CodeReview/20260922-AUDIT-甲-A2-交付回执.md
+  git -c core.quotePath=false diff --cached --name-only | wc -l
+  14                     # 恰为 13 证据 + 1 回执，无第 15 项 ⇒ 暂存区未混入他人内容（H16 达成）
+本件（13）与证据包、回执的落地方式：逐件显式 pathspec + `git commit --only`，不使用 `git add -A`，
+提交后复跑 `git diff --cached --name-only` 应回到 0。pathspec 面只有两处以甲为前缀的 A2 路径：
+  CodeReview/20260922-AUDIT-甲-证据/A2/       （01~13，13 件）
+  CodeReview/20260922-AUDIT-甲-A2-交付回执.md （1 件）
+主树同一时刻存在他人未跟踪路径（CodeReview/20260921-AUDIT-乙-P1-*、乙-P2b-*、
+CodeReview/_audit_recheck/乙-R7-* 等），本件不触碰、不提交、不改动其状态；
+提交后 `git diff --cached --name-only` 复跑仍为 0，且 `git show --name-only` 只允许列出上述 14 个路径。
+
+代码面（本单前四笔）与文档面（本件所属这一笔）分离：
+  ba8627d  手册清障（206 U+FFFD → 0，只重建字节）
+  2c3f579  手册新增 security 章节（+175/-4，另笔，满足判据 4「两笔分开」）
+  5a37028  A2-1 + A2-2 + 测试（4 文件 +495/-98）
+  65b68fb  一处 CreateFmt 文案改字面量拼接（无行为差异）
+  本笔      docs(audit)：A2 证据包 01~13 + 交付回执
+
+================================== 5. 读取本件时的两个陷阱（登记以免复算出错） ==================================
+注 1：U+FFFD 计数用 `grep -c` 是「含该字节的行数」，不是出现次数；本包 13 件该值为 0，
+      两种口径在 0 上等价，但若复算得到非 0 必须换 node 的逐码点计数再比。
+注 2：在本机 Git Bash 里写 `grep -c $'\r' file` 会得到「每个数据行都命中」的假阳性
+      （实测：13 件的该计数与其 `wc -l` 逐一相等，而逐字节计数 CR 字节数为 0）。
+      原因是命令串里的 `\r` 在传参环节丢失。复算 CR 请用 §1 的 `tr -dc '\r' | wc -c`
+      或直接逐字节计数，不要以 `grep -c $'\r'` 的结果推翻本件结论。

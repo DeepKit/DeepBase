@@ -1,0 +1,46 @@
+A2 判据 5 的另一个口径：其余三条行为的用例无法对 pre-A2 单元表达（依赖 A2 才存在的符号），实跑证据是接口级编译红
+命令：dcc64 -B -Q -N0.tmpa2_probedcu_red_only -U"...;.tmpwt_a2_headCore;...;Tests;DUnitX" TestsTest.DeepBase.Security.MasterKey.pas
+     （.tmp/a2_probe/compile_red.bat 逐字，wt_a2_head = git worktree add 自 f6b7212）
+时间：UTC+8 2026-09-22 11:56
+诚实表述（H7）：这不是“红测试”，而是“旧代码下这条断言写不出来”：E2003 未声明标识符覆盖
+     TMasterKeyNotice / KeyFileExists / AccessManagedExternally / RequireExistingKey /
+     MASTER_KEY_EXTERNAL_ACL_ENV / MASTER_KEY_EXTERNAL_ACL_YES，E2034 实参过多 x3 落在 LoadOrCreate(sink) 三处调用点。
+     可表达、可跑红的建钥 owner-only 那条已在 04 文件给出真红。
+
+=== compile_red.log（逐字，仅 CRLF→LF）===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\wt_a2_head\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Tests\Test.DeepBase.Security.MasterKey.pas(51) Error: E2003 Undeclared identifier: 'TMasterKeyNotice'
+Tests\Test.DeepBase.Security.MasterKey.pas(154) Error: E2003 Undeclared identifier: 'MASTER_KEY_EXTERNAL_ACL_ENV'
+Tests\Test.DeepBase.Security.MasterKey.pas(154) Error: E2250 There is no overloaded version of 'GetEnvironmentVariable' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(171) Error: E2003 Undeclared identifier: 'MASTER_KEY_EXTERNAL_ACL_ENV'
+Tests\Test.DeepBase.Security.MasterKey.pas(204) Error: E2005 'TMasterKeyNotice' is not a type identifier
+Tests\Test.DeepBase.Security.MasterKey.pas(371) Error: E2003 Undeclared identifier: 'KeyFileExists'
+Tests\Test.DeepBase.Security.MasterKey.pas(374) Error: E2003 Undeclared identifier: 'KeyFileExists'
+Tests\Test.DeepBase.Security.MasterKey.pas(382) Error: E2003 Undeclared identifier: 'AccessManagedExternally'
+Tests\Test.DeepBase.Security.MasterKey.pas(384) Error: E2003 Undeclared identifier: 'MASTER_KEY_EXTERNAL_ACL_ENV'
+Tests\Test.DeepBase.Security.MasterKey.pas(385) Error: E2003 Undeclared identifier: 'AccessManagedExternally'
+Tests\Test.DeepBase.Security.MasterKey.pas(388) Error: E2003 Undeclared identifier: 'MASTER_KEY_EXTERNAL_ACL_YES'
+Tests\Test.DeepBase.Security.MasterKey.pas(389) Error: E2003 Undeclared identifier: 'AccessManagedExternally'
+Tests\Test.DeepBase.Security.MasterKey.pas(397) Error: E2003 Undeclared identifier: 'AccessManagedExternally'
+Tests\Test.DeepBase.Security.MasterKey.pas(419) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(435) Error: E2250 There is no overloaded version of 'WillRaiseWithMessageRegex' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(453) Error: E2250 There is no overloaded version of 'WillRaiseWithMessageRegex' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(502) Error: E2003 Undeclared identifier: 'MASTER_KEY_EXTERNAL_ACL_ENV'
+Tests\Test.DeepBase.Security.MasterKey.pas(502) Error: E2003 Undeclared identifier: 'MASTER_KEY_EXTERNAL_ACL_YES'
+Tests\Test.DeepBase.Security.MasterKey.pas(504) Error: E2034 Too many actual parameters
+Tests\Test.DeepBase.Security.MasterKey.pas(511) Error: E2250 There is no overloaded version of 'Contains' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(518) Error: E2034 Too many actual parameters
+Tests\Test.DeepBase.Security.MasterKey.pas(530) Error: E2034 Too many actual parameters
+Tests\Test.DeepBase.Security.MasterKey.pas(548) Error: E2003 Undeclared identifier: 'RequireExistingKey'
+Tests\Test.DeepBase.Security.MasterKey.pas(549) Error: E2250 There is no overloaded version of 'WillRaiseWithMessageRegex' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(558) Error: E2003 Undeclared identifier: 'RequireExistingKey'
+Tests\Test.DeepBase.Security.MasterKey.pas(570) Error: E2003 Undeclared identifier: 'RequireExistingKey'
+Tests\Test.DeepBase.Security.MasterKey.pas(618) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(633) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(643) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(657) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(679) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.Security.MasterKey.pas(718) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+RED_COMPILE_EXIT=1

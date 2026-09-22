@@ -1,0 +1,118 @@
+A2 判据 1 实跑：同一条建钥/导出探针分别对 pre-A2 单元（RED）与当前工作树（GREEN）编译，icacls 回读原始输出
+锚点：RED 源 = .tmpwt_a2_head（git worktree add 自 f6b7212）；GREEN 源 = 工作树（含本单改动）
+时间：UTC+8 2026-09-22 11:52；命令与参数见 01 文件 capture_acl.bat 逐字
+读法：RED 建钥文件带满 inherited 条目（(I)，含 CodexSandboxUsers / Authenticated Users / BUILTINUsers(RX)）＝旧缺陷面；
+      GREEN 建钥文件只剩 FY3700uyi.it:(F) 一条，与同一次运行里导出面 backup.key 逐字同形 ⇒ 两把写钥面同源收紧；
+      notice_b 证明显式豁免时跳过收紧这件事被打进了一行可观测告警；notice_c 证明EXTERNAL_ACL 取非 YES 值时仍收紧（fail-closed）。
+判据：验收判据 1（全新用户路径建钥后 owner-only 单条目、无 (I)、与导出面同形）+ 判据 2 的「跳过可观测」半边。
+
+=== capture_acl.log（逐字，仅 CRLF→LF）===
+
+=== BUILD RED (pre-A2 unit from .tmp\wt_a2_head) ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\wt_a2_head\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+3647 lines, 0.20 seconds, 1382692 bytes code, 192224 bytes data.
+RED_BUILD_EXIT=0
+=== BUILD GREEN (working tree) ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+3764 lines, 0.25 seconds, 1385068 bytes code, 192352 bytes data.
+GREEN_BUILD_EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+3763 lines, 0.23 seconds, 1368364 bytes code, 190824 bytes data.
+NOTICE_BUILD_EXIT=0
+
+=== RUN RED ===
+PROBE LoadOrCreate: key bytes = 32
+PROBE ExportTo: backup written = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\red\backup.key
+PROBE KeyFilePath = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\red\master.key
+RED_RUN_EXIT=0
+--- icacls RED provisioned key ---
+.tmp\a2_probe\run\red\master.key S-1-5-21-17452405-757048079-2430367978-4111302023:(I)(M,DC)
+                                 S-1-5-21-806911548-2288407920-2332577828-2694129860:(I)(M)
+                                 S-1-5-21-164131091-2614192739-4145570582-3940640076:(I)(M,DC)
+                                 FY3700\fuyi.it:(I)(M,DC)
+                                 S-1-5-21-1460622082-605189620-1746128395-4267689499:(I)(M,DC)
+                                 FY3700\CodexSandboxUsers:(I)(M)
+                                 S-1-5-21-2290812369-1527564678-3498550124-1471097621:(I)(M)
+                                 S-1-5-21-689731835-3537074254-2911669727-2919541131:(I)(M,DC)
+                                 S-1-5-21-1762898124-693269680-903089967-3036144237:(I)(M,DC)
+                                 FY3700\CodexSandboxUsers:(I)(M,DC)
+                                 S-1-5-21-829547853-2268380283-968831208-784706939:(I)(M,DC)
+                                 BUILTIN\Administrators:(I)(F)
+                                 NT AUTHORITY\SYSTEM:(I)(F)
+                                 NT AUTHORITY\Authenticated Users:(I)(M)
+                                 BUILTIN\Users:(I)(RX)
+                                 S-1-5-21-2296007949-280594627-3757337337-1001:(I)(R)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_RED_KEY_EXIT=0
+--- icacls RED exported backup ---
+.tmp\a2_probe\run\red\backup.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_RED_BACKUP_EXIT=0
+
+=== RUN GREEN ===
+PROBE LoadOrCreate: key bytes = 32
+PROBE ExportTo: backup written = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\green\backup.key
+PROBE KeyFilePath = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\green\master.key
+GREEN_RUN_EXIT=0
+--- icacls GREEN provisioned key ---
+.tmp\a2_probe\run\green\master.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_GREEN_KEY_EXIT=0
+--- icacls GREEN exported backup ---
+.tmp\a2_probe\run\green\backup.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_GREEN_BACKUP_EXIT=0
+
+=== RUN GREEN + notice sink, default policy (no external declaration) ===
+PROBE NOTICE: Master key provisioned at "d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\notice_a\master.key" and restricted to its owner.
+PROBE LoadOrCreate: key bytes = 32
+PROBE KeyFilePath = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\notice_a\master.key
+NOTICE_A_RUN_EXIT=0
+.tmp\a2_probe\run\notice_a\master.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_NOTICE_A_EXIT=0
+
+=== RUN GREEN + notice sink, DEEPBASE_MASTER_KEY_EXTERNAL_ACL=YES ===
+PROBE NOTICE: Master key provisioned at "d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\notice_b\master.key" without restricting it to its owner, because DEEPBASE_MASTER_KEY_EXTERNAL_ACL declares that access to this path is managed externally.
+PROBE LoadOrCreate: key bytes = 32
+PROBE KeyFilePath = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\notice_b\master.key
+NOTICE_B_RUN_EXIT=0
+.tmp\a2_probe\run\notice_b\master.key S-1-5-21-17452405-757048079-2430367978-4111302023:(I)(M,DC)
+                                      S-1-5-21-806911548-2288407920-2332577828-2694129860:(I)(M)
+                                      S-1-5-21-164131091-2614192739-4145570582-3940640076:(I)(M,DC)
+                                      FY3700\fuyi.it:(I)(M,DC)
+                                      S-1-5-21-1460622082-605189620-1746128395-4267689499:(I)(M,DC)
+                                      FY3700\CodexSandboxUsers:(I)(M)
+                                      S-1-5-21-2290812369-1527564678-3498550124-1471097621:(I)(M)
+                                      S-1-5-21-689731835-3537074254-2911669727-2919541131:(I)(M,DC)
+                                      S-1-5-21-1762898124-693269680-903089967-3036144237:(I)(M,DC)
+                                      FY3700\CodexSandboxUsers:(I)(M,DC)
+                                      S-1-5-21-829547853-2268380283-968831208-784706939:(I)(M,DC)
+                                      BUILTIN\Administrators:(I)(F)
+                                      NT AUTHORITY\SYSTEM:(I)(F)
+                                      NT AUTHORITY\Authenticated Users:(I)(M)
+                                      BUILTIN\Users:(I)(RX)
+                                      S-1-5-21-2296007949-280594627-3757337337-1001:(I)(R)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_NOTICE_B_EXIT=0
+=== RUN GREEN + notice sink, undeclared external value (must stay restricted) ===
+PROBE NOTICE: Master key provisioned at "d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\notice_c\master.key" and restricted to its owner.
+PROBE LoadOrCreate: key bytes = 32
+PROBE KeyFilePath = d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\notice_c\master.key
+NOTICE_C_RUN_EXIT=0
+.tmp\a2_probe\run\notice_c\master.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_NOTICE_C_EXIT=0

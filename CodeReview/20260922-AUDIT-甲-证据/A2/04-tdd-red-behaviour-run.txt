@@ -1,0 +1,69 @@
+A2 判据 5 的 TDD 红：负向用例先行，在旧实现上真实跑红（非自报）
+命令：powershell -File Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security.MasterKey.TTestUserMasterKey -OutputDir .tmp/a2_testout
+时间：UTC+8 2026-09-22 10:40（实现落地前）；对照 GREEN 见 05 文件（10:40 -> 11:53）
+红点：Test_LoadOrCreate_ProvisionedFileIsOwnerOnly —— Expected [1] but got [7]，
+      即旧建钥路径在 Windows 上留下 7 条继承 ACE，owner-only 断言不成立 ⇒ 用例锁住的正是本单缺陷面。
+注：本文摘取运行器配置头 + 编译尾部 + 结果段；中间 250 行 dcc64 Hint 噪声以 […] 标出，未改动任何一行保留文本。
+
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: False
+Skip Compile: False
+No Rebuild: False
+Run Filter: Test.DeepBase.Security.MasterKey.TTestUserMasterKey
+Output: D:\_Progs\02Business\DeepBase\.tmp\a2_testout
+DCU Output: D:\_Progs\02Business\DeepBase\.tmp\a2_testout\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+[... 编译 Hint 噪声略 ...]
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Speech.TTS.Edge.pas(200) Hint: H2164 Variable 'All' is declared but never used in 'TEdgeTTSBackend.SupportedVoices'
+D:\_Progs\02Business\DeepBase\ThirdParty\Social\DeepBase.Social.QQ.pas(198) Hint: H2077 Value assigned to 'TQQClient.ParseCallbackJson' never used
+386732 lines, 30.70 seconds, 38350420 bytes code, 3307288 bytes data.
+SUCCESS: Unit Tests compiled
+
+Running Unit Tests...
+----------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+.................F....................
+
+Tests Found   : 19
+Tests Ignored : 0
+Tests Passed  : 18
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Security.MasterKey.TTestUserMasterKey.Test_LoadOrCreate_ProvisionedFileIsOwnerOnly
+  Message: Expected [1] but got [7] The provisioned master key must be restricted to its owner; any further entry is someone else holding a readable copy.
+
+
+
+FAILED: Some Unit Tests tests failed (Exit code: 1)
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        FAILED
+==============================================
+
+Some tests failed!
+

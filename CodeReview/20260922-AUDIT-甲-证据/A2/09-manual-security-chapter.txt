@@ -1,0 +1,97 @@
+甲A2-3 第二笔证据：CLI 手册新增 security 章节（清障笔之后另笔提交）
+================================================================================
+工单：WO-20260922-AUDIT-甲-A2 §三 A2-3 / §四 判据 4
+目标文件：docs/80.ops.CLI用户手册-cli-manual.md
+本笔边界：只新增内容，不改写清障笔已落地的既有文字（清障 = ba8627d，已单独提交）
+
+--------------------------------------------------------------------------------
+[1] 落地方式：锚点插入脚本（不做全文重写，防止把清障结果再洗一遍）
+--------------------------------------------------------------------------------
+脚本：.tmp/a2_probe/apply_manual_steps.cjs
+载荷：.tmp/a2_probe/manual_steps.txt（@ANCHOR / @NEW / @END 五段，正文用真实反引号，
+      避免在 JS 模板字面量里转义反引号 —— 上一版草稿把 icacls/chmod 的反引号多写了
+      一层反斜杠，落盘后会以反斜杠+反引号的形式出现在正文里，需在落盘前订正）
+
+脚本的三条硬约束（任一不满足即 exit 1，不静默跳过）：
+  - 目标文件已含 "## 安全命令 (security)" 正文标题 ⇒ ALREADY APPLIED，拒绝重复插入；
+  - 每个锚点在文件中命中数必须恰为 1（0 或 >1 都报错并打印锚点）；
+  - 读入时按原样保留 BOM 与行尾（检测 CRLF 后统一还原）。
+
+实际输出：
+  applied 5 steps; BOM=true CRLF=true
+
+--------------------------------------------------------------------------------
+[2] 五处锚点改动（git diff --numstat 实测 175 插入 / 4 删除）
+--------------------------------------------------------------------------------
+ 1. 目录：5 条列表 ⇒ 6 条（新增 "6. [安全命令 (security)](#安全命令-security)"，
+    原 6–9 顺延为 7–10）
+ 2. 基本用法 / 主要命令表：增一行 "| security | 主密钥备份、状态与指纹对账 |"
+ 3. "## 配置命令 (config)" 与 "## 全局选项" 之间插入整章 "## 安全命令 (security)"：
+    子命令概览（含三条命令的退出码语义）、security export（语法/选项/--yes 只跳过
+    确认不跳过校验/三条事实/与 UBS2 v1→v2 迁移窗口的关系 + verify 对账）、
+    security status（绝不建钥 + Resolved from 行 + Key source 两分支与 Access policy
+    默认/豁免两态的判读表 + 指纹含义）、security verify（不输出明文，不匹配退出码 1）、
+    密钥文件的访问权限（默认 owner-only：Windows 单条禁继承 DACL + 回读，POSIX 0600/0700；
+    导出件同样收紧且不受豁免影响；唯一合法豁免两条环境变量；非 YES 一律视为未声明，
+    拼错的豁免会收紧而不是放开；跳过必打印告警并持续显示在 status；已存在的密钥文件
+    不被追溯收紧）
+ 4. 环境变量表：增 DEEPBASE_MASTER_KEY_FILE、DEEPBASE_MASTER_KEY_EXTERNAL_ACL 两行
+    （名字直接取自 Core/DeepBase.Security.MasterKey.pas 的常量 MASTER_KEY_FILE_ENV /
+    MASTER_KEY_EXTERNAL_ACL_ENV，不另造名）
+ 5. 命令速查表：在 "### 国际化命令" 与 "### 配置命令" 之间增 "### 安全命令" 三条调用
+
+--------------------------------------------------------------------------------
+[3] 与实现同源核对（手册文字不另立说法）
+--------------------------------------------------------------------------------
+调用形态：Tools/CLI/CLI.Security.pas:67 'Usage: DeepBase security <subcommand> [options]'
+        ⇒ 新增文字一律写 DeepBase security ...（不沿用存量 DeepBaseCLI 前缀，见 [6]）
+子命令三行：CLI.Security.pas:70-72（export/status/verify 描述逐条对应）
+--yes 语义：CLI.Security.pas:77 'Skip the interactive confirmation of export'
+        :121 if not HasOption('yes') then Confirm(...)  ⇒ 「只跳过一次确认」
+导出三条事实：CLI.Security.pas:105-119（唯一秘密 / 丢失永不可恢复且无服务端重置 /
+        离线存放 + 迁移窗口关系 + 指纹不匹配 = 换密钥而非迁移失败）
+status 绝不建钥：CLI.Security.pas:150-154 只读注释 + :163 仅判 TFile.Exists，全程无 LoadOrCreate
+status 两行文案：:160-161（默认收紧）、:156-158（[WARN] 豁免）、:165（no key file yet）、
+        :172（existing key file, read as it is）、:147-148（Resolved from）
+豁免来源常量：Core/DeepBase.Security.MasterKey.pas:104 MASTER_KEY_FILE_ENV、
+        :111 MASTER_KEY_EXTERNAL_ACL_ENV、:112 MASTER_KEY_EXTERNAL_ACL_YES = 'YES'，
+        :107-110 注释即「只对 override 路径生效、永不作用于默认路径与导出」
+导出前置与回读：Core/DeepBase.Security.MasterKey.pas:90-96 ExportTo 契约
+        （目标必须不存在、目录必须存在、必须能收紧、回读按长度与 SHA-256 比对）
+
+--------------------------------------------------------------------------------
+[4] 编码与行尾复测（本笔提交前实测）
+--------------------------------------------------------------------------------
+node 直读目标文件：
+  bytes 28744 / BOM true
+  U+FFFD 0
+  CRLF 1133，LF 总数 1133（即无裸 LF），孤立 CR 0
+  行数 1134（清障笔基线 963 ⇒ 净增 171 行正文 + 目录/表格行）
+  残留转义反引号（反斜杠+反引号）序列：Grep '\\`' ⇒ No matches found
+git ls-files --eol（本笔前后同形，未触发 renormalize）：
+  i/lf    w/crlf  attr/text eol=lf    docs/80.ops.CLI用户手册-cli-manual.md
+门禁：
+  node 09_工程脚本/eol-gate/check_eol.js --repo
+    → 行尾门禁通过：检查了 1452 个文件（.pas CRLF / .md LF），跳过目录 11    EXIT=0
+  node 09_工程脚本/encoding-gate/check_pas_encoding.js
+    → 编码门禁通过：975 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，
+      双重编码基线文件 50，跳过目录 10）                                        EXIT=0
+说明：eol-gate 计数由 1451 变为 1452，是本仓他人新增文件所致（HEAD 期间由 7f5127c
+      移动至 3b2f43f），与甲无关，登记不追改。
+
+--------------------------------------------------------------------------------
+[5] 提交
+--------------------------------------------------------------------------------
+git add 前 git diff --cached --name-only ⇒ 空
+git commit --only -m ... -- "docs/80.ops.CLI用户手册-cli-manual.md"
+  → [master 2c3f579]  1 file changed, 175 insertions(+), 4 deletions(-)
+提交后 git diff --cached --name-only ⇒ 空（暂存区未携带他人内容，H15/H16）
+
+--------------------------------------------------------------------------------
+[6] 登记项（本笔不擅改）
+--------------------------------------------------------------------------------
+手册存量命名分叉：正文/示例用 "DeepBaseCLI ..." 103 处，而全部真实帮助文本为
+"Usage: DeepBase ..."，且仓库无 DeepBaseCLI.exe。本笔新增文字统一用准确的
+"DeepBase security ..."；全库改名属独立清障，登记后交主控定夺，不在 A2 范围内顺手做。
+手册页脚 "*文档版本: 1.0* / *最后更新: 2025-11-29*" 为存量陈旧戳（清障笔亦未触碰），
+同样登记不擅改。

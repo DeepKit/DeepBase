@@ -1,0 +1,17 @@
+A2-3 判据 4：CLI 手册清障前后计数（206 -> 0 U+FFFD）
+命令：node .tmp/a2_probe/manual_counts.mjs（HEAD 版本经 git show f6b7212:path 取字节，工作树取磁盘文件）
+时间：UTC+8 2026-09-22 11:57；另有独立复核 agent 逐行核对 188 对差异行，结论见交付回执
+口径说明：清障只重建被双重编码破坏的字节，行数 963 不变、改动行 188 行成对（numstat 188/188），未新增任何内容（新增 security 章节另笔提交）
+
+=== manual_counts.log（逐字）===
+--- HEAD blob (before) ---
+bytes=20078 bom=true nul=false decode=strict-utf8-ok
+U+FFFD=206 lines=963 crlf=0
+--- working tree (after) ---
+bytes=20974 bom=true nul=false decode=strict-utf8-ok
+U+FFFD=0 lines=963 crlf=962
+--- pair diff ---
+lineCount(a)=963 lineCount(b)=963 differingLinePositions=188
+
+=== git diff --numstat（工作树 vs HEAD，仅该文件）===
+188	188	docs/80.ops.CLI用户手册-cli-manual.md

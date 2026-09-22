@@ -1,0 +1,62 @@
+判据 6（其一）：隔离工作树 @ 目标 commit 的三门禁复核 + 本单提交链
+采集时刻：UTC+8 2026-09-22 12:44~12:46
+采集口径：主控现场管制通告《共享树风险通告-eol基线被清零.md》（commit dc3b068）§三
+          「门禁/测试结论一律走隔离工作树 @ 目标 commit；主树只用来看有没有动别人的东西」。
+          本件即为按该口径重做的门禁证据。
+
+=== 1. 本单提交链（git log 实测） ===
+ba8627d  docs(cli-manual): 甲A2-3 第一笔 —— 清障，手册 206 处 U+FFFD 归零（+188/-188，不含新增内容）
+2c3f579  docs(cli-manual): 甲A2-3 第二笔 —— 新增 security 章节（+175/-4）
+5a37028  fix(security): 甲A2-1/A2-2 建钥路径同源收紧 owner-only DACL，迁移取钥默认拒绝建钥
+65b68fb  style(security): 甲A2 建钥拒绝文案改为字面量拼接
+         —— 该笔只改 Core/DeepBase.Security.MasterKey.pas 一处 CreateFmt 的字符串写法
+            （'Set ' + MASTER_KEY_EXTERNAL_ACL_ENV + '=' + MASTER_KEY_EXTERNAL_ACL_YES 改为字面量），
+            无行为差异；改后 dcc64 单编该单元通过：3727 lines, 0.17 seconds，DCC_EXIT=0。
+
+5a37028 内容（git show --numstat，恰好 4 件，无他人文件）：
+  137  21  Core/DeepBase.Security.MasterKey.pas
+   31   4  Core/DeepBase.Security.pas
+  311  71  Tests/Test.DeepBase.Security.MasterKey.pas
+   16   2  Tools/CLI/CLI.Security.pas
+
+H15 原子提交复核（每笔前后各跑一次）：
+  git diff --cached --name-only  →  提交前空、提交后空（共享树未被本单 git add 污染）
+  取 --only + 显式 pathspec 方式落笔，未使用 git add -A / git add .
+
+=== 2. 建隔离工作树（detached @ 5a37028） ===
+命令：git worktree add --detach .tmp/wt_a2_verify 5a37028
+输出：Preparing worktree (detached HEAD 5a37028a)
+      Updating files: 100% (2051/2051), done.
+      HEAD is now at 5a37028a fix(security): 甲A2-1/A2-2 建钥路径同源收紧 owner-only DACL，迁移取钥默认拒绝建钥
+
+=== 3. 三门禁在隔离工作树内跑（逐字输出） ===
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js
+编码门禁通过：974 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，跳过目录 3）
+EXIT=0
+
+$ node 09_工程脚本/eol-gate/check_eol.js
+行尾门禁通过：检查了 1437 个文件（.pas CRLF / .md LF），跳过目录 3
+EXIT=0
+
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+证据编码门禁通过：扫描 152 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+
+=== 4. 两处口径登记（不是本单造成的变化，但影响门禁数字的可比性） ===
+(a) eol 门禁命令行接口已收口：
+    本单早期证据里用的 `check_eol.js --repo` 现已 fail-closed 拒绝：
+      行尾门禁失败：参数 --repo 为未知参数（已知参数: --root <dir> / --baseline <file> / --emit-baseline）。
+      已按 fail-closed 拒绝放行。   EXIT=3
+    原因是乙 P2 §3.3 补做（commit d326519，gate-args.js 单一实现）。本单改用无参口径
+    （默认以脚本所在树为 root），并按通告 §五 提醒：读门禁输出以标题总数为准。
+(b) 共享树 eol_baseline.json 事件闭环：
+    dc3b068 通告该文件工作树被清零（12:22:08，四项全空，未申报）⇒ 期间行尾门禁判定不可信；
+    本单复核时该文件已被改动方还原：git status --porcelain 对该路径无输出，
+    size 45779 B，mtime 2026-09-22 12:35:07。还原动作由改动方执行，主控与本单均未 checkout/restore
+    他人工作树改动（H1/H16）。
+    共享树文件数漂移（他人新增文件所致，非本单）：.pas 975→977，行尾检查 1451→1457；
+    隔离树 @5a37028 口径为 974 / 1437 / 152。
+
+=== 5. 未纳入本件的东西 ===
+证据包 01~09 在本件采集时仍未提交（未跟踪），故隔离工作树内不含它们；证据编码门禁在隔离树里
+跑的是已入库的 152 件。本单 9 件证据的 UTF-8 / NUL / U+FFFD 字节级校验见 12 件（逐文件列表）。

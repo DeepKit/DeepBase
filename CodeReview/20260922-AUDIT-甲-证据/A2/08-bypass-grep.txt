@@ -1,0 +1,101 @@
+A2 判据 2 的旁路扫描（H8：豁免必须声明式 + 可观测 + 默认关，不得出现明文开关绕过）
+锚点 HEAD f6b7212；时间 UTC+8 2026-09-22 12:05；模式集沿用甲 A-1 同一套（SSOT，不另立标准）
+结论：本单 500 行新增行内 10 个模式命中 0 处；全文件面的 ENV.*OVERRIDE / plaintext 命中均为 f6b7212 既有代码且与本单无关（归属见下文）。
+
+=== 口径 1：只看本单新增行（git diff -U0 | grep ^+ 后逐模式）===
+$ git diff -U0 -- <四文件> | grep "^+"  后逐模式扫（只看本单新增行）
+  added lines = 500
+--- pattern: skip.*verify
+    hits in added lines = 0
+--- pattern: bypass
+    hits in added lines = 0
+--- pattern: force
+    hits in added lines = 0
+--- pattern: insecure
+    hits in added lines = 0
+--- pattern: allow.*plain
+    hits in added lines = 0
+--- pattern: no.?verify
+    hits in added lines = 0
+--- pattern: ignore.*hash
+    hits in added lines = 0
+--- pattern: DISABLE
+    hits in added lines = 0
+--- pattern: ENV.*OVERRIDE
+    hits in added lines = 0
+--- pattern: plaintext
+    hits in added lines = 0
+
+$ 全文件面（含既有行）命中归属：
+  ENV.*OVERRIDE：4 处全部指向 DEEPBASE_MASTER_KEY_FILE 的密钥路径解析（A-1 既有注释/既有测试名），不是门禁开关。
+  plaintext：5 处全部在 Core/DeepBase.Security.pas 的 EncryptText 局部变量 Plaintext 与 459 行注释，f6b7212 既有代码、不在本单 diff 行内。
+
+
+=== 口径 2：四个改动文件全量（含既有行，逐条命中位置如实列出）===
+$ 旁路扫描（A1 同款模式集，逐条 grep -nE，范围 = 本单改动四文件）
+  files: Core/DeepBase.Security.MasterKey.pas Core/DeepBase.Security.pas Tools/CLI/CLI.Security.pas Tests/Test.DeepBase.Security.MasterKey.pas
+  patterns: "skip.*verify" "bypass" "force" "insecure" "allow.*plain" "no.?verify" "ignore.*hash" "DISABLE" "ENV.*OVERRIDE" "plaintext"
+  注：不含裸 "skip"，A1 已登记理由——CLI.Security.pas 的 --yes 帮助行 "Skip the interactive confirmation of export" 属 A-1 既有文案，非门禁绕过。
+
+--- pattern: skip.*verify
+    (0 hits)
+--- pattern: bypass
+    (0 hits)
+--- pattern: force
+    (0 hits)
+--- pattern: insecure
+    (0 hits)
+--- pattern: allow.*plain
+    (0 hits)
+--- pattern: no.?verify
+    (0 hits)
+--- pattern: ignore.*hash
+    (0 hits)
+--- pattern: DISABLE
+    (0 hits)
+--- pattern: ENV.*OVERRIDE
+Core/DeepBase.Security.MasterKey.pas:62:    /// <summary>Env override when set, otherwise the per-user default path.</summary>
+Tests/Test.DeepBase.Security.MasterKey.pas:14:    - Key path resolution: environment override and per-user default
+Tests/Test.DeepBase.Security.MasterKey.pas:64:    procedure Test_KeyFilePath_UsesEnvironmentOverride;
+Tests/Test.DeepBase.Security.MasterKey.pas:348:procedure TTestUserMasterKey.Test_KeyFilePath_UsesEnvironmentOverride;
+--- pattern: plaintext
+Core/DeepBase.Security.pas:262:  Plaintext: TBytes;
+Core/DeepBase.Security.pas:271:  Plaintext := TEncoding.UTF8.GetBytes(AText);
+Core/DeepBase.Security.pas:273:    Result := TUBS2.Protect(Plaintext, Key);
+Core/DeepBase.Security.pas:275:    SecureClearBytes(Plaintext);
+Core/DeepBase.Security.pas:459:  // Limit plaintext size to avoid storing oversized secret blobs.
+
+$ 新增豁免面全量枚举（豁免必须是声明式 + 可观测 + 默认关，H8）
+Core/DeepBase.Security.MasterKey.pas:28:  (DEEPBASE_MASTER_KEY_EXTERNAL_ACL below), which is default-off, applies to an
+Core/DeepBase.Security.MasterKey.pas:68:    /// <summary>True when DEEPBASE_MASTER_KEY_EXTERNAL_ACL declares that access to
+Core/DeepBase.Security.MasterKey.pas:71:    class function AccessManagedExternally: Boolean; static;
+Core/DeepBase.Security.MasterKey.pas:74:    /// AccessManagedExternally holds; either outcome is announced through
+Core/DeepBase.Security.MasterKey.pas:111:  MASTER_KEY_EXTERNAL_ACL_ENV = 'DEEPBASE_MASTER_KEY_EXTERNAL_ACL';
+Core/DeepBase.Security.MasterKey.pas:112:  MASTER_KEY_EXTERNAL_ACL_YES = 'YES';
+Core/DeepBase.Security.MasterKey.pas:297:  AccessManagedExternally), which an export destination can never claim. }
+Core/DeepBase.Security.MasterKey.pas:327:class function TUserMasterKey.AccessManagedExternally: Boolean;
+Core/DeepBase.Security.MasterKey.pas:335:  Result := SameText(Trim(GetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV)),
+Core/DeepBase.Security.MasterKey.pas:336:    MASTER_KEY_EXTERNAL_ACL_YES);
+Core/DeepBase.Security.MasterKey.pas:383:  ExternalAcl: Boolean;
+Core/DeepBase.Security.MasterKey.pas:389:  ExternalAcl := AccessManagedExternally;
+Core/DeepBase.Security.MasterKey.pas:404:    if not ExternalAcl then
+Core/DeepBase.Security.MasterKey.pas:419:  if ExternalAcl then
+Core/DeepBase.Security.MasterKey.pas:421:      'its owner, because ' + MASTER_KEY_EXTERNAL_ACL_ENV + ' declares that access to ' +
+Core/DeepBase.Security.MasterKey.pas:448:          'Nothing was created. Set ' + MASTER_KEY_EXTERNAL_ACL_ENV + '=' +
+Core/DeepBase.Security.MasterKey.pas:449:          MASTER_KEY_EXTERNAL_ACL_YES + ' when the access to that path is administered ' +
+Tools/CLI/CLI.Security.pas:155:  if TUserMasterKey.AccessManagedExternally then
+Tools/CLI/CLI.Security.pas:157:      'their owner, because ' + MASTER_KEY_EXTERNAL_ACL_ENV + ' declares that somebody ' +
+Tests/Test.DeepBase.Security.MasterKey.pas:70:    procedure Test_AccessManagedExternally_NeedsOverrideAndDeclaration;
+Tests/Test.DeepBase.Security.MasterKey.pas:154:  FPriorAclEnv := GetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV);
+Tests/Test.DeepBase.Security.MasterKey.pas:155:  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, nil);
+Tests/Test.DeepBase.Security.MasterKey.pas:171:    SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, nil)
+Tests/Test.DeepBase.Security.MasterKey.pas:173:    SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar(FPriorAclEnv));
+Tests/Test.DeepBase.Security.MasterKey.pas:380:procedure TTestUserMasterKey.Test_AccessManagedExternally_NeedsOverrideAndDeclaration;
+Tests/Test.DeepBase.Security.MasterKey.pas:382:  Assert.IsFalse(TUserMasterKey.AccessManagedExternally,
+Tests/Test.DeepBase.Security.MasterKey.pas:384:  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar('MAYBE'));
+Tests/Test.DeepBase.Security.MasterKey.pas:385:  Assert.IsFalse(TUserMasterKey.AccessManagedExternally,
+Tests/Test.DeepBase.Security.MasterKey.pas:388:  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar(MASTER_KEY_EXTERNAL_ACL_YES));
+Tests/Test.DeepBase.Security.MasterKey.pas:389:  Assert.IsTrue(TUserMasterKey.AccessManagedExternally,
+Tests/Test.DeepBase.Security.MasterKey.pas:397:  Assert.IsFalse(TUserMasterKey.AccessManagedExternally,
+Tests/Test.DeepBase.Security.MasterKey.pas:502:  SetEnvironmentVariable(MASTER_KEY_EXTERNAL_ACL_ENV, PChar(MASTER_KEY_EXTERNAL_ACL_YES));
+Tests/Test.DeepBase.Security.MasterKey.pas:508:  Assert.Contains(FNotices, MASTER_KEY_EXTERNAL_ACL_ENV,

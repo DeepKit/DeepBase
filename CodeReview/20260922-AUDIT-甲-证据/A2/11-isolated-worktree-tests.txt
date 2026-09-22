@@ -1,0 +1,63 @@
+================================== 锚点与口径 ==================================
+工单：WO-20260922-AUDIT-甲-A2
+采集树：隔离工作树 d:\_Progs\02Business\DeepBase\.tmp\wt_a2_verify @ 5a37028
+        （git worktree add --detach .tmp/wt_a2_verify 5a37028；干净检出，不含任何人在共享树的
+        未提交在制品 ⇒ 结论可归因到 commit，符合主控 2026-09-22 现场管制口径）
+命令（两条，均在该工作树根执行）：
+  powershell -File Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security.MasterKey.TTestUserMasterKey -OutputDir .tmp\a2wt_fixture   > .tmp\a2wt_fixture.log
+  powershell -File Scripts/run_tests.ps1 -Type Unit -OutputDir .tmp\a2wt_full                                                              > .tmp\a2wt_full.log
+原始日志：.tmp/a2wt_fixture.log / .tmp/a2wt_full.log
+        XML：.tmp/wt_a2_verify/.tmp/a2wt_fixture/UnitTestResults.xml、.tmp/wt_a2_verify/.tmp/a2wt_full/UnitTestResults.xml
+说明：本节所有数字为机器输出的原样摘录，非自报结论（H7）；甲不以任何一跑宣布"全库绿"。
+
+================================== A. 甲 A2 目标夹具（独立跑）==================================
+编译：386978 lines, 28.45 seconds, 38363188 bytes code, 3307792 bytes data. -> SUCCESS: Unit Tests compiled
+运行：Tests Found 26 / Tests Ignored 0 / Tests Passed 26 / Tests Leaked 0 / Tests Failed 0 / Tests Errored 0
+结论行：SUCCESS: All Unit Tests tests passed ；Final Summary -> Unit Tests: PASSED ；FIXTURE_EXIT=0
+
+================================== B. 全量套件（隔离树 @ 5a37028）==================================
+编译：386978 lines, 28.41 seconds, 38363188 bytes code, 3307792 bytes data.
+console 汇总（原文）：
+  Tests Found   : 4679
+  Tests Ignored : 4
+  Tests Passed  : 4671
+  Tests Leaked  : 0
+  Tests Failed  : 3
+  Tests Errored : 1
+  FAILED: Some Unit Tests tests failed (Exit code: 1)   /   Final Summary -> Unit Tests: FAILED
+XML 根属性（两侧交叉校验）：total="4675" errors="1" failures="3" ignored="4"
+校验和：4671 + 3 + 1 + 4 = 4679 = console Found ✔；4675 + 4(ignored) = 4679 ✔
+套件数增量：A-1 基线 4671 -> 本跑 4679 = +8，与 A2 测试单元由 18 例扩到 26 例（+8）一一对应。
+
+甲域执行证明（新用例在统一 runner 里真的被执行，而非只在独立夹具里跑过）：
+  UnitTestResults.xml:6334 <test-suite type="Fixture" name="TTestUserMasterKey" executed="True"
+                             result="Success" success="True" time="0.265">
+  该 fixture 块（:6335..:6363）内 test-case 共 26 条，result="Success" 26 条、非 Success 0 条。
+
+================================== C. 非通过项逐件点名（本跑 3F + 1E）==================================
+F1 Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.StaticPair_InjectedReplay_Unchanged
+   Condition is False when True expected. [second identical injected frame must short-circuit (Unchanged=True)]
+F2 Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.InjectedBitmap_FlowsThroughFrameDifferGate
+   Condition is False when True expected. [second static after seed]
+F3 Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate6_TenThousandInstances_ZeroGdiAndHeapLeak
+   Condition is False when True expected. [HB Gate #6 VIOLATION: USER handle leak round 1 (before=41 after=42 delta=1)]
+E1 Test.DeepBase.Resilience.Timeout.PBT.TTimeoutPolicyPropertyTests.Property6_TimeoutCancelsBackgroundTask
+   Access violation at address 00007FF7315A751A in module 'DeepBaseTests.exe' (offset 221751A). Read of address 0000000000000000
+四项与 A-1 基线证据 `CodeReview/20260921-AUDIT-甲-证据/A1/07-fullsuite-e268de0.txt` §3 点名的
+F1/F2/F3 + E1 **同一组用例、同一消息**（F3 该轮记录为 round 2 delta=1，本轮为 round 1 delta=1，
+属同一 handle-leak 断言的轮次抖动，不是新增项）。甲 A2 改动的文件只有 Core/DeepBase.Security.MasterKey.pas、
+Core/DeepBase.Security.pas、Tools/CLI/CLI.Security.pas、Tests/Test.DeepBase.Security.MasterKey.pas，
+与上述四项的 SUT（Desktop.Perception / HB.Benchmark / Resilience.Timeout）无编译期或运行期依赖，
+因此按「归因不明，禁推断执行方」只登记相关性：本单既未修好也未弄坏这四项中的任何一项。
+
+================================== D. 同口径参照（共享工作树那一跑）==================================
+主仓共享树（含他人未提交在制品）另跑一次：Tests Found 4679 / Passed 4674 / Failed 0 / Errored 1。
+两跑差 3 项全在乙域（Perception 2 项 + HB Gate #6 1 项），与 A-1 基线记录的
+「主工作树 1F / 干净 HEAD 树 3F」方向一致（差值只在乙域 Perception 面出现，两跑树内容不同）。
+absolute failed/errored 因此不是跨运行可比的受控量（沿用 R8/A-1 已确立的树内容口径）。
+
+================================== E. 内存泄漏汇总（存量，非本单引入）==================================
+"Unexpected Memory Leak" 段落出现在全量跑结束后的收尾阶段，逐条点名 TCR016Entity/TCR017Entity、
+TJSONPair/TJSONObject/TJSONString、TTestIntentLLMBackend/TTestIntentParser 的 ActRec、
+TBackupVersion、TFeatureFlag/TFlagVariant/TTargetingRule、TConfigItem 等对象 —— 均非甲域对象；
+DUnitX 计数侧 Tests Leaked 在两个跑次均为 0。登记为存量，不在本单范围内擅动。

@@ -1,0 +1,317 @@
+A2 判据 2/3 实跑：迁移取钥门禁 + security status 密钥来源与豁免可观测（原始输出逐字）
+锚点 HEAD f6b7212；CLI 构建 = brcc32 + dcc64（序列见 .tmp/a2_cli_build.log，本单复用了 A-1 的构建配方）
+实跑时间 UTC+8 2026-09-22 11:56
+读法：[1] 无密钥文件且未放行 => 抛 ESecurityException、进程退出码 1、磁盘上确认没建出密钥文件；
+      [2] 显式放行 => 门禁放行并建钥，退出码 0，且建出的 key 仍是 owner-only 单条目（放行只授权“建”，不削弱“收紧”）；
+      [4] status 在无 key 时 exit=1 并打印 “Key source : no key file yet ...”；[5] 有 key 时 exit=0 打印 “existing key file”；
+      [6] 声明外部管理权限时 status 必须以 [WARN] 行把豁免事实说出来（判据 2 的可观测半边）。
+
+== 为什么以探针 + 调用点引文双腿取证（H17）==
+MigrateLegacyUBS2Secrets 编译在 {$IF DEFINED(MACOS) OR DEFINED(LINUX)} 内，且全仓无调用者、CLI 无迁移子命令：
+Windows 宿主无法执行该方法本体。因此本单不做任何“假装跑通迁移”的事，改用量得到的两腿：
+  腿 1 = 迁移路径实际调用的跨平台门禁 TUserMasterKey.RequireExistingKey(同一操作名、同一默认值) 的真实进程退出码与报错文案；
+  腿 2 = 从源码逐行摘出该调用点，证明“取钥前先过门禁”确实发生在存储检查与取钥之前。
+
+== 调用点与门禁源码摘录（当前工作树，行号真实）==
+--- Core/DeepBase.Security.pas 106-116（迁移窗口声明）---
+106:	
+107:	    {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+108:	    /// <summary>迁移窗口：把库中仍为 UBS2 v1 的凭据逐条用旧口令熵解出、以当前用户
+109:	    /// 密钥重新封存为 v2 后写回（名称与描述不变），返回迁移条数。旧熵公式只存在于
+110:	    /// 迁移器中，正常读取路径仍然拒绝 v1。取钥前默认拒绝建钥：密钥文件不存在时
+111:	    /// LoadOrCreate 会静默新建一把，那会让用户手上的既有备份全部对不上，因此只有
+112:	    /// 调用方显式放行（AAllowProvisioning=True）才允许本次新建。</summary>
+113:	    function MigrateLegacyUBS2Secrets(const ALegacyPassphrase: string;
+114:	      const AAllowProvisioning: Boolean = False): Integer;
+115:	    {$ENDIF}
+116:	    
+
+--- Core/DeepBase.Security.pas 496-515（实现首部：门禁在 FStorage 检查与取钥之前）---
+496:	{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+497:	function TDeepBaseSecurity.MigrateLegacyUBS2Secrets(
+498:	  const ALegacyPassphrase: string;
+499:	  const AAllowProvisioning: Boolean): Integer;
+500:	var
+501:	  Names: TArray<string>;
+502:	  Name: string;
+503:	  Rec: TSecretRecord;
+504:	  LegacyBlob, Migrated: TBytes;
+505:	  Key: TUBS2KeyMaterial;
+506:	begin
+507:	  Result := 0;
+508:	
+509:	  // Ahead of the storage check and ahead of taking key material: BuildUBS2Key
+510:	  // provisions when the key file is absent, and a migration that minted a key
+511:	  // would invalidate every backup the user holds while still reporting success.
+512:	  TUserMasterKey.RequireExistingKey('the UBS2 v1 to v2 secret migration',
+513:	    AAllowProvisioning);
+514:	
+515:	  if not Assigned(FStorage) then
+
+--- Core/DeepBase.Security.pas 201-229（BuildUBS2Key：LoadOrCreate 唯一产品调用点 + 日志 sink）---
+201:	{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+202:	// ============================================================================
+203:	// UBS2 Key Material
+204:	// ============================================================================
+205:	
+206:	// The user secret is the only password entropy; machine identity only travels
+207:	// through the AAD, so the binding authenticates a record without being a secret
+208:	// an attacker could enumerate to rebuild the key.
+209:	//
+210:	// The notice sink exists because this is the call that can mint that secret: a key
+211:	// that appears without a word is exactly how a user ends up holding backups that
+212:	// match nothing. It reaches the application log; before the manager exists there is
+213:	// no log to write to, which is why the same facts are readable from
+214:	// "DeepBase security status" and are refused by RequireExistingKey on the migration
+215:	// path instead of being announced only here.
+216:	function BuildUBS2Key: TUBS2KeyMaterial;
+217:	begin
+218:	  Result.MasterSecret := TUserMasterKey.LoadOrCreate(
+219:	    procedure(const AMessage: string)
+220:	    var
+221:	      AppLogger: TDeepBaseLogger;
+222:	    begin
+223:	      AppLogger := DeepBase.Manager.DeepBase.Logger;
+224:	      if Assigned(AppLogger) then
+225:	        AppLogger.Warn(AMessage, 'DeepBase.Security');
+226:	    end);
+227:	  Result.Binding := TMachineIdentityProvider.Binding;
+228:	end;
+229:	{$ENDIF}
+
+--- Core/DeepBase.Security.MasterKey.pas 337-350（RequireExistingKey 实现，fail-closed）---
+337:	end;
+338:	
+339:	class procedure TUserMasterKey.RequireExistingKey(const AOperation: string;
+340:	  const AAllowProvisioning: Boolean);
+341:	begin
+342:	  if AAllowProvisioning or KeyFileExists then
+343:	    Exit;
+344:	  raise ESecurityException.CreateFmt(
+345:	    'Refusing to provision a master key for %s: no key file exists at "%s" yet. ' +
+346:	    'A key created now seals records that no earlier backup can open, and it leaves ' +
+347:	    'the backups that were taken against the old key matching nothing. Restore the ' +
+348:	    'key file first, or authorise creating a new one in this run if you have no ' +
+349:	    'data sealed with another key.', [AOperation, KeyFilePath]);
+350:	end;
+
+--- Tools/CLI/CLI.Security.pas 138-176（DoStatus：Access policy 与 Key source 两行）---
+138:	
+139:	class function TSecurityCommands.DoStatus: Integer;
+140:	var
+141:	  KeyPath: string;
+142:	begin
+143:	  Result := 1;
+144:	  KeyPath := TUserMasterKey.KeyFilePath;
+145:	
+146:	  Writeln('Master key file  : ', KeyPath);
+147:	  if Trim(GetEnvironmentVariable(MASTER_KEY_FILE_ENV)) <> '' then
+148:	    Writeln('Resolved from    : environment variable ', MASTER_KEY_FILE_ENV);
+149:	
+150:	  // Read-only by design: status must never provision a key, because a query that
+151:	  // creates the secret would hide the very loss it is meant to report. Neither line
+152:	  // below says anything about the access an existing file carries: status reads it
+153:	  // nowhere, and a key predating this restriction keeps the ACL it was created with
+154:	  // until its owner sets one (icacls / ls -l).
+155:	  if TUserMasterKey.AccessManagedExternally then
+156:	    TCliUtils.Warning('Access policy    : newly provisioned keys are NOT restricted to ' +
+157:	      'their owner, because ' + MASTER_KEY_EXTERNAL_ACL_ENV + ' declares that somebody ' +
+158:	      'else administers access to the path held in ' + MASTER_KEY_FILE_ENV)
+159:	  else
+160:	    Writeln('Access policy    : newly provisioned keys are restricted to their owner; ' +
+161:	      'this command changes nothing about a file that already exists');
+162:	
+163:	  if not TFile.Exists(KeyPath) then
+164:	  begin
+165:	    Writeln('Key source       : no key file yet - the first use that seals data ' +
+166:	      'provisions one at the path above');
+167:	    TCliUtils.Warning('The master key does not exist yet. It is created on the first ' +
+168:	      'use that seals data; until then there is nothing to back up.');
+169:	    Exit;
+170:	  end;
+171:	
+172:	  Writeln('Key source       : existing key file, read as it is');
+173:	  Writeln('Size (bytes)     : ', TFile.GetSize(KeyPath):0);
+174:	  Writeln('Fingerprint      : ', TUserMasterKey.FingerprintOf(KeyPath));
+175:	  Writeln('(One-way SHA-256 of the key material. Publishing it reveals nothing,');
+176:	  Writeln('but it lets any copy be checked with "security verify".)');
+
+
+== 调用面盘点原始 grep（排除 .tmp 取证树）==
+$ grep -rn "MigrateLegacyUBS2Secrets" --include="*.pas" --include="*.dpr" .   | grep -v "^./  .tmp"      (排除 .tmp 取证树)
+./Core/DeepBase.Security.pas:113:    function MigrateLegacyUBS2Secrets(const ALegacyPassphrase: string;
+./Core/DeepBase.Security.pas:497:function TDeepBaseSecurity.MigrateLegacyUBS2Secrets(
+
+$ grep -rn "LoadOrCreate" --include="*.pas" --include="*.dpr" . | grep -v .tmp | grep -v Tests/   (产品侧调用点全量)
+./Core/DeepBase.Security.MasterKey.pas:77:    class function LoadOrCreate(
+./Core/DeepBase.Security.MasterKey.pas:376:class function TUserMasterKey.LoadOrCreate(
+./Core/DeepBase.Security.pas:111:    /// LoadOrCreate 会静默新建一把，那会让用户手上的既有备份全部对不上，因此只有
+./Core/DeepBase.Security.pas:218:  Result.MasterSecret := TUserMasterKey.LoadOrCreate(
+
+$ grep -rn "CLI.Security\|SecurityCommands" --include="*.pas" Tools/CLI   (security 子命令注册面)
+Tools/CLI/CLI.Main.pas:32:  CLI.Security;
+Tools/CLI/CLI.Main.pas:72:    Result := TSecurityCommands.Execute
+Tools/CLI/CLI.Security.pas:2:  CLI.Security - Master key backup commands
+Tools/CLI/CLI.Security.pas:11:unit CLI.Security;
+Tools/CLI/CLI.Security.pas:20:  TSecurityCommands = class
+Tools/CLI/CLI.Security.pas:36:{ TSecurityCommands }
+Tools/CLI/CLI.Security.pas:38:class function TSecurityCommands.Execute: Integer;
+Tools/CLI/CLI.Security.pas:63:class procedure TSecurityCommands.ShowHelp;
+Tools/CLI/CLI.Security.pas:86:class function TSecurityCommands.DoExport: Integer;
+Tools/CLI/CLI.Security.pas:139:class function TSecurityCommands.DoStatus: Integer;
+Tools/CLI/CLI.Security.pas:180:class function TSecurityCommands.DoVerify: Integer;
+
+$ grep -rn "Migrate" Tools/CLI --include="*.pas"   (CLI 是否暴露迁移入口)
+(无命中：CLI 无迁移子命令，Windows 宿主无法实跑迁移)
+
+=== capture_status.bat（逐字）===
+@echo off
+rem A2 evidence capture part 2: the fail-closed gate that guards key provisioning on
+rem the migration path, and the security status surface that reports it.
+chcp 65001 >nul
+call "D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
+cd /d d:\_Progs\02Business\DeepBase
+
+set P=.tmp\a2_probe
+set BASE=d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run
+set EXE=.tmp\a2_bin\DeepBase.exe
+
+dcc64 -B -Q -N0%P%\dcu_green -E%P%\bin_green\ -U"%P%\dcu_green;Core;Features;Persistence;VCL;FMX;ThirdParty\Payment;ThirdParty\Social" %P%\A2RequireKeyProbe.dpr
+echo REQPROBE_BUILD_EXIT=%ERRORLEVEL%
+echo.
+
+echo === [1] gate with no key file, no authorisation (expect refusal, non-zero exit) ===
+if exist %BASE%\rk_refuse rd /s /q %BASE%\rk_refuse
+set DEEPBASE_MASTER_KEY_FILE=%BASE%\rk_refuse\master.key
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=
+%P%\bin_green\A2RequireKeyProbe.exe refuse
+echo REQ_REFUSE_EXIT=%ERRORLEVEL%
+if exist %BASE%\rk_refuse\master.key (echo UNEXPECTED_KEY_CREATED) else (echo NO_KEY_FILE_CREATED=yes)
+
+echo.
+echo === [2] gate with no key file, explicit authorisation (expect provisioning, exit=0) ===
+if exist %BASE%\rk_allow rd /s /q %BASE%\rk_allow
+set DEEPBASE_MASTER_KEY_FILE=%BASE%\rk_allow\master.key
+%P%\bin_green\A2RequireKeyProbe.exe allow
+echo REQ_ALLOW_EXIT=%ERRORLEVEL%
+icacls %BASE%\rk_allow\master.key
+echo ICACLS_RK_ALLOW_EXIT=%ERRORLEVEL%
+
+echo.
+echo === [3] gate with an existing key file, no authorisation (expect pass-through) ===
+%P%\bin_green\A2RequireKeyProbe.exe existing
+echo REQ_EXISTING_EXIT=%ERRORLEVEL%
+
+echo.
+echo === [4] security status with no key file (default policy) ===
+if exist %BASE%\cli rd /s /q %BASE%\cli
+set DEEPBASE_MASTER_KEY_FILE=%BASE%\cli\master.key
+%EXE% security status
+echo STATUS_EMPTY_EXIT=%ERRORLEVEL%
+
+echo.
+echo === [5] security status with an existing key file ===
+rem Seed the key through the provisioning path itself, so the run also shows that
+rem an explicit authorisation does not weaken the owner-only restriction.
+%P%\bin_green\A2RequireKeyProbe.exe allow
+echo SEED_KEY_EXIT=%ERRORLEVEL%
+icacls %BASE%\cli\master.key
+echo ICACLS_SEEDED_EXIT=%ERRORLEVEL%
+%EXE% security status
+echo STATUS_PRESENT_EXIT=%ERRORLEVEL%
+
+echo.
+echo === [6] security status with the external-access declaration in force ===
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=YES
+%EXE% security status
+echo STATUS_EXEMPT_EXIT=%ERRORLEVEL%
+set DEEPBASE_MASTER_KEY_EXTERNAL_ACL=
+
+echo.
+echo === [7] security help (command list the manual must match) ===
+%EXE% security help
+echo STATUS_HELP_EXIT=%ERRORLEVEL%
+
+=== capture_status.log（逐字，仅 CRLF→LF）===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+3790 lines, 0.22 seconds, 1369380 bytes code, 190792 bytes data.
+REQPROBE_BUILD_EXIT=0
+
+=== [1] gate with no key file, no authorisation (expect refusal, non-zero exit) ===
+PROBE REFUSED (ESecurityException): Refusing to provision a master key for the UBS2 v1 to v2 secret migration: no key file exists at "d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\rk_refuse\master.key" yet. A key created now seals records that no earlier backup can open, and it leaves the backups that were taken against the old key matching nothing. Restore the key file first, or authorise creating a new one in this run if you have no data sealed with another key.
+REQ_REFUSE_EXIT=1
+NO_KEY_FILE_CREATED=yes
+
+=== [2] gate with no key file, explicit authorisation (expect provisioning, exit=0) ===
+PROBE gate accepted explicit authorisation, now provisioning
+PROBE provisioned after explicit authorisation: d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\rk_allow\master.key
+REQ_ALLOW_EXIT=0
+d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\rk_allow\master.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_RK_ALLOW_EXIT=0
+
+=== [3] gate with an existing key file, no authorisation (expect pass-through) ===
+PROBE existing key accepted without provisioning: d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\rk_allow\master.key
+REQ_EXISTING_EXIT=0
+
+=== [4] security status with no key file (default policy) ===
+Master key file  : d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\cli\master.key
+Resolved from    : environment variable DEEPBASE_MASTER_KEY_FILE
+Access policy    : newly provisioned keys are restricted to their owner; this command changes nothing about a file that already exists
+Key source       : no key file yet - the first use that seals data provisions one at the path above
+[33m[WARN] The master key does not exist yet. It is created on the first use that seals data; until then there is nothing to back up.[0m
+STATUS_EMPTY_EXIT=1
+
+=== [5] security status with an existing key file ===
+PROBE gate accepted explicit authorisation, now provisioning
+PROBE provisioned after explicit authorisation: d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\cli\master.key
+SEED_KEY_EXIT=0
+d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\cli\master.key FY3700\fuyi.it:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+ICACLS_SEEDED_EXIT=0
+Master key file  : d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\cli\master.key
+Resolved from    : environment variable DEEPBASE_MASTER_KEY_FILE
+Access policy    : newly provisioned keys are restricted to their owner; this command changes nothing about a file that already exists
+Key source       : existing key file, read as it is
+Size (bytes)     : 32
+Fingerprint      : c73d5b37f9f41fa7e4158eabc154b26027c283c3e30f88c5627597f072bf11c1
+(One-way SHA-256 of the key material. Publishing it reveals nothing,
+but it lets any copy be checked with "security verify".)
+STATUS_PRESENT_EXIT=0
+
+=== [6] security status with the external-access declaration in force ===
+Master key file  : d:\_Progs\02Business\DeepBase\.tmp\a2_probe\run\cli\master.key
+Resolved from    : environment variable DEEPBASE_MASTER_KEY_FILE
+[33m[WARN] Access policy    : newly provisioned keys are NOT restricted to their owner, because DEEPBASE_MASTER_KEY_EXTERNAL_ACL declares that somebody else administers access to the path held in DEEPBASE_MASTER_KEY_FILE[0m
+Key source       : existing key file, read as it is
+Size (bytes)     : 32
+Fingerprint      : c73d5b37f9f41fa7e4158eabc154b26027c283c3e30f88c5627597f072bf11c1
+(One-way SHA-256 of the key material. Publishing it reveals nothing,
+but it lets any copy be checked with "security verify".)
+STATUS_EXEMPT_EXIT=0
+
+=== [7] security help (command list the manual must match) ===
+Security Commands
+
+Usage: DeepBase security <subcommand> [options]
+
+Subcommands:
+  export      Write a verified backup of the master key to a file
+  status      Report the master key path, its source and access policy
+  verify      Compare a backup against the current master key
+
+Options:
+  --output, -o <path>   Destination file for export (must not exist)
+  --file, -f <path>     Backup file for verify
+  --yes                 Skip the interactive confirmation of export
+  --help                Show this help
+
+Examples:
+  DeepBase security export --output E:\deepbase-master-key-20260921.key
+  DeepBase security status
+  DeepBase security verify --file E:\deepbase-master-key-20260921.key
+STATUS_HELP_EXIT=0

@@ -1,0 +1,62 @@
+A2 判据 5 的 TDD 绿：同一 fixture 在实现后 26/26 通过（用例数从 19 增至 26，本单新增 7 条行为用例）
+命令：powershell -File Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security.MasterKey.TTestUserMasterKey -OutputDir .tmp/a2_testout
+时间：UTC+8 2026-09-22 11:53
+注：同上，中间 dcc64 Hint 噪声以 […] 标出。
+
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: False
+Skip Compile: False
+No Rebuild: False
+Run Filter: Test.DeepBase.Security.MasterKey.TTestUserMasterKey
+Output: D:\_Progs\02Business\DeepBase\.tmp\a2_testout
+DCU Output: D:\_Progs\02Business\DeepBase\.tmp\a2_testout\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+[... 编译 Hint 噪声略 ...]
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.IntentClarification.Storage.pas(270) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.IntentClarification.Storage.pas(376) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Speech.TTS.Edge.pas(200) Hint: H2164 Variable 'All' is declared but never used in 'TEdgeTTSBackend.SupportedVoices'
+D:\_Progs\02Business\DeepBase\ThirdParty\Social\DeepBase.Social.QQ.pas(198) Hint: H2077 Value assigned to 'TQQClient.ParseCallbackJson' never used
+387094 lines, 27.39 seconds, 38363836 bytes code, 3307976 bytes data.
+SUCCESS: Unit Tests compiled
+
+Running Unit Tests...
+----------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+....................................................
+
+Tests Found   : 26
+Tests Ignored : 0
+Tests Passed  : 26
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+SUCCESS: All Unit Tests tests passed
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        PASSED
+==============================================
+
+All tests passed!
+
