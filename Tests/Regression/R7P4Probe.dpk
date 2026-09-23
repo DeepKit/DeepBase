@@ -1,7 +1,15 @@
 package R7P4Probe;
 
-{ R7-P4 (A18) fixture package. Build: dcc64 R7P4Probe.dpk (Win64).
-  Output R7P4Probe.bpl is a committed test fixture (see .gitattributes *.bpl binary). }
+{ R7-P4 / D2 (A18) fixture package.
+
+  Rebuild (Win64, from the repo root, after rsvars.bat):
+    dcc64 -B -Q -N0bld\dcu -LEbld\bpl -U"bld\dcu;Core" Tests\Regression\R7P4Probe.dpk
+  Output R7P4Probe.bpl is a committed test fixture (see .gitattributes *.bpl binary).
+
+  DeepBase.Plugin / DeepBase.Types are deliberately NOT in `contains`: they are
+  statically linked into this package (dcc64 W1033 "implicitly imported"), so the
+  fixture stays loadable without DeepBaseCore.bpl, which is a gitignored build
+  output and therefore unavailable in an isolated worktree. }
 
 requires
   rtl;
