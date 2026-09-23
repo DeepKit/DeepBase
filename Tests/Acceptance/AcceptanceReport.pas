@@ -1,8 +1,8 @@
 ﻿{ ============================================================================
-  AcceptanceReport - 楠屾敹鎶ュ憡鐢熸垚鍣?
+  AcceptanceReport - 验收报告生成器
   
-  鐗堟湰: 1.0
-  璇存槑: 鐢熸垚璇︾粏鐨勯獙鏀舵姤鍛?(HTML/JSON/XML)
+  版本: 1.0
+  说明: 生成详细的验收报告 (HTML/JSON/XML)
   ============================================================================ }
 
 unit AcceptanceReport;
@@ -46,14 +46,14 @@ uses
 
 const
   PHASE_NAMES: array[1..8] of string = (
-    '鏂囨。涓庢灦鏋勫鏌?,
-    '闈欐€佷唬鐮佸垎鏋?, 
-    '鍗曞厓娴嬭瘯楠岃瘉',
-    '闆嗘垚娴嬭瘯',
-    '瀹夊叏涓撻」娴嬭瘯',
-    '鍏煎鎬ф祴璇?,
-    '绀轰緥椤圭洰楠岃瘉',
-    '鏈€缁堥獙鏀?
+    '文档与架构审查',
+    '静态代码分析', 
+    '单元测试验证',
+    '集成测试',
+    '安全专项测试',
+    '兼容性测试',
+    '示例项目验证',
+    '最终验收'
   );
 
 { TAcceptanceReportGenerator }
@@ -107,11 +107,11 @@ end;
 function TAcceptanceReportGenerator.GetStatusIcon(Status: TTestStatus): string;
 begin
   case Status of
-    tsPassed: Result := '鉁?;
-    tsFailed: Result := '鉁?;
-    tsManual: Result := '鈿?;
-    tsSkipped: Result := '鈼?;
-    tsRunning: Result := '鉄?;
+    tsPassed: Result := '✓';
+    tsFailed: Result := '✗';
+    tsManual: Result := '⚠';
+    tsSkipped: Result := '○';
+    tsRunning: Result := '⟳';
   else
     Result := '-';
   end;
@@ -130,14 +130,14 @@ end;
 function TAcceptanceReportGenerator.GetStatusText(Status: TTestStatus): string;
 begin
   case Status of
-    tsNotRun: Result := '鏈墽琛?;
-    tsRunning: Result := '鎵ц涓?;
-    tsPassed: Result := '閫氳繃';
-    tsFailed: Result := '澶辫触';
-    tsSkipped: Result := '璺宠繃';
-    tsManual: Result := '寰呬汉宸?;
+    tsNotRun: Result := '未执行';
+    tsRunning: Result := '执行中';
+    tsPassed: Result := '通过';
+    tsFailed: Result := '失败';
+    tsSkipped: Result := '跳过';
+    tsManual: Result := '待人工';
   else
-    Result := '鏈煡';
+    Result := '未知';
   end;
 end;
 
@@ -146,7 +146,7 @@ begin
   if (Phase >= 1) and (Phase <= 8) then
     Result := PHASE_NAMES[Phase]
   else
-    Result := '鏈煡闃舵';
+    Result := '未知阶段';
 end;
 
 function TAcceptanceReportGenerator.GenerateHTMLReport: string;
@@ -178,7 +178,7 @@ begin
     HTML.Add('<html lang="zh-CN"><head>');
     HTML.Add('<meta charset="UTF-8">');
     HTML.Add('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
-    HTML.Add('<title>DeepBase 楠屾敹鎶ュ憡</title>');
+    HTML.Add('<title>DeepBase 验收报告</title>');
     HTML.Add('<style>');
     HTML.Add('* { margin: 0; padding: 0; box-sizing: border-box; }');
     HTML.Add('body { font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif; background: #f5f7fa; }');
@@ -210,27 +210,27 @@ begin
     
     // Header
     HTML.Add('<div class="header">');
-    HTML.Add('<h1>馃И DeepBase 楠屾敹鎶ュ憡</h1>');
-    HTML.Add('<div>鐢熸垚鏃堕棿: ' + FormatDateTime('yyyy骞磎m鏈坉d鏃?hh:nn:ss', Now) + '</div>');
+    HTML.Add('<h1>🧪 DeepBase 验收报告</h1>');
+    HTML.Add('<div>生成时间: ' + FormatDateTime('yyyy年mm月dd日 hh:nn:ss', Now) + '</div>');
     HTML.Add('</div>');
     
     // Statistics
     HTML.Add('<div class="stats">');
     HTML.Add('<div class="stat-card stat-total">');
     HTML.Add(Format('<div class="stat-number">%d</div>', [TotalTests]));
-    HTML.Add('<div class="stat-label">鎬绘祴璇曢」</div>');
+    HTML.Add('<div class="stat-label">总测试项</div>');
     HTML.Add('</div>');
     HTML.Add('<div class="stat-card stat-pass">');
     HTML.Add(Format('<div class="stat-number">%d</div>', [PassedTests]));
-    HTML.Add('<div class="stat-label">閫氳繃</div>');
+    HTML.Add('<div class="stat-label">通过</div>');
     HTML.Add('</div>');
     HTML.Add('<div class="stat-card stat-fail">');
     HTML.Add(Format('<div class="stat-number">%d</div>', [FailedTests]));
-    HTML.Add('<div class="stat-label">澶辫触</div>');
+    HTML.Add('<div class="stat-label">失败</div>');
     HTML.Add('</div>');
     HTML.Add('<div class="stat-card stat-manual">');
     HTML.Add(Format('<div class="stat-number">%d</div>', [ManualTests]));
-    HTML.Add('<div class="stat-label">寰呬汉宸ョ‘璁?/div>');
+    HTML.Add('<div class="stat-label">待人工确认</div>');
     HTML.Add('</div>');
     HTML.Add('</div>');
     
@@ -241,7 +241,7 @@ begin
       if Length(PhaseTests) = 0 then Continue;
       
       HTML.Add('<div class="phase">');
-      HTML.Add(Format('<div class="phase-header">绗?%d 闃舵: %s</div>', [Phase, GetPhaseName(Phase)]));
+      HTML.Add(Format('<div class="phase-header">第 %d 阶段: %s</div>', [Phase, GetPhaseName(Phase)]));
       
       for Item in PhaseTests do
       begin
@@ -261,7 +261,7 @@ begin
     end;
     
     HTML.Add('<div class="footer">');
-    HTML.Add('鎶ュ憡鐢?DeepBase 鍙鍖栭獙鏀舵祴璇曞伐鍏疯嚜鍔ㄧ敓鎴?);
+    HTML.Add('报告由 DeepBase 可视化验收测试工具自动生成');
     HTML.Add('</div>');
     
     HTML.Add('</div>');
@@ -285,7 +285,7 @@ var
 begin
   JSON := TJSONObject.Create;
   try
-    JSON.AddPair('title', 'DeepBase 楠屾敹鎶ュ憡');
+    JSON.AddPair('title', 'DeepBase 验收报告');
     JSON.AddPair('generated_at', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now));
     JSON.AddPair('version', 'DeepBase Framework v1.0');
     
@@ -371,7 +371,7 @@ begin
     XML.Add('<?xml version="1.0" encoding="UTF-8"?>');
     XML.Add('<acceptance_report>');
     XML.Add('  <metadata>');
-    XML.Add('    <title>DeepBase 楠屾敹鎶ュ憡</title>');
+    XML.Add('    <title>DeepBase 验收报告</title>');
     XML.Add('    <generated_at>' + FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now) + '</generated_at>');
     XML.Add('    <version>DeepBase Framework v1.0</version>');
     XML.Add('  </metadata>');
