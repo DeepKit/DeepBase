@@ -24,7 +24,7 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.Title := 'DeepBase 可视化验收测�?;
+  Application.Title := 'DeepBase 可视化验收测试';
   Application.CreateForm(TfrmAcceptanceMain, frmAcceptanceMain);
   Application.Run;
 end.
