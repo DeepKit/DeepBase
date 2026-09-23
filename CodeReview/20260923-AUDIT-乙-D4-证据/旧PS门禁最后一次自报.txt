@@ -1,0 +1,29 @@
+
+Encoding Gate
+-------------
+  Files scanned             : 739
+  Hard violations (errors)  : 1
+  Hard violations (allowlisted/downgraded): 0
+    invalid UTF-8           : 1
+    mojibake patterns       : 0
+  Soft violations (warnings): 76
+    missing BOM        : 18  (.pas/.dpr/.dpk/.dfm/.fmx)
+    unexpected BOM     : 58  (.md/.sql)
+  Report                    : .tmp/d4/old-gate-report.json
+
+Hard violations:
+  [InvalidUtf8] history.md  -- File contains bytes that are not valid UTF-8
+
+Top soft warnings (up to 10):
+  [MissingBom] Core/DeepBase.Crypto.AES.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Core/DeepBase.SecureMemory.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Core/DeepBase.Security.MachineIdentity.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Core/DeepBase.Security.MasterKey.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Core/DeepBase.Security.UBS2.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Core/DeepBase.Template.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Features/DeepBase.AutoUpdate.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Features/DeepBase.UIA.Engine.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Features/DeepBase.UIA.UnifiedActuator.pas  -- UTF-8 source must have BOM per .editorconfig
+  [MissingBom] Features/DeepBase.Updater.pas  -- UTF-8 source must have BOM per .editorconfig
+
+Encoding Gate: FAILED (1 hard violations; 76 soft/BOM violations reported as warnings)

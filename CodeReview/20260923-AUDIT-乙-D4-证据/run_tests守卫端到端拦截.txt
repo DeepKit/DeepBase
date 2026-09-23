@@ -1,0 +1,48 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: False
+Skip Compile: True
+No Rebuild: False
+Run Filter: NoSuchFixtureZZZ
+Output: D:\_Progs\02Business\DeepBase\TestResults
+DCU Output: D:\_Progs\02Business\DeepBase\TestResults\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+
+Running Unit Tests...
+----------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+
+
+Tests Found   : 0
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+ERROR: Test XML reports only 0 executed tests; minimum is 1.
+FAILED: Unit Tests produced fewer than 1 executed tests in D:\_Progs\02Business\DeepBase\TestResults\UnitTestResults.xml
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        FAILED
+==============================================
+
+Some tests failed!

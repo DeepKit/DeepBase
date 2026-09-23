@@ -1,0 +1,23 @@
+本文件为 D4 §1.1/未覆盖面登记项的 fail-open 探测原始输出（三条命令 + 原样回显）。
+
+命令与输出：
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root "E:/Scratch/does-not-exist-d4" ; echo EXIT=$?
+EXIT=0
+构建归属门禁通过：生产单元 0，构建文件 0，孤儿（已登记基线）0
+
+$ node 09_工程脚本/managed-copy-gate/check_managed_copy.js --root "E:/Scratch/does-not-exist-d4" ; echo EXIT=$?
+EXIT=0
+托管拷贝门禁通过：检查了 0 个 .pas 文件（M1 硬规则 + M2 基线 99 项豁免存量）
+
+$ node 09_工程脚本/managed-copy-gate/check_managed_copy.js --ROOT "E:/Scratch/does-not-exist-d4" ; echo EXIT=$?
+EXIT=1（报的是全仓违规，即参数被静默忽略后回落默认根）
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --repo ".tmp/d4/emptyrepo" ; echo EXIT=$?
+EXIT=3
+证据编码门禁失败：扫描 0 个 CodeReview 证据文件（repo=D:\_Progs\02Business\DeepBase\.tmp\d4\emptyrepo, all-worktree=false）。已按 fail-closed 拒绝放行。
+
+结论：五道门禁中 encoding-gate / eol-gate / evidence-encoding-gate 已 fail-closed（乙 P1/P2 交付），
+build-ownership 与 managed-copy 仍为 fail-open（扫 0 文件报绿 + 本机绝对路径默认根 + 参数大小写静默回落），
+逐条处置建议见《WO-20260923-AUDIT-乙-D4 交付回执》§六。

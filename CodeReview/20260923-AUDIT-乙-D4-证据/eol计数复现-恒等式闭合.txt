@@ -1,0 +1,64 @@
+D4 §1.3 计数可复现证据（生成时刻 2026-09-23 11:36:11 +0800，仓库根工作树，含他方在途未提交件）
+所有输出为命令原样截取。
+
+== 1) 行尾门禁连跑两次 ==
+行尾门禁通过：检查了 1475 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+行尾门禁通过：检查了 1475 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+
+== 2) 恒等式分量（.pas + .md） ==
+$ git ls-files "*.pas" "*.md" | wc -l          # tracked
+1460
+$ git ls-files -d "*.pas" "*.md" | wc -l       # tracked but deleted in worktree
+3
+$ git ls-files -o --exclude-standard "*.pas" "*.md" | wc -l   # untracked, not ignored
+31
+# tracked inside gate SKIP dirs (excluded from gate face):
+.workbuddy/memory/2026-09-19.md
+.workbuddy/memory/2026-09-20.md
+.workbuddy/memory/2026-09-21.md
+.workbuddy/memory/MEMORY-ARCHIVE-20260920.md
+.workbuddy/memory/MEMORY.md
+# untracked inside gate SKIP dirs:
+.workbuddy/memory/2026-08-29.md
+.workbuddy/memory/2026-09-14.md
+.workbuddy/memory/2026-09-15.md
+.workbuddy/memory/2026-09-16.md
+.workbuddy/memory/2026-09-17.md
+.workbuddy/memory/2026-09-18.md
+.workbuddy/memory/2026-09-22.md
+.workbuddy/memory/2026-09-23.md
+
+== 3) 编码门禁 .pas 面 ==
+$ git ls-files "*.pas" | wc -l
+975
+$ git ls-files -d "*.pas" | wc -l
+0
+$ git ls-files -o --exclude-standard "*.pas"   # 未跟踪但被门禁扫到的 .pas
+.ai/subset/Core/b.pas
+.ai/subset/Features/a.pas
+编码门禁通过：977 个 .pas + 651 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+== 4) 恒等式 ==
+977(.pas) = 975 tracked - 0 deleted + 2 untracked - 0 in-SKIP
+498(.md)  = 485 tracked - 3 deleted + 29 untracked - 13 in-SKIP(5 tracked + 8 untracked)
+1475(行尾门禁) = 977 + 498
+
+== 5) 第二快照（生成时刻 2026-09-23 11:51:16 +0800，同一工作树，期间新建本单交付回执 .md） ==
+行尾门禁通过：检查了 1476 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+编码门禁通过：977 个 .pas + 652 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+-- 恒等式分量 --
+tracked(`git ls-files "*.pas" "*.md"`)      = 1460
+deleted(`git ls-files -d "*.pas" "*.md"`)     = 3
+untracked(`git ls-files -o --exclude-standard "*.pas" "*.md"`) = 32
+in-SKIP(tracked+untracked, .pas+.md)          = 13 (.workbuddy/memory 下 5 tracked + 8 untracked)
+977(.pas) = 975 - 0 + 2 - 0
+499(.md)  = 485 - 3 + 30 - 13
+1476      = 977 + 499
+-- 差值归因 --
+行尾 1475 -> 1476 (+1) / 扩展面 651 -> 652 (+1) / .pas 面 977 不变
+唯一新增未跟踪 .md（非 SKIP 内）= CodeReview/20260923-AUDIT-乙-D4-交付回执.md（本单交付物 ②，11:46 新建）

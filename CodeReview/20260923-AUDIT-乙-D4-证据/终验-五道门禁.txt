@@ -1,0 +1,26 @@
+D4 收口终验：五道门禁一次跑完（生成时刻 2026-09-23 11:52:15 +0800，仓库根，工作树含他方在途件与本单未提交交付件）
+判据7 口径：本单不得让既有门禁由绿转红；两处 EXIT=1 是本单之前既存的他人红（HEAD 净树逐字节一致，见 HEAD净树-*.txt），见回执 §四-1。
+===== GATE encoding-gate/check_pas_encoding =====
+编码门禁通过：977 个 .pas + 652 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+===== GATE eol-gate/check_eol =====
+行尾门禁通过：检查了 1476 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+===== GATE evidence-encoding-gate/check_evidence_encoding =====
+证据编码门禁通过：扫描 174 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+===== GATE managed-copy-gate/check_managed_copy =====
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+EXIT=1
+===== GATE build-ownership/check_build_ownership =====
+构建归属门禁失败，违规 3 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1

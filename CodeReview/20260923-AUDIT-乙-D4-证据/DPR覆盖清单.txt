@@ -1,0 +1,133 @@
+DPR 覆盖清单（WO-20260923-AUDIT-乙-D4 §1.5）
+生成时刻：2026-09-23 11:0x +0800　基准 HEAD：7ec9381（工作树含他方在途修改，.dpr 集合不受其影响）
+取证树：D:\_Progs\02Business\DeepBase
+
+判据（刻意保守，避免假绿）：
+  一件 .dpr 算「被入口覆盖」= 它的文件名（去扩展名）出现在任一「执行入口」文本中：
+    Scripts/**、09_工程脚本/**、.github/**、Tests/** 下的 .ps1/.js/.yml/.yaml/.bat/.cmd/.py
+  刻意不把 .dproj/.dpk 计入：每个 .dpr 都有一个同名 .dproj，若计入则 67 件全部「被覆盖」，那是假判据
+  （.dproj 里的引用只说明 IDE 里存在这个工程，不说明任何脚本/CI 会编译它）。
+
+已知判据偏差（必须与结论一起读）：按裸文件名匹配会「过匹配」短名——
+  Tools/CLI/DeepBase.dpr、Tools/Studio/Studio.dpr 等列出的命中数极大，仅因 "DeepBase"/"Studio"
+  这两个词几乎出现在每个脚本里。此类件的「覆盖」不成立，应判为未被明确引用；本清单不因此改判据，
+  只把偏差写出来（收紧判据＝换成一比一的显式工程路径引用表，属甲 D3 编译门的输入，不在本单做）。
+
+结论（两件点名件的归属，见工单 §1.5）：
+  Tests/Architecture/DeepBaseArchitectureTests.dpr → 已被覆盖：Scripts/run_architecture_checks.ps1 引用并执行
+      （主控「0 命中」来自只在 09_工程脚本/ 下搜索，未覆盖 Scripts/ 目录）
+  Tests/TestNewModules.dpr → 未被覆盖：不在任何入口脚本/BAT/CI 的引用里（本文件 UNCOVERED 清单第 27 行）
+  ⇒ 两件都必须出现在甲 D3 全库 .dpr 编译门的覆盖清单中；编译门本体由 D3 交付，本单不建门。
+
+计数：dpr total 67 / covered 29 / uncovered 38
+      uncovered 按目录：Tests 20、Tools 10、Examples 5、doQry 2、DeepBaseRun 1
+
+复现方式：把下方「附录：判据脚本」存为任意 .js 文件，在仓库根执行 `node <该文件>`（脚本以 process.cwd() 为根）。
+
+========== 附录：判据脚本（原样） ==========
+// D4 §1.5 取证：逐件 .dpr 判定「是否被任何构建/门禁入口引用」。
+// 判据：文件名(basename 去扩展) 是否出现在「执行入口」中：Scripts/*.ps1、09_工程脚本/**、.github/workflows/**。
+// 刻意排除 .dproj/.dpk 同级工程文件：每个 .dpr 都有一个同名 .dproj，把它算作「被引用」会让 67 件全绿，是假判据。
+const fs = require('fs'), path = require('path');
+const ROOT = process.cwd();
+function walk(dir, out) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (['.git', '.claude', '.tmp', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.superpowers', '.workbuddy', 'TestResults'].includes(e.name)) continue;
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p, out); else out.push(p);
+  }
+  return out;
+}
+const all = walk(ROOT, []);
+const dprs = all.filter(f => f.toLowerCase().endsWith('.dpr'));
+const ENTRY_DIRS = ['Scripts', '09_工程脚本', '.github', 'Tests'];
+const haystacks = all.filter(f => {
+  const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+  return /\.(ps1|js|yml|yaml|bat|cmd|py)$/.test(path.extname(f).toLowerCase())
+    && ENTRY_DIRS.some(d => rel.startsWith(d.replace(/\\/g, '/') + '/'))
+    && !f.toLowerCase().endsWith('.dpr');
+}).map(f => ({ f: path.relative(ROOT, f).replace(/\\/g, '/'), t: (() => { try { return fs.readFileSync(f, 'utf8'); } catch (e) { return ''; } })() }));
+const covered = [], uncovered = [];
+for (const d of dprs) {
+  const rel = path.relative(ROOT, d).replace(/\\/g, '/');
+  const name = path.basename(d, '.dpr');
+  const hits = haystacks.filter(h => h.t.includes(name)).map(h => h.f);
+  (hits.length ? covered : uncovered).push({ rel, hits });
+}
+console.log('dpr total', dprs.length, 'covered', covered.length, 'uncovered', uncovered.length);
+console.log('--- COVERED ---');
+for (const c of covered) console.log(c.rel, '<=', c.hits.join(','));
+console.log('--- UNCOVERED ---');
+for (const u of uncovered) console.log(u.rel);
+
+========== 附录：脚本原始输出（node .tmp/d4/dpr_coverage.js，在仓库根执行） ==========
+dpr total 67 covered 29 uncovered 38
+--- COVERED ---
+DeepFlow/Source/DeepFlow.dpr <= 09_工程脚本/build-ownership/check_build_ownership.js
+Examples/DataBindingDemo/DataBindingDemo.dpr <= Scripts/build_examples_win64.ps1
+Examples/FMXDemo/FMXPlatformDemo.dpr <= Scripts/build_examples_win64.ps1
+Examples/FullDemo/FullDemo.dpr <= Scripts/build_examples_win64.ps1
+Examples/MicroserviceClientDemo/MicroserviceClientDemo.dpr <= Scripts/build_examples_win64.ps1
+Examples/MultiLanguageDemo/MultiLanguageDemo.dpr <= Scripts/build_examples_win64.ps1
+Examples/MVVMDemo/MVVMDemo.dpr <= Scripts/build_examples_win64.ps1
+Examples/Phase0Demo/Phase0Demo.dpr <= Scripts/build_examples_win64.ps1
+Examples/Phase1Demo/Phase1Demo.dpr <= Scripts/build_examples_win64.ps1
+Examples/Templates/CRUDApp/CRUDApp.dpr <= Scripts/build_examples_win64.ps1
+Examples/Templates/DataAnalyzer/DataAnalyzer.dpr <= Scripts/build_examples_win64.ps1
+Examples/Templates/DocManager/DocManager.dpr <= Scripts/build_examples_win64.ps1
+Tests/Acceptance/DeepBaseAcceptanceTest.dpr <= Tests/Acceptance/RunAcceptanceTest.bat
+Tests/Architecture/DeepBaseArchitectureTests.dpr <= Scripts/run_architecture_checks.ps1
+Tests/AutoFix/Fixtures/AutoFixHarness.dpr <= Scripts/autofix/_smoke-test.ps1,Tests/AutoFix/e2e-dry-run.ps1,Tests/AutoFix/Fixtures/build.bat
+Tests/DeepBaseTests.dpr <= Scripts/autofix/compiler.ps1,Scripts/r5_m2_ubs2_migration_drill.ps1,Scripts/run_tests.ps1,Tests/AutoFix/compiler.Tests.ps1
+Tests/Governance/ConfigRegistrarPBT.dpr <= Tests/Governance/build_pbt.bat
+Tests/InferenceTests.dpr <= Tests/compile_inference.cmd
+Tests/Integration/DeepBaseIntegrationTests.dpr <= Scripts/run_tests.ps1
+Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr <= Tests/Plugins/build_plugin_tests.bat
+Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr <= Tests/Plugins/build_plugin_tests.bat
+Tests/Plugins/Fixture/TestPlugin77.dpr <= Tests/Plugins/build_plugin_tests.bat
+Tests/Plugins/Fixture/TestPluginABI10.dpr <= Tests/Plugins/build_plugin_tests.bat
+Tests/Plugins/PluginLifecycleHarness.dpr <= Tests/Plugins/build_plugin_tests.bat
+Tests/Speech/SpeechSpike.dpr <= Tests/Speech/build.bat,Tests/Speech/build_spike.bat
+Tests/Speech/TestSpeechHeadless.dpr <= Tests/Speech/build_tests.bat,Tests/Speech/_build.bat
+Tests/Stress/DeepBaseStressTests.dpr <= Tests/Stress/run_stress_tests.bat,Tests/Stress/run_stress_tests.ps1
+Tools/CLI/DeepBase.dpr <= .github/workflows/delphi-ci.yml,09_工程脚本/build-ownership/check_build_ownership.js,09_工程脚本/build-ownership/test_negative_sample.js,09_工程脚本/encoding-gate/check_pas_encoding.js,09_工程脚本/eol-gate/check_eol.js,09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js,09_工程脚本/gate-args.js,09_工程脚本/managed-copy-gate/check_managed_copy.js,Scripts/autofix/ai-call.ps1,Scripts/autofix/autofix-cli.ps1,Scripts/autofix/autofix.ps1,Scripts/autofix/compiler.ps1,Scripts/autofix/delphi-env.ps1,Scripts/autofix/fix-cache.ps1,Scripts/autofix/lint-pascal-deps.ps1,Scripts/autofix/_common.ps1,Scripts/autofix/_smoke-test.ps1,Scripts/build_examples_win64.ps1,Scripts/build_packages_win64.ps1,Scripts/check-entropy.ps1,Scripts/check-layer-violations.ps1,Scripts/check-security-patterns.ps1,Scripts/check_cabi_pure_c.py,Scripts/check_jcs_crosslang.py,Scripts/check_rename_residue.ps1,Scripts/compile_core_packages_win64.ps1,Scripts/compile_packages_win64.ps1,Scripts/coverage_check.ps1,Scripts/gen_ehai_symbol_baseline.py,Scripts/migrate_llm_credentials.ps1,Scripts/r5_m2_ubs2_migration_drill.ps1,Scripts/run_architecture_checks.ps1,Scripts/run_tests.ps1,Scripts/_fix_line.ps1,Tests/Acceptance/RunAcceptanceTest.bat,Tests/AutoFix/compiler.Tests.ps1,Tests/AutoFix/diff-guard.Tests.ps1,Tests/AutoFix/Fixtures/build.bat,Tests/Speech/_build.bat,Tests/Stress/run_stress_tests.bat,Tests/Stress/run_stress_tests.ps1
+Tools/Studio/Studio.dpr <= .github/workflows/delphi-ci.yml,Scripts/autofix/delphi-env.ps1,Scripts/build_examples_win64.ps1,Scripts/build_packages_win64.ps1,Scripts/run_architecture_checks.ps1,Scripts/run_tests.ps1,Scripts/verify_doqry.ps1,Tests/compile_inference.cmd,Tests/Speech/build.bat,Tests/Speech/_build.bat
+--- UNCOVERED ---
+DeepBaseRun/DeepBaseRun.dpr
+doQry/examples/DoQryDemo/DoQryDemo.dpr
+doQry/prjDoQry.dpr
+Examples/AIErrorHandlerDemo/AIErrorHandlerDemo.dpr
+Examples/AutoFixDemo/AutoFixDemo.dpr
+Examples/HbColdStartProbe/HbColdStartProbe.dpr
+Examples/HbSnapshotDemo/HbSnapshotDemo.dpr
+Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr
+Tests/DebugTest.dpr
+Tests/DebugTest2.dpr
+Tests/DebugTest3.dpr
+Tests/DebugTest4.dpr
+Tests/DebugTest5.dpr
+Tests/DebugTest6.dpr
+Tests/FMX/TestFMXPlatformStandalone.dpr
+Tests/GUI/DeepBaseGUITests.dpr
+Tests/GUI/PageDriverSmoke.dpr
+Tests/MinimalDUnitX.dpr
+Tests/SimpleTest.dpr
+Tests/TestBplR7P4.dpr
+Tests/TestCryptoR7P1.dpr
+Tests/TestDeepBaseRSA.dpr
+Tests/TestGateVerdictAndA8.dpr
+Tests/TestLLMClient.dpr
+Tests/TestLLMProxyClient.dpr
+Tests/TestNetR7P2.dpr
+Tests/TestNewModules.dpr
+Tests/TestUpdateChainM1.dpr
+Tools/Calibration/Calib.Record.dpr
+Tools/Calibration/Calib.Sweep.dpr
+Tools/FMXGallery/hbtheme_fmx_gallery.dpr
+Tools/Gallery/hbtheme_gallery.dpr
+Tools/LogAnalyzer/LogAnalyzer.dpr
+Tools/SeedTool/SeedTool.dpr
+Tools/Studio/DeepBaseStudio.dpr
+Tools/Tray/DeepBaseTray.dpr
+Tools/UniPublisher/DeepPublisher.dpr
+Tools/UpdaterHelper/UpdaterHelper.dpr

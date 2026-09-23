@@ -1,0 +1,6 @@
+
+==============================================
+   Encoding Gate (check_pas_encoding.js)
+==============================================
+Encoding Gate: FAILED - gate script not found under E:\Scratch\temp\d4-empty-15c760fb85d347be9a9037f4b4c3e6cb\09_*; gate did not run
+allPassed-after-missing-gate = False

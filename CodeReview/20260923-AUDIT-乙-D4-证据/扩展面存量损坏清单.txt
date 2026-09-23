@@ -1,0 +1,16 @@
+非.pas 硬违规面总数 = 650
+分扩展名: {".md":497,".sql":14,".dpk":25,".dpr":67,".fmx":7,".dfm":40}
+存量违规 13 件:
+  Examples/FullDemo/FullDemo.dpr  <= G2
+  history.md  <= G2
+  sql/llm_prompts_init.sql  <= G2
+  sql/studio_init.sql  <= G2
+  sql/tier0_init.sql  <= G2
+  sql/tier1_init.sql  <= G2
+  sql/tier2_init.sql  <= G2
+  sql/upgrade_v0.3_schema_fix.sql  <= G2
+  Tests/Acceptance/DeepBaseAcceptanceTest.dpr  <= G2
+  Tests/GUI/DeepBaseGUITests.dpr  <= G2
+  Tools/LogAnalyzer/LogAnalyzer.dpr  <= G2
+  Tools/SeedTool/SeedTool.dpr  <= G2
+  Tools/Studio/Studio.dpr  <= G2
