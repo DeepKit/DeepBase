@@ -1,0 +1,3 @@
+[1/1] Tests/Speech/TestSpeechHeadless.dpr CONFIG=default BUILD_EXIT=0
+编译门禁统计：DPR总数=1 成功=1 失败=0 被跳过=0 失败子路径=0 .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁通过：1 个 .dpr 全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）

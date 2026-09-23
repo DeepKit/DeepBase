@@ -1,0 +1,17 @@
+$ # WO-20260923-AUDIT-甲-D5 §1.1 判据3 补证 · VCL 面 6 件直编探针
+$ # 为什么需要探针：VCL/DeepBase.VCL.HB.{Grid,NavTree,PageControl,Tray,Cards,Controls}.pas
+$ #   只被 DeepBaseVCL.dpk 引用，不在任何 .dpr 的可达面上 ⇒ 甲 D3 的 .dpr 编译门扫不到它们。
+$ #   包面由甲 D4 补；本节先用等价搜索面（与 check_build.js UNIT_DIRS 同构）直编取证，证明删私有副本后仍绿。
+$ # 工作树：.tmp/wt_d5 @ 72fa744（含本单未提交改动）；脚本 .tmp/probe-vcl.cjs（不入库，落在 SKIP 的 .tmp 内）
+$ node .tmp/probe-vcl.cjs
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Cache.pas(181) Hint: H2219 Private symbol 'DoEvict' declared but never used
+14537 lines, 1.30 seconds, 3428160 bytes code, 355372 bytes data.
+BUILD_EXIT=0
+
+# 探针程序 uses 清单：DeepBase.VCL.HB.Controls / Grid / NavTree / PageControl / Tray / Cards
+# dcc64 会递归编译 interface uses 依赖链，故 EXIT=0 同时证明：
+#   a) 私有 ColorToARGB 副本删除后，这 5 件的调用面全部解析到 DeepBase.VCL.HB.Controls 里的唯一声明；
+#   b) Controls 转发到 Core.HbColorWithAlpha 的委托链在 VCL 侧可编译。
+# 唯一一条 Hint 属 Core/DeepBase.Cache.pas 既有存量，与本单无关。

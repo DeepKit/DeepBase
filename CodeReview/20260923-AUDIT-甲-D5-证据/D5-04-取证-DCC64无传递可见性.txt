@@ -1,0 +1,39 @@
+D5-04 取证：dcc64 不做「传递可见性」——修 TestSpeechHeadless.dpr 的依据
+=============================================================
+
+背景：修完 Features/DeepBase.Speech.WakeWord.pas 的三处类型缺陷后（见 D5-05），
+Tests/Speech/TestSpeechHeadless.dpr 暴露出下一条错误：
+
+  TestSpeechHeadless.dpr(352) Error: E2003 Undeclared identifier: 'TVoiceProfileId'
+
+`TVoiceProfileId` 定义在 Features/DeepBase.Speech.Voiceprint.Contracts.pas:31（interface type 段），
+而该 dpr 的 uses 只列了 DeepBase.Speech.Voiceprint（:29）；Voiceprint.pas:28 在 **interface uses**
+里引了 Contracts。所以问题归结为一个编译器语义问题：客户端能否透过
+「我用的单元之 interface uses」看到第三方单元的声明。
+
+本实验用最小可复现单元对回答它（与仓内代码无关，排除一切干扰）：
+
+  uvuea.pas: interface 声明 `TAlphaThing = string`
+  uvueb.pas: interface uses uvuea（不声明任何东西）
+  probe3.dpr: uses uvueb; var X: TAlphaThing
+
+结果（Delphi 37.0 / dcc64 37.0，Win64，参数与门禁同构：-Q -B -U…）：
+
+  ===== probe3 rc=1 =====
+  probe3.dpr(3) Error: E2003 Undeclared identifier: 'TAlphaThing'
+
+⇒ ** dcc64 不透过 interface uses 传递声明可见性。**（对照：把 Contracts 直接写进 uses 的
+   probe2.dpr 同一批次编译 rc=0。）
+
+因此 Voiceprint.pas:39-42 原注释「Re-exported here for source-compat.」描述的是一个
+Delphi 不存在的机制，正是这条错误注释让客户端漏写 uses。修法取「客户端自己声明依赖」：
+
+* Tests/Speech/TestSpeechHeadless.dpr:30 补 `DeepBase.Speech.Voiceprint.Contracts,`
+  ——仓内既有正确样板是 Tests/Test.DeepBase.Speech.Voiceprint.pas:21-22，两个单元都列。
+* Features/DeepBase.Speech.Voiceprint.pas:42-43 把失效的「re-export」表述改成真实约束，
+  防止下一个客户端再踩。
+
+两处都不是放宽门禁、不是加开关（H8），是补齐声明面。
+
+复现材料：.tmp/probe/{probe1.dpr,probe2.dpr,probe3.dpr,u/uvuea.pas,u/uvueb.pas,run.cjs}
+（.tmp 在门禁 SKIP 名单内，不入库）

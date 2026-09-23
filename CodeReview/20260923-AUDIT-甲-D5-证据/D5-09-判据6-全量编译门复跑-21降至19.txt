@@ -1,0 +1,77 @@
+判据 6 证据：修复后全量编译门复跑，红项 21 → 19，且消失的正是本单修的两件
+================================================================================
+
+判定现场（按工单口径：编译与全量复跑走隔离工作树 @ 目标 commit，共享树结论无效）
+--------------------------------------------------------------------------------
+- commit        : 4190bf20e77f8c052d9d49da0129cc0e1d22a8ad（甲 D5 三件代码面已由 dbd672e6 落库）
+- 基线 commit   : 72fa744（D3 建门验收点，21 红清单出处 CodeReview/20260923-AUDIT-甲-D3-证据/HEAD-21红-首个错误行.txt）
+- 隔离工作树    : D:\_Progs\02Business\DeepBase\.tmp\wt_d5_j6（git worktree add --detach 4190bf2）
+- 命令          : DEEPBASE_DUNITX_SOURCE='D:\ProgramData\delphi\DUnitX\Source' \
+                  node 09_工程脚本/build-gate/check_build.js --all
+- GATE_EXIT     : 1（仍红 19 件，属预期：其余红项归乙 D6 / 甲类 4 件 / 乙类 1 件，非本单 scope）
+
+门禁统计行（原样）
+--------------------------------------------------------------------------------
+编译门禁统计：DPR总数=67 成功=48 失败=19 被跳过=0 失败子路径=0 .res生成=21 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：19 个 .dpr 编译不过
+
+- DPR总数 67 = `git ls-files '*.dpr' | wc -l` = 67（本次实测）；门禁面与索引一致，未放宽。
+- 被跳过=0 / 失败子路径=0：本单没有动用任何门禁开关（判据 4 的复算面）。
+
+红项集合差（路径级，逐位比对，非按错误文案比对）
+--------------------------------------------------------------------------------
+$ 基线路径集（21）∩ 现路径集（19）
+消失的红（= 本单修掉的）        : 2 件
+  Tests/Speech/TestSpeechHeadless.dpr      ← §1.2 WakeWord E2010（判据 2）
+  Tools/FMXGallery/hbtheme_fmx_gallery.dpr ← §1.1 FMX Choice E2003 'ColorToARGB'（判据 1）
+新增的红                          : 0 件
+其余 19 件（基线 21 − 消失 2）     : 全部仍在，路径与错误文案逐项未变
+
+⇒ 判据 6 成立方式：数量下降 = 21→19 = 恰好本单处理的 2 件转绿，其余红项集合不变。
+   未通过任何门禁改动达成（check_build.js 在 72fa744..4190bf2 区间 diff 为空，见下）。
+
+现 19 红清单（路径 + 首个错误行，供主控独立复算）
+--------------------------------------------------------------------------------
+DeepFlow/Source/DeepFlow.dpr                                  DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+Examples/MVVMDemo/MVVMDemo.dpr                                LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+Examples/MultiLanguageDemo/MultiLanguageDemo.dpr              MainForm.pas(119) Error: E2052 Unterminated string
+Examples/Templates/CRUDApp/CRUDApp.dpr                        Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+Examples/Templates/DataAnalyzer/DataAnalyzer.dpr              DataAnalyzer.dpr(13) Fatal: F1026 File not found: 'Main.Form.pas'
+Examples/Templates/DocManager/DocManager.dpr                  Entity.Document.pas(14) Fatal: F2613 Unit 'DeepBase.ORM.Attributes' not found.
+Tests/Acceptance/DeepBaseAcceptanceTest.dpr                   AcceptanceRunner.pas(158) Error: E2052 Unterminated string
+Tests/GUI/DeepBaseGUITests.dpr                                DeepBase.GUITest.pas(819) Error: E2029 ')' expected but identifier '?' found
+Tests/GUI/PageDriverSmoke.dpr                                 PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+Tests/Plugins/PluginLifecycleHarness.dpr                      PluginLifecycleHarness.dpr(58) Error: E2003 Undeclared identifier: 'TDeepBasePluginManager'
+Tests/Speech/SpeechSpike.dpr                                  SpeechSpike.dpr(180) Error: E2003 Undeclared identifier: 'TProcessEntry32'
+Tests/Stress/DeepBaseStressTests.dpr                          Stress.Database.pas(170) Error: E2010 Incompatible types: 'FireDAC.Comp.Client.TFDConnection' and 'TObject'
+Tests/TestLLMClient.dpr                                       TestLLMClient.dpr(35) Error: E2052 Unterminated string
+Tools/Calibration/Calib.Record.dpr                            Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+Tools/Gallery/hbtheme_gallery.dpr                             Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+Tools/LogAnalyzer/LogAnalyzer.dpr                             LogAnalyzer.MainForm.pas(186) Error: E2052 Unterminated string
+Tools/Studio/DeepBaseStudio.dpr                               DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+Tools/UniPublisher/DeepPublisher.dpr                          Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+doQry/examples/DoQryDemo/DoQryDemo.dpr                        DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+
+Tools/Studio/DeepBaseStudio.dpr 的口径变化（判据 5 的后半，如实登记）
+--------------------------------------------------------------------------------
+基线（无 .dproj）：Forms\Studio.MainForm.pas(43) Fatal: F2613 Unit 'Studio.ConfigFrame' not found.
+现在（补 .dproj 后）：DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+- F2613 是环境假红（缺省搜索面不含 Frames/），已由补 .dproj 消除：本行 CONFIG=DeepBaseStudio.dproj（证据 D5-06）。
+- 剩下的 E2003 是真实代码红：`DeepBaseStudio.dpr:31` 引用 `TStudioMainForm`，而 Studio.MainForm.pas 里
+  声明的是 `TfrmStudioMain`/`frmStudioMain`（证据 D5-08 §B）。该工程与 `Tools/Studio/Studio.dpr` 构成同目录
+  双入口，修法涉及「删工程」或「登记第二套入口」，两者都超出本单授权 ⇒ 交主控裁定（回执 §四），
+  故判据 5 的「BUILD_EXIT=0」在本单内不可达，不是修一半。
+
+改动归属（防把他人成果算进本单）
+--------------------------------------------------------------------------------
+$ git diff --stat 72fa744 4190bf2 -- '09_工程脚本/build-gate/'   → 空（门禁未动）
+$ git diff --name-only 72fa744 4190bf2 -- '*.pas' '*.dpr' '*.dproj'
+  → 仅本单 13 件（Core/DeepBase.HB.Core.pas、FMX/DeepBase.FMX.HB.Choice.pas、
+    Features/DeepBase.Speech.{SAPI.Decl,Voiceprint,WakeWord}.pas、Tests/Speech/TestSpeechHeadless.dpr、
+    VCL/DeepBase.VCL.HB.{Cards,Controls,Grid,NavTree,PageControl,Tray}.pas、Tools/Studio/DeepBaseStudio.dproj）
+  ⇒ 72fa744..4190bf2 区间内的其余提交（乙 D5 e423153/dbd672e6/…）只动 09_工程脚本 的 js 与文档，
+    不影响本次红项集合；红项 21→19 全部归因本单。
+
+时间口径
+--------------------------------------------------------------------------------
+本 log 未记录起止时间戳，故不作为耗时证据；耗时以 D4 单（3.4）重新实测为准。

@@ -1,0 +1,15 @@
+$ # WO-20260923-AUDIT-甲-D5 §1.3 判据5 · after（补 Tools/Studio/DeepBaseStudio.dproj 之后）
+$ # 同一工作树 .tmp/wt_d5 @ 72fa744，唯一变化 = 新增 Tools/Studio/DeepBaseStudio.dproj（门禁搜索面未动，见下方取证）
+$ node "09_工程脚本/build-gate/check_build.js" --dpr Tools/Studio/DeepBaseStudio.dpr
+GATE_EXIT=1
+[1/1] Tools/Studio/DeepBaseStudio.dpr CONFIG=DeepBaseStudio.dproj BUILD_EXIT=1
+  Tools/Studio/DeepBaseStudio.dpr 编译失败：DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0 .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：1 个 .dpr 编译不过
+  Tools/Studio/DeepBaseStudio.dpr EXIT=1  DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+
+# 前后对比结论：
+# 1) CONFIG 由 default 翻成 DeepBaseStudio.dproj，F2613（环境性假红）消失 ⇒ 「补 .dproj」确实是 F2613 的因。
+# 2) 剩下的红是 E2003：DeepBaseStudio.dpr:31 引用 TStudioMainForm/StudioMainForm，全仓唯一定义处即本行自身（git grep 见 D5-08）。
+#    真实主窗体是 Tools/Studio/Forms/Studio.MainForm.pas:60 的 TfrmStudioMain / var frmStudioMain（.dfm 根亦为 frmStudioMain），
+#    并由同目录的 Studio.dpr + Studio.dproj 使用。⇒ 判据5 的 BUILD_EXIT=0 在「不新增第二套 Studio 入口、不删死工程」前提下不可达。

@@ -1,0 +1,68 @@
+WO-20260923-AUDIT-甲-D5 取证 · 静态计数（判据3）与 Tools/Studio 双入口（§1.3 前提更正）
+日期 2026-09-23 · 工作树 .tmp/wt_d5 @ 72fa744（含本单未提交改动）· 命令均在仓库根执行
+
+════════════════════════════════════════════════════════════════════════════
+§A 判据3：ColorToARGB 收敛到恰好一处定义
+════════════════════════════════════════════════════════════════════════════
+$ grep -rn "function ColorToARGB" --include=*.pas Core Features Persistence VCL FMX Governance Tests Tools
+VCL/DeepBase.VCL.HB.Controls.pas:403:function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
+VCL/DeepBase.VCL.HB.Controls.pas:744:function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte): ARGB;
+
+⇒ 一个函数（interface 声明 :403 + implementation 实现 :744，Delphi 语法要求两行），全库唯一。
+
+$ grep -rln "ColorToARGB" --include=*.pas Core Features Persistence VCL FMX Governance Tests Tools | sort   # 14 件
+  VCL/DeepBase.VCL.HB.Controls.pas   ← 唯一声明者
+  VCL/DeepBase.VCL.HB.Cards.pas  Grid  NavTree  PageControl  Tray   ← 本单删掉私有副本、改为引用
+  VCL/DeepBase.VCL.HB.Choice.pas  Dialogs  Glass  Inputs  Status  Terminal  Text  Voice   ← 原本就引用 Controls 的 9 件
+
+$ grep -rn "function HbColorWithAlpha" --include=*.pas Core VCL FMX
+Core/DeepBase.HB.Core.pas:267:function HbColorWithAlpha(AColor: TAlphaColor; AAlphaOverride: Byte = 0): TAlphaColor;
+Core/DeepBase.HB.Core.pas:1320:function HbColorWithAlpha(AColor: TAlphaColor; AAlphaOverride: Byte): TAlphaColor;
+
+$ grep -rn "HbColorWithAlpha" --include=*.pas Core VCL FMX | wc -l
+29        ← 1 处声明 + 1 处实现 + 25 处 FMX Choice 调用 + 2 处 VCL Controls 转发/引用
+⇒ 面无关的字节打包逻辑只在 Core 一处（SSOT），VCL 的 ColorToARGB 只是把 TAlphaColor 结果转成 ARGB 的薄封装。
+
+【对甲 D5 工单 §1.1 取证口径的更正】
+工单原文：「grep -rn 'function ColorToARGB' ⇒ 零命中」「全仓 15 个文件在调用一个没有定义的函数」。
+实测：修复前该 grep 有 6 处命中（Controls 1 + 私有副本 5），15 个调用方里 14 个能解析到定义；
+     真正 E2003 的只有 FMX/DeepBase.FMX.HB.Choice.pas 一件（D5-01 before 日志为证）。
+     工单结论（要做 SSOT 收敛）成立，取证数字偏大，按本节实测为准。
+
+════════════════════════════════════════════════════════════════════════════
+§B §1.3 前提更正：Tools/Studio 有两个 Studio 入口，DeepBaseStudio.dpr 是引用不存在类型的死件
+════════════════════════════════════════════════════════════════════════════
+$ git grep -n "TStudioMainForm"
+Tools/Studio/DeepBaseStudio.dpr:31:  Application.CreateForm(TStudioMainForm, StudioMainForm);
+$ git grep -n "StudioMainForm"
+Tools/Studio/DeepBaseStudio.dpr:18:  Studio.MainForm in 'Forms\Studio.MainForm.pas' {StudioMainForm};
+Tools/Studio/DeepBaseStudio.dpr:31:  Application.CreateForm(TStudioMainForm, StudioMainForm);
+
+⇒ TStudioMainForm / StudioMainForm 在全仓仅此一处出现（就是引用它自己那一行），无任何定义处。
+
+真实主窗体（Tools/Studio/Forms/Studio.MainForm.pas）：
+  :60   TfrmStudioMain = class(TForm)
+  :123  frmStudioMain: TfrmStudioMain;
+  Tools/Studio/Forms/Studio.MainForm.dfm:1  object frmStudioMain: TfrmStudioMain
+
+使用它的是同目录的活工程 Tools/Studio/Studio.dpr（program Studio，var frmStudioMain，含 11 件 Frames）
++ Tools/Studio/Studio.dproj（MainSource=Studio.dpr；DCCReference 的 <Form> 亦为 frmStudioMain）。
+
+git 历史（谁被维护）：
+  DeepBaseStudio.dpr  最后一次被碰 = cd20ddc6(2026-05-16) 之前 = ca3364ee(2026-05-09 更名 UniBase→DeepBase)
+  Studio.dpr          ca3364ee(2026-05-09)
+  Studio.dproj        d327c40f(2026-06-17) 0c899b59(2026-06-15) 6072d996(2026-06-02) cd20ddc6 之后仍在维护
+⇒ Studio 家族真相源 = Studio.dpr + Studio.dproj（IDE 侧也只有它有 .dproj，产物 Studio.exe 亦由它产出）；
+   DeepBaseStudio.dpr 自 ca3364ee 起就引用不存在的窗体类，从未编译过（甲 D3 基线第 19 行即此件）。
+
+════════════════════════════════════════════════════════════════════════════
+§C 本单处置与不开口子的理由
+════════════════════════════════════════════════════════════════════════════
+按 §1.3 的字面修法补了 Tools/Studio/DeepBaseStudio.dproj（搜索面/命名空间逐字镜像 Studio.dproj，避免同族工具造第二套环境真相源）。
+效果（D5-05 / D5-06 两跑）：CONFIG 由 default 翻成 DeepBaseStudio.dproj，F2613 环境假红消失，剩余红为真实代码红 E2003。
+门禁本体（check_build.js 的 UNIT_DIRS / DEFAULT_NS）未改一字 ⇒ 判据5 后半「搜索面未放宽」成立。
+
+判据5 前半「BUILD_EXIT=0」不可达，且两条可达路径都不该由本单擅自选：
+  (i) 把 :31 改成 TfrmStudioMain/frmStudioMain ⇒ 立刻绿，但等于给同一工具登记第二套入口（架构分叉，AGENTS.md 禁止）；
+  (ii) 删除 DeepBaseStudio.dpr（连带本单新增的 .dproj）⇒ 消掉分叉，但删工程属不可逆处置，工单未授权。
+按「数量的下降必须是修复的结果，不是视线的转移」，本单不删、不改引用、不动门禁，把该件如实留在红里并登记待主控裁定。
