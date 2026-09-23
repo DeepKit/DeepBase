@@ -110,26 +110,26 @@ begin
     UB.I18n.AddTranslation('%d items', 'en-US', '%d items');
     
     // Chinese translations
-    UB.I18n.AddTranslation('Welcome', 'zh-CN', '娆㈣繋');
-    UB.I18n.AddTranslation('Hello', 'zh-CN', '浣犲ソ');
-    UB.I18n.AddTranslation('Save', 'zh-CN', '淇濆瓨');
-    UB.I18n.AddTranslation('Cancel', 'zh-CN', '鍙栨秷');
-    UB.I18n.AddTranslation('Open File', 'zh-CN', '鎵撳紑鏂囦欢');
-    UB.I18n.AddTranslation('Settings', 'zh-CN', '璁剧疆');
-    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '浣犲ソ锛?s锛佷綘浠婂勾 %d 宀併€?);
-    UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 涓」鐩?);
-    UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 涓」鐩?);
+    UB.I18n.AddTranslation('Welcome', 'zh-CN', '欢迎');
+    UB.I18n.AddTranslation('Hello', 'zh-CN', '你好');
+    UB.I18n.AddTranslation('Save', 'zh-CN', '保存');
+    UB.I18n.AddTranslation('Cancel', 'zh-CN', '取消');
+    UB.I18n.AddTranslation('Open File', 'zh-CN', '打开文件');
+    UB.I18n.AddTranslation('Settings', 'zh-CN', '设置');
+    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '你好，%s！你今年 %d 岁。');
+    UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 个项目');
+    UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 个项目');
     
     // Japanese translations
-    UB.I18n.AddTranslation('Welcome', 'ja-JP', '銈堛亞銇撱仢');
-    UB.I18n.AddTranslation('Hello', 'ja-JP', '銇撱倱銇仭銇?);
-    UB.I18n.AddTranslation('Save', 'ja-JP', '淇濆瓨');
-    UB.I18n.AddTranslation('Cancel', 'ja-JP', '銈儯銉炽偦銉?);
-    UB.I18n.AddTranslation('Open File', 'ja-JP', '銉曘偂銈ゃ儷銈掗枊銇?);
-    UB.I18n.AddTranslation('Settings', 'ja-JP', '瑷畾');
-    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', '銇撱倱銇仭銇€?s銇曘倱锛併亗銇仧銇?d姝炽仹銇欍€?);
-    UB.I18n.AddTranslation('%d item', 'ja-JP', '%d 銈€偆銉嗐儬');
-    UB.I18n.AddTranslation('%d items', 'ja-JP', '%d 銈€偆銉嗐儬');
+    UB.I18n.AddTranslation('Welcome', 'ja-JP', 'ようこそ');
+    UB.I18n.AddTranslation('Hello', 'ja-JP', 'こんにちは');
+    UB.I18n.AddTranslation('Save', 'ja-JP', '保存');
+    UB.I18n.AddTranslation('Cancel', 'ja-JP', 'キャンセル');
+    UB.I18n.AddTranslation('Open File', 'ja-JP', 'ファイルを開く');
+    UB.I18n.AddTranslation('Settings', 'ja-JP', '設定');
+    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'こんにちは、%sさん！あなたは%d歳です。');
+    UB.I18n.AddTranslation('%d item', 'ja-JP', '%d アイテム');
+    UB.I18n.AddTranslation('%d items', 'ja-JP', '%d アイテム');
   end;
   
   LoadLanguages;

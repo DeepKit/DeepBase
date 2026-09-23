@@ -1,13 +1,13 @@
 ﻿{ ============================================================================
-  LogAnalyzer.MainForm - 鏃ュ織鍒嗘瀽鍣ㄤ富绐椾綋
+  LogAnalyzer.MainForm - 日志分析器主窗体
 
-  鐗堟湰: 1.0
-  鍔熻兘:
-    - 鎵撳紑澶氫釜鏁版嵁搴?
-    - 鏃ュ織鍒楄〃鏄剧ず
-    - 鏃堕棿/绾у埆/鍏抽敭璇嶈繃婊?
-    - 缁熻闈㈡澘
-    - 瀵煎嚭鍔熻兘
+  版本: 1.0
+  功能:
+    - 打开多个数据库
+    - 日志列表显示
+    - 时间/级别/关键词过滤
+    - 统计面板
+    - 导出功能
   ============================================================================ }
 
 unit LogAnalyzer.MainForm;
@@ -58,7 +58,7 @@ uses
 
 type
   TfrmLogAnalyzer = class(TForm)
-    { 鑿滃崟 }
+    { 菜单 }
     MainMenu: TMainMenu;
     mnuFile: TMenuItem;
     mnuFileOpen: TMenuItem;
@@ -75,7 +75,7 @@ type
     mnuHelp: TMenuItem;
     mnuHelpAbout: TMenuItem;
 
-    { 宸ュ叿鏍?}
+    { 工具栏 }
     pnlToolbar: TPanel;
     lblDatabase: TLabel;
     cboDatabase: TComboBox;
@@ -83,7 +83,7 @@ type
     btnCloseDB: TButton;
     btnRefresh: TButton;
 
-    { 杩囨护闈㈡澘 }
+    { 过滤面板 }
     pnlFilter: TPanel;
     lblFromTime: TLabel;
     dtpFrom: TDateTimePicker;
@@ -103,7 +103,7 @@ type
     btnSearch: TButton;
     btnClear: TButton;
 
-    { 涓诲唴瀹瑰尯 }
+    { 主内容区 }
     splMain: TSplitter;
     pnlLeft: TPanel;
     lvLogs: TListView;
@@ -116,10 +116,10 @@ type
     lblStatsTitle: TLabel;
     lvStats: TListView;
 
-    { 鐘舵€佹爮 }
+    { 状态栏 }
     StatusBar: TStatusBar;
 
-    { 瀵硅瘽妗?}
+    { 对话框 }
     dlgOpen: TOpenDialog;
     dlgSave: TSaveDialog;
 
@@ -183,7 +183,7 @@ implementation
 {$R *.dfm}
 
 const
-  APP_TITLE = 'DeepBase 鏃ュ織鍒嗘瀽鍣?;
+  APP_TITLE = 'DeepBase 日志分析器';
   VERSION = '1.0';
 
 { TfrmLogAnalyzer }
@@ -201,11 +201,11 @@ begin
 
   CreateUI;
 
-  // 榛樿鏃堕棿鑼冨洿: 鏈€杩?4灏忔椂
+  // 默认时间范围: 最近24小时
   dtpFrom.DateTime := IncHour(Now, -24);
   dtpTo.DateTime := Now;
 
-  // 榛樿绾у埆
+  // 默认级别
   chkInfo.Checked := True;
   chkWarn.Checked := True;
   chkError.Checked := True;
@@ -233,19 +233,19 @@ procedure TfrmLogAnalyzer.CreateMenu;
 begin
   MainMenu := TMainMenu.Create(Self);
 
-  // 鏂囦欢鑿滃崟
+  // 文件菜单
   mnuFile := TMenuItem.Create(MainMenu);
-  mnuFile.Caption := '鏂囦欢(&F)';
+  mnuFile.Caption := '文件(&F)';
   MainMenu.Items.Add(mnuFile);
 
   mnuFileOpen := TMenuItem.Create(mnuFile);
-  mnuFileOpen.Caption := '鎵撳紑鏁版嵁搴?&O)...';
+  mnuFileOpen.Caption := '打开数据库(&O)...';
   mnuFileOpen.ShortCut := TextToShortCut('Ctrl+O');
   mnuFileOpen.OnClick := mnuFileOpenClick;
   mnuFile.Add(mnuFileOpen);
 
   mnuFileClose := TMenuItem.Create(mnuFile);
-  mnuFileClose.Caption := '鍏抽棴鏁版嵁搴?&C)';
+  mnuFileClose.Caption := '关闭数据库(&C)';
   mnuFileClose.OnClick := mnuFileCloseClick;
   mnuFile.Add(mnuFileClose);
 
@@ -254,17 +254,17 @@ begin
   mnuFile.Add(mnuFileSep1);
 
   mnuFileExportCSV := TMenuItem.Create(mnuFile);
-  mnuFileExportCSV.Caption := '瀵煎嚭涓?CSV...';
+  mnuFileExportCSV.Caption := '导出为 CSV...';
   mnuFileExportCSV.OnClick := mnuFileExportCSVClick;
   mnuFile.Add(mnuFileExportCSV);
 
   mnuFileExportJSON := TMenuItem.Create(mnuFile);
-  mnuFileExportJSON.Caption := '瀵煎嚭涓?JSON...';
+  mnuFileExportJSON.Caption := '导出为 JSON...';
   mnuFileExportJSON.OnClick := mnuFileExportJSONClick;
   mnuFile.Add(mnuFileExportJSON);
 
   mnuFileExportHTML := TMenuItem.Create(mnuFile);
-  mnuFileExportHTML.Caption := '瀵煎嚭涓?HTML...';
+  mnuFileExportHTML.Caption := '导出为 HTML...';
   mnuFileExportHTML.OnClick := mnuFileExportHTMLClick;
   mnuFile.Add(mnuFileExportHTML);
 
@@ -273,34 +273,34 @@ begin
   mnuFile.Add(mnuFileSep2);
 
   mnuFileExit := TMenuItem.Create(mnuFile);
-  mnuFileExit.Caption := '閫€鍑?&X)';
+  mnuFileExit.Caption := '退出(&X)';
   mnuFileExit.ShortCut := TextToShortCut('Alt+F4');
   mnuFileExit.OnClick := mnuFileExitClick;
   mnuFile.Add(mnuFileExit);
 
-  // 瑙嗗浘鑿滃崟
+  // 视图菜单
   mnuView := TMenuItem.Create(MainMenu);
-  mnuView.Caption := '瑙嗗浘(&V)';
+  mnuView.Caption := '视图(&V)';
   MainMenu.Items.Add(mnuView);
 
   mnuViewRefresh := TMenuItem.Create(mnuView);
-  mnuViewRefresh.Caption := '鍒锋柊(&R)';
+  mnuViewRefresh.Caption := '刷新(&R)';
   mnuViewRefresh.ShortCut := TextToShortCut('F5');
   mnuViewRefresh.OnClick := mnuViewRefreshClick;
   mnuView.Add(mnuViewRefresh);
 
   mnuViewStats := TMenuItem.Create(mnuView);
-  mnuViewStats.Caption := '鏄剧ず缁熻(&S)';
+  mnuViewStats.Caption := '显示统计(&S)';
   mnuViewStats.OnClick := mnuViewStatsClick;
   mnuView.Add(mnuViewStats);
 
-  // 甯姪鑿滃崟
+  // 帮助菜单
   mnuHelp := TMenuItem.Create(MainMenu);
-  mnuHelp.Caption := '甯姪(&H)';
+  mnuHelp.Caption := '帮助(&H)';
   MainMenu.Items.Add(mnuHelp);
 
   mnuHelpAbout := TMenuItem.Create(mnuHelp);
-  mnuHelpAbout.Caption := '鍏充簬(&A)...';
+  mnuHelpAbout.Caption := '关于(&A)...';
   mnuHelpAbout.OnClick := mnuHelpAboutClick;
   mnuHelp.Add(mnuHelpAbout);
 end;
@@ -317,7 +317,7 @@ begin
   lblDatabase := TLabel.Create(Self);
   lblDatabase.Parent := pnlToolbar;
   lblDatabase.SetBounds(10, 12, 50, 16);
-  lblDatabase.Caption := '鏁版嵁搴?';
+  lblDatabase.Caption := '数据库:';
 
   cboDatabase := TComboBox.Create(Self);
   cboDatabase.Parent := pnlToolbar;
@@ -328,28 +328,28 @@ begin
   btnOpenDB := TButton.Create(Self);
   btnOpenDB.Parent := pnlToolbar;
   btnOpenDB.SetBounds(380, 7, 80, 26);
-  btnOpenDB.Caption := '鎵撳紑...';
+  btnOpenDB.Caption := '打开...';
   btnOpenDB.OnClick := btnOpenDBClick;
 
   btnCloseDB := TButton.Create(Self);
   btnCloseDB.Parent := pnlToolbar;
   btnCloseDB.SetBounds(470, 7, 60, 26);
-  btnCloseDB.Caption := '鍏抽棴';
+  btnCloseDB.Caption := '关闭';
   btnCloseDB.OnClick := btnCloseDBClick;
 
   btnRefresh := TButton.Create(Self);
   btnRefresh.Parent := pnlToolbar;
   btnRefresh.SetBounds(540, 7, 60, 26);
-  btnRefresh.Caption := '鍒锋柊';
+  btnRefresh.Caption := '刷新';
   btnRefresh.OnClick := btnRefreshClick;
 
-  // 瀵硅瘽妗?
+  // 对话框
   dlgOpen := TOpenDialog.Create(Self);
-  dlgOpen.Filter := 'SQLite 鏁版嵁搴搢*.db;*.sqlite;*.sqlite3|鎵€鏈夋枃浠秥*.*';
-  dlgOpen.Title := '鎵撳紑鏃ュ織鏁版嵁搴?;
+  dlgOpen.Filter := 'SQLite 数据库|*.db;*.sqlite;*.sqlite3|所有文件|*.*';
+  dlgOpen.Title := '打开日志数据库';
 
   dlgSave := TSaveDialog.Create(Self);
-  dlgSave.Title := '瀵煎嚭鏃ュ織';
+  dlgSave.Title := '导出日志';
 end;
 
 procedure TfrmLogAnalyzer.CreateFilterPanel;
@@ -361,11 +361,11 @@ begin
   pnlFilter.BevelOuter := bvNone;
   pnlFilter.ParentBackground := False;
 
-  // 绗竴琛? 鏃堕棿鑼冨洿
+  // 第一行: 时间范围
   lblFromTime := TLabel.Create(Self);
   lblFromTime.Parent := pnlFilter;
   lblFromTime.SetBounds(10, 12, 50, 16);
-  lblFromTime.Caption := '浠?';
+  lblFromTime.Caption := '从:';
 
   dtpFrom := TDateTimePicker.Create(Self);
   dtpFrom.Parent := pnlFilter;
@@ -375,7 +375,7 @@ begin
   lblToTime := TLabel.Create(Self);
   lblToTime.Parent := pnlFilter;
   lblToTime.SetBounds(200, 12, 30, 16);
-  lblToTime.Caption := '鍒?';
+  lblToTime.Caption := '到:';
 
   dtpTo := TDateTimePicker.Create(Self);
   dtpTo.Parent := pnlFilter;
@@ -385,7 +385,7 @@ begin
   lblLevel := TLabel.Create(Self);
   lblLevel.Parent := pnlFilter;
   lblLevel.SetBounds(400, 12, 40, 16);
-  lblLevel.Caption := '绾у埆:';
+  lblLevel.Caption := '级别:';
 
   chkTrace := TCheckBox.Create(Self);
   chkTrace.Parent := pnlFilter;
@@ -417,11 +417,11 @@ begin
   chkFatal.SetBounds(775, 10, 55, 20);
   chkFatal.Caption := 'Fatal';
 
-  // 绗簩琛? 鍏抽敭璇嶆悳绱?
+  // 第二行: 关键词搜索
   lblSource := TLabel.Create(Self);
   lblSource.Parent := pnlFilter;
   lblSource.SetBounds(10, 48, 40, 16);
-  lblSource.Caption := '鏉ユ簮:';
+  lblSource.Caption := '来源:';
 
   edtSource := TEdit.Create(Self);
   edtSource.Parent := pnlFilter;
@@ -430,7 +430,7 @@ begin
   lblMessage := TLabel.Create(Self);
   lblMessage.Parent := pnlFilter;
   lblMessage.SetBounds(210, 48, 40, 16);
-  lblMessage.Caption := '娑堟伅:';
+  lblMessage.Caption := '消息:';
 
   edtMessage := TEdit.Create(Self);
   edtMessage.Parent := pnlFilter;
@@ -439,19 +439,19 @@ begin
   btnSearch := TButton.Create(Self);
   btnSearch.Parent := pnlFilter;
   btnSearch.SetBounds(520, 43, 60, 26);
-  btnSearch.Caption := '鎼滅储';
+  btnSearch.Caption := '搜索';
   btnSearch.OnClick := btnSearchClick;
 
   btnClear := TButton.Create(Self);
   btnClear.Parent := pnlFilter;
   btnClear.SetBounds(590, 43, 60, 26);
-  btnClear.Caption := '娓呴櫎';
+  btnClear.Caption := '清除';
   btnClear.OnClick := btnClearClick;
 end;
 
 procedure TfrmLogAnalyzer.CreateMainContent;
 begin
-  // 宸︿晶鏃ュ織鍒楄〃
+  // 左侧日志列表
   pnlLeft := TPanel.Create(Self);
   pnlLeft.Parent := Self;
   pnlLeft.Align := alClient;
@@ -473,26 +473,26 @@ begin
   end;
   with lvLogs.Columns.Add do
   begin
-    Caption := '鏃堕棿';
+    Caption := '时间';
     Width := 150;
   end;
   with lvLogs.Columns.Add do
   begin
-    Caption := '绾у埆';
+    Caption := '级别';
     Width := 60;
   end;
   with lvLogs.Columns.Add do
   begin
-    Caption := '鏉ユ簮';
+    Caption := '来源';
     Width := 120;
   end;
   with lvLogs.Columns.Add do
   begin
-    Caption := '娑堟伅';
+    Caption := '消息';
     Width := 500;
   end;
 
-  // 鍙充晶璇︽儏闈㈡澘
+  // 右侧详情面板
   pnlRight := TPanel.Create(Self);
   pnlRight.Parent := Self;
   pnlRight.Align := alRight;
@@ -510,7 +510,7 @@ begin
 
   tabDetails := TTabSheet.Create(pgcDetails);
   tabDetails.PageControl := pgcDetails;
-  tabDetails.Caption := '璇︽儏';
+  tabDetails.Caption := '详情';
 
   mmoDetails := TMemo.Create(Self);
   mmoDetails.Parent := tabDetails;
@@ -523,7 +523,7 @@ begin
 
   tabStats := TTabSheet.Create(pgcDetails);
   tabStats.PageControl := pgcDetails;
-  tabStats.Caption := '缁熻';
+  tabStats.Caption := '统计';
 
   pnlStats := TPanel.Create(Self);
   pnlStats.Parent := tabStats;
@@ -533,7 +533,7 @@ begin
   lblStatsTitle := TLabel.Create(Self);
   lblStatsTitle.Parent := pnlStats;
   lblStatsTitle.SetBounds(10, 10, 200, 16);
-  lblStatsTitle.Caption := '鏃ュ織缁熻';
+  lblStatsTitle.Caption := '日志统计';
   lblStatsTitle.Font.Style := [fsBold];
 
   lvStats := TListView.Create(Self);
@@ -546,18 +546,18 @@ begin
 
   with lvStats.Columns.Add do
   begin
-    Caption := '椤圭洰';
+    Caption := '项目';
     Width := 150;
   end;
   with lvStats.Columns.Add do
   begin
-    Caption := '鏁伴噺';
+    Caption := '数量';
     Width := 80;
     Alignment := taRightJustify;
   end;
   with lvStats.Columns.Add do
   begin
-    Caption := '鐧惧垎姣?;
+    Caption := '百分比';
     Width := 80;
     Alignment := taRightJustify;
   end;
@@ -572,12 +572,12 @@ begin
   with StatusBar.Panels.Add do
   begin
     Width := 200;
-    Text := '灏辩华';
+    Text := '就绪';
   end;
   with StatusBar.Panels.Add do
   begin
     Width := 150;
-    Text := '鏃ュ織: 0';
+    Text := '日志: 0';
   end;
   with StatusBar.Panels.Add do
   begin
@@ -600,7 +600,7 @@ begin
 
   if not FileExists(APath) then
   begin
-    MessageDlg('鏁版嵁搴撴枃浠朵笉瀛樺湪: ' + APath, mtError, [mbOK], 0);
+    MessageDlg('数据库文件不存在: ' + APath, mtError, [mbOK], 0);
     Exit;
   end;
 
@@ -623,7 +623,7 @@ begin
     on E: Exception do
     begin
       Conn.Free;
-      MessageDlg('鎵撳紑鏁版嵁搴撳け璐? ' + E.Message, mtError, [mbOK], 0);
+      MessageDlg('打开数据库失败: ' + E.Message, mtError, [mbOK], 0);
     end;
   end;
 end;
@@ -753,20 +753,20 @@ end;
 procedure TfrmLogAnalyzer.DisplayLogDetails(const AEntry: TLogEntry);
 begin
   mmoDetails.Clear;
-  mmoDetails.Lines.Add('=== 鏃ュ織璇︽儏 ===');
+  mmoDetails.Lines.Add('=== 日志详情 ===');
   mmoDetails.Lines.Add('');
   mmoDetails.Lines.Add('ID: ' + IntToStr(AEntry.Id));
-  mmoDetails.Lines.Add('鏃堕棿: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
-  mmoDetails.Lines.Add('绾у埆: ' + LevelToString(AEntry.Level));
-  mmoDetails.Lines.Add('鏉ユ簮: ' + AEntry.Source);
+  mmoDetails.Lines.Add('时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
+  mmoDetails.Lines.Add('级别: ' + LevelToString(AEntry.Level));
+  mmoDetails.Lines.Add('来源: ' + AEntry.Source);
   mmoDetails.Lines.Add('');
-  mmoDetails.Lines.Add('=== 娑堟伅 ===');
+  mmoDetails.Lines.Add('=== 消息 ===');
   mmoDetails.Lines.Add(AEntry.Message);
 
   if AEntry.Details <> '' then
   begin
     mmoDetails.Lines.Add('');
-    mmoDetails.Lines.Add('=== 璇︾粏淇℃伅 ===');
+    mmoDetails.Lines.Add('=== 详细信息 ===');
     mmoDetails.Lines.Add(AEntry.Details);
   end;
 end;
@@ -786,7 +786,7 @@ begin
     lvStats.Items.Clear;
 
     Item := lvStats.Items.Add;
-    Item.Caption := '鎬绘暟';
+    Item.Caption := '总数';
     Item.SubItems.Add(IntToStr(Total));
     Item.SubItems.Add('100%');
 
@@ -807,19 +807,19 @@ begin
     Item.SubItems.Add('');
 
     Item := lvStats.Items.Add;
-    Item.Caption := '鍞竴鏉ユ簮鏁?;
+    Item.Caption := '唯一来源数';
     Item.SubItems.Add(IntToStr(Stats.UniqueSources));
     Item.SubItems.Add('');
 
     if Stats.FirstTime > 0 then
     begin
       Item := lvStats.Items.Add;
-      Item.Caption := '鏈€鏃╂椂闂?;
+      Item.Caption := '最早时间';
       Item.SubItems.Add(FormatDateTime('yyyy-mm-dd hh:nn', Stats.FirstTime));
       Item.SubItems.Add('');
 
       Item := lvStats.Items.Add;
-      Item.Caption := '鏈€鏅氭椂闂?;
+      Item.Caption := '最晚时间';
       Item.SubItems.Add(FormatDateTime('yyyy-mm-dd hh:nn', Stats.LastTime));
       Item.SubItems.Add('');
     end;
@@ -831,12 +831,12 @@ end;
 procedure TfrmLogAnalyzer.UpdateStatusBar;
 begin
   if FCurrentDB <> '' then
-    StatusBar.Panels[0].Text := '宸茶繛鎺? ' + ExtractFileName(FCurrentDB)
+    StatusBar.Panels[0].Text := '已连接: ' + ExtractFileName(FCurrentDB)
   else
-    StatusBar.Panels[0].Text := '鏈繛鎺?;
+    StatusBar.Panels[0].Text := '未连接';
 
-  StatusBar.Panels[1].Text := Format('鏃ュ織: %d', [Length(FLogs)]);
-  StatusBar.Panels[2].Text := Format('鏁版嵁搴? %d', [FConnections.Count]);
+  StatusBar.Panels[1].Text := Format('日志: %d', [Length(FLogs)]);
+  StatusBar.Panels[2].Text := Format('数据库: %d', [FConnections.Count]);
 end;
 
 procedure TfrmLogAnalyzer.ClearFilter;
@@ -881,7 +881,7 @@ begin
   end;
 end;
 
-{ 浜嬩欢澶勭悊 }
+{ 事件处理 }
 
 procedure TfrmLogAnalyzer.btnOpenDBClick(Sender: TObject);
 begin
@@ -946,18 +946,18 @@ procedure TfrmLogAnalyzer.mnuFileExportCSVClick(Sender: TObject);
 begin
   if Length(FLogs) = 0 then
   begin
-    MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+    MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
     Exit;
   end;
 
-  dlgSave.Filter := 'CSV 鏂囦欢|*.csv';
+  dlgSave.Filter := 'CSV 文件|*.csv';
   dlgSave.DefaultExt := 'csv';
   dlgSave.FileName := 'logs_' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.csv';
 
   if dlgSave.Execute then
   begin
     TLogExporter.ExportToCSV(FLogs, dlgSave.FileName);
-    MessageDlg('瀵煎嚭鎴愬姛: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
   end;
 end;
 
@@ -965,18 +965,18 @@ procedure TfrmLogAnalyzer.mnuFileExportJSONClick(Sender: TObject);
 begin
   if Length(FLogs) = 0 then
   begin
-    MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+    MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
     Exit;
   end;
 
-  dlgSave.Filter := 'JSON 鏂囦欢|*.json';
+  dlgSave.Filter := 'JSON 文件|*.json';
   dlgSave.DefaultExt := 'json';
   dlgSave.FileName := 'logs_' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.json';
 
   if dlgSave.Execute then
   begin
     TLogExporter.ExportToJSON(FLogs, dlgSave.FileName);
-    MessageDlg('瀵煎嚭鎴愬姛: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
   end;
 end;
 
@@ -984,18 +984,18 @@ procedure TfrmLogAnalyzer.mnuFileExportHTMLClick(Sender: TObject);
 begin
   if Length(FLogs) = 0 then
   begin
-    MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+    MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
     Exit;
   end;
 
-  dlgSave.Filter := 'HTML 鏂囦欢|*.html';
+  dlgSave.Filter := 'HTML 文件|*.html';
   dlgSave.DefaultExt := 'html';
   dlgSave.FileName := 'logs_' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.html';
 
   if dlgSave.Execute then
   begin
-    TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '鏃ュ織瀵煎嚭 - ' + ExtractFileName(FCurrentDB));
-    MessageDlg('瀵煎嚭鎴愬姛: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '日志导出 - ' + ExtractFileName(FCurrentDB));
+    MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
   end;
 end;
 
@@ -1019,13 +1019,13 @@ procedure TfrmLogAnalyzer.mnuHelpAboutClick(Sender: TObject);
 begin
   MessageDlg(
     APP_TITLE + ' v' + VERSION + #13#10#13#10 +
-    'DeepBase 鏃ュ織鍒嗘瀽宸ュ叿' + #13#10 +
-    '鐢ㄤ簬鏌ョ湅鍜屽垎鏋?DeepBase 妗嗘灦鐢熸垚鐨勬棩蹇楁暟鎹€? + #13#10#13#10 +
-    '鍔熻兘:' + #13#10 +
-    '- 澶氭暟鎹簱鏀寔' + #13#10 +
-    '- 鏃堕棿/绾у埆/鍏抽敭璇嶈繃婊? + #13#10 +
-    '- 缁熻淇℃伅' + #13#10 +
-    '- CSV/JSON/HTML 瀵煎嚭',
+    'DeepBase 日志分析工具' + #13#10 +
+    '用于查看和分析 DeepBase 框架生成的日志数据。' + #13#10#13#10 +
+    '功能:' + #13#10 +
+    '- 多数据库支持' + #13#10 +
+    '- 时间/级别/关键词过滤' + #13#10 +
+    '- 统计信息' + #13#10 +
+    '- CSV/JSON/HTML 导出',
     mtInformation, [mbOK], 0);
 end;
 
