@@ -33,7 +33,9 @@ fs.writeFileSync(path.join(tmp, 'src', 'Bad_M2.pas'), Buffer.from(
   'begin\r\n  FillChar(Buf, N, 0);\r\nend;\r\nend.\r\n', 'utf8'));
 
 const emptyBaseline = path.join(tmp, 'empty_baseline.json');
-fs.writeFileSync(emptyBaseline, JSON.stringify({ files: {} }, null, 2), 'utf8');
+// `_comment` 溯源 + `files` 键是基线状态自检（gate-baseline.js，WO-20260923-AUDIT-乙-D5 §一-3）
+// 的放行条件；缺了会以 EXIT=2 结束而不是报 M1/M2。
+fs.writeFileSync(emptyBaseline, JSON.stringify({ _comment: '负向样本用空基线', files: {} }, null, 2), 'utf8');
 
 let failed = false;
 let stdoutErr = '';

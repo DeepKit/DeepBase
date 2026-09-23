@@ -19,7 +19,9 @@ fs.writeFileSync(path.join(tmp, 'Core', 'Evil.pas'), 'unit Evil;' + NL + 'interf
 fs.writeFileSync(path.join(tmp, 'prod.dpk'), 'package prod;' + NL + 'contains' + NL + '  Bar,' + NL + '  DeepBase.Plugins.Manager;');
 
 const emptyBaseline = path.join(tmp, 'baseline.json');
-fs.writeFileSync(emptyBaseline, JSON.stringify({ orphans: {} }));
+// 溯源 + `orphans` 键齐备才走检查路径；否则基线状态自检（gate-baseline.js，
+// WO-20260923-AUDIT-乙-D5 §一-3）会以 EXIT=2 拦下，测不到 O1。
+fs.writeFileSync(emptyBaseline, JSON.stringify({ generatedFrom: 'test_negative_sample.js', orphans: {} }));
 let failed = false;
 try {
   execFileSync(process.execPath, [path.join(HERE, 'check_build_ownership.js'), '--root', tmp, '--baseline', emptyBaseline], { stdio: 'pipe' });

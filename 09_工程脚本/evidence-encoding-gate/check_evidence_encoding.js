@@ -8,11 +8,16 @@
 //  E2 硬规则（不可豁免）：E1 通过后必须是合法 UTF-8（拦截 GBK/ANSI 原始字节入库）。
 // 扫描口径：默认只扫 git 已跟踪的证据文件（CI checkout 内即全量；本地 gitignored 的临时
 //     log 不参与，避免把未入库的本地产物当成仓库违规）；--all-worktree 改走工作树枚举。
-// 用法: node check_evidence_encoding.js [--repo <dir>] [--baseline <file>] [--all-worktree]
-// 退出码：0 通过；1 违规；2 自身执行失败（基线不可读/枚举失败）；3 扫描自身失败（扫到 0 个证据文件）——fail-closed，绝不放行。
+//     两种口径共用同一排除规则：路径任一成分命中共享 SKIP 目录集（gate-skip.js）即排除，
+//     扩展名命中二进制清单（BINARY_EXT）即排除，其余一律纳入 —— 证据门禁的职责是「CodeReview/
+//     下已入库的证据文件不得是 UTF-16LE/GBK 落盘」，与扩展名无关，所以白名单反向做成排除集。
+// 用法: node check_evidence_encoding.js [--repo <dir>] [--baseline <file>] [--all-worktree] [--list-files]
+// 退出码：0 通过；1 违规；2 自身执行失败（基线不可信/枚举失败）；3 扫描自身失败（扫到 0 个证据文件）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { gateSkipSet } = require('../gate-skip');
+const { loadGateBaseline } = require('../gate-baseline');
 
 function arg(name, dflt) {
   const i = process.argv.indexOf('--' + name);
@@ -22,8 +27,22 @@ const REPO = path.resolve(arg('repo', path.join(__dirname, '../..')));
 const BASELINE_P = arg('baseline', path.join(__dirname, 'evidence_encoding_baseline.json'));
 const ALL_WORKTREE = process.argv.includes('--all-worktree');
 const SUBDIR = 'CodeReview';
-const EXT = /\.(txt|log|csv|xml)$/i;
-const SKIP_DIRS = new Set(['.git', '__history', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+const SKIP_DIRS = gateSkipSet();
+// E1（NUL 计数）与 E2（严格 UTF-8 解码）只对文本证据有意义；二进制容器（图片/压缩包/编译
+// 产物/office 文档）本身就是合法的非 UTF-8 字节流，纳入即必然误报，故按扩展名排除。
+// 清单外的扩展名默认纳入：新增证据类型不必改本门禁（WO-20260923-AUDIT-乙-D5 §一-1）。
+const BINARY_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.tif', '.tiff',
+  '.pdf', '.zip', '.gz', '.7z', '.rar', '.tar', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.exe', '.dll', '.bpl', '.dcu', '.obj', '.lib', '.o', '.a', '.so', '.res', '.map', '.bin', '.dat',
+  '.mp3', '.mp4', '.wav', '.avi', '.mov', '.gifv', '.ttf', '.otf', '.woff', '.woff2', '.pkl', '.db', '.sqlite']);
+
+function isBinaryName(name) {
+  return BINARY_EXT.has(path.extname(name).toLowerCase());
+}
+// 已跟踪口径下 git 返回的是仓库相对路径，需按目录成分判断是否落在 SKIP 目录内。
+function inSkipDir(rel) {
+  return rel.split('/').slice(0, -1).some(seg => SKIP_DIRS.has(seg));
+}
 
 function countNul(buf) {
   let n = 0;
@@ -39,10 +58,10 @@ function validUtf8(buf) {
 }
 
 function trackedFiles() {
-  const out = execFileSync('git', ['-C', REPO, '-c', 'core.quotepath=false', 'ls-files', '-z', '--',
-    SUBDIR + '/**/*.txt', SUBDIR + '/**/*.log', SUBDIR + '/**/*.csv', SUBDIR + '/**/*.xml'],
+  const out = execFileSync('git', ['-C', REPO, '-c', 'core.quotepath=false', 'ls-files', '-z', '--', SUBDIR],
     { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 });
-  return out.toString('utf8').split('\0').filter(Boolean);
+  return out.toString('utf8').split('\0').filter(Boolean)
+    .filter(rel => !inSkipDir(rel) && !isBinaryName(path.posix.basename(rel)));
 }
 
 function walkFiles(dir, acc) {
@@ -57,21 +76,15 @@ function walkFiles(dir, acc) {
     if (SKIP_DIRS.has(e.name)) continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walkFiles(p, acc);
-    else if (e.isFile() && EXT.test(e.name)) acc.push(path.relative(REPO, p).replace(/\\/g, '/'));
+    else if (e.isFile() && !isBinaryName(e.name)) acc.push(path.relative(REPO, p).replace(/\\/g, '/'));
   }
   return acc;
 }
 
-let baseline = { nulStock: {} };
-try {
-  baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
-} catch (e) {
-  if (fs.existsSync(BASELINE_P)) {
-    console.error(`证据编码门禁基线文件不可读或非法 JSON: ${BASELINE_P} (${e.message})`);
-    process.exit(2);
-  }
-}
-const nulStock = baseline.nulStock || {};
+const { nulStock } = loadGateBaseline({
+  file: BASELINE_P, label: '证据编码',
+  keys: { nulStock: 'object' },
+});
 
 let files;
 try {
@@ -86,6 +99,10 @@ if (files.length === 0) {
   console.error(`证据编码门禁失败：扫描 0 个 ${SUBDIR} 证据文件（repo=${REPO}, all-worktree=${ALL_WORKTREE}）。已按 fail-closed 拒绝放行。`);
   process.exit(3);
 }
+
+// 取证用：打印本次实际纳入的文件清单后退出。「哪些证据件进了门禁」必须能从门禁自身复算，
+// 而不是靠 README 复述一份会漂移的清单（WO-20260923-AUDIT-乙-D5 §一-1）。
+if (process.argv.includes('--list-files')) { files.forEach(f => console.log(f)); process.exit(0); }
 
 const violations = [];
 let exempted = 0;

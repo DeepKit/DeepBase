@@ -49,7 +49,9 @@ fs.writeFileSync(path.join(tmp, 'src', 'Bad_MultiCR.pas'), Buffer.from('unit Bad
 fs.writeFileSync(path.join(tmp, 'src', 'Bad_MultiCR_Mixed.pas'), Buffer.from('unit Bad_MultiCR_Mixed;\r\r\r\r\ninterface\nimplementation\r\nend.\r\n', 'utf8'));
 
 const emptyBaseline = path.join(tmp, 'empty_baseline.json');
-fs.writeFileSync(emptyBaseline, JSON.stringify({ pas_lf_exceptions: [], pas_mixed_exceptions: [], md_crlf_exceptions: [], pas_multicr_exceptions: [] }, null, 2), 'utf8');
+// 溯源字段 `_comment` 与四个键齐备是基线状态自检（gate-baseline.js，WO-20260923-AUDIT-乙-D5 §一-3）
+// 的放行条件；缺任一项本样本会以 EXIT=2 结束，测不到 L1–L4。
+fs.writeFileSync(emptyBaseline, JSON.stringify({ _comment: '负向样本用空基线', pas_lf_exceptions: [], pas_mixed_exceptions: [], md_crlf_exceptions: [], pas_multicr_exceptions: [] }, null, 2), 'utf8');
 
 let failed = false;
 let stdoutErr = '';

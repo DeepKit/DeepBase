@@ -7,9 +7,11 @@
 //  O3 C1 同名类消解校验：Core\DeepBase.Plugins.Manager.pas 不得再声明 TDeepBasePluginManager ⇒ 出现即 FAIL。
 //  O4 生产单元（新轨 6 单元自身除外）的源码引用 DeepBase.Plugins.{6单元} ⇒ BLOCK（uses 级封锁）。
 // 用法: node check_build_ownership.js [--root <dir>] [--baseline <file>] [--emit-baseline]
-// 退出码：0 通过；1 违规。
+// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）。
 const fs = require('fs');
 const path = require('path');
+const { gateSkipSet } = require('../gate-skip');
+const { loadGateBaseline } = require('../gate-baseline');
 
 function arg(name, dflt) {
   const i = process.argv.indexOf('--' + name);
@@ -19,7 +21,7 @@ const ROOT = path.resolve(arg('root', 'D:/_Progs/02Business/DeepBase'));
 const BASELINE_P = arg('baseline', path.join(__dirname, 'build_ownership_baseline.json'));
 const EMIT = process.argv.includes('--emit-baseline');
 const PROD_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tools', 'DeepFlow'];
-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy']);
+const SKIP = gateSkipSet();
 const NEWTRACK = ['DeepBase.Plugins.CAbi', 'DeepBase.Plugins.CAbiLoader', 'DeepBase.Plugins.Contracts', 'DeepBase.Plugins.Manager', 'DeepBase.Plugins.SafeGuard', 'DeepBase.Plugins.Verifier'];
 
 function walk(dir, exts, out) {
@@ -89,8 +91,12 @@ for (const u of prodUnits) {
 }
 
 // O1：孤儿须入基线
-let baseline = { orphans: {} };
-if (fs.existsSync(BASELINE_P)) baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
+// 本门的 --emit-baseline 要读旧基线以保留人工 disposition，故基线校验放在 EMIT 之前：
+// 不允许在坏基线上重刷（否则 47 条人工标注会退回『待标注』）。守写入动作仍是 B1。
+const baseline = loadGateBaseline({
+  file: BASELINE_P, label: '构建归属',
+  keys: { orphans: 'object' },
+});
 if (EMIT) {
   const emit = { generatedFrom: 'check_build_ownership.js', orphans: {} };
   for (const o of orphans) emit.orphans[o.path] = baseline.orphans[o.path] && baseline.orphans[o.path].disposition

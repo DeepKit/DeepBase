@@ -10,9 +10,11 @@
 // 扫描根与排除集（H10 口径）：仓库根，SKIP 目录集与行尾门禁一致
 //     （.git/.tmp/.claude/BuildOutput/DCUOutput/bin/dcu/TestResults 等）。
 // 用法: node check_managed_copy.js [--root <dir>] [--baseline <file>] [--emit-baseline]
-// 退出码：0 通过；1 违规。
+// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）。
 const fs = require('fs');
 const path = require('path');
+const { gateSkipSet } = require('../gate-skip');
+const { loadGateBaseline } = require('../gate-baseline');
 
 function arg(name, dflt) {
   const i = process.argv.indexOf('--' + name);
@@ -21,7 +23,7 @@ function arg(name, dflt) {
 const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')));
 const BASELINE_P = arg('baseline', path.join(__dirname, 'managed_copy_baseline.json'));
 const EMIT = process.argv.includes('--emit-baseline');
-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+const SKIP = gateSkipSet();
 
 // 非限定 Move( 与 System.Move(；排除 TFile.Move 等文件方法（前随 '.'）
 const MEM_MOVE = /(?<![\w.$])(?:System\.)?Move\s*\(/g;
@@ -79,11 +81,13 @@ if (EMIT) {
   process.exit(0);
 }
 
-let baseline = { files: {} };
-if (fs.existsSync(BASELINE_P)) {
-  try { baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8')); } catch (e) {}
-}
-const baseFiles = baseline.files || {};
+// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复基线的动作，
+// 不能因为基线已坏就把自己锁在门外（守写入侧是 B1，守读取侧是 gate-baseline.js）。
+const baseline = loadGateBaseline({
+  file: BASELINE_P, label: '托管拷贝',
+  keys: { files: 'object' },
+});
+const baseFiles = baseline.files;
 const violations = findings.map(v => 'M1 Move/托管类型裸拷贝: ' + v.rel + ':' + v.line);
 
 for (const rel of Object.keys(counts).sort()) {

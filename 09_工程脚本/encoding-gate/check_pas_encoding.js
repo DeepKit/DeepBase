@@ -20,10 +20,13 @@
 //   · G3：文档 BOM 口径与 .pas 相反（源码要 BOM，文档不要求）；
 //   · G5：行尾由 eol-gate 唯一立法，此处重复判定即双真源。
 // 用法: node check_pas_encoding.js [--root <dir>] [--baseline <file>]
-// 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
+// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）；
+//        3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
 const { parseGateArgs } = require('../gate-args');
+const { gateSkipSet } = require('../gate-skip');
+const { loadGateBaseline } = require('../gate-baseline');
 
 // 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
 // 此前本文件与 eol 门禁各写一份内联校验，且裂成「校验侧归一放行 / 取值侧大小写敏感取空」
@@ -41,7 +44,7 @@ const { parseGateArgs } = require('../gate-args');
   var ROOT = opts.root;
   var BASELINE_P = opts.baseline;
 }
-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+const SKIP = gateSkipSet();
 // 扩展硬违规面：只跑 G2/G4（见文件头「扫描面」）。目录名与 eol-gate / managed-copy-gate 完全一致，
 // 三道门禁的扫描面差异必须只剩「扩展名」这一个维度，否则「门禁覆盖了什么」永远说不清。
 const EXT_HARD = new Set(['.dpr', '.dpk', '.dfm', '.fmx', '.md', '.sql']);
@@ -69,7 +72,13 @@ function walk(dir, out) {
 }
 function validUtf8(buf) { try { new TextDecoder('utf-8', { fatal: true }).decode(buf); return true; } catch (e) { return false; } }
 
-const baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
+const baseline = loadGateBaseline({
+  file: BASELINE_P, label: '编码',
+  keys: {
+    fffd: 'object', loneCr: 'object', mojibake: 'object',
+    bomExceptions: 'array', mojibakeExceptions: 'array', hardUtf8Exceptions: 'array',
+  },
+});
 const allowed = baseline.fffd || {};
 const loneCrAllowed = baseline.loneCr || {};
 const bomExcepts = new Set(baseline.bomExceptions || []);

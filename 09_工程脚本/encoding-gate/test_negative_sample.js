@@ -60,7 +60,9 @@ fs.writeFileSync(path.join(tmp, 'src', 'MojibakeOnly.pas'), Buffer.concat([
 ]));
 
 const emptyBaseline = path.join(tmp, 'baseline.json');
-fs.writeFileSync(emptyBaseline, JSON.stringify({ fffd: {}, loneCr: {}, bomExceptions: [] }));
+// 键集必须与 check_pas_encoding.js 的 loadGateBaseline spec 一致：缺键或无溯源字段会被
+// 基线状态自检判为「基线不可信」EXIT=2（WO-20260923-AUDIT-乙-D5 §一-3），样本就测不到 G1–G6。
+fs.writeFileSync(emptyBaseline, JSON.stringify({ _comment: '负向样本用空基线', fffd: {}, loneCr: {}, mojibake: {}, bomExceptions: [], mojibakeExceptions: [], hardUtf8Exceptions: [] }));
 // ── 扩展硬违规面（.dpr/.dpk/.dfm/.fmx/.md/.sql）───────────────────────────────
 // 「非 .pas 文件的编码完整性」只在本门禁立法；没有这组样本，收紧扫描面会悄悄缩小覆盖面。
 // 样本 10：.dpr 含 GBK 原始字节 ⇒ G2 必红；样本 11：.md 为 UTF-16LE ⇒ G4 必红。
@@ -101,7 +103,7 @@ try {
   } else {
     fs.copyFileSync(iso, path.join(g6Root, 'src', 'MojibakeOnly.pas'));
     const emptyBase = path.join(g6Root, 'empty_baseline.json');
-    fs.writeFileSync(emptyBase, JSON.stringify({ fffd: {}, loneCr: {}, bomExceptions: [], mojibake: {} }));
+    fs.writeFileSync(emptyBase, JSON.stringify({ _comment: '负向样本用空基线', fffd: {}, loneCr: {}, mojibake: {}, bomExceptions: [], mojibakeExceptions: [], hardUtf8Exceptions: [] }));
     // (a) 修后必红
     let red = false, out = '';
     try {
@@ -116,24 +118,26 @@ try {
     else console.log('G6 负样本通过：MojibakeOnly.pas 被 G6 拦下并还原出「日志导出」');
 
     // (b) 修前假绿：拖空 G6 判据的同源拷贝须放行 — 证明旧门禁确实是绿的
-    // 副本必须能 require 到真实的 gate-args.js：门禁源码里是 require('../gate-args')，
-    // 按脚本自身位置解析——副本落在 g6Root（tmp）内时该路径必然 MODULE_NOT_FOUND，
-    // 于是「按预期放行」被误读成引擎崩溃。故把副本里的相对 require 改写为绝对路径，
-    // 副本即可落在任何位置（本单 §七 把参数解析外置成共享模块后新增的约束）。
+    // 副本必须能 require 到真实的共享模块（gate-args / gate-skip / gate-baseline）：门禁源码里
+    // 是 require('../gate-*')，按脚本自身位置解析——副本落在 g6Root（tmp）内时该路径必然
+    // MODULE_NOT_FOUND，于是「按预期放行」被误读成引擎崩溃。故把副本里所有相对 require 统一
+    // 改写为绝对路径（一处正则覆盖全部共享模块，新增模块不必再改本样本），副本即可落在任何位置。
     const noG6 = path.join(g6Root, 'check_pas_encoding_nog6.js');
     const src = fs.readFileSync(path.join(HERE, 'check_pas_encoding.js'), 'utf8');
-    const gateArgsAbs = path.resolve(HERE, '../gate-args.js');
     if (!src.includes('function detectMojibake')) {
       console.error('G6 负样本异常：门禁源码中找不到 detectMojibake，无法构造「修前」对照'); failed = true;
-    } else if (!fs.existsSync(gateArgsAbs)) {
-      console.error('G6 负样本异常：共享参数模块缺失（' + gateArgsAbs + '），无法构造「修前」对照'); failed = true;
     } else {
       // 两处改写互不相干：G6 判据恒为 null ⇒ 等价于「加 G6 之前」的门禁；
       // 相对 require → 绝对路径 ⇒ 副本可跨目录执行。
       const patched = src
-        .replace("require('../gate-args')", 'require(' + JSON.stringify(gateArgsAbs) + ')')
+        .replace(/require\('\.\.\/([\w-]+)'\)/g, (m, mod) => 'require(' + JSON.stringify(path.resolve(HERE, '../' + mod + '.js')) + ')')
         .replace('function detectMojibake(line) {', 'function detectMojibake(line) {\n  return null; // 「修前」对照：G6 判据失效');
-      if (patched === src) {
+      const missing = (src.match(/require\('\.\.\/([\w-]+)'\)/g) || [])
+        .map(s => s.match(/\.\.\/([\w-]+)/)[1])
+        .filter(mod => !fs.existsSync(path.resolve(HERE, '../' + mod + '.js')));
+      if (missing.length) {
+        console.error('G6 负样本异常：共享模块缺失（' + missing.join(', ') + '），无法构造「修前」对照'); failed = true;
+      } else if (patched === src) {
         console.error('G6 负样本异常：源码两处改写均未命中，「修前」对照与现行门禁无异'); failed = true;
       } else {
         fs.writeFileSync(noG6, patched);
