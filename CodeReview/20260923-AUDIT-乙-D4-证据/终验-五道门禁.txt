@@ -24,3 +24,30 @@ EXIT=1
   O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
   O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
 EXIT=1
+
+
+===== 第三快照：落笔两笔后复跑五道门禁（生成时刻 2026-09-23 12:08:20 +0800，同一共享工作树，期间他方 3c64b72 入库） =====
+===== GATE encoding-gate/check_pas_encoding =====
+EXIT=0
+编码门禁通过：977 个 .pas + 653 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+===== GATE eol-gate/check_eol =====
+EXIT=0
+行尾门禁通过：检查了 1477 个文件（.pas CRLF / .md LF），跳过目录 11
+===== GATE evidence-encoding-gate/check_evidence_encoding =====
+EXIT=0
+证据编码门禁通过：扫描 199 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+===== GATE managed-copy-gate/check_managed_copy =====
+EXIT=1
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+===== GATE build-ownership/check_build_ownership =====
+EXIT=1
+构建归属门禁失败，违规 3 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
