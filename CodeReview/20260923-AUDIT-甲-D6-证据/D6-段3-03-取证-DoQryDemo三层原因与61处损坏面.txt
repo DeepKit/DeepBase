@@ -1,0 +1,100 @@
+$ # WO-20260923-AUDIT-甲-D6 段3 · 「DoQryDemo 移出库（DBClient 不在 Win64 lib 面，属平台不适用）」前提取证
+$ # 隔离工作树 .tmp/d6_seg3 @ 7ee0015 · 2026-09-24 复跑 · 结论登记于 D6-段3-04 论证件
+
+## 〇、被裁定的工程面
+
+$ git ls-files doQry/examples/
+doQry/examples/DoQryDemo/DoQryDemo.dpr        # 该目录只有这一件：无 .dproj、无 .pas
+$ git log --oneline -- doQry/examples/DoQryDemo/DoQryDemo.dpr
+7516962d 对齐任务文档，更新阶段统计和日期      # 全历史唯一一笔 = 诞生笔
+
+⇒ DoQryDemo 在契约面的位置：T1 观测面在册件（不在 T2）。工单段3 的「移出库」只能理解为删仓内文件 + 同步清单。
+
+## 一、第一层：F2613 的真实原因是命名空间，不是「Win64 没有这个单元」
+
+$ ls "D:/Program Files (x86)/Embarcadero/Studio/37.0/lib/Win64/release/" | grep -i dbclient
+Datasnap.DBClient.dcu            # 706523 字节，存在
+（无 DBClient.dcu）              # 顶层裸名 DBClient 在 Win64 面确实不存在
+
+$ ls .../lib/Win64/release/ | grep -i midas
+MidasLib.dcu                     # 存在，且就叫这个名（顶层，无需命名空间）
+Datasnap.Midas.dcu / DataSnapServerMidas.* / midas64.res ...
+
+⇒ .dpr 写的 `uses ... DBClient, MidasLib ...`：MidasLib 直接可解析；DBClient 要靠命名空间补全成
+   `Datasnap.DBClient` 才找得到。所以「DBClient 不在 Win64 lib 面」这句话只在「顶层裸名不存在」这一层为真，
+   而「属平台不适用」为假——DataSnap 客户端数据集在 Win64 是完整提供的。
+
+## 二、第二层：为什么同目录的库工程 prjDoQry 是绿的，只有 demo 红
+
+$ grep -n "DCC_Namespace" doQry/prjDoQry.dproj
+69: <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>   # Base 组，Win32/Win64 共同继承
+78: <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>                # Base_Win32
+87: <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>                    # Base_Win64
+
+$ sed -n '38,39p' "09_工程脚本/build-gate/check_build.js"
+38: // 无 .dproj 工程的缺省命名空间：与 Scripts/compile_packages_win64.ps1 的 $NS 同构。
+39: const DEFAULT_NS = 'System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win';
+
+⇒ 门禁只在工程没有 .dproj 时回落到 DEFAULT_NS；DEFAULT_NS 里没有 Datasnap，也没有 Vcl.Samples。
+
+⇒ 差异不在平台，在「有没有 .dproj 提供命名空间」。DoQryDemo 无 .dproj ⇒ 走 DEFAULT_NS ⇒ 找不到 Datasnap.DBClient。
+   两条对等修法：(a) 给 demo 补 .dproj（prjDoQry 已有同名 DCC_Namespace 可镜像）；(b) 把 .dpr 的 `DBClient` 写成
+   `Datasnap.DBClient`（现代 Delphi 的直接写法，不依赖命名空间）。(b) 是单行、零门禁改动的工程侧修正。
+   甲不擅自改 DEFAULT_NS：那是门禁本体放宽枚举面，属治理决定，另报主控（见 D6-段3-04 §四）。
+
+## 三、第三层：把命名空间补上之后，暴露的是库自身的真缺陷（关键）
+
+$ python .tmp/d6_seg3_doqry_probe.py ";Datasnap"      # 复刻 buildDefaultEnv/compileOne，只改 -NS；cwd=工程目录
+doQry\examples\DoQryDemo\DoQryDemo.dpr(43) Error: E2003 Undeclared identifier: 'DoQryInit'
+doQry\examples\DoQryDemo\DoQryDemo.dpr(58) Error: E2052 Unterminated string
+doQry\examples\DoQryDemo\DoQryDemo.dpr(59) Error: E2066 / E2029 / E2003 'title' / E2008 ...
+doQry\examples\DoQryDemo\DoQryDemo.dpr(60) Error: E2052 Unterminated string
+doQry\examples\DoQryDemo\DoQryDemo.dpr(61) Error: E2052 Unterminated string
+doQry\examples\DoQryDemo\DoQryDemo.dpr(75) Error: E2003 Undeclared identifier: 'DoQryExecSelect'
+doQry\examples\DoQryDemo\DoQryDemo.dpr(90) Error: E2029 'END' expected but 'FINALLY' found
+EXIT=1
+
+## 三之一、E2003 的根因：doQry 库的 interface 声明被编码损坏吃掉换行而注释化（生产面缺陷）
+
+$ python -c "对 doQry/src/uDoQry.pas 逐行取字节"
+line 10 (len 81):  2f 2f 20 e5 88 9d ... e9 8f 82 3f 70 72 6f 63 65 64 75 72 65 20 44 6f 51 72 79 49 6e 69 74 ...
+                   '= // 初始化与上下' + 0x3F('?') + 'procedure DoQryInit(const ProjectRoot: string);'   ← 同一行
+line 18 (len 147): 2f 2f 20 ... 3f 66 75 6e 63 74 69 6f 6e 20 44 6f 51 72 79 45 78 65 63 53 65 6c 65 63 74 ...
+                   '= // 执行器' + 0x3F('?') + 'function DoQryExecSelect(...): Integer;'                 ← 同一行
+
+⇒ 丙-A 型损坏的最恶性形态：被替换成 0x3F 的字节正好是行尾换行，注释与后面的声明并入同一行，声明整条被 `//` 吞掉。
+   后果是 doQry 库的 interface 少了这两个公开例程（implementation 里 :30/:74 的实现还在，但没进导出面），
+   任何消费者都调不到——demo 只是第一个撞上的消费者。
+
+全历史链（同一 uDoQry.pas）：
+$ git show <c>:doQry/src/uDoQry.pas 取含 DoQryInit 的行
+7516962d  L11 'procedure DoQryInit(const ProjectRoot: string);'      ← 干净祖先：独立成行，注释另起
+ca3364e   L10 '// 初始化与上下?procedure DoQryInit(...'              ← 损坏引入笔（UniBase→DeepBase 更名笔）
+7ddfbed   L10 '// ...<U+FFFD>?procedure DoQryInit(...'               ← 只把非法字节改成 U+FFFD，换行仍未恢复
+649b1e0   L10 '// <双重编码乱码>?procedure DoQryInit(...'            ← 乙 B1-B5 编码修复笔：方向反了，注释更乱，声明依旧被吞
+⇒ HEAD 上该缺陷仍在，且历次「编码修复」都没修到它（换行缺失不在逐字节替换的修复模型里）。
+
+## 三之二、E2052 的根因：demo 自身从诞生笔起就写了跨行字符串字面量（Delphi 语法不允许）
+
+$ python -c "对 DoQryDemo.dpr 逐行取字节"（58/59/60/61）
+ 58 | b"      Q.ExecSQL('INSERT INTO queries (proc_name, sql_template, id_field, ... allow_full_scan) VALUES (\r"
+ 59 | b"        ''texts.insert'', ''INSERT INTO texts (title, created_at) VALUES (:title, :created_at)'', ''id'', 30, 1000, 0)');\r"
+ 60 | b"      Q.ExecSQL('INSERT INTO queries (proc_name, sql_template, timeout_sec, ... VALUES (\r"
+ 61 | b"        ''texts.list'', ''SELECT id, title, created_at FROM texts ORDER BY id'', 30, 1000, 0)');\r"
+suspect_3F_at = []   # 这四行内 0x3F 命中 0 处；也无 U+FFFD ⇒ 不是编码损坏，是作者把 SQL 直接折行写
+
+$ git show 7516962d:doQry/examples/DoQryDemo/DoQryDemo.dpr   # 与 HEAD 逐字节同源（该文件只有诞生一笔）
+⇒ 「自诞生从未编译过」，与段2 DeepBaseStudio.dpr 同一类戊类缺陷，不是平台问题。
+
+## 四、第四层：doQry 整个子系统的编码损坏面（删 demo 就再也看不见）
+
+$ 按乙 D6 的丙类口径扫 doQry/ 全目录（丙-A 判据：`[\x80-\xff]\x3f`，即非 ASCII 字节后紧跟 0x3F；丙-B：EF BF BD）
+doQry/doQryMain.pas                 丙A=10  [129,139,146,183,214,247,...]   丙B=0
+doQry/uDoQryLegacy.pas              丙A=42  [25,30,37,40,41,45,...]         丙B=4   [577,744,1019,1172]
+doQry/src/uDoQry.pas                 丙A=2  [10,18]                          丙B=0
+doQry/src/uDoQryDialect.pas          丙A=1  [63]                             丙B=0
+doQry/src/uDoQryExecutor.pas         丙A=2  [279,362]                        丙B=0
+代码面 TOTAL = 10+46+2+1+2 = 61 行（另有 doQry/tasks.md 丙A/丙B 各 27 行，文档面，本件不并入）
+
+⇒ 主控 15 件红项清单里，只有 DoQryDemo 这一件是 doQry 子系统的探针。删掉它＝61 处损坏与 2 处导出面丢失同时失去唯一报警器，
+   属于「数量的下降是视线的转移，不是修复的结果」，工单明禁。

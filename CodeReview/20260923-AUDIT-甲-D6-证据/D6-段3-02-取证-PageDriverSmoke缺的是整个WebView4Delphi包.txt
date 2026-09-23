@@ -1,0 +1,49 @@
+$ # WO-20260923-AUDIT-甲-D6 段3 · PageDriverSmoke「移出库」裁定的依据取证
+$ # 隔离工作树 .tmp/d6_seg3 @ 7ee0015 · 2026-09-23 · 结论登记于 contracts/T2-待定面.txt 注释
+
+## 一、缺口是一个第三方包，不是一个单元
+
+$ git ls-files | grep -ci "uWV"
+0
+$ git grep -ln "^unit uWV"        # tracked 范围内声明 uWV* 单元的 .pas
+（无输出）
+
+⇒ WebView4Delphi 的 uWV* 单元在全仓 tracked 面零命中：不是「漏提交一个单元」，是整包未随仓提供。
+
+被删件的引用面（git show 7ee0015:Tests/GUI/PageDriverSmoke.dpr）：
+  uses ... uWVLoader,  -- 第 20 行，门禁首错 F2613 Unit 'uWVLoader' not found.（见 D6-段3-01 §一）
+  以及 in '..\..\Features\DeepBase.Browser*.pas' 五件。
+
+被引用单元自身同一条依赖链（Features/DeepBase.Browser.Engine.WebView2.pas:18-40）：
+  uWVBrowser / uWVWinControl / uWVWindowParent / uWVTypes / uWVConstants /
+  uWVTypeLibrary / uWVLoader / uWVInterfaces / uWVCoreWebView2Args / uWVBrowserBase —— 十件同级外部单元。
+
+## 二、这条依赖链默认不参与编译，所以「补齐」等于改治理决定
+
+$ grep -n 'IFDEF\|ELSE\|ENDIF' Features/DeepBase.Browser.Engine.WebView2.pas
+16:{$IFDEF USE_WEBVIEW2}
+1142:{$ELSE}
+1146:{$ENDIF USE_WEBVIEW2}
+$ git grep -n "USE_WEBVIEW2" -- "*.dproj" "*.dpk" "*.js"
+（无输出）⇒ 全仓无任何工程配置或门禁脚本定义该开关。
+
+⇒ `Engine.WebView2.pas` 在默认配置下编译成 `{$ELSE}` 空桩，`TWebView2BrowserSession`（:43 声明、:272 起实现）
+   在门禁面根本不存在。该结构性事实乙 B5 已核过并登记：CodeReview/20260919-全库审计-疑点核验表.md:115（T5.3，行号 16/1146）。
+⇒ 要让 PageDriverSmoke 变绿，必须「引入 WebView4Delphi 第三方包」+「在配置里定义 USE_WEBVIEW2」+「解冻该引擎面」，
+   三件都属治理决定，不属本单「清零测试面红项」的授权范围；工单段1 也明确「不得把新轨解冻、不得把旧轨改掉」同类边界。
+
+## 三、删除不产生覆盖真空（先证再删）
+
+$ git grep -n "TWebView2BrowserSession" -- "*.dpr" "*.dpk" "*.pas"
+Features/DeepBase.Browser.Engine.WebView2.pas（声明与实现自身）
+⇒ 删件后该类在仓内无任何 .dpr 消费者，不出现悬空引用。
+
+$ git grep -n "Engine.WebView2\|Browser.PageDriver" -- "*.dpk" "*.dpr"
+DeepBaseBrowser.dpk / Tests/DeepBaseTests.dpr 均按单元名列出五件 Feature 单元
+⇒ 五件仍由 T0 面编译（含 PageDriver 的单元级用例 Tests/Test.DeepBase.Browser.PageDriver.pas），
+   PageDriverSmoke.dpr 只是同一批单元的 GUI 手工冒烟壳；删壳不减单元覆盖，属清死件而非移视线。
+
+## 四、落地动作
+
+$ git rm -q Tests/GUI/PageDriverSmoke.dpr        # 已跟踪 .dpr 67 → 66
+并同步：contracts/T2-待定面.txt 去掉该行（理由留在注释），contracts/T1-观测面.txt 机械重派生（见 D6-段3-06）。

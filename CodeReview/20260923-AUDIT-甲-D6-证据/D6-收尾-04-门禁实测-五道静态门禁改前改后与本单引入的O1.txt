@@ -1,0 +1,66 @@
+D6 收尾 五道静态门禁实测：改后全绿面 + 一处本单引入的归属违规（如实登记）
+
+一、判定环境
+
+  工作树 = .tmp/d6_a_gates @ 78d7f9f（本单代码落地 commit），DIRTY_LINES=0
+  对照树 = .tmp/d6_a_base @ 0d1fe7c（主控派单基线），DIRTY_LINES=0
+  命令一律 `node 09_工程脚本/<门>/check_*.js --root .`（两门都接受 --root，
+  其中 build-ownership 的默认根被硬编码为绝对路径，故必须显式传 --root 才落在工作树里；
+  该 fail-open 默认值本身是登记项，见 §四-3）。
+  原始输出全量入库：D6-收尾-05（上半 = 改后五门，下半 = 改前红门复跑）。
+
+二、改后（@78d7f9f）逐门 EXIT
+
+  编码门禁       EXIT=0  978 个 .pas + 651 个扩展面（基线残留U+FFFD 18 / BOM例外 45 /
+                          孤立CR基线 0 / 双重编码基线 50 / 扩展面存量损坏豁免 13 / 跳过目录 3）
+  行尾门禁       EXIT=0  1475 个文件（.pas CRLF / .md LF）
+  证据编码门禁   EXIT=0  477 个 CodeReview 证据文件，NUL 违规 0，全部合法 UTF-8
+  托管拷贝门禁   EXIT=1  违规 6 项 —— 与改前逐条同集合、同计数（§三），本单零贡献
+  构建归属门禁   EXIT=1  违规 4 项 —— 改前 3 项，多出的一项由本单造成（§三-2）
+
+三、改前/改后对照与归因
+
+  1) 托管拷贝（M2）：0d1fe7c 与 78d7f9f 两次输出的 6 条违规逐字相同
+     （Core/DeepBase.SecureMemory.pas 2、Core/DeepBase.Security.MasterKey.pas 1、
+      Core/DeepBase.Security.UBS2.pas 9、Tests/Test.DeepBase.SecureMemory.pas 1、
+      Tests/Test.DeepBase.Security.UBS2.pas Move 3 / FillChar 3）。
+     这些件全部不是本单改动面 ⇒ 本单未新增、未消除、未改写该门的任何一条。
+     注：该门基线里这些计数为 0，说明基线自乙 M2/A2 系列落笔后未重录 —— 属乙线台账。
+
+  2) 构建归属（O1）：改前 3 项（Gate.Verdict / Security.UBS2.Migration / Update.Contracts），
+     改后 4 项，新增项 = Features/DeepBase.Browser.Engine.WebView2.pas。
+     归因唯一且可复算：
+
+       git grep -l Engine.WebView2 0d1fe7c -- '*.dpr' '*.dpk' '*.dproj'
+         → Tests/GUI/PageDriverSmoke.dpr        （唯一命中）
+       git grep -l Engine.WebView2 78d7f9f -- '*.dpr' '*.dpk' '*.dproj'
+         → （零命中，GREP_EXIT=1）
+
+     即被移出库的 PageDriverSmoke.dpr 是该生产单元在全部构建引用面上的唯一引用者。
+
+  3) 计数漂移逐件对账（不用 README 的旧快照当基准，两棵树现算同一时刻对比）：
+
+       门禁面             @0d1fe7c  @78d7f9f  差  归因
+       编码门 .pas 面          975      978  +3  DocManager/Entity.Base.pas、DataAnalyzer/{Data.Module,Main.Form}.pas
+       编码门 扩展面           648      651  +3  +2 .dfm(DataAnalyzer 新窗体对) +2 .md −1 .dpr(PageDriverSmoke 出库)
+       行尾门（.pas+.md）     1470     1475  +5  +3 .pas +2 .md
+       证据门 CodeReview      476      477   +1  主控落笔的验收裁定件
+     两棵干净工作树按同一 SKIP 口径现扫的扩展名分布（find 计数）与上表逐位闭合：
+     md 495→497、dfm 40→42、dpr 67→66、pas 975→978、dpk/fmx/sql 不变；
+     +2 .md 来自 0d1fe7c 与段1 之间的主控笔 16eb6ba（验收裁定 + 本单工单正文），不属本单。
+     门禁基线未被本单改写（本单不涉及任何 --emit-baseline）。
+
+四、处置与登记（不自行消红）
+
+  1. 本单**不改** build_ownership_baseline.json，也**不改**托管拷贝基线。把新增 O1 静默
+     录进基线属于「视线的转移」，与本单判据 6 的口径直接冲突；该违规连同其归因交主控裁定。
+  2. 需要主控知道的实质判断：这条 O1 与其说是新缺陷，不如说是**被移出库暴露出来的既有真相**——
+     WebView2 引擎单元整段被 `{$IFDEF USE_WEBVIEW2}` 包着且全仓无一处定义该符号（D6-段3-02），
+     唯一"引用"它的 PageDriverSmoke 又是一个缺整个 WebView4Delphi 外部包、从未编过的工程。
+     也就是说该单元此前并非"被构建覆盖"，只是被一个死工程的 uses 子句**记账**成有归属。
+     可选处置（均由主控定）：(a) 把该单元纳入基线的孤儿清单并单派一单决定去留；
+     (b) 与 DeepBaseStudio/DoQryDemo 一并做「死面清理」；(c) 真正接上 WebView4Delphi 依赖。
+  3. 顺带登记（乙线门禁本体，非本单 scope）：build-ownership 的 ROOT 默认值是硬编码绝对路径
+     `D:/_Progs/02Business/DeepBase`，在 CI 检出目录下会扫 0 文件仍报绿；且它自带一套
+     `arg()` 而未复用 `09_工程脚本/gate-args.js`（工单约束「不得另写一套 arg()」只约束本单新增代码，
+     此处是存量，登记不擅改）。

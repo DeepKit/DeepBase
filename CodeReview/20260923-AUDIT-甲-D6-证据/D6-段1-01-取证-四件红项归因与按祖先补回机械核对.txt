@@ -1,0 +1,434 @@
+甲 D6 段1（测试面 4 件）——缺陷归因与「按祖先补回」机械核对
+=============================================================
+工单：docs/ui/work-orders/WO-20260923-AUDIT-甲-D6-编译红项T1面清零-测试面优先.md
+落笔提交：7ee0015（Tests/ 8 件，288 insertions / 279 deletions）
+判定现场：.tmp/d6_a_base（detach 工作树 @0d1fe7c，DIRTY_LINES=0）；修复后判定见 D6-收尾-02（.tmp/d6_a_ship @78d7f9f）
+
+本件只登记两件事：改前**为什么红**（归因）、补回的**内容依据什么**（判据 2）。
+逐件 BUILD_EXIT 的原始输出不在本件复述——改前红（含编译器首错原文）见 `D6-收尾-01`，
+改后绿见 `D6-收尾-02`；本单未为 7ee0015 单独再跑一次全量门，理由是判据 1 所需的是
+「四件在落地态全部 BUILD_EXIT=0」，该判定已由 收尾-02 的逐件行给出，重复跑只产第二套口径。
+
+复算环境（下列命令一律在此树下执行）：
+
+```
+git -C /d/_Progs/02Business/DeepBase worktree add --detach .tmp/d6_a_base 0d1fe7c
+```
+
+--------------------------------------------------------------------------------------------------
+§一  四件的缺陷类别
+--------------------------------------------------------------------------------------------------
+| 工程 | 首错（收尾-01 原文摘录） | 类别 | 修法 |
+|---|---|---|---|
+| Tests/GUI/DeepBaseGUITests.dpr | 5 件 uses 面报错，逐件不同 | 丙类（编码损坏） | 按最早可得祖先补回，见 §三–§五 |
+| Tests/Plugins/PluginLifecycleHarness.dpr | :58 E2003 Undeclared identifier: 'TDeepBasePluginManager' | 丁类（消费方引用了不在其 uses 面上的类名） | 只改测试侧 20 处标识符，见 §二 |
+| Tests/Speech/SpeechSpike.dpr | :180 E2003 Undeclared identifier: 'TProcessEntry32' | 丁类（uses 缺单元 + 该件自述无生产依赖） | 补 `Winapi.TlHelp32` uses 与本地 DPAPI 裸声明 |
+| Tests/Stress/DeepBaseStressTests.dpr | Stress.Database.pas:170 E2010 'TFDConnection' vs 'TObject' | 丁类（Core 面按 TObject 擦除后的显式下行转型缺失） | 消费方补转型，Core 面零改动 |
+
+SpeechSpike / Stress.Database 两件的改动量（+8 / 3 行）小于本件登记成本，diff 本身即证据，
+故不再为它们单列核对段；两件的共同点是**缺陷在消费方声明面**，不在被调用的生产实现里。
+
+--------------------------------------------------------------------------------------------------
+§二  PluginLifecycleHarness：为什么改 20 处标识符，而不是「补 uses」
+--------------------------------------------------------------------------------------------------
+工单前提：「你的修法不得把新轨解冻、不得把旧轨改掉，只补 `uses` 或在冻结边界内处理」。
+实测结论：在该件上，「补 uses」与「不动轨」互斥，故选冻结边界内的第二条路。命令与输出：
+
+```
+$ git grep -n "TDeepBasePluginManager\b" -- Core/DeepBase.PluginManager.pas
+Core/DeepBase.PluginManager.pas:91:  TDeepBasePluginManager = class      ← 旧轨类确有声明
+
+$ sed -n '20,29p' Tests/Plugins/PluginLifecycleHarness.dpr               ← harness 的 uses 面
+uses
+  ShareMem,
+  System.SysUtils, System.Classes, System.IOUtils, System.Hash,
+  Winapi.Windows,
+  DeepBase.Plugins.Contracts in '..\..\Core\DeepBase.Plugins.Contracts.pas',
+  DeepBase.Plugins.SafeGuard in '..\..\Core\DeepBase.Plugins.SafeGuard.pas',
+  DeepBase.Plugins.Verifier in '..\..\Core\DeepBase.Plugins.Verifier.pas',
+  DeepBase.Plugins.Manager in '..\..\Core\DeepBase.Plugins.Manager.pas',
+  DeepBase.Plugins.CAbi in '..\..\Core\DeepBase.Plugins.CAbi.pas',
+  DeepBase.Plugins.CAbiLoader in '..\..\Core\DeepBase.Plugins.CAbiLoader.pas';
+                                       ↑ uses 面只有新轨，旧轨单元 DeepBase.PluginManager 不在其中
+
+$ git grep -n "TDllPluginManager = class" -- '*.pas'
+Core/DeepBase.Plugins.Manager.pas:99:  TDllPluginManager = class          ← 新轨类（harness 已 uses 该单元）
+
+$ git grep -n "procedure RegisterPluginKind\|procedure SetPluginDllPath\|property Verifier" \
+      -- Core/DeepBase.Plugins.Manager.pas Core/DeepBase.PluginManager.pas
+Core/DeepBase.Plugins.Manager.pas:141:    procedure RegisterPluginKind(const AKind, ACreateFuncPrefix: string;
+Core/DeepBase.Plugins.Manager.pas:149:    procedure SetPluginDllPath(const AName, ADllPath: string);
+Core/DeepBase.Plugins.Manager.pas:176:    property Verifier: IPluginVerifier read FVerifier write FVerifier;
+                                       ↑ harness 调用的三个成员只存在于新轨，旧轨面一个都没有
+
+$ git show 0d1fe7c:Tests/Plugins/PluginLifecycleHarness.dpr | grep -c "TDeepBasePluginManager"
+20                                                                       ← 工单/回执口径「20 处标识符引用」的出处
+```
+
+归因：E2003 报的是「类名不在可见单元里」，不是「类被删了」。harness 从头到尾用的是新轨
+（`DeepBase.Plugins.Manager` + 其成员），只是把类型名写成了旧轨的 `TDeepBasePluginManager`。
+两条修法对比：
+- 补 `uses DeepBase.PluginManager` ⇒ 旧轨类进消费方可见面，而旧轨面并没有 harness 需要的
+  `RegisterPluginKind/SetPluginDllPath/Verifier`（上表第三组命令），补了 uses 仍然编译不过，
+  除非再把成员调用改回旧轨 API —— 那正是工单禁止的「把旧轨改掉/把新轨绕过」。
+- 把 20 处标识符指向 harness 本来就在用的新轨类 ⇒ 语义与 uses 面、成员调用三方一致，
+  轨本体零改动。
+
+轨零改动的机械证明（判据 3）：
+
+```
+$ git diff --name-only 0d1fe7c 78d7f9f -- Core/DeepBase.PluginManager.pas 'DeepBase.Plugins*' \
+      'Core/*Plugin*' 'Features/*Plugin*'
+（空输出 ⇒ 命中 0 件）
+```
+
+--------------------------------------------------------------------------------------------------
+§三  GUI 5 件：谱系与「最早可得祖先」的确切含义
+--------------------------------------------------------------------------------------------------
+```
+$ for f in Tests/GUI/Test.GUI.Core.pas Tests/GUI/Test.GUI.VCL.pas Tests/GUI/UniBase.GUITest.pas \
+      Tests/GUI/DeepBase.GUITest.pas Tests/GUI/GUITest.FormFactory.pas; do echo "### $f"; \
+      git log --oneline -- "$f"; done
+```
+### 命令 1：各件提交谱系（输出）
+### Tests/GUI/Test.GUI.Core.pas
+649b1e07 WO-20260919-AUDIT-乙: B1-B5 编码修复、覆盖/构建归属对账、TManagedWorker、锚点核验
+ca3364ee refactor: rename UniBase -> DeepBase, fix compilation errors
+7516962d 对齐任务文档，更新阶段统计和日期
+
+### Tests/GUI/Test.GUI.VCL.pas
+649b1e07 WO-20260919-AUDIT-乙: B1-B5 编码修复、覆盖/构建归属对账、TManagedWorker、锚点核验
+ca3364ee refactor: rename UniBase -> DeepBase, fix compilation errors
+7516962d 对齐任务文档，更新阶段统计和日期
+
+### Tests/GUI/UniBase.GUITest.pas
+ca3364ee refactor: rename UniBase -> DeepBase, fix compilation errors
+7516962d 对齐任务文档，更新阶段统计和日期
+
+### Tests/GUI/DeepBase.GUITest.pas
+649b1e07 WO-20260919-AUDIT-乙: B1-B5 编码修复、覆盖/构建归属对账、TManagedWorker、锚点核验
+1c344d9f On feat/db-autoupdate-ed25519-verify: wip-prior-unrelated-work
+ca3364ee refactor: rename UniBase -> DeepBase, fix compilation errors
+
+### Tests/GUI/GUITest.FormFactory.pas
+649b1e07 WO-20260919-AUDIT-乙: B1-B5 编码修复、覆盖/构建归属对账、TManagedWorker、锚点核验
+1c344d9f On feat/db-autoupdate-ed25519-verify: wip-prior-unrelated-work
+ca3364ee refactor: rename UniBase -> DeepBase, fix compilation errors
+7516962d 对齐任务文档，更新阶段统计和日期
+
+### 命令 2：本仓可获得的最早版本即 7516962d（该件的新增提交）
+$ git log --oneline --diff-filter=A -- Tests/GUI/UniBase.GUITest.pas
+7516962d 对齐任务文档，更新阶段统计和日期
+
+读法：7516962d 是 Tests/GUI 这批件的**首次入库提交**，谱系上再无更向上游 ⇒ 本单所称「干净祖先」的准确含义是「**仓内可获得的最早版本**」，不是「逐字无损坏的版本」（该限制的直接后果见 §五末）。改名之前的路径是 UniBase.GUITest.pas / UniBaseGUITests.dpr，故比对时做字节级 UniBase→DeepBase 机械映射。
+
+--------------------------------------------------------------------------------------------------
+§四  「差异只来自编码」的骨架证明（ASCII 代码骨架 CRC，忽略空白/引号/? 者为宽松骨架）
+--------------------------------------------------------------------------------------------------
+```
+$ python .tmp/d6_skel_proof.py        # 对每件取 git show <rev>:<path> 的 ASCII 代码骨架做 CRC32
+```
+脚本留在一维工作区 `.tmp/d6_skel_proof.py`，本单**未入库**：它是一次性核对工具，不是门禁。
+骨架口径（供复算）：严格 = 去掉行首缩进后的整行文本；宽松 = 再忽略空白、引号内容与 `?` 字符，
+即「只有编码损坏会碰到的那部分」允许不同。CRC 相同 ⇒ 结构相同；宽松相同而严格不同 ⇒ 差异纯来自编码。
+### Tests/GUI/Test.GUI.Core.pas   祖先 7516962d:UniBase 同名件（字节级 UniBase→DeepBase 映射后）
+  祖先行数=943
+  ca3364ee: 行数=943 骨架判定=骨架不一致  严格骨架CRC=95816e34 宽松骨架CRC=286e60fe
+  649b1e07: 行数=943 骨架判定=骨架不一致  严格骨架CRC=95816e34 宽松骨架CRC=286e60fe
+  HEAD: 行数=943 骨架判定=骨架不一致  严格骨架CRC=95816e34 宽松骨架CRC=286e60fe
+  祖先基准: 严格骨架CRC=fb53059a 宽松骨架CRC=8e650e4e
+
+### Tests/GUI/Test.GUI.VCL.pas   祖先 7516962d:UniBase 同名件（字节级 UniBase→DeepBase 映射后）
+  祖先行数=608
+  ca3364ee: 行数=608 骨架判定=宽松一致(仅差空白/?/引号)  严格骨架CRC=2ab42c01 宽松骨架CRC=dff2a9b2
+  649b1e07: 行数=608 骨架判定=宽松一致(仅差空白/?/引号)  严格骨架CRC=2ab42c01 宽松骨架CRC=dff2a9b2
+  HEAD: 行数=608 骨架判定=宽松一致(仅差空白/?/引号)  严格骨架CRC=2ab42c01 宽松骨架CRC=dff2a9b2
+  祖先基准: 严格骨架CRC=55e8327e 宽松骨架CRC=dff2a9b2
+
+
+读法（对上一段输出）：
+- `Test.GUI.VCL.pas`：改前三版（ca3364ee / 649b1e07 / 0d1fe7c）宽松骨架 CRC 逐位相同（`dff2a9b2`），
+  且与祖先基准宽松 CRC **相同** ⇒ 结构没变过，差异确实只落在空白/引号/`?` 层，属纯编码损坏。
+- `Test.GUI.Core.pas`：改前三版宽松骨架 CRC 同样逐位相同（`286e60fe`）⇒ 改名之后没有再发生任何
+  结构性编辑；但它与祖先基准**不等**（`286e60fe` vs `8e650e4e`）。差异定位到具体行后是一条**新的**结论
+  （不是先前推测的「吞行」——行数两边都是 943，行没被吞）：
+
+```
+$ node -e "把 7516962d 的祖先与 0d1fe7c 的改前件各做「ASCII 投影 → 再去掉空白/引号/?」（= 宽松骨架），逐行比对"
+### Tests/GUI/Test.GUI.Core.pas 宽松投影不等行数=2
+L10  ANC:"-/"        HEAD:"-"
+L11  ANC:"-/"        HEAD:"-"
+（同一比较对 VCL 输出 不等行数=0）
+
+$ node -e "打印这两行的原始内容（latin-1 视角，非 ASCII 显示为 U+00XX 形式）"
+L9   ANC:"    - å¤éæ¡/åéæ®"      ← 注释行「- 复选框/单选按钮」，HEAD 里 `/` 仍在
+     HEAD:"    - æ¾¶å¶â¬å¤å¾î/éæ¢â¬å¤å¯é?"
+L10  ANC:"    - ä¸ææ¡/ååè¡¨æ¡"   ← 注释行「- 下拉框/列表框」，HEAD 里 `/` **消失**
+     HEAD:"    - æ¶å¬«åªºå¦?éæ¥ãå¦?"
+L11  ANC:"    - æ§ä»¶å¯è§æ§/å¯ç¨ç¶æ"  ← 注释行「- 控件可见性/启用状态」，HEAD 里 `/` **消失**
+     HEAD:"    - éºÑæ¬¢éîïåé¬?éæ¬æ¤éèµâ¬?"
+```
+
+⇒ 实测事实：**损坏不只替换非 ASCII 字节，还会把与 CJK 相邻的 ASCII 字符一起吃掉**（这里是 2 个 `/`，
+都落在文件头注释列表项里）。这类差异用「只看本文件自洽性」的检查一律发现不了——注释里少一个斜杠，
+编码合法、括号配平、编译照过；只有跟祖先比对才看得见。这也正是 Core/VCL 采取**整件对齐祖先**、
+而不是「只把非 ASCII 段替换回去」的理由：逐段替换会保住这 2 个已被吞的 ASCII 缺失。
+
+
+§三-补  整件对齐后的等值性（直接复算，最强的一条）
+
+```
+$ node -e "对每件：把 7516962d 的祖先文本做 UniBase→DeepBase 字节级映射、CRLF 归一，
+           与 .tmp/d6_a_ship（@78d7f9f 干净工作树）的落地件逐行比对"
+Tests/GUI/Test.GUI.Core.pas 祖先行数=943 落地行数=943 不等行数=1
+  L1  ANC:{ ====…      NOW:<BOM>{ ====…
+Tests/GUI/Test.GUI.VCL.pas  祖先行数=608 落地行数=608 不等行数=1
+  L1  ANC:{ ====…      NOW:<BOM>{ ====…
+```
+
+⇒ 两件落地后与映射祖先**逐行等值**，唯一差异是首行的 UTF-8 BOM（本仓对含 CJK 的 `.pas` 的既定编码
+要求，见 `.tmp` 之外的编码门禁口径），不是内容差异。这条比对同时说明：**没有夹带任何自创代码**。
+
+--------------------------------------------------------------------------------------------------
+§五  LCS 逐行补回件的逐行核对（DeepBase.GUITest.pas）
+--------------------------------------------------------------------------------------------------
+该件不能整件对齐祖先（`7516962d` 只含改名前的 `UniBase.GUITest.pas`，且 ca3364ee 之后有合法编辑），
+故按 LCS 对齐逐行补回。核对脚本：`.tmp/d6_verify_restore.cjs`（一次性核对工具，未入库；口径见脚本第 12–19 行：
+取补回行里的中文片段 `[一-鿿]{2,}`，逐段在**映射后的同名祖先全文**里做子串匹配）。原始输出：
+
+L2
+  OLD(damaged)|  DeepBase.GUITest - GUI 自动化测试框�?
+  NEW(restored)|  DeepBase.GUITest - GUI 自动化测试框架
+  ANC_MATCH: ALL
+L5
+  OLD(damaged)|  说明: 提供完整�?GUI 自动化测试基础设施
+  NEW(restored)|  说明: 提供完整的 GUI 自动化测试基础设施
+  ANC_MATCH: ALL
+L47
+  OLD(damaged)|  /// 时间戳辅�?
+  NEW(restored)|  /// 时间戳辅助类
+  ANC_MATCH: 0/1 -> ["时间戳辅助类"]
+L137
+  OLD(damaged)|  /// GUI 测试上下�?
+  NEW(restored)|  /// GUI 测试上下文
+  ANC_MATCH: ALL
+L156
+  OLD(damaged)|    /// <summary>记录步骤开�?/summary>
+  NEW(restored)|    /// <summary>记录步骤开始</summary>
+  ANC_MATCH: ALL
+L182
+  OLD(damaged)|  /// 截图比较�?
+  NEW(restored)|  /// 截图比较器
+  ANC_MATCH: ALL
+L198
+  OLD(damaged)|    /// <summary>生成差异�?/summary>
+  NEW(restored)|    /// <summary>生成差异图像</summary>
+  ANC_MATCH: 0/1 -> ["生成差异图像"]
+L204
+  OLD(damaged)|  /// GUI 测试报告生成�?
+  NEW(restored)|  /// GUI 测试报告生成器
+  ANC_MATCH: ALL
+L217
+  OLD(damaged)|  /// GUI 测试基类 - 可独立使用或�?DUnitX 集成
+  NEW(restored)|  /// GUI 测试基类 - 可独立使用或与 DUnitX 集成
+  ANC_MATCH: ALL
+L230
+  OLD(damaged)|    /// <summary>销毁测试窗�?/summary>
+  NEW(restored)|    /// <summary>销毁测试窗体</summary>
+  ANC_MATCH: ALL
+L236
+  OLD(damaged)|    /// <summary>测试上下�?/summary>
+  NEW(restored)|    /// <summary>测试上下文</summary>
+  ANC_MATCH: ALL
+L260
+  OLD(damaged)|    /// <summary>模拟勾�?/summary>
+  NEW(restored)|    /// <summary>模拟勾选</summary>
+  ANC_MATCH: ALL
+L277
+  OLD(damaged)|    /// <summary>断言控件不可�?/summary>
+  NEW(restored)|    /// <summary>断言控件不可见</summary>
+  ANC_MATCH: ALL
+L289
+  OLD(damaged)|    /// <summary>断言控件�?/summary>
+  NEW(restored)|    /// <summary>断言控件值</summary>
+  ANC_MATCH: ALL
+L306
+  OLD(damaged)|    /// <summary>保存为基准截�?/summary>
+  NEW(restored)|    /// <summary>保存为基准截图</summary>
+  ANC_MATCH: ALL
+L309
+  OLD(damaged)|    /// <summary>与基准截图比�?/summary>
+  NEW(restored)|    /// <summary>与基准截图比对</summary>
+  ANC_MATCH: ALL
+L318
+  OLD(damaged)|    /// <summary>开始步�?/summary>
+  NEW(restored)|    /// <summary>开始步骤</summary>
+  ANC_MATCH: ALL
+L325
+  OLD(damaged)|    /// <summary>Setup - 在每个测试之前调�?/summary>
+  NEW(restored)|    /// <summary>Setup - 在每个测试之前调用</summary>
+  ANC_MATCH: ALL
+L328
+  OLD(damaged)|    /// <summary>TearDown - 在每个测试之后调�?/summary>
+  NEW(restored)|    /// <summary>TearDown - 在每个测试之后调用</summary>
+  ANC_MATCH: ALL
+L334
+  OLD(damaged)|    /// <summary>获取所有测试结�?/summary>
+  NEW(restored)|    /// <summary>获取所有测试结果</summary>
+  ANC_MATCH: ALL
+L339
+  OLD(damaged)|  /// GUI 测试运行�?
+  NEW(restored)|  /// GUI 测试运行器
+  ANC_MATCH: ALL
+L350
+  OLD(damaged)|    /// <summary>运行测试�?/summary>
+  NEW(restored)|    /// <summary>运行测试用例</summary>
+  ANC_MATCH: 0/1 -> ["运行测试用例"]
+L594
+  OLD(damaged)|    // 加载基准�?
+  NEW(restored)|    // 加载基准图像
+  ANC_MATCH: 0/1 -> ["加载基准图像"]
+L608
+  OLD(damaged)|    // 加载实际�?
+  NEW(restored)|    // 加载实际图像
+  ANC_MATCH: 0/1 -> ["加载实际图像"]
+L638
+  OLD(damaged)|  // 尺寸不匹�?
+  NEW(restored)|  // 尺寸不匹配
+  ANC_MATCH: ALL
+L674
+  OLD(damaged)|  Result.IsMatch := Result.DifferencePercent < 0.1; // 默认 0.1% 阈�?
+  NEW(restored)|  Result.IsMatch := Result.DifferencePercent < 0.1; // 默认 0.1% 阈值
+  ANC_MATCH: ALL
+L798
+  OLD(damaged)|      HTML.Add(Format('<p><strong>窗体�?</strong> %s</p>', [R.FormClass]));
+  NEW(restored)|      HTML.Add(Format('<p><strong>窗体类</strong> %s</p>', [R.FormClass]));
+  ANC_MATCH: ALL
+L799
+  OLD(damaged)|      HTML.Add(Format('<p><strong>开始时�?</strong> %s</p>', [FormatDateTime('hh:nn:ss.zzz', R.StartTime)]));
+  NEW(restored)|      HTML.Add(Format('<p><strong>开始时间</strong> %s</p>', [FormatDateTime('hh:nn:ss.zzz', R.StartTime)]));
+  ANC_MATCH: ALL
+L804
+  OLD(damaged)|        HTML.Add('<tr><th>#</th><th>描述</th><th>操作</th><th>预期</th><th>实际</th><th>状�?/th><th>截图</th></tr>');
+  NEW(restored)|        HTML.Add('<tr><th>#</th><th>描述</th><th>操作</th><th>预期</th><th>实际</th><th>状态</th><th>截图</th></tr>');
+  ANC_MATCH: ALL
+L819
+  OLD(damaged)|          HTML.Add(Format('<td class="%s">%s</td>', [StatusClass, IfThen(S.Success, '�?, '�?)]));
+  NEW(restored)|          HTML.Add(Format('<td class="%s">%s</td>', [StatusClass, IfThen(S.Success, '通过', '失败')]));
+  ANC_MATCH: ALL
+L947
+  OLD(damaged)|  // 创建上下�?
+  NEW(restored)|  // 创建上下文
+  ANC_MATCH: ALL
+L972
+  OLD(damaged)|  // 销毁窗�?
+  NEW(restored)|  // 销毁窗体
+  ANC_MATCH: ALL
+L1150
+  OLD(damaged)|    Exit; // 不存在等同于不可�?
+  NEW(restored)|    Exit; // 不存在等同于不可见
+  ANC_MATCH: ALL
+L1355
+  OLD(damaged)|  // 这里提供一个简化的运行器接�?
+  NEW(restored)|  // 这里提供一个简化的运行器接口
+  ANC_MATCH: ALL
+统计：改动行 34 行 ⇒ 中文片段命中祖先 `ALL` 29 行；`0/1`（该行有 1 段在祖先里找不到）5 行，
+分别是「时间戳辅助类 / 生成差异图像 / 运行测试用例 / 加载基准图像 / 加载实际图像」。
+
+对那 5 段的处理（这是判据 2 要求写明的部分，也是本单最重要的一条前提更正）：
+**不是我没查祖先，而是祖先在这 5 行本身也处于被吞态。**逐条复算：
+
+```
+$ git show 7516962d:Tests/GUI/UniBase.GUITest.pas | grep -n "时间戳\|生成差异\|运行测试\|加载基准\|加载实际"
+47:  /// 时间戳辅助              ← 落地写作「时间戳辅助类」
+196:    /// <summary>生成差异图</summary>   ← 落地写作「生成差异图像」
+348:    /// <summary>运行测试类</summary>   ← 落地写作「运行测试用例」
+590:    // 加载基准图              ← 落地写作「加载基准图像」
+604:    // 加载实际图              ← 落地写作「加载实际图像」
+```
+
+即损坏早于本仓首次入库（§三 命令 2：`7516962d` 就是这批件的 `--diff-filter=A` 新增提交，
+谱系上再无更上游可查），祖先被吞的是**词尾 1–2 字**。因此：
+1. 本单所称「按干净祖先补回」的准确含义是「按仓内可获得的最早版本补回」，不是「逐字还原原始文本」；
+2. 上述 5 段的依据是「同件同类行的词形 + 该行剩余上下文」，不是祖先逐字，且 5 段全部落在
+   `///` / `//` 注释行 ⇒ 不影响任何可执行语义，已逐条列出供异族模型复核；
+3. 若要逐字溯源，唯一路径是本仓之外的原始出处，属新议题，不在本单范围内自行扩面。
+
+--------------------------------------------------------------------------------------------------
+§六  修复后残留归零（三类损坏各一条判据，逐件）
+--------------------------------------------------------------------------------------------------
+Tests/GUI/DeepBaseGUITests.dpr  strict-UTF8=OK  BOM=no  CRLF=0  U+FFFD=0  PUA=0  反向可解乱码行=0 []
+Tests/GUI/DeepBase.GUITest.pas  strict-UTF8=OK  BOM=yes  CRLF=0  U+FFFD=0  PUA=0  反向可解乱码行=0 []
+Tests/GUI/Test.GUI.Core.pas  strict-UTF8=OK  BOM=yes  CRLF=0  U+FFFD=0  PUA=0  反向可解乱码行=0 []
+Tests/GUI/Test.GUI.VCL.pas  strict-UTF8=OK  BOM=yes  CRLF=0  U+FFFD=0  PUA=0  反向可解乱码行=0 []
+Tests/GUI/GUITest.FormFactory.pas  strict-UTF8=OK  BOM=yes  CRLF=0  U+FFFD=0  PUA=0  反向可解乱码行=0 []
+
+（判据含义：U+FFFD=丙-B 残留；PUA=私有区字符，双重编码的副产物；「反向可解乱码行」= 把该行按 GBK
+重新编码再按 UTF-8 解码能得到 CJK 文本的行数，即丙-C 双重编码残留。三项同时为 0 ⇒ 三类都清了。）
+
+--------------------------------------------------------------------------------------------------
+§七  本件不覆盖什么
+--------------------------------------------------------------------------------------------------
+1. `DeepBaseGUITests.dpr`（10 行）与 `GUITest.FormFactory.pas`（18 行）的补回未做 §五 那样的逐行留痕，
+   其依据同属 7516962d 映射祖先，diff 即可复核；登记为留痕强度不齐（Core/VCL 有等值性直证、GUITest 有逐行表、
+   dpr/FormFactory 只有 diff）。
+2. 逐件 BUILD_EXIT 不在本件（见页首指向）。
+3. §三-补 的比对基准是**工作树文件**（`.tmp/d6_a_ship` @78d7f9f 干净树），不是共享树，符合本链「共享树结论无效」。
+
+--------------------------------------------------------------------------------------------------
+§八  全库丙-C（双重编码乱码）存量面——本单口径下的债务面，不属本单 scope
+--------------------------------------------------------------------------------------------------
+判据口径（`.tmp/d6_mojibake.py:3-20`，未加 `--fix` = 只报不改）：某行本身是**合法 UTF-8**（所以编码门禁看它是绿的），
+但把该行按 GBK 重新编码后再按 UTF-8 解码能得到含 CJK 的文本 ⇒ 该行属「UTF-8 字节被误当 GBK 解码后又存成 UTF-8」。
+扫描面：`git ls-files -- '*.pas' '*.dpr' '*.dpk'`。
+
+```
+$ cd .tmp/d6_a_ship          # 干净工作树 @78d7f9f（本单落地后）
+$ PYTHONIOENCODING=utf-8 python ../d6_mojibake.py | grep '^MOJIBAKE'
+MOJIBAKE	Tools/SeedTool/uAntiTamperPackage.pas	lines=43
+MOJIBAKE	Tools/LogAnalyzer/LogAnalyzer.Export.pas	lines=19
+MOJIBAKE	Tools/Studio/Studio.Resources.pas	lines=17
+MOJIBAKE	Tests/Test.DeepBase.i18n.pas	lines=15
+MOJIBAKE	FMX/DeepBase.FMX.AutoUpdater.pas	lines=9
+MOJIBAKE	FMX/DeepBase.FMX.MRUControls.pas	lines=9
+MOJIBAKE	Tests/Test.DeepBase.MRU.pas	lines=8
+MOJIBAKE	Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas	lines=7
+MOJIBAKE	Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas	lines=7
+MOJIBAKE	Tests/Regression/Test.Regression.BUG009_LoggingRace.pas	lines=6
+MOJIBAKE	Tests/Regression/Test.Regression.BUG070_LogInjection.pas	lines=6
+MOJIBAKE	Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas	lines=6
+MOJIBAKE	Tests/Test.LogAnalyzer.pas	lines=6
+MOJIBAKE	Examples/FullDemo/FullDemo.MainForm.pas	lines=5
+MOJIBAKE	FMX/DeepBase.FMX.ConfigControls.pas	lines=5
+MOJIBAKE	FMX/DeepBase.FMX.ConfigEdit.pas	lines=5
+MOJIBAKE	Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas	lines=5
+MOJIBAKE	Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas	lines=5
+MOJIBAKE	Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas	lines=5
+MOJIBAKE	Tests/Test.DeepBase.FormState.pas	lines=5
+MOJIBAKE	Tools/LogAnalyzer/LogAnalyzer.Stats.pas	lines=5
+MOJIBAKE	Tests/Integration/Test.Integration.Core.pas	lines=4
+MOJIBAKE	FMX/DeepBase.FMX.I18nControls.pas	lines=3
+MOJIBAKE	Tests/Integration/DeepBase.IntegrationTest.pas	lines=3
+MOJIBAKE	Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas	lines=3
+MOJIBAKE	Tests/Regression/Test.Regression.BUG066_PathTraversal.pas	lines=3
+MOJIBAKE	Tests/Test.SeedTool.pas	lines=3
+MOJIBAKE	FMX/DeepBase.FMX.Controls.pas	lines=2
+MOJIBAKE	Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas	lines=2
+MOJIBAKE	Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas	lines=2
+MOJIBAKE	Tests/Test.DeepBase.Theme.pas	lines=2
+MOJIBAKE	Tools/CLI/CLI.DB.pas	lines=2
+MOJIBAKE	Tools/CLI/CLI.Main.pas	lines=2
+MOJIBAKE	Examples/Templates/Common/Template.AutoUpdateBootstrap.pas	lines=1
+---- 检测文件数=34  行数=230
+```
+
+对照同一脚本在段1 期间（改前态）的输出：**45 件 / 415 行**。留痕件 `.tmp/d6_mojibake_detect.txt` **不入库**，
+原因是它本身不是合法 UTF-8——Windows 下 python 的 stdout 重定向按 ANSI 码页落盘，中文汇总行成了 GBK；
+把它原样放进 `CodeReview/` 会直接把证据编码门禁打红。这是本单一条实测教训（已在交付回执 §二 登记）。
+
+差值归因（只给可点名的部分）：本单段3 修掉 DocManager 轨 6 件（`Service.Document` 40、`Service.Search` 17、
+`Form.DocumentEdit` 15、`Entity.Document` 14、`Data.Module` 10、`Entity.Category` 9 = 105 行）；
+其余减量来自他单同期入库，**本单未逐笔核对他单贡献**，故此处不做归因表，只给总量。
+
+登记结论：丙-C 存量 **34 件 / 230 行**仍在库，而五道静态门禁对它一律绿。这说明「编码门禁 EXIT=0」
+不等于「中文内容正确」——门禁判的是字节合法性与 U+FFFD 基线，判不出双重编码。作为门禁能力缺口交主控。

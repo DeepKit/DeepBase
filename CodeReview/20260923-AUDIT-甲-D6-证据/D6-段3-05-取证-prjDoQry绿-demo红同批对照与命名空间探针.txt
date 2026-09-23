@@ -1,0 +1,80 @@
+D6 段3 取证 05 —— prjDoQry 绿 / DoQryDemo 红：同批对照 + 只补命名空间后的真错面
+工单：WO-20260923-AUDIT-甲-D6-编译红项T1面清零-测试面优先
+目的：主控对 DoQryDemo 的裁定前提是「DBClient 不在 Win64 lib 面，属平台不适用 ⇒ 移出库」。
+      本件用同一批、同一棵树、同一编译器把同族两件对照跑，并只改 -NS 一处，验证该前提。
+
+────────────────────────────────────────────────────────────────────────
+§一 判定树（工单口径：隔离 git worktree add --detach @ 目标 commit；共享树结论无效）
+────────────────────────────────────────────────────────────────────────
+$ git worktree add --detach .tmp/d6_seg3b 7ee0015
+HEAD is now at 7ee00157 fix(audit-甲-D6): 段1 测试面 4 件编译清零（GUI 丙类按祖先补回 + 3 件丁类声明缺陷）
+$ cd .tmp/d6_seg3b && git status --porcelain | wc -l
+0                      ← 干净树，无其他角色未提交改动混入
+
+────────────────────────────────────────────────────────────────────────
+§二 同批对照（门禁原样跑，两行只此一次，逐字）
+────────────────────────────────────────────────────────────────────────
+$ node 09_工程脚本/build-gate/check_build.js --dpr doQry/prjDoQry.dpr --dpr doQry/examples/DoQryDemo/DoQryDemo.dpr
+[dpr 1/2] doQry/prjDoQry.dpr CONFIG=prjDoQry.dproj BUILD_EXIT=0
+[dpr 2/2] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=1
+  doQry/examples/DoQryDemo/DoQryDemo.dpr 编译失败：DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+编译门禁统计：DPR总数=2 成功=1 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0
+编译门禁统计：判定面=2 已跟踪=92 清单来源=named .res生成=1 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：1 个工程编译不过
+  doQry/examples/DoQryDemo/DoQryDemo.dpr EXIT=1  DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+GATE_EXIT=1（重定向后再取 $?，不经管道）
+
+读法：
+· 两件同用 doQry/src 下的同一批单元。库工程 prjDoQry 绿 ⇒ 「DBClient 在 Win64 上不可用」
+  这一前提如果成立，prjDoQry 也该红。它绿，说明红的原因不在平台 lib 面。
+· CONFIG 一栏即分叉点：prjDoQry 有 .dproj（走工程自己的 DCC_Namespace，含 Datasnap），
+  demo 无 .dproj（回落 check_build.js:39 DEFAULT_NS，其中没有 Datasnap）。
+· 「.res生成=1」是本树首次跑该子集时门禁自动补 DoQryDemo.res，非本单改动。
+
+────────────────────────────────────────────────────────────────────────
+§三 只改 -NS 一处（补 ";Datasnap"），其余参数与门禁 buildDefaultEnv 同构
+────────────────────────────────────────────────────────────────────────
+可复跑件：本目录 d6_seg3_doqry_probe.py（BASE_NS / UNIT_DIRS 逐字抄 check_build.js:37,39，
+只暴露 -NS 追加位，编译产物一律落 .tmp/d6_seg3_doqry_out/，不写源码目录）。
+
+$ python CodeReview/20260923-AUDIT-甲-D6-证据/d6_seg3_doqry_probe.py
+NS = System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win
+DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+EXIT=1                                    ← 与 §二 门禁结论一致（同首错、同 EXIT）
+
+$ python CodeReview/20260923-AUDIT-甲-D6-证据/d6_seg3_doqry_probe.py ";Datasnap"
+NS = …;System.Win;Datasnap
+…（16 条 Hint/Warning 略，均在 doQry/src，非致命）
+DoQryDemo.dpr(43) Error: E2003 Undeclared identifier: 'DoQryInit'
+DoQryDemo.dpr(58) Error: E2052 Unterminated string
+DoQryDemo.dpr(59) Error: E2066 Missing operator or semicolon
+DoQryDemo.dpr(59) Error: E2029 '(' expected but string constant found
+DoQryDemo.dpr(59) Error: E2029 '(' expected but identifier 'INTO' found
+DoQryDemo.dpr(59) Error: E2003 Undeclared identifier: 'title'
+DoQryDemo.dpr(59) Error: E2008 Incompatible types
+DoQryDemo.dpr(59) Error: E2029 Expression expected but ':' found
+DoQryDemo.dpr(59) Error: E2066 Missing operator or semicolon
+DoQryDemo.dpr(59) Error: E2052 Unterminated string
+DoQryDemo.dpr(60) Error: E2052 Unterminated string
+DoQryDemo.dpr(61) Error: E2052 Unterminated string
+DoQryDemo.dpr(64) Error: E2125 EXCEPT or FINALLY expected
+DoQryDemo.dpr(75) Error: E2003 Undeclared identifier: 'DoQryExecSelect'
+DoQryDemo.dpr(90) Error: E2029 'END' expected but 'FINALLY' found
+DoQryDemo.dpr(93) Error: E2029 '.' expected but ';' found
+EXIT=1
+
+────────────────────────────────────────────────────────────────────────
+§四 对照出来的两层结论（细节与逐笔取证见 D6-段3-03）
+────────────────────────────────────────────────────────────────────────
+1. 「DBClient 不在 Win64 lib 面」为假：Datasnap.DBClient.dcu 与 MidasLib.dcu 在
+   …\37.0\lib\Win64\release 内均存在（清单见 D6-段3-03 §一），只是 bare name `DBClient`
+   要 Datasnap 命名空间才解析得到。
+2. 补上命名空间后 F2613 消失，暴露的不是「还差一个 namespace」，而是两类真实缺陷：
+   · E2003 DoQryInit / DoQryExecSelect 未声明 —— uDoQry.pas:10 与 :18 两行丙-A 编码损坏
+     把「非 ASCII 注释 + 紧跟其后的公开例程声明」整行吞进注释（被吞的字节正是换行），
+     例程因此不进接口导出面；implementation 侧 :30/:74 实现仍在。
+   · E2052/E2029/E2125 …… demo 自己的 SQL 字面量跨行书写（:58/:60 未闭合，:59/:61 续写），
+     自诞生从未通过编译。
+   两层都属于「库的导出面有洞 + 消费者写错」，删掉 demo 会让这两层同时失去唯一探针，
+   并让 prjDoQry 显示为绿而掩盖导出面的缺失 ⇒ 处置论证见 D6-段3-04。

@@ -1,0 +1,43 @@
+$ # WO-20260923-AUDIT-甲-D6 段3 · T2 三件裁定落地实测（改前 / 改后）
+$ # 隔离工作树 .tmp/d6_seg3 = git worktree add --detach @ 7ee0015（甲 D6 段1 落笔件）· 2026-09-23
+$ # 逐个点名跑，不只看 --all 汇总；每件都留 BUILD_EXIT 与门禁 EXIT
+
+## 一、改前基线：T2 三件 + DoQryDemo 各自首错
+
+$ node "09_工程脚本/build-gate/check_build.js" --dpr Tests/GUI/PageDriverSmoke.dpr
+[dpr 1/1] Tests/GUI/PageDriverSmoke.dpr CONFIG=default BUILD_EXIT=1
+  Tests/GUI/PageDriverSmoke.dpr 编译失败：PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=92 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+EXIT=1
+# （同批另两件 DataAnalyzer/DocManager 的改前首错见 T2-待定面.txt 在册注释，来源甲 D4 取证，本单不重抄）
+
+$ node "09_工程脚本/build-gate/check_build.js" --dpr doQry/examples/DoQryDemo/DoQryDemo.dpr
+[dpr 1/1] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=1
+  doQry/examples/DoQryDemo/DoQryDemo.dpr 编译失败：DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=91 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+EXIT=1
+
+## 二、改后：补齐两件（DataAnalyzer / DocManager）
+
+$ node "09_工程脚本/build-gate/check_build.js" --dpr Examples/Templates/DocManager/DocManager.dpr --dpr Examples/Templates/DataAnalyzer/DataAnalyzer.dpr
+[dpr 1/2] Examples/Templates/DocManager/DocManager.dpr CONFIG=default BUILD_EXIT=0
+[dpr 2/2] Examples/Templates/DataAnalyzer/DataAnalyzer.dpr CONFIG=default BUILD_EXIT=0
+编译门禁统计：DPR总数=2 成功=2 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=2 已跟踪=92 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁通过：2 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）
+EXIT=0
+
+## 三、改后：清空 T2 在册件后对空面跑 --manifest（实测 fail-closed，不是「全都通过」）
+
+$ node "09_工程脚本/build-gate/check_build.js" --manifest "09_工程脚本/build-gate/contracts/T2-待定面.txt"
+编译门禁失败(fail-closed)：--manifest 清单为空（0 个工程）：...\contracts\T2-待定面.txt——空清单不是「全都通过」，直接红
+EXIT=2
+# ⇒ T2 归零后面不可跑，本单不对其主张「绿」；该面 0 件的口径写在 T2-待定面.txt 注释里。
+
+## 四、判定面计数变化（同一 worktree 内机械复算）
+
+已跟踪 .dpr：67（改前）→ 66（删 PageDriverSmoke 后）；门禁「已跟踪」口径含 .dpk，对应 92 → 91。
+T1 行集：63 = 67 − T0(1) − T2(3) → 65 = 66 − T0(1) − T2(0)。差集只应是 +DataAnalyzer.dpr +DocManager.dpr，
+实测比对见 D6-段3-06，结果零漂移。

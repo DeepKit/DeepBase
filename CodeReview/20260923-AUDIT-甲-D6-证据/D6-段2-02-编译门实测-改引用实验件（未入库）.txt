@@ -1,0 +1,36 @@
+$ # WO-20260923-AUDIT-甲-D6 段2 · 对照实验（工作树内的临时改动，未入库、已回退）
+$ # 同一隔离工作树 .tmp/d6_seg2 @ 7ee0015，唯一改动 = DeepBaseStudio.dpr:18/:31 的两处标识符改为活件真实窗体类 TfrmStudioMain / var frmStudioMain
+$ # 目的：把「段2 续修到 BUILD_EXIT=0」这条路走到底，验证它买到的是什么
+$ git diff -- Tools/Studio/DeepBaseStudio.dpr
+diff --git a/Tools/Studio/DeepBaseStudio.dpr b/Tools/Studio/DeepBaseStudio.dpr
+index e8f2d99e..60f463ce 100644
+--- a/Tools/Studio/DeepBaseStudio.dpr
++++ b/Tools/Studio/DeepBaseStudio.dpr
+@@ -15,7 +15,7 @@ uses
+   FireDAC.Phys.SQLite,
+   FireDAC.Phys.SQLiteDef,
+   FireDAC.Stan.ExprFuncs,
+-  Studio.MainForm in 'Forms\Studio.MainForm.pas' {StudioMainForm};
++  Studio.MainForm in 'Forms\Studio.MainForm.pas' {frmStudioMain};
+ 
+ {$R *.res}
+ 
+@@ -28,6 +28,6 @@ begin
+   if TStyleManager.IsValidStyle('Windows11') then
+     TStyleManager.TrySetStyle('Windows11');
+     
+-  Application.CreateForm(TStudioMainForm, StudioMainForm);
++  Application.CreateForm(TfrmStudioMain, frmStudioMain);
+   Application.Run;
+ end.
+$ node "09_工程脚本/build-gate/check_build.js" --dpr Tools/Studio/DeepBaseStudio.dpr
+[dpr 1/1] Tools/Studio/DeepBaseStudio.dpr CONFIG=DeepBaseStudio.dproj BUILD_EXIT=0
+编译门禁统计：DPR总数=1 成功=1 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=92 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁通过：1 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）
+GATE_EXIT=0
+# 结论：BUILD_EXIT=0 可达，但代价是把一个从未编译过的死 .dpr 转正为同一工具的「第二套活入口」——
+# 它的 uses 只注册 Studio.MainForm 1 件（活入口 Studio.dpr 注册 12 件），且过程体完全没有
+# DeepBase.Manager.InitializeEx / CurrentLanguage(i18n) / Finalize 三段生命周期（见 D6-段2-04 逐行对比）。
+# ⇒ 编译门会绿，程序按该入口启动即处于未初始化状态。这正是工单段1 明令禁止的「为了编译通过乱补」形态。

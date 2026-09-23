@@ -1,0 +1,73 @@
+$ # WO-20260923-AUDIT-甲-D6 段2 · 取证：DeepBaseStudio.dpr 自诞生即引用不存在的窗体类（全历史从未编译过）
+$ # 在共享树 @ 7ee0015 执行（纯历史只读查询，不改工作树）· 2026-09-23
+$ # 结论：该标识符在仓库存在以来的每一个 commit 上都无法解析 ⇒ 此件生来即坏，不是「坏在本单之前被人修坏」。
+
+$ git log --oneline --all -S"TStudioMainForm" -- Tools/
+7516962d 对齐任务文档，更新阶段统计和日期
+#   ↑ 全历史改变该符号出现次数的笔数 = 1，即引入笔 7516962d(2025-11-30)；此后无任何 commit 改过它。
+
+$ git show 7516962d --stat -- Tools/Studio/ | grep -i "Studio.dpr"
+ Tools/Studio/Studio.dpr                          |   75 ++
+ Tools/Studio/Studio.dproj                        |  141 +++
+ Tools/Studio/UniBaseStudio.dpr                   |   32 +
+#   ↑ 同一笔里 Studio.dpr（活入口，75 行）与 UniBaseStudio.dpr（死入口，32 行，后改名 DeepBaseStudio.dpr）一起新增。
+#     即「同一工具的第二个入口」从诞生第一笔就存在，且真相同源从这一笔起就是 Studio.dpr + Studio.dproj。
+
+$ git show 7516962d:Tools/Studio/UniBaseStudio.dpr | grep -n "Studio.MainForm in\|CreateForm"
+17:  Studio.MainForm in 'Forms\Studio.MainForm.pas' {StudioMainForm};
+30:  Application.CreateForm(TStudioMainForm, StudioMainForm);
+
+$ git show 7516962d:Tools/Studio/Forms/Studio.MainForm.pas | grep -n "= class(TForm)\|frmStudioMain: T"
+55:  TfrmStudioMain = class(TForm)
+112:  frmStudioMain: TfrmStudioMain;
+
+$ git show 7516962d:Tools/Studio/Forms/Studio.MainForm.dfm | sed -n 1p
+object frmStudioMain: TfrmStudioMain
+#   ⇒ 引入笔当场就写错：窗体真实类/变量名自始为 TfrmStudioMain / frmStudioMain（.dfm 根亦为 frmStudioMain），
+#     死入口却写 TStudioMainForm / StudioMainForm —— 这两个名字在全仓任何 revision 都不存在（D5-08 §B 同款取证复验）。
+
+$ git log --oneline -- Tools/Studio/UniBaseStudio.dpr Tools/Studio/DeepBaseStudio.dpr   # HEAD 可达的全部被碰笔
+cd20ddc6 fix: round1 + round2 quality fixes (40+ delivered, 157+ items addressed)
+ca3364ee refactor: rename UniBase -> DeepBase, fix compilation errors
+7516962d 对齐任务文档，更新阶段统计和日期
+#   ⇒ 该件自诞生以来总共只被碰过 2 次：一次纯更名（ca3364ee），一次加 uses 行（cd20ddc6）。
+#     没有任何一笔试图修正 CreateForm 那一行的窗体类引用 ⇒ 「修到 BUILD_EXIT=0」这条路历史上从未有人走过。
+
+$ git show cd20ddc6 -- Tools/Studio/DeepBaseStudio.dpr | sed -n "/^@@/,\$p"   # 唯一一次"改内容"只加了一条 uses
+@@ -2,13 +2,14 @@
+   DeepBase Studio - 配置管理工具
+ 
+   版本: 1.0
+-  说明: DeepBase 框架的可视化配置和管理工?
++  说明: DeepBase 框架的可视化配置和管理工?
+   ============================================================================ }
+ 
+ program DeepBaseStudio;
+ 
+ uses
+   Vcl.Forms,
++  FireDAC.VCLUI.Wait,
+   Vcl.Themes,
+   Vcl.Styles,
+   FireDAC.Phys.SQLite,
+#   ↑ 唯一一次内容改动 = 补 FireDAC.VCLUI.Wait（依赖面），E2003 所在行从未被触碰。
+#     注：diff 两侧同字仍显 ? ⇒ 该有损字节在 ca3364ee 更名之前就已在文件里（更名校正的是标识符，不是编码）。
+
+$ git log --oneline --diff-filter=A -- Tools/Studio/DeepBaseStudio.dproj   # .dproj 由甲 D5 补（消 F2613 环境假红）
+dbd672e docs(audit-D5): 乙 D5 交付回执 + README 覆盖面同步 + 7 件证据（三项全部落代码，SKIP 对照表与负向样本原始输出入库）
+
+$ grep -n DeepBaseStudio "CodeReview/20260923-AUDIT-甲-D3-证据/HEAD-21红-首个错误行.txt"   # D3 基线起该件即红
+19:Tools/Studio/DeepBaseStudio.dpr 编译失败：Forms\Studio.MainForm.pas(43) Fatal: F2613 Unit 'Studio.ConfigFrame' not found.
+#   D3 时该件的红是环境性假红（无 .dproj ⇒ Frames\ 不在搜索面，而 .dpr 自身又未登记 11 件 Frame）。
+#   甲 D5 补 .dproj 消掉 F2613 后真实代码红 E2003 才暴露 ⇒ 主控「首错遮蔽」判定成立（验收结论 §判据5 ⚠️）。
+#   甲 D6 段2 从 E2003 继续往下走，走到的是 D6-段2-02 那个「第二套入口」实验件，处置论证见 D6-段2-04。
+
+$ python -c "扫描 DeepBaseStudio.dpr 的 EF BF BD 有损特征（只打印十六进制与计数，避免 U+FFFD 进控制台）"
+total lines: 34
+L5 hex tail: e79086e5b7a5efbfbd3f
+FFFD total   : 1
+FFFD+3F      : 1
+hit line 5 e79086e5b7a5efbfbd3f
+#   ⇒ L5 头注释尾字节 = 的(E7 90 86) 管(E5 B7 A5) + EF BF BD + 3F，即丙-A 有损特征全文件仅 1 处（在 L5）。
+#     登记为遗留债务，本单不顺手改：该件正等主控裁定处置（D6-段2-04），注释级编码修复属噪声，
+#     且在待裁定件上动字节会污染后续比对的基线。

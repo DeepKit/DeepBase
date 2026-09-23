@@ -1,0 +1,9 @@
+tracked .dpr=66  tracked .dpk=25
+T0 展开=26  T1 在册=65  T2 在册=0
+期望 T1（= 全部 .dpr − T0 − T2）=65
+set_equal=true  order_equal=true
+T1 缺（应进未进）=[]
+T1 多（不该在却在）=[]
+清单里指向未跟踪文件=[]
+DoQryDemo 仍在 T1=true  PageDriverSmoke 在面=false
+CHECK_EXIT=0

@@ -1,0 +1,13 @@
+$ # WO-20260923-AUDIT-甲-D6 段2 · 基线实测（改前）
+$ # 隔离工作树 .tmp/d6_seg2 = git worktree add --detach @ 7ee0015（甲 D6 段1 落笔件）· 2026-09-23
+$ # 一次性点名两件 Studio 入口，逐个看 BUILD_EXIT
+$ node "09_工程脚本/build-gate/check_build.js" --dpr Tools/Studio/DeepBaseStudio.dpr --dpr Tools/Studio/Studio.dpr
+[dpr 1/2] Tools/Studio/DeepBaseStudio.dpr CONFIG=DeepBaseStudio.dproj BUILD_EXIT=1
+  Tools/Studio/DeepBaseStudio.dpr 编译失败：DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+[dpr 2/2] Tools/Studio/Studio.dpr CONFIG=Studio.dproj BUILD_EXIT=0
+编译门禁统计：DPR总数=2 成功=1 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=2 已跟踪=92 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：1 个工程编译不过
+  Tools/Studio/DeepBaseStudio.dpr EXIT=1  DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+GATE_EXIT=1
