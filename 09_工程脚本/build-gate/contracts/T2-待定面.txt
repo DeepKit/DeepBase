@@ -1,0 +1,16 @@
+# 编译门禁契约清单 · T2 待定面（WO-20260923-AUDIT-甲-D4 §二）
+# 语义：引用了仓内确实不存在的单元、且本轮无法补齐的工程。仍然逐个编译、逐个记录 BUILD_EXIT（红不隐藏），
+#       但不进 T0，因此不阻断提交；排队待主控裁定「补齐」或「移出库」。
+# 语法：每行一个仓内相对路径，或整面选择子 all-dpr / all-dpk；# 起注释。
+# 归面判据（实测于 ae1638d，取证见 CodeReview/20260923-AUDIT-甲-D4-证据/）：首错为 F 类「文件/单元找不到」，
+#       且被引件在该工程可解析范围内不存在——F2613 两件在全库 git ls-files 与 `unit <名>;` 声明均为零命中；
+#       F1026 一件是被 `in '<同目录文件>'` 按路径引用、该路径在本目录不存在（同名单元在他处存在，补法不同，见下）。
+
+# F2613 Unit 'uWVLoader' not found —— WebView2 loader 单元不在仓内（外部组件未随仓提供）。
+Tests/GUI/PageDriverSmoke.dpr
+
+# F1026 File not found: 'Main.Form.pas' —— 模板缺主窗体单元，同目录只剩 Engine/Chart/Report 三件。
+Examples/Templates/DataAnalyzer/DataAnalyzer.dpr
+
+# F2613 Unit 'DeepBase.ORM.Attributes' not found —— ORM 属性单元在全库不存在（模板引用了未落地的层）。
+Examples/Templates/DocManager/DocManager.dpr

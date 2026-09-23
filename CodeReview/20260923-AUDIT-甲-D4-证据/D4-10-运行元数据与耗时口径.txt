@@ -1,0 +1,45 @@
+# D4 取证运行元数据（判据 7 现场与可复现性）
+
+## 取证基准与隔离工作树
+
+```
+BASE_SHA = ae1638dc37a02fd79ec42b677799c07339759c4a   （取证时 HEAD）
+d4_t0r   check_build.js sha256=ca2b8052515a0d39…      （.tmp/d4_t0r  @ ae1638d，--detach）
+d4_allr  check_build.js sha256=ca2b8052515a0d39…      （.tmp/d4_allr @ ae1638d，--detach）
+```
+
+两个工作树由 `git worktree add --detach` 新建、事后已移除；门禁本体与 `contracts/` 从共享树复制进去
+（本单改动未提交，隔离树里只有已提交内容，不复制就没有本单的门可判）。
+**判定口径不变**：结论只认 `--detach` 工作树 @ 目标 commit 的 EXIT，共享树结果不作判定。
+
+## 两次运行的命令与结果
+
+```
+cd .tmp/d4_t0r  && node 09_工程脚本/build-gate/check_build.js --manifest "<abs>/.tmp/d4_t0r/09_工程脚本/build-gate/contracts/T0-生产契约面.txt"
+  → GATE_EXIT=0   real 2m27.188s   判定面=26（DPK 25 + Tests/DeepBaseTests.dpr）  两面被跳过=0   .res生成=2
+cd .tmp/d4_allr && node 09_工程脚本/build-gate/check_build.js --all
+  → GATE_EXIT=1   real 3m34.655s   判定面=92   DPR 67（成功 51 / 失败 16）  DPK 25（全成功）  两面被跳过=0   .res生成=23
+node 09_工程脚本/build-gate/test_negative_sample.js
+  → SUITE_EXIT=0   23 例全 PASS   real 0m9.963s
+```
+
+## 耗时口径披露（重要，别把这里的数字当成单实例）
+
+本轮两次运行期间，乙线同期在跑同一道门：`18:18:27` 起 `.tmp/wt_d6_v3` 的 `--all`、
+`18:26:58` 与 `18:27:17` 又各自起了 `--all`（`.tmp/wt_d6_v3` / `.tmp/wt_d6_final`），
+与本单 T0（18:18:31–18:20:58）和 `--all`（18:20:58–18:24:3x）两段完全重叠。
+因此 **2m27s / 3m35s 是双实例并发负载下的上界**；单实例数字未取到（乙线持续占用编译门，
+等待无上限，本单不为取数字而阻塞）。对照：D3 单实例 `--all` 只编 67 个 `.dpr` 时是热 1m37s / 冷 4m03s，
+加面 25 个包后并发下 3m35s，量级一致，无异常放大。
+
+## HEAD 推进与红数关系
+
+本回执落笔时 master 已推进到 `2dc149d8`（乙 D6 续单补 `Tests/Acceptance/DeepBaseAcceptanceTest.dpr`），
+该件在 D4-01 的 16 个 `.dpr` 红里排第 6（E2052）。也就是说 **本单入库后的红数会继续下降，
+下降来自乙的修复，不是本单换了视线**——`.dpr`/`.dpk` 两面计数在 ae1638d 与 2dc149d 均为 67 / 25，
+判定面没有因任何一单而缩小。
+
+## 暂存区
+
+见 `D4-08-判据7-暂存区现场.txt`：取证全程 `git diff --cached` 为空（STAGED_COUNT=0），
+提交按精确 pathspec 逐项点名，共享工作树里他人未提交的改动一律不带。

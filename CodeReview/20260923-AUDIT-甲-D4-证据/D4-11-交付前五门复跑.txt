@@ -1,0 +1,38 @@
+# 交付前五道静态门禁复跑（共享工作树现场，含甲 D4 未提交改动）
+# 取证基准 ae1638d；退出码逐门如实记录，不做汇总美化。
+# 本单新增/改动的 6 件（门本体、样本、三份清单、两份 README）不在下列任何违规项里。
+
+
+===== node 09_工程脚本/encoding-gate/check_pas_encoding.js =====
+编码门禁通过：977 个 .pas + 663 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+===== node 09_工程脚本/eol-gate/check_eol.js =====
+行尾门禁通过：检查了 1487 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+
+===== node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js =====
+证据编码门禁通过：扫描 428 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+
+===== node 09_工程脚本/managed-copy-gate/check_managed_copy.js =====
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+EXIT=1
+
+===== node 09_工程脚本/build-ownership/check_build_ownership.js =====
+构建归属门禁失败，违规 3 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+## 两处红的归因（不属本单，登记给对应线）
+- managed-copy M2 六项：全部落在他人未提交的共享树改动上（Core/DeepBase.SecureMemory.pas、Core/DeepBase.Security.MasterKey.pas、Core/DeepBase.Security.UBS2.pas 与对应 Tests），本单未触碰这些文件。
+- build-ownership O1 三项：Core/DeepBase.Gate.Verdict.pas、Core/DeepBase.Security.UBS2.Migration.pas、Features/DeepBase.Update.Contracts.pas 是甲既有线已入库件，出现在「新增孤儿」是构建归属基线未随其更新，属乙 D5 后续基线维护范围，本单不动他人基线。
+- 结论：本单交付面（编码/行尾/证据编码）三门 EXIT=0；另两门的红与本单无因果，如实记录不复用为本单结论。

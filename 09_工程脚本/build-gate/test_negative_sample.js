@@ -1,10 +1,12 @@
-// 编译门禁负向样本（WO-20260923-AUDIT-甲-D3 §2.4）
+// 编译门禁负向样本（WO-20260923-AUDIT-甲-D3 §2.4；WO-20260923-AUDIT-甲-D4 §3.2/§3.3 补包面与清单面）
 //
 // 这道门的价值全在「红得可信」上：S-3 的根因不是没人编译，而是没有任何机械判定，
 // 所以负向样本必须证明三件事——
 //   1) 输入面不可信时不放行（不存在根 / 空扫描 / 索引与磁盘不一致 / 部分扫描）；
 //   2) 代码真在编译（语法错误的 .dpr 必须被 dcc64 拦下，而不是只做文件枚举就报绿）；
 //   3) 判定不恒真（合法 .dpr 必须能过，否则「红」没有信息量）。
+// D4 把这三件事逐条搬到 .dpk 包面与外部契约清单面上：三面各自的「计数为 0 / 部分扫描 / BUILD_EXIT≠0」都要红，
+// 且每面都留正对照——缺正对照的红无法区分「拦住了断裂」与「恒红」。
 // 每个用例都在 %TEMP% 里建独立 git 仓库跑真实进程，不碰本仓工作树。
 'use strict';
 
@@ -19,6 +21,11 @@ const GATE = path.join(HERE, 'check_build.js');
 const OK_DPR = 'program OkProj;\n{$APPTYPE CONSOLE}\nbegin\nend.\n';
 // 语法错误样本：F 前缀是 dcc64 的 Fatal，E 前缀是 Error，两者都必须被 firstErrorLine 抓到。
 const BAD_DPR = 'program BadProj;\nbegin\n  this is not valid pascal\nend.\n';
+// 包面样本（WO-20260923-AUDIT-甲-D4 §3.3）：合法最小包同时走 {$R *.res} 补生成路径；
+// 改坏的包用的是单元里的类型错误（E2010），不是缺文件——判据 3 要的是「真在编译包」，F 类不算。
+const OK_DPK = 'package OkPkg;\n{$R *.res}\nrequires\n  rtl;\nend.\n';
+const BAD_DPK = 'package BadPkg;\n{$R *.res}\nrequires\n  rtl;\ncontains\n  BadUnit in \'BadUnit.pas\';\nend.\n';
+const BAD_UNIT = 'unit BadUnit;\ninterface\nvar X: Integer;\nimplementation\ninitialization\n  X := \'not-a-number\';\nend.\n';
 
 let failed = false;
 const trash = [];
@@ -160,6 +167,81 @@ expectExit('负样本⑧未声明范围', runGate(['--root', makeRepo('norangeso
   for (const [label, argv] of ARG_CASES) {
     expectExit(`参数负样本(${label})`, runGate(argv), 3, ['fail-closed']);
   }
+}
+
+// ---- 以下为 WO-20260923-AUDIT-甲-D4 §3.2/§3.3 新增：三条 fail-closed 逐条在包面成立 + 包面正对照 + 清单面完整性 ----
+// 既有 16 例（①-⑫）逐条保留、断言未改；这里只往上加。
+
+function writeManifest(root, name, text) {
+  const abs = path.join(root, name);
+  fs.writeFileSync(abs, text, 'utf8');
+  return abs;
+}
+
+// ⓬包面正对照：合法最小 .dpk 必须编过（顺带走 {$R *.res} 补生成路径）。缺了它，包面的「红」无法区分
+// 「拦住了断裂」与「包面根本编不了所以恒红」。
+{
+  const root = makeRepo('dpk-ok', { 'OkPkg.dpk': OK_DPK });
+  expectExit('包面正对照⓬合法包', runGate(['--all', '--root', root]), 0, ['DPK总数=1', '成功=1', '被跳过=0']);
+}
+
+// ⓭包面 fail-closed·BUILD_EXIT：故意改坏一个 .dpk（单元里放类型错误），必须在包面真红，且红的是 E 类编译错误
+// 而不是 F 类文件缺失——后者只能证明「文件没找到」，证不了包被真编译。
+{
+  const root = makeRepo('dpk-bad', { 'BadPkg.dpk': BAD_DPK, 'BadUnit.pas': BAD_UNIT });
+  const res = runGate(['--all', '--root', root]);
+  expectExit('包面负样本⓭故意改坏 .dpk', res, 1, ['BadPkg.dpk', 'BUILD_EXIT=1', 'DPK总数=1', '失败=1', '被跳过=0', 'Error: E2010']);
+  if (/Fatal:/.test(res.out)) bug('包面负样本⓭：输出含 Fatal: ——「改坏」退化成了 F 类断裂（文件缺失/依赖不可解析），不能证明包体被编译');
+}
+
+// ⓮包面 fail-closed·计数为 0：清单声明整面 all-dpk，而仓库里一个包都没有 ⇒ 声明落空必须是红，
+// 不能因为「这一面没东西可编」就报成全过。
+{
+  const root = makeRepo('dpk-nopkg', { 'OkProj.dpr': OK_DPR });
+  const mf = writeManifest(root, 'only-dpk.txt', 'all-dpk\n');
+  expectExit('包面负样本⓮整面声明落空', runGate(['--manifest', mf, '--root', root]), 2, ['整面 all-dpk 计数为 0']);
+}
+
+// ⓯包面 fail-closed·readdir 失败：被封锁目录里放的是 .dpk（而非 .dpr），证明包面在同一次枚举里，
+// 部分扫描同样不放行。注入方式与 ⑦ 一致（子进程替换 fs.readdirSync），判定仍由门禁进程自己产出。
+{
+  const root = makeRepo('dpk-seal', { 'OkPkg.dpk': OK_DPK });
+  fs.mkdirSync(path.join(root, 'sealedPkg'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'sealedPkg', 'Ghost.dpk'), OK_DPK, 'utf8');
+  const injector = path.join(os.tmpdir(), 'buildgate-inject-readdir-dpk-' + Date.now() + '.js');
+  trashFiles.push(injector);
+  fs.writeFileSync(injector, [
+    'const fs = require("fs");',
+    'const real = fs.readdirSync;',
+    'fs.readdirSync = function (p, ...a) {',
+    '  if (String(p) === process.env.BG_SEAL) throw Object.assign(new Error("injected"), { code: "EPERM" });',
+    '  return real.call(fs, p, ...a);',
+    '};',
+    'process.argv = [process.execPath, process.env.BG_GATE, "--all", "--root", process.env.BG_ROOT];',
+    'require(process.env.BG_GATE);',
+  ].join('\n'), 'utf8');
+  const r = spawnSync(process.execPath, [injector], {
+    encoding: 'utf8',
+    env: Object.assign({}, process.env, { BG_GATE: GATE, BG_ROOT: root, BG_SEAL: path.join(root, 'sealedPkg') }),
+  });
+  expectExit('包面负样本⓯部分扫描（.dpk 目录 readdir 注入失败）', { code: r.status, out: (r.stdout || '') + (r.stderr || '') }, 2,
+    ['readdir 失败', '部分扫描不得报绿']);
+}
+
+// ⓰包面输入完整性：未跟踪但存在的 .dpk —— 绕开编译判定最典型的形态，红
+{
+  const root = makeRepo('dpk-untracked', { 'OkPkg.dpk': OK_DPK });
+  fs.writeFileSync(path.join(root, 'Ghost.dpk'), OK_DPK, 'utf8');
+  expectExit('包面负样本⓰未跟踪 .dpk', runGate(['--all', '--root', root]), 2, ['未跟踪但存在的 .dpk']);
+}
+
+// ⓱⓲清单面不可信：--manifest 指向不存在的文件 / 清单解析后零条目，两者都不许变成「无工程可编 ⇒ 通过」
+expectExit('负样本⓱--manifest 文件不存在', runGate(['--manifest', path.join(os.tmpdir(), 'buildgate-no-such-manifest-' + Date.now() + '.txt'), '--root', makeRepo('mfmissing', { 'OkPkg.dpk': OK_DPK })]), 2,
+  ['--manifest 读不到']);
+{
+  const root = makeRepo('mfempty', { 'OkPkg.dpk': OK_DPK });
+  const mf = writeManifest(root, 'blank.txt', '# 只有注释和空行\n\n');
+  expectExit('负样本⓲--manifest 清单为空', runGate(['--manifest', mf, '--root', root]), 2, ['--manifest 清单为空']);
 }
 
 for (const p of trashFiles) {

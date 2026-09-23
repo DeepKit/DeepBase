@@ -1,0 +1,3 @@
+[dpk 24/25] dclDeepBaseFMX.dpk CONFIG=dclDeepBaseFMX.dproj BUILD_EXIT=0
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0
+[dpr 28/67] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0

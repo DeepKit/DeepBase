@@ -1,0 +1,17 @@
+# T2 待定面归面取证（HEAD=ae1638d，每条命令可复算）
+
+## 1) Tests/GUI/PageDriverSmoke.dpr — F2613 Unit 'uWVLoader' not found
+git ls-files -- '*uWVLoader*'            = 0 件
+git grep -lE '^unit uWVLoader;' 声明数 = 0 件
+git grep -l uWVLoader 引用文件数        = 10 件（只被引用，从未被定义）
+
+## 2) Examples/Templates/DocManager/DocManager.dpr — F2613 Unit 'DeepBase.ORM.Attributes' not found
+git ls-files -- '*DeepBase.ORM.Attributes*' = 0 件
+git grep -lE '^unit DeepBase.ORM.Attributes;' = 0 件
+git grep -l 引用文件数 = 10 件
+
+## 3) Examples/Templates/DataAnalyzer/DataAnalyzer.dpr — F1026 File not found: Main.Form.pas
+本模板目录已跟踪件清单：Examples/Templates/DataAnalyzer/Analysis.Engine.pas Examples/Templates/DataAnalyzer/Chart.Builder.pas Examples/Templates/DataAnalyzer/DataAnalyzer.dpr Examples/Templates/DataAnalyzer/README.md Examples/Templates/DataAnalyzer/Report.Generator.pas 
+全库 Main.Form.pas 路径（按文件名命中）：Examples/FMXDemo/Main.Form.pas Examples/MicroserviceClientDemo/Main.Form.pas Examples/Templates/CRUDApp/Main.Form.pas Examples/Templates/DocManager/Main.Form.pas 
+口径差别：前两件是「单元在全库不存在」（F2613）；第三件是 .dpr 用 in 'Main.Form.pas' 按同目录路径引用，该路径在本目录不存在，
+而同名单元存在于其它 Example 目录——补法不同（要么补文件、要么改引用路径），故三件一并交主控裁定，不在本单内动被审源码。

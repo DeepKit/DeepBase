@@ -1,0 +1,71 @@
+# 编译门禁契约清单 · T1 观测面（WO-20260923-AUDIT-甲-D4 §二）
+# 语义：清单内每一个工程都编、都判并如实记录 BUILD_EXIT，但红不阻断提交（阻断语义只属于 T0）。
+# 语法：每行一个仓内相对路径，或整面选择子 all-dpr / all-dpk；# 起注释。清单只做加法，没有排除行——
+#       「范围内跳过谁」是门禁 bypass，禁止；要把某个工程移出观测面，就把它改登到 T2 或删除该行。
+# 归面规则：全部已跟踪 .dpr − T0 的 Tests/DeepBaseTests.dpr − T2 三件（被引单元全库零命中，见 T2 文件）。
+# 派生自 git ls-files -- "*.dpr"（机械取差集，无手工增删；本次派生基准 ae1638d）。
+#       新增 .dpr 须显式归面；--all 全量面始终是超集，任何工程都跑不掉编译判定。
+
+DeepBaseRun/DeepBaseRun.dpr
+DeepFlow/Source/DeepFlow.dpr
+Examples/AIErrorHandlerDemo/AIErrorHandlerDemo.dpr
+Examples/AutoFixDemo/AutoFixDemo.dpr
+Examples/DataBindingDemo/DataBindingDemo.dpr
+Examples/FMXDemo/FMXPlatformDemo.dpr
+Examples/FullDemo/FullDemo.dpr
+Examples/HbColdStartProbe/HbColdStartProbe.dpr
+Examples/HbSnapshotDemo/HbSnapshotDemo.dpr
+Examples/MVVMDemo/MVVMDemo.dpr
+Examples/MicroserviceClientDemo/MicroserviceClientDemo.dpr
+Examples/MultiLanguageDemo/MultiLanguageDemo.dpr
+Examples/Phase0Demo/Phase0Demo.dpr
+Examples/Phase1Demo/Phase1Demo.dpr
+Examples/Templates/CRUDApp/CRUDApp.dpr
+Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr
+Tests/Acceptance/DeepBaseAcceptanceTest.dpr
+Tests/Architecture/DeepBaseArchitectureTests.dpr
+Tests/AutoFix/Fixtures/AutoFixHarness.dpr
+Tests/DebugTest.dpr
+Tests/DebugTest2.dpr
+Tests/DebugTest3.dpr
+Tests/DebugTest4.dpr
+Tests/DebugTest5.dpr
+Tests/DebugTest6.dpr
+Tests/FMX/TestFMXPlatformStandalone.dpr
+Tests/GUI/DeepBaseGUITests.dpr
+Tests/Governance/ConfigRegistrarPBT.dpr
+Tests/InferenceTests.dpr
+Tests/Integration/DeepBaseIntegrationTests.dpr
+Tests/MinimalDUnitX.dpr
+Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr
+Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr
+Tests/Plugins/Fixture/TestPlugin77.dpr
+Tests/Plugins/Fixture/TestPluginABI10.dpr
+Tests/Plugins/PluginLifecycleHarness.dpr
+Tests/SimpleTest.dpr
+Tests/Speech/SpeechSpike.dpr
+Tests/Speech/TestSpeechHeadless.dpr
+Tests/Stress/DeepBaseStressTests.dpr
+Tests/TestBplR7P4.dpr
+Tests/TestCryptoR7P1.dpr
+Tests/TestDeepBaseRSA.dpr
+Tests/TestGateVerdictAndA8.dpr
+Tests/TestLLMClient.dpr
+Tests/TestLLMProxyClient.dpr
+Tests/TestNetR7P2.dpr
+Tests/TestNewModules.dpr
+Tests/TestUpdateChainM1.dpr
+Tools/CLI/DeepBase.dpr
+Tools/Calibration/Calib.Record.dpr
+Tools/Calibration/Calib.Sweep.dpr
+Tools/FMXGallery/hbtheme_fmx_gallery.dpr
+Tools/Gallery/hbtheme_gallery.dpr
+Tools/LogAnalyzer/LogAnalyzer.dpr
+Tools/SeedTool/SeedTool.dpr
+Tools/Studio/DeepBaseStudio.dpr
+Tools/Studio/Studio.dpr
+Tools/Tray/DeepBaseTray.dpr
+Tools/UniPublisher/DeepPublisher.dpr
+Tools/UpdaterHelper/UpdaterHelper.dpr
+doQry/examples/DoQryDemo/DoQryDemo.dpr
+doQry/prjDoQry.dpr

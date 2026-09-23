@@ -1,0 +1,4 @@
+check_build.js 中的枚举面定义行： const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
+gateSkipSet("Logs") = [".git",".claude","__history","BuildOutput","DCUOutput","bin","dcu","node_modules",".tmp",".superpowers",".workbuddy","TestResults","Logs"]
+内联字面量集合已移除 = true
+本门 require gate-skip = true
