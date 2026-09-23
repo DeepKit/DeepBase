@@ -1,20 +1,22 @@
 ﻿unit Entity.Tag;
 
 {*******************************************************************************
-  Tag Entity - 鏍囩瀹炰綋
+  Tag Entity - 标签实体
 
-  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鏍囩绯荤粺
+  DeepBase 框架文档管理模板 - 标签系统
 *******************************************************************************}
 
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections, System.UITypes,
-  DeepBase.ORM.Attributes, DeepBase.ORM.Entity;
+  System.SysUtils, System.Classes, System.Generics.Collections,
+  Winapi.Windows, System.Generics.Defaults, System.UITypes, Vcl.Graphics,
+  DeepBase.ORM.Mapping,
+  Entity.Base;
 
 type
   /// <summary>
-  /// 鏍囩瀹炰綋
+  /// 标签实体
   /// </summary>
   [Table('Tags')]
   TTag = class(TEntityBase)
@@ -42,16 +44,16 @@ type
 
     class function NewId: string;
 
-    /// <summary>楠岃瘉鏍囩</summary>
+    /// <summary>验证标签</summary>
     function Validate: Boolean; override;
 
-    /// <summary>鑾峰彇楠岃瘉閿欒</summary>
+    /// <summary>获取验证错误</summary>
     function GetValidationErrors: TArray<string>;
 
-    /// <summary>棰勫畾涔夐鑹插垪琛?/summary>
+    /// <summary>预定义颜色列表</summary>
     class function GetPresetColors: TArray<string>;
 
-    // 灞炴€?
+    // 属性
     property Id: string read FId write FId;
     property Name: string read FName write FName;
     property Color: string read FColor write FColor;
@@ -61,7 +63,7 @@ type
   end;
 
   /// <summary>
-  /// 鏂囨。-鏍囩鍏宠仈
+  /// 文档-标签关联
   /// </summary>
   [Table('DocumentTags')]
   TDocumentTag = class(TEntityBase)
@@ -85,7 +87,7 @@ type
   end;
 
   /// <summary>
-  /// 鏍囩鏈嶅姟
+  /// 标签服务
   /// </summary>
   TTagService = class
   private
@@ -95,28 +97,28 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>鍔犺浇鏍囩</summary>
+    /// <summary>加载标签</summary>
     procedure LoadTags(Tags: TObjectList<TTag>);
 
-    /// <summary>鏍规嵁 ID 鑾峰彇鏍囩</summary>
+    /// <summary>根据 ID 获取标签</summary>
     function GetTagById(const Id: string): TTag;
 
-    /// <summary>鏍规嵁鍚嶇О鑾峰彇鏍囩</summary>
+    /// <summary>根据名称获取标签</summary>
     function GetTagByName(const Name: string): TTag;
 
-    /// <summary>鑾峰彇鎴栧垱寤烘爣绛?/summary>
+    /// <summary>获取或创建标签</summary>
     function GetOrCreateTag(const Name: string): TTag;
 
-    /// <summary>鑾峰彇鎵€鏈夋爣绛?/summary>
+    /// <summary>获取所有标签</summary>
     function GetAllTags: TArray<TTag>;
 
-    /// <summary>鑾峰彇鐑棬鏍囩</summary>
+    /// <summary>获取热门标签</summary>
     function GetPopularTags(Count: Integer = 10): TArray<TTag>;
 
-    /// <summary>鎼滅储鏍囩</summary>
+    /// <summary>搜索标签</summary>
     function SearchTags(const Query: string): TArray<TTag>;
 
-    /// <summary>娓呯┖</summary>
+    /// <summary>清空</summary>
     procedure Clear;
 
     property Tags: TObjectDictionary<string, TTag> read FTags;
@@ -133,7 +135,7 @@ constructor TTag.Create;
 begin
   inherited;
   FId := NewId;
-  FColor := '#3498db';  // 榛樿钃濊壊
+  FColor := '#3498db';  // 默认蓝色
   FUsageCount := 0;
   FCreatedAt := Now;
 end;
@@ -187,14 +189,14 @@ begin
   Errors := TList<string>.Create;
   try
     if FName.Trim.IsEmpty then
-      Errors.Add('鏍囩鍚嶇О涓嶈兘涓虹┖');
+      Errors.Add('标签名称不能为空');
 
     if Length(FName) > 50 then
-      Errors.Add('鏍囩鍚嶇О涓嶈兘瓒呰繃 50 瀛楃');
+      Errors.Add('标签名称不能超过 50 字符');
 
-    // 鏍囩鍚嶄笉鑳藉寘鍚壒娈婂瓧绗?
+    // 标签名不能包含特殊字符
     if ContainsText(FName, ',') or ContainsText(FName, ';') then
-      Errors.Add('鏍囩鍚嶇О涓嶈兘鍖呭惈閫楀彿鎴栧垎鍙?);
+      Errors.Add('标签名称不能包含逗号或分号');
 
     Result := Errors.ToArray;
   finally
@@ -205,16 +207,16 @@ end;
 class function TTag.GetPresetColors: TArray<string>;
 begin
   Result := [
-    '#e74c3c',  // 绾㈣壊
-    '#e67e22',  // 姗欒壊
-    '#f1c40f',  // 榛勮壊
-    '#2ecc71',  // 缁胯壊
-    '#1abc9c',  // 闈掔豢鑹?
-    '#3498db',  // 钃濊壊
-    '#9b59b6',  // 绱壊
-    '#34495e',  // 娣辩伆钃?
-    '#95a5a6',  // 鐏拌壊
-    '#e91e63'   // 绮夌孩鑹?
+    '#e74c3c',  // 红色
+    '#e67e22',  // 橙色
+    '#f1c40f',  // 黄色
+    '#2ecc71',  // 绿色
+    '#1abc9c',  // 青绿色
+    '#3498db',  // 蓝色
+    '#9b59b6',  // 紫色
+    '#34495e',  // 深灰蓝
+    '#95a5a6',  // 灰色
+    '#e91e63'   // 粉红色
   ];
 end;
 
@@ -254,7 +256,7 @@ begin
     FTagsByName.Add(Tag.Name.ToLower, Tag);
   end;
 
-  // 涓嶉噴鏀句紶鍏ョ殑鍒楄〃锛屽洜涓哄璞″凡缁忕Щ鍔ㄥ埌瀛楀吀
+  // 不释放传入的列表，因为对象已经移动到字典
   Tags.OwnsObjects := False;
 end;
 
@@ -296,7 +298,7 @@ begin
     for Pair in FTags do
       List.Add(Pair.Value);
 
-    // 鎸夊悕绉版帓搴?
+    // 按名称排序
     List.Sort(TComparer<TTag>.Construct(
       function(const A, B: TTag): Integer
       begin
@@ -320,7 +322,7 @@ begin
     for Pair in FTags do
       List.Add(Pair.Value);
 
-    // 鎸変娇鐢ㄦ鏁伴檷搴忔帓搴?
+    // 按使用次数降序排序
     List.Sort(TComparer<TTag>.Construct(
       function(const A, B: TTag): Integer
       begin
@@ -328,7 +330,7 @@ begin
       end
     ));
 
-    // 鍙栧墠 N 涓?
+    // 取前 N 个
     if List.Count > Count then
       List.DeleteRange(Count, List.Count - Count);
 
@@ -354,7 +356,7 @@ begin
         List.Add(Pair.Value);
     end;
 
-    // 鎸夌浉鍏虫€ф帓搴忥紙鍚嶇О寮€澶村尮閰嶄紭鍏堬級
+    // 按相关性排序（名称开头匹配优先）
     List.Sort(TComparer<TTag>.Construct(
       function(const A, B: TTag): Integer
       var

@@ -51,7 +51,6 @@ type
     function FormatNumber(Value: Double; Decimals: Integer = 2): string;
     function EscapeHTML(const S: string): string;
     function EscapeCSV(const S: string): string;
-    function EscapeJSON(const S: string): string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -212,7 +211,7 @@ var
 begin
   Content := Generate(Format);
   TFile.WriteAllText(FileName, Content, TEncoding.UTF8);
-  Log.Info('Report saved: %s', [FileName]);
+  Logger.InfoFmt('Report saved: %s', [FileName]);
 end;
 
 function TReportGenerator.GenerateTextReport: string;
@@ -220,7 +219,7 @@ var
   SB: TStringBuilder;
   Section: TReportSection;
   Row: TArray<string>;
-  I, J: Integer;
+  I: Integer;
   ColWidths: TArray<Integer>;
   Line: string;
 begin
@@ -431,11 +430,12 @@ end;
 
 function TReportGenerator.GenerateJSONReport: string;
 var
-  Root, SectionsArr, SectionObj, DataArr, RowArr: TJSONObject;
+  Root, SectionObj: TJSONObject;
+  SectionsArr, HeadersArr, DataArr, RowArr: TJSONArray;
   Section: TReportSection;
+  Header: string;
   Row: TArray<string>;
   Cell: string;
-  I: Integer;
 begin
   Root := TJSONObject.Create;
   try
@@ -455,20 +455,24 @@ begin
       
       if Length(Section.Headers) > 0 then
       begin
-        SectionObj.AddPair('headers', TJSONArray.Create(Section.Headers));
+        // 现代 System.JSON 没有 TArray<string> 的 Create 重载，也没有 AddElement（E2250/E2003）
+        HeadersArr := TJSONArray.Create;
+        for Header in Section.Headers do
+          HeadersArr.Add(Header);
+        SectionObj.AddPair('headers', HeadersArr);
         
         DataArr := TJSONArray.Create;
         for Row in Section.Data do
         begin
           RowArr := TJSONArray.Create;
           for Cell in Row do
-            TJSONArray(RowArr).Add(Cell);
-          DataArr.AddElement(RowArr);
+            RowArr.Add(Cell);
+          DataArr.Add(RowArr);
         end;
         SectionObj.AddPair('data', DataArr);
       end;
       
-      TJSONArray(SectionsArr).AddElement(SectionObj);
+      SectionsArr.Add(SectionObj);
     end;
     Root.AddPair('sections', SectionsArr);
     
@@ -498,16 +502,6 @@ begin
     Result := '"' + StringReplace(S, '"', '""', [rfReplaceAll]) + '"'
   else
     Result := S;
-end;
-
-function TReportGenerator.EscapeJSON(const S: string): string;
-begin
-  Result := S;
-  Result := StringReplace(Result, '\', '\\', [rfReplaceAll]);
-  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
-  Result := StringReplace(Result, #13, '\r', [rfReplaceAll]);
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-  Result := StringReplace(Result, #9, '\t', [rfReplaceAll]);
 end;
 
 end.

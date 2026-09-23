@@ -1,9 +1,9 @@
 ﻿unit Form.CategoryTree;
 
 {*******************************************************************************
-  Category Tree Form - 鍒嗙被绠＄悊绐椾綋
+  Category Tree Form - 分类管理窗体
 
-  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鍒嗙被鏍戠鐞?
+  DeepBase 框架文档管理模板 - 分类树管理
 *******************************************************************************}
 
 interface
@@ -59,8 +59,9 @@ implementation
 {$R *.dfm}
 
 uses
+  FireDAC.Comp.Client,
   Data.Module,
-  DeepBase.Logger;
+  DeepBase.Logging;
 
 { TCategoryTreeForm }
 
@@ -109,7 +110,7 @@ begin
       Q.Free;
     end;
 
-    // 鏋勫缓鏍?
+    // 构建树
     for Cat in FCategories do
     begin
       if Cat.ParentId.IsEmpty then
@@ -120,7 +121,7 @@ begin
       end;
     end;
 
-    // 娣诲姞瀛愯妭鐐?
+    // 添加子节点
     for Cat in FCategories do
     begin
       if not Cat.ParentId.IsEmpty and NodeMap.ContainsKey(Cat.ParentId) then
@@ -145,7 +146,7 @@ var
   Cat: TCategory;
 begin
   cmbParent.Items.Clear;
-  cmbParent.Items.Add('(鏃?- 鏍瑰垎绫?');
+  cmbParent.Items.Add('(无 - 根分类)');
 
   for Cat in FCategories do
     cmbParent.Items.Add(Cat.Name);
@@ -169,7 +170,7 @@ begin
   edtName.Text := Cat.Name;
   mmoDescription.Text := Cat.Description;
 
-  // 鐖跺垎绫?
+  // 父分类
   cmbParent.ItemIndex := 0;
   for I := 0 to FCategories.Count - 1 do
   begin
@@ -209,19 +210,19 @@ var
   Q: TFDQuery;
   ParentId: string;
 begin
-  if edtName.Text.Trim.IsEmpty then
+  if Trim(edtName.Text).IsEmpty then
   begin
-    ShowMessage('璇疯緭鍏ュ垎绫诲悕绉?);
+    ShowMessage('请输入分类名称');
     edtName.SetFocus;
     Exit;
   end;
 
   if FCurrentCategory = nil then Exit;
 
-  FCurrentCategory.Name := edtName.Text.Trim;
+  FCurrentCategory.Name := Trim(edtName.Text);
   FCurrentCategory.Description := mmoDescription.Text;
 
-  // 鐖跺垎绫?
+  // 父分类
   if cmbParent.ItemIndex > 0 then
     ParentId := FCategories[cmbParent.ItemIndex - 1].Id
   else
@@ -260,7 +261,7 @@ begin
 
     Q.ExecSQL;
 
-    Log.Info('Category saved: %s', [FCurrentCategory.Name]);
+    Logger.InfoFmt('Category saved: %s', [FCurrentCategory.Name]);
     LoadCategories;
   finally
     Q.Free;
@@ -273,7 +274,7 @@ var
 begin
   if FCurrentCategory = nil then Exit;
 
-  if MessageDlg(Format('纭畾瑕佸垹闄ゅ垎绫?"%s" 鍚楋紵', [FCurrentCategory.Name]),
+  if MessageDlg(Format('确定要删除分类 "%s" 吗？', [FCurrentCategory.Name]),
     mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
     Exit;
 
@@ -281,22 +282,22 @@ begin
   try
     Q.Connection := DataModule1.FDConnection1;
 
-    // 灏嗚鍒嗙被涓嬬殑鏂囨。绉诲埌鏍?
+    // 将该分类下的文档移到根
     Q.SQL.Text := 'UPDATE Documents SET CategoryId = NULL WHERE CategoryId = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;
 
-    // 灏嗗瓙鍒嗙被鎻愬崌涓烘牴
+    // 将子分类提升为根
     Q.SQL.Text := 'UPDATE Categories SET ParentId = NULL WHERE ParentId = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;
 
-    // 鍒犻櫎鍒嗙被
+    // 删除分类
     Q.SQL.Text := 'DELETE FROM Categories WHERE Id = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;
 
-    Log.Info('Category deleted: %s', [FCurrentCategory.Name]);
+    Logger.InfoFmt('Category deleted: %s', [FCurrentCategory.Name]);
     LoadCategories;
     ClearFields;
   finally

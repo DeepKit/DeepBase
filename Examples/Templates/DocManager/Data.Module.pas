@@ -1,9 +1,9 @@
 ﻿unit Data.Module;
 
 {*******************************************************************************
-  Data Module - 鏁版嵁妯″潡
+  Data Module - 数据模块
 
-  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鏁版嵁璁块棶灞?
+  DeepBase 框架文档管理模板 - 数据访问层
 *******************************************************************************}
 
 interface
@@ -53,25 +53,25 @@ implementation
 {$R *.dfm}
 
 uses
-  DeepBase.Manager, DeepBase.Logger;
+  DeepBase.Logging;
 
 procedure TDataModule1.DataModuleCreate(Sender: TObject);
 begin
-  // 鍒濆鍖栬矾寰?
-  FStoragePath := TPath.Combine(DeepBase.GetAppPath, 'Documents');
-  FDatabasePath := TPath.Combine(DeepBase.GetAppPath, 'docmanager.db');
+  // 初始化路径
+  FStoragePath := TPath.Combine(TPath.GetAppPath, 'Documents');
+  FDatabasePath := TPath.Combine(TPath.GetAppPath, 'docmanager.db');
 
   if not TDirectory.Exists(FStoragePath) then
     TDirectory.CreateDirectory(FStoragePath);
 
-  // 鍒濆鍖栨暟鎹簱
+  // 初始化数据库
   InitializeDatabase;
 
-  // 鍒涘缓鏈嶅姟
+  // 创建服务
   FDocumentService := TDocumentService.Create(FDConnection1, FStoragePath);
   FSearchService := TSearchService.Create(FDConnection1);
 
-  Log.Info('DataModule initialized');
+  Logger.Info('DataModule initialized');
 end;
 
 procedure TDataModule1.DataModuleDestroy(Sender: TObject);
@@ -79,7 +79,7 @@ begin
   FSearchService.Free;
   FDocumentService.Free;
   FDConnection1.Close;
-  Log.Info('DataModule destroyed');
+  Logger.Info('DataModule destroyed');
 end;
 
 procedure TDataModule1.InitializeDatabase;
@@ -94,7 +94,7 @@ begin
   CreateTables;
   CreateDefaultCategories;
 
-  Log.Info('Database initialized: %s', [FDatabasePath]);
+  Logger.InfoFmt('Database initialized: %s', [FDatabasePath]);
 end;
 
 procedure TDataModule1.CreateTables;
@@ -105,7 +105,7 @@ begin
   try
     Q.Connection := FDConnection1;
 
-    // Documents 琛?
+    // Documents 表
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Documents (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -121,7 +121,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // Categories 琛?
+    // Categories 表
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Categories (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -135,7 +135,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // Tags 琛?
+    // Tags 表
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Tags (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -146,7 +146,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // DocumentTags 琛?
+    // DocumentTags 表
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS DocumentTags (' +
       '  DocumentId TEXT,' +
@@ -158,7 +158,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // Attachments 琛?
+    // Attachments 表
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Attachments (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -172,7 +172,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // DocumentVersions 琛?
+    // DocumentVersions 表
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS DocumentVersions (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -187,7 +187,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // 绱㈠紩
+    // 索引
     Q.SQL.Text := 'CREATE INDEX IF NOT EXISTS idx_docs_category ON Documents(CategoryId)';
     Q.ExecSQL;
     Q.SQL.Text := 'CREATE INDEX IF NOT EXISTS idx_docs_status ON Documents(Status)';
@@ -211,54 +211,54 @@ begin
   try
     Q.Connection := FDConnection1;
 
-    // 妫€鏌ユ槸鍚﹀凡鏈夊垎绫?
+    // 检查是否已有分类
     Q.SQL.Text := 'SELECT COUNT(*) AS Cnt FROM Categories';
     Q.Open;
     if Q.FieldByName('Cnt').AsInteger > 0 then
       Exit;
 
-    // 鍒涘缓榛樿鍒嗙被
+    // 创建默认分类
     Q.SQL.Text :=
       'INSERT INTO Categories (Id, Name, ParentId, SortOrder, Description, CreatedAt) VALUES ' +
       '(:Id, :Name, :Parent, :Sort, :Desc, :Created)';
 
-    // 宸ヤ綔
+    // 工作
     Q.ParamByName('Id').AsString := 'cat-work';
-    Q.ParamByName('Name').AsString := '宸ヤ綔';
+    Q.ParamByName('Name').AsString := '工作';
     Q.ParamByName('Parent').Clear;
     Q.ParamByName('Sort').AsInteger := 1;
-    Q.ParamByName('Desc').AsString := '宸ヤ綔鐩稿叧鏂囨。';
+    Q.ParamByName('Desc').AsString := '工作相关文档';
     Q.ParamByName('Created').AsDateTime := Now;
     Q.ExecSQL;
 
-    // 瀛︿範
+    // 学习
     Q.ParamByName('Id').AsString := 'cat-study';
-    Q.ParamByName('Name').AsString := '瀛︿範';
+    Q.ParamByName('Name').AsString := '学习';
     Q.ParamByName('Parent').Clear;
     Q.ParamByName('Sort').AsInteger := 2;
-    Q.ParamByName('Desc').AsString := '瀛︿範绗旇';
+    Q.ParamByName('Desc').AsString := '学习笔记';
     Q.ParamByName('Created').AsDateTime := Now;
     Q.ExecSQL;
 
-    // 涓汉
+    // 个人
     Q.ParamByName('Id').AsString := 'cat-personal';
-    Q.ParamByName('Name').AsString := '涓汉';
+    Q.ParamByName('Name').AsString := '个人';
     Q.ParamByName('Parent').Clear;
     Q.ParamByName('Sort').AsInteger := 3;
-    Q.ParamByName('Desc').AsString := '涓汉鏂囨。';
+    Q.ParamByName('Desc').AsString := '个人文档';
     Q.ParamByName('Created').AsDateTime := Now;
     Q.ExecSQL;
 
-    // 褰掓。
+    // 归档
     Q.ParamByName('Id').AsString := 'cat-archive';
-    Q.ParamByName('Name').AsString := '褰掓。';
+    Q.ParamByName('Name').AsString := '归档';
     Q.ParamByName('Parent').Clear;
     Q.ParamByName('Sort').AsInteger := 99;
-    Q.ParamByName('Desc').AsString := '宸插綊妗ｆ枃妗?;
+    Q.ParamByName('Desc').AsString := '已归档文档';
     Q.ParamByName('Created').AsDateTime := Now;
     Q.ExecSQL;
 
-    Log.Info('Default categories created');
+    Logger.Info('Default categories created');
   finally
     Q.Free;
   end;

@@ -141,8 +141,8 @@ begin
   for I := 0 to High(Data) do
   begin
     Values[I] := Data[I].Value;
-    if Data[I].Label <> '' then
-      Labels[I] := Data[I].Label
+    if Data[I].PointLabel <> '' then
+      Labels[I] := Data[I].PointLabel
     else
       Labels[I] := FormatDateTime('yyyy-mm-dd', Data[I].Timestamp);
   end;
@@ -207,7 +207,7 @@ procedure TChartBuilder.SaveToFile(const FileName: string);
 begin
   // Stub implementation - save description
   TFile.WriteAllText(FileName + '.txt', GenerateDescription, TEncoding.UTF8);
-  Log.Info('Chart description saved: %s.txt', [FileName]);
+  Logger.InfoFmt('Chart description saved: %s.txt', [FileName]);
   
   // In a real implementation, this would save an image file
   // using TeeChart or similar component

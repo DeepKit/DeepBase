@@ -48,7 +48,8 @@ type
   TTimeSeriesPoint = record
     Timestamp: TDateTime;
     Value: Double;
-    Label: string;
+    // 不能命名 Label：那是 Delphi 保留字，字段位置直接 E2029
+    PointLabel: string;
   end;
 
   TTimeSeriesData = TArray<TTimeSeriesPoint>;
@@ -149,10 +150,8 @@ end;
 { TAnalysisEngine }
 
 class function TAnalysisEngine.CalculateStats(const Values: TArray<Double>): TStatsSummary;
-var
-  SortedValues: TArray<Double>;
 begin
-  Result := Default(TTrendResult);
+  Result := Default(TStatsSummary);
   
   if Length(Values) = 0 then
     Exit;
@@ -165,11 +164,8 @@ begin
   Result.Range := Result.Max - Result.Min;
   Result.Variance := Self.Variance(Values);
   Result.StdDev := Sqrt(Result.Variance);
-  
-  // Calculate median and quartiles
-  SortedValues := Copy(Values);
-  TArray.Sort<Double>(SortedValues);
-  
+
+  // Median/Percentile 各自复制并排序，这里不再预先排序
   Result.Median := Self.Median(Values);
   Result.Q1 := Self.Percentile(Values, 0.25);
   Result.Q3 := Self.Percentile(Values, 0.75);
@@ -337,7 +333,7 @@ var
   N: Integer;
   SumX, SumY, SumXY, SumX2, SumY2: Double;
   I: Integer;
-  MeanX, MeanY: Double;
+  MeanY: Double;
   SSTotal, SSResidual: Double;
   Predicted: Double;
 begin
@@ -550,7 +546,6 @@ end;
 class function TAnalysisEngine.Normalize(const Values: TArray<Double>): TArray<Double>;
 var
   MinVal, MaxVal, Range: Double;
-  V: Double;
   I: Integer;
 begin
   if Length(Values) = 0 then

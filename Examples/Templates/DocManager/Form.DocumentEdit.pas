@@ -1,9 +1,9 @@
 ﻿unit Form.DocumentEdit;
 
 {*******************************************************************************
-  Document Edit Form - 鏂囨。缂栬緫绐椾綋
+  Document Edit Form - 文档编辑窗体
 
-  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鏂囨。缂栬緫瀵硅瘽妗?
+  DeepBase 框架文档管理模板 - 文档编辑对话框
 *******************************************************************************}
 
 interface
@@ -71,8 +71,9 @@ implementation
 {$R *.dfm}
 
 uses
+  FireDAC.Comp.Client,
   Data.Module,
-  DeepBase.Logger;
+  DeepBase.Logging;
 
 { TDocumentEditForm }
 
@@ -83,22 +84,22 @@ begin
   FModified := False;
   FCategoryIds := TList<string>.Create;
 
-  // 閰嶇疆鐗堟湰鍒楄〃
+  // 配置版本列表
   lvVersions.ViewStyle := vsReport;
   lvVersions.RowSelect := True;
   lvVersions.ReadOnly := True;
   lvVersions.Columns.Clear;
-  with lvVersions.Columns.Add do begin Caption := '鐗堟湰'; Width := 50; end;
-  with lvVersions.Columns.Add do begin Caption := '鏃堕棿'; Width := 120; end;
-  with lvVersions.Columns.Add do begin Caption := '澶囨敞'; Width := 100; end;
+  with lvVersions.Columns.Add do begin Caption := '版本'; Width := 50; end;
+  with lvVersions.Columns.Add do begin Caption := '时间'; Width := 120; end;
+  with lvVersions.Columns.Add do begin Caption := '备注'; Width := 100; end;
 
-  // 閰嶇疆闄勪欢鍒楄〃
+  // 配置附件列表
   lvAttachments.ViewStyle := vsReport;
   lvAttachments.RowSelect := True;
   lvAttachments.ReadOnly := True;
   lvAttachments.Columns.Clear;
-  with lvAttachments.Columns.Add do begin Caption := '鏂囦欢鍚?; Width := 150; end;
-  with lvAttachments.Columns.Add do begin Caption := '澶у皬'; Width := 80; end;
+  with lvAttachments.Columns.Add do begin Caption := '文件名'; Width := 150; end;
+  with lvAttachments.Columns.Add do begin Caption := '大小'; Width := 80; end;
 
   LoadCategories;
 end;
@@ -106,7 +107,7 @@ end;
 procedure TDocumentEditForm.FormDestroy(Sender: TObject);
 begin
   FCategoryIds.Free;
-  // 涓嶉噴鏀?FDocument锛岀敱璋冪敤鑰呯鐞?
+  // 不释放 FDocument，由调用者管理
 end;
 
 procedure TDocumentEditForm.LoadCategories;
@@ -116,7 +117,7 @@ begin
   cmbCategory.Items.Clear;
   FCategoryIds.Clear;
 
-  cmbCategory.Items.Add('(鏃犲垎绫?');
+  cmbCategory.Items.Add('(无分类)');
   FCategoryIds.Add('');
 
   Q := TFDQuery.Create(nil);
@@ -150,7 +151,7 @@ begin
   mmoContent.Text := '';
   edtTags.Text := '';
 
-  // 閫夋嫨鍒嗙被
+  // 选择分类
   if not CategoryId.IsEmpty then
   begin
     I := FCategoryIds.IndexOf(CategoryId);
@@ -173,7 +174,7 @@ begin
   FDocument := DataModule1.DocumentService.GetDocument(DocId);
   if FDocument = nil then
   begin
-    ShowMessage('鏂囨。涓嶅瓨鍦?);
+    ShowMessage('文档不存在');
     ModalResult := mrCancel;
     Exit;
   end;
@@ -184,14 +185,14 @@ begin
   edtTitle.Text := FDocument.Title;
   mmoContent.Text := FDocument.Content;
 
-  // 鍒嗙被
+  // 分类
   I := FCategoryIds.IndexOf(FDocument.CategoryId);
   if I >= 0 then
     cmbCategory.ItemIndex := I
   else
     cmbCategory.ItemIndex := 0;
 
-  // 鏍囩
+  // 标签
   edtTags.Text := '';
   for Tag in FDocument.Tags do
   begin
@@ -259,14 +260,14 @@ var
   TagStr: string;
   Tags: TArray<string>;
 begin
-  if edtTitle.Text.Trim.IsEmpty then
+  if Trim(edtTitle.Text).IsEmpty then
   begin
-    ShowMessage('璇疯緭鍏ユ爣棰?);
+    ShowMessage('请输入标题');
     edtTitle.SetFocus;
     Exit;
   end;
 
-  FDocument.Title := edtTitle.Text.Trim;
+  FDocument.Title := Trim(edtTitle.Text);
   FDocument.Content := mmoContent.Text;
 
   if cmbCategory.ItemIndex > 0 then
@@ -274,7 +275,7 @@ begin
   else
     FDocument.CategoryId := '';
 
-  // 瑙ｆ瀽鏍囩
+  // 解析标签
   TagStr := edtTags.Text;
   Tags := TagStr.Split([',', ';', ' '], TStringSplitOptions.ExcludeEmpty);
   FDocument.TagList.Clear;
@@ -283,19 +284,19 @@ begin
 
   if FIsNew then
   begin
-    // 鍒涘缓鏂版枃妗?
+    // 创建新文档
     var NewDoc := DataModule1.DocumentService.CreateDocument(
       FDocument.Title, FDocument.Content, FDocument.CategoryId);
     DataModule1.DocumentService.SetTags(NewDoc.Id, FDocument.Tags);
     FDocument.Free;
     FDocument := NewDoc;
-    Log.Info('New document created: %s', [FDocument.Id]);
+    Logger.InfoFmt('New document created: %s', [FDocument.Id]);
   end
   else
   begin
-    // 鏇存柊鐜版湁鏂囨。
+    // 更新现有文档
     DataModule1.DocumentService.UpdateDocument(FDocument);
-    Log.Info('Document updated: %s', [FDocument.Id]);
+    Logger.InfoFmt('Document updated: %s', [FDocument.Id]);
   end;
 
   FModified := False;
@@ -305,9 +306,9 @@ end;
 procedure TDocumentEditForm.UpdateTitle;
 begin
   if FIsNew then
-    Caption := '鏂板缓鏂囨。'
+    Caption := '新建文档'
   else
-    Caption := '缂栬緫鏂囨。 - ' + FDocument.Title;
+    Caption := '编辑文档 - ' + FDocument.Title;
 
   if FModified then
     Caption := Caption + ' *';
@@ -322,7 +323,7 @@ procedure TDocumentEditForm.btnCancelClick(Sender: TObject);
 begin
   if FModified then
   begin
-    case MessageDlg('鏂囨。宸蹭慨鏀癸紝鏄惁淇濆瓨锛?, mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
+    case MessageDlg('文档已修改，是否保存？', mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
       mrYes: SaveDocument;
       mrNo: ModalResult := mrCancel;
       mrCancel: Exit;
@@ -339,21 +340,21 @@ var
 begin
   if FIsNew then
   begin
-    ShowMessage('璇峰厛淇濆瓨鏂囨。鍚庡啀娣诲姞闄勪欢');
+    ShowMessage('请先保存文档后再添加附件');
     Exit;
   end;
 
   OpenDlg := TOpenDialog.Create(Self);
   try
-    OpenDlg.Title := '閫夋嫨闄勪欢';
-    OpenDlg.Filter := '鎵€鏈夋枃浠秥*.*';
+    OpenDlg.Title := '选择附件';
+    OpenDlg.Filter := '所有文件|*.*';
     if OpenDlg.Execute then
     begin
       Attachment := DataModule1.DocumentService.AttachFile(FDocument.Id, OpenDlg.FileName);
       if Attachment <> nil then
       begin
         LoadAttachments;
-        ShowMessage('闄勪欢宸叉坊鍔?);
+        ShowMessage('附件已添加');
       end;
     end;
   finally
@@ -369,12 +370,12 @@ begin
 
   Version := Integer(lvVersions.Selected.Data);
 
-  if MessageDlg(Format('纭畾瑕佹仮澶嶅埌鐗堟湰 %d 鍚楋紵', [Version]),
+  if MessageDlg(Format('确定要恢复到版本 %d 吗？', [Version]),
     mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
     DataModule1.DocumentService.RestoreVersion(FDocument.Id, Version);
     LoadDocument(FDocument.Id);
-    ShowMessage('宸叉仮澶嶅埌鎸囧畾鐗堟湰');
+    ShowMessage('已恢复到指定版本');
   end;
 end;
 

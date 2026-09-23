@@ -7,6 +7,7 @@ uses
   Entity.Document in 'Entity.Document.pas',
   Entity.Category in 'Entity.Category.pas',
   Entity.Tag in 'Entity.Tag.pas',
+  Entity.Base in 'Entity.Base.pas',
   Service.Document in 'Service.Document.pas',
   Service.Search in 'Service.Search.pas',
   Form.DocumentEdit in 'Form.DocumentEdit.pas' {DocumentEditForm},

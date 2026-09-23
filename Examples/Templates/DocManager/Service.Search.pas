@@ -1,10 +1,10 @@
 ﻿unit Service.Search;
 
 {*******************************************************************************
-  Search Service - 鎼滅储鏈嶅姟
+  Search Service - 搜索服务
 
-  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鍏ㄦ枃鎼滅储鏈嶅姟
-  浣跨敤 SQLite FTS5 瀹炵幇楂樻晥鍏ㄦ枃鎼滅储
+  DeepBase 框架文档管理模板 - 全文搜索服务
+  使用 SQLite FTS5 实现高效全文搜索
 *******************************************************************************}
 
 interface
@@ -16,23 +16,23 @@ uses
 
 type
   /// <summary>
-  /// 鎼滅储閫夐」
+  /// 搜索选项
   /// </summary>
   TSearchOptions = record
-    CategoryId: string;       // 闄愬畾鍒嗙被
-    Tags: TArray<string>;     // 闄愬畾鏍囩
-    DateFrom: TDateTime;      // 鏃ユ湡鑼冨洿璧峰
-    DateTo: TDateTime;        // 鏃ユ湡鑼冨洿缁撴潫
-    Status: TDocumentStatus;  // 鏂囨。鐘舵€?
-    MaxResults: Integer;      // 鏈€澶х粨鏋滄暟
-    IncludeContent: Boolean;  // 鎼滅储鍐呭
-    IncludeTitle: Boolean;    // 鎼滅储鏍囬
+    CategoryId: string;       // 限定分类
+    Tags: TArray<string>;     // 限定标签
+    DateFrom: TDateTime;      // 日期范围起始
+    DateTo: TDateTime;        // 日期范围结束
+    Status: TDocumentStatus;  // 文档状态
+    MaxResults: Integer;      // 最大结果数
+    IncludeContent: Boolean;  // 搜索内容
+    IncludeTitle: Boolean;    // 搜索标题
     
     class function Default: TSearchOptions; static;
   end;
 
   /// <summary>
-  /// 鎼滅储鏈嶅姟 - 浣跨敤 SQLite FTS5 鍏ㄦ枃鎼滅储
+  /// 搜索服务 - 使用 SQLite FTS5 全文搜索
   /// </summary>
   TSearchService = class
   private
@@ -45,39 +45,39 @@ type
   public
     constructor Create(AConnection: TFDConnection);
 
-    /// <summary>鍒濆鍖?FTS 绱㈠紩琛?/summary>
+    /// <summary>初始化 FTS 索引表</summary>
     procedure InitializeFTS;
 
-    /// <summary>妫€鏌?FTS 鏄惁鍙敤</summary>
+    /// <summary>检查 FTS 是否可用</summary>
     function IsFTSAvailable: Boolean;
 
-    /// <summary>鍩烘湰鍏ㄦ枃鎼滅储</summary>
+    /// <summary>基本全文搜索</summary>
     function Search(const Query: string): TObjectList<TSearchResult>;
 
-    /// <summary>楂樼骇鎼滅储锛堝甫閫夐」锛?/summary>
+    /// <summary>高级搜索（带选项）</summary>
     function AdvancedSearch(const Query: string; 
       const Options: TSearchOptions): TObjectList<TSearchResult>;
 
-    /// <summary>鎼滅储鏍囬</summary>
+    /// <summary>搜索标题</summary>
     function SearchByTitle(const Query: string): TObjectList<TSearchResult>;
 
-    /// <summary>鑾峰彇鎼滅储寤鸿</summary>
+    /// <summary>获取搜索建议</summary>
     function GetSuggestions(const Prefix: string; 
       MaxCount: Integer = 10): TArray<string>;
 
-    /// <summary>绱㈠紩鍗曚釜鏂囨。</summary>
+    /// <summary>索引单个文档</summary>
     procedure IndexDocument(const DocId, Title, Content: string);
 
-    /// <summary>浠庣储寮曚腑绉婚櫎鏂囨。</summary>
+    /// <summary>从索引中移除文档</summary>
     procedure RemoveFromIndex(const DocId: string);
 
-    /// <summary>閲嶅缓鍏ㄩ儴绱㈠紩</summary>
+    /// <summary>重建全部索引</summary>
     procedure RebuildIndex;
 
-    /// <summary>浼樺寲绱㈠紩</summary>
+    /// <summary>优化索引</summary>
     procedure OptimizeIndex;
 
-    /// <summary>鑾峰彇绱㈠紩缁熻</summary>
+    /// <summary>获取索引统计</summary>
     function GetIndexStats: string;
 
     property Connection: TFDConnection read FConnection;
@@ -87,8 +87,8 @@ type
 implementation
 
 uses
-  System.StrUtils, System.DateUtils,
-  DeepBase.Logger;
+  System.StrUtils, System.DateUtils, System.Math,
+  DeepBase.Logging;
 
 { TSearchOptions }
 
@@ -112,7 +112,7 @@ begin
   FConnection := AConnection;
   FFTSEnabled := False;
   
-  // 妫€鏌ュ苟鍒濆鍖?FTS
+  // 检查并初始化 FTS
   if IsFTSAvailable then
   begin
     InitializeFTS;
@@ -129,10 +129,10 @@ begin
   try
     Query.Connection := FConnection;
     try
-      // 灏濊瘯鍒涘缓涓€涓复鏃?FTS5 琛ㄦ潵娴嬭瘯
+      // 尝试创建一个临时 FTS5 表来测试
       Query.SQL.Text := 'SELECT sqlite_version()';
       Query.Open;
-      Result := True;  // SQLite 3.9+ 鏀寔 FTS5
+      Result := True;  // SQLite 3.9+ 支持 FTS5
     except
       Result := False;
     end;
@@ -149,17 +149,17 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 鍒涘缓 FTS5 铏氭嫙琛?
+    // 创建 FTS5 虚拟表
     Query.SQL.Text := 
       'CREATE VIRTUAL TABLE IF NOT EXISTS Documents_FTS USING fts5(' +
       '  DocId, ' +
       '  Title, ' +
       '  Content, ' +
-      '  tokenize = "unicode61"' +  // 鏀寔 Unicode
+      '  tokenize = "unicode61"' +  // 支持 Unicode
       ')';
     Query.ExecSQL;
     
-    // 鍒涘缓瑙﹀彂鍣細鎻掑叆
+    // 创建触发器：插入
     Query.SQL.Text := 
       'CREATE TRIGGER IF NOT EXISTS Documents_AI AFTER INSERT ON Documents BEGIN ' +
       '  INSERT INTO Documents_FTS (DocId, Title, Content) ' +
@@ -167,7 +167,7 @@ begin
       'END';
     Query.ExecSQL;
     
-    // 鍒涘缓瑙﹀彂鍣細鏇存柊
+    // 创建触发器：更新
     Query.SQL.Text := 
       'CREATE TRIGGER IF NOT EXISTS Documents_AU AFTER UPDATE ON Documents BEGIN ' +
       '  UPDATE Documents_FTS SET Title = NEW.Title, Content = NEW.Content ' +
@@ -175,14 +175,14 @@ begin
       'END';
     Query.ExecSQL;
     
-    // 鍒涘缓瑙﹀彂鍣細鍒犻櫎
+    // 创建触发器：删除
     Query.SQL.Text := 
       'CREATE TRIGGER IF NOT EXISTS Documents_AD AFTER DELETE ON Documents BEGIN ' +
       '  DELETE FROM Documents_FTS WHERE DocId = OLD.Id; ' +
       'END';
     Query.ExecSQL;
     
-    Log.Info('FTS5 index initialized');
+    Logger.Info('FTS5 index initialized');
   finally
     Query.Free;
   end;
@@ -211,7 +211,7 @@ begin
     
     if FFTSEnabled then
     begin
-      // 浣跨敤 FTS5 鎼滅储
+      // 使用 FTS5 搜索
       SQL := 
         'SELECT d.Id, d.Title, d.Content, d.UpdatedAt, d.CategoryId, ' +
         '  c.Name AS CategoryName, ' +
@@ -222,11 +222,11 @@ begin
         'WHERE Documents_FTS MATCH :Query ' +
         '  AND d.Status = :Status ';
       
-      // 娣诲姞鍒嗙被杩囨护
+      // 添加分类过滤
       if not Options.CategoryId.IsEmpty then
         SQL := SQL + 'AND d.CategoryId = :CategoryId ';
       
-      // 娣诲姞鏃ユ湡杩囨护
+      // 添加日期过滤
       if Options.DateFrom > 0 then
         SQL := SQL + 'AND d.UpdatedAt >= :DateFrom ';
       if Options.DateTo > 0 then
@@ -249,7 +249,7 @@ begin
     end
     else
     begin
-      // 鍥為€€鍒?LIKE 鎼滅储
+      // 回退到 LIKE 搜索
       SQL := 
         'SELECT d.Id, d.Title, d.Content, d.UpdatedAt, d.CategoryId, ' +
         '  c.Name AS CategoryName, 0 AS Score ' +
@@ -289,7 +289,7 @@ begin
       SqlQuery.Next;
     end;
     
-    Log.Debug('Search "%s": %d results', [Query, Result.Count]);
+    Logger.DebugFmt('Search "%s": %d results', [Query, Result.Count]);
   finally
     SqlQuery.Free;
   end;
@@ -312,12 +312,12 @@ var
   I: Integer;
   Builder: TStringBuilder;
 begin
-  // 鏋勫缓 FTS5 鏌ヨ璇硶
-  // 鏀寔锛氬崟璇嶆悳绱€€佺煭璇悳绱紙寮曞彿锛夈€佸墠缂€鎼滅储锛?锛?
+  // 构建 FTS5 查询语法
+  // 支持：单词搜索、短语搜索（引号）、前缀搜索（*）
   
   Builder := TStringBuilder.Create;
   try
-    // 鍒嗗壊鎼滅储璇?
+    // 分割搜索词
     Terms := Query.Split([' '], TStringSplitOptions.ExcludeEmpty);
     
     for I := 0 to High(Terms) do
@@ -325,14 +325,14 @@ begin
       if I > 0 then
         Builder.Append(' ');
       
-      // 濡傛灉涓嶆槸鐭锛堝紩鍙峰寘鍥达級锛屾坊鍔犲墠缂€鍖归厤
+      // 如果不是短语（引号包围），添加前缀匹配
       if not Terms[I].StartsWith('"') and not Terms[I].EndsWith('*') then
         Builder.Append(Terms[I] + '*')
       else
         Builder.Append(Terms[I]);
     end;
     
-    // 闄愬畾鎼滅储鍒?
+    // 限定搜索列
     if Options.IncludeTitle and Options.IncludeContent then
       Result := Builder.ToString
     else if Options.IncludeTitle then
@@ -359,7 +359,7 @@ begin
   LowerContent := Content.ToLower;
   Terms := Query.ToLower.Split([' '], TStringSplitOptions.ExcludeEmpty);
   
-  // 鏌ユ壘绗竴涓尮閰嶈瘝鐨勪綅缃?
+  // 查找第一个匹配词的位置
   Pos := -1;
   for var Term in Terms do
   begin
@@ -370,18 +370,18 @@ begin
   
   if Pos < 0 then
   begin
-    // 娌℃壘鍒板尮閰嶏紝杩斿洖寮€澶撮儴鍒?
+    // 没找到匹配，返回开头部分
     if Length(Content) <= MaxLength then
       Exit(Content)
     else
       Exit(Copy(Content, 1, MaxLength) + '...');
   end;
   
-  // 璁＄畻鎽樿鑼冨洿
+  // 计算摘要范围
   StartPos := Max(0, Pos - MaxLength div 3);
   EndPos := Min(Length(Content), StartPos + MaxLength);
   
-  // 灏濊瘯浠庡崟璇嶈竟鐣屽紑濮?
+  // 尝试从单词边界开始
   while (StartPos > 0) and (Content[StartPos + 1] <> ' ') do
     Dec(StartPos);
   
@@ -394,7 +394,7 @@ begin
   if EndPos < Length(Content) then
     Result := Result + '...';
   
-  // 绉婚櫎鎹㈣
+  // 移除换行
   Result := Result.Replace(#13#10, ' ').Replace(#10, ' ').Replace(#13, ' ');
 end;
 
@@ -414,12 +414,12 @@ begin
     Pos := LowerText.IndexOf(Term);
     while Pos >= 0 do
     begin
-      // 娣诲姞楂樹寒鏍囪
+      // 添加高亮标记
       Result := Copy(Result, 1, Pos) + 
                 '<mark>' + Copy(Result, Pos + 1, Length(Term)) + '</mark>' +
                 Copy(Result, Pos + Length(Term) + 1, Length(Result));
       
-      // 缁х画鏌ユ壘涓嬩竴涓?
+      // 继续查找下一个
       LowerText := Result.ToLower;
       Pos := LowerText.IndexOf(Term, Pos + Length('<mark></mark>') + Length(Term));
     end;
@@ -438,7 +438,7 @@ begin
     try
       Query.Connection := FConnection;
       
-      // 浠庢爣棰樹腑鎻愬彇寤鸿
+      // 从标题中提取建议
       Query.SQL.Text := 
         'SELECT DISTINCT Title FROM Documents ' +
         'WHERE Title LIKE :Prefix AND Status = :Status ' +
@@ -454,7 +454,7 @@ begin
         Query.Next;
       end;
       
-      // 濡傛灉寤鸿涓嶈冻锛屼粠鏍囩涓ˉ鍏?
+      // 如果建议不足，从标签中补充
       if Suggestions.Count < MaxCount then
       begin
         Query.SQL.Text := 
@@ -493,12 +493,12 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 鍏堝垹闄ゆ棫绱㈠紩
+    // 先删除旧索引
     Query.SQL.Text := 'DELETE FROM Documents_FTS WHERE DocId = :DocId';
     Query.ParamByName('DocId').AsString := DocId;
     Query.ExecSQL;
     
-    // 鎻掑叆鏂扮储寮?
+    // 插入新索引
     Query.SQL.Text := 
       'INSERT INTO Documents_FTS (DocId, Title, Content) VALUES (:DocId, :Title, :Content)';
     Query.ParamByName('DocId').AsString := DocId;
@@ -533,24 +533,24 @@ var
 begin
   if not FFTSEnabled then Exit;
   
-  Log.Info('Rebuilding FTS index...');
+  Logger.Info('Rebuilding FTS index...');
   
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
     
-    // 娓呯┖绱㈠紩
+    // 清空索引
     Query.SQL.Text := 'DELETE FROM Documents_FTS';
     Query.ExecSQL;
     
-    // 閲嶆柊绱㈠紩鎵€鏈夋枃妗?
+    // 重新索引所有文档
     Query.SQL.Text := 
       'INSERT INTO Documents_FTS (DocId, Title, Content) ' +
       'SELECT Id, Title, Content FROM Documents WHERE Status != :Deleted';
     Query.ParamByName('Deleted').AsInteger := Ord(dsDeleted);
     Query.ExecSQL;
     
-    Log.Info('FTS index rebuilt');
+    Logger.Info('FTS index rebuilt');
   finally
     Query.Free;
   end;
@@ -567,7 +567,7 @@ begin
     Query.Connection := FConnection;
     Query.SQL.Text := 'INSERT INTO Documents_FTS(Documents_FTS) VALUES (''optimize'')';
     Query.ExecSQL;
-    Log.Info('FTS index optimized');
+    Logger.Info('FTS index optimized');
   finally
     Query.Free;
   end;
@@ -582,13 +582,13 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 鏂囨。鏁?
+    // 文档数
     Query.SQL.Text := 'SELECT COUNT(*) AS Cnt FROM Documents WHERE Status != :Deleted';
     Query.ParamByName('Deleted').AsInteger := Ord(dsDeleted);
     Query.Open;
     DocCount := Query.FieldByName('Cnt').AsInteger;
     
-    // 绱㈠紩鏁?
+    // 索引数
     if FFTSEnabled then
     begin
       Query.SQL.Text := 'SELECT COUNT(*) AS Cnt FROM Documents_FTS';
@@ -598,10 +598,10 @@ begin
     else
       IndexCount := 0;
     
-    Result := Format('鏂囨。鏁? %d, 绱㈠紩鏁? %d, FTS: %s', [
+    Result := Format('文档数: %d, 索引数: %d, FTS: %s', [
       DocCount, 
       IndexCount, 
-      IfThen(FFTSEnabled, '鍚敤', '绂佺敤')
+      IfThen(FFTSEnabled, '启用', '禁用')
     ]);
   finally
     Query.Free;

@@ -2,8 +2,9 @@
 # 语义：清单内每一个工程都编、都判并如实记录 BUILD_EXIT，但红不阻断提交（阻断语义只属于 T0）。
 # 语法：每行一个仓内相对路径，或整面选择子 all-dpr / all-dpk；# 起注释。清单只做加法，没有排除行——
 #       「范围内跳过谁」是门禁 bypass，禁止；要把某个工程移出观测面，就把它改登到 T2 或删除该行。
-# 归面规则：全部已跟踪 .dpr − T0 的 Tests/DeepBaseTests.dpr − T2 三件（被引单元全库零命中，见 T2 文件）。
-# 派生自 git ls-files -- "*.dpr"（机械取差集，无手工增删；本次派生基准 ae1638d）。
+# 归面规则：全部已跟踪 .dpr − T0 的 Tests/DeepBaseTests.dpr − T2 在册件（甲-D6 段3 后 T2 为 0 件，见 T2 文件）。
+# 派生自 git ls-files -- "*.dpr"（机械取差集，无手工增删；基线 ae1638d，甲-D6 段3 同步后复算零漂移，
+#       复算口径与结果见 CodeReview/20260923-AUDIT-甲-D6-证据/）。
 #       新增 .dpr 须显式归面；--all 全量面始终是超集，任何工程都跑不掉编译判定。
 
 DeepBaseRun/DeepBaseRun.dpr
@@ -21,6 +22,8 @@ Examples/MultiLanguageDemo/MultiLanguageDemo.dpr
 Examples/Phase0Demo/Phase0Demo.dpr
 Examples/Phase1Demo/Phase1Demo.dpr
 Examples/Templates/CRUDApp/CRUDApp.dpr
+Examples/Templates/DataAnalyzer/DataAnalyzer.dpr
+Examples/Templates/DocManager/DocManager.dpr
 Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr
 Tests/Acceptance/DeepBaseAcceptanceTest.dpr
 Tests/Architecture/DeepBaseArchitectureTests.dpr
@@ -63,9 +66,15 @@ Tools/Gallery/hbtheme_gallery.dpr
 Tools/LogAnalyzer/LogAnalyzer.dpr
 Tools/SeedTool/SeedTool.dpr
 Tools/Studio/DeepBaseStudio.dpr
+# DeepBaseStudio：保持红，未移面。该入口引用的窗体类名在仓库任何 revision 都不存在（生来即坏），
+# 改到绿的唯一路径是把活入口 Studio.dpr 之外再造一套生命周期 = 架构分叉。结论是「应移出库」，
+# 删文件属不可逆处置且本单未获授权 ⇒ 按工单指令停下交主控裁定，论证见 D6-段2-04。
 Tools/Studio/Studio.dpr
 Tools/Tray/DeepBaseTray.dpr
 Tools/UniPublisher/DeepPublisher.dpr
 Tools/UpdaterHelper/UpdaterHelper.dpr
+# doQry/examples/DoQryDemo：保持红，未移面。主控「移出库（DBClient 不在 Win64 lib 面）」的前提
+# 经实测更正（Datasnap 在 Win64 存在，红因是 .dproj 缺失回落 DEFAULT_NS + 两层真实缺陷），
+# 论证与处置请求见 CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-04。
 doQry/examples/DoQryDemo/DoQryDemo.dpr
 doQry/prjDoQry.dpr
