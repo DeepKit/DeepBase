@@ -20,16 +20,26 @@ const path = require('path');
 
 /**
  * @param {string} argvSource 通常是 process.execPath 之后的 argv 切片，即 process.argv.slice(2)
- * @param {object} spec       { label, root, baseline, extra }
+ * @param {object} spec       { label, root, baseline, extra, valued }
  *   label    失败信息里的门禁名（如「编码」）
- *   root     该门禁的默认 root（已 resolve 前的原始路径）
- *   baseline 该门禁的默认 baseline 文件路径
- *   extra    额外合法开关集合（eol 门禁的 --emit-baseline）
- * @returns {{ root: string, baseline: string, flags: Set<string>, consumed: string[] }}
+ *   root     该门禁的默认 root（已 resolve 前的原始路径）；省略则该门禁不认 --root
+ *   baseline 该门禁的默认 baseline 文件路径；省略则该门禁不认 --baseline
+ *   extra    额外合法【无值】开关集合（eol 门禁的 --emit-baseline）
+ *   valued   额外合法【带值】参数集合，值可重复（编译门禁的 --dpr）
+ * @returns {{ root: string|undefined, baseline: string|undefined, flags: Set<string>, values: Map<string,string[]>, consumed: string[] }}
  */
 function parseGateArgs(argv, spec) {
-  const known = new Set(['root', 'baseline', 'help', ...(spec.extra || [])]);
+  // 合法参数集只由 spec 决定：门禁不认的参数，校验器就不放行（否则又出现「校验接受、取值侧不认」的裂缝）。
+  const valuedKeys = spec.valued || [];
+  const known = new Set([
+    ...(spec.root === undefined ? [] : ['root']),
+    ...(spec.baseline === undefined ? [] : ['baseline']),
+    'help',
+    ...(spec.extra || []),
+    ...valuedKeys,
+  ]);
   const flags = new Set();
+  const values = new Map();
   const consumed = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -81,11 +91,16 @@ function parseGateArgs(argv, spec) {
   const map = new Map();
   for (let i = 0; i < consumed.length; i += 2) {
     if (!map.has(consumed[i])) map.set(consumed[i], consumed[i + 1]);
+    if (valuedKeys.includes(consumed[i])) {
+      if (!values.has(consumed[i])) values.set(consumed[i], []);
+      values.get(consumed[i]).push(consumed[i + 1]);
+    }
   }
   return {
-    root: path.resolve(map.get('root') || spec.root),
-    baseline: path.resolve(map.get('baseline') || spec.baseline),
+    root: spec.root === undefined ? undefined : path.resolve(map.get('root') || spec.root),
+    baseline: spec.baseline === undefined ? undefined : path.resolve(map.get('baseline') || spec.baseline),
     flags,
+    values,
     consumed,
   };
 }

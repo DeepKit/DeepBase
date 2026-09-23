@@ -1,0 +1,21 @@
+DeepFlow/Source/DeepFlow.dpr 编译失败：DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+Examples/MVVMDemo/MVVMDemo.dpr 编译失败：LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+Examples/MultiLanguageDemo/MultiLanguageDemo.dpr 编译失败：MainForm.pas(119) Error: E2052 Unterminated string
+Examples/Templates/CRUDApp/CRUDApp.dpr 编译失败：Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+Examples/Templates/DataAnalyzer/DataAnalyzer.dpr 编译失败：DataAnalyzer.dpr(13) Fatal: F1026 File not found: 'Main.Form.pas'
+Examples/Templates/DocManager/DocManager.dpr 编译失败：Entity.Document.pas(14) Fatal: F2613 Unit 'DeepBase.ORM.Attributes' not found.
+Tests/Acceptance/DeepBaseAcceptanceTest.dpr 编译失败：AcceptanceRunner.pas(158) Error: E2052 Unterminated string
+Tests/GUI/DeepBaseGUITests.dpr 编译失败：DeepBase.GUITest.pas(819) Error: E2029 ')' expected but identifier '?' found
+Tests/GUI/PageDriverSmoke.dpr 编译失败：PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+Tests/Plugins/PluginLifecycleHarness.dpr 编译失败：PluginLifecycleHarness.dpr(58) Error: E2003 Undeclared identifier: 'TDeepBasePluginManager'
+Tests/Speech/SpeechSpike.dpr 编译失败：SpeechSpike.dpr(180) Error: E2003 Undeclared identifier: 'TProcessEntry32'
+Tests/Speech/TestSpeechHeadless.dpr 编译失败：D:\_Progs\02Business\DeepBase\.tmp\wt_d3\Features\DeepBase.Speech.WakeWord.pas(260) Error: E2010 Incompatible types: 'Cardinal' and 'DeepBase.Speech.SAPI.Decl.SPRECOSTATE'
+Tests/Stress/DeepBaseStressTests.dpr 编译失败：Stress.Database.pas(170) Error: E2010 Incompatible types: 'FireDAC.Comp.Client.TFDConnection' and 'TObject'
+Tests/TestLLMClient.dpr 编译失败：TestLLMClient.dpr(35) Error: E2052 Unterminated string
+Tools/Calibration/Calib.Record.dpr 编译失败：Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+Tools/FMXGallery/hbtheme_fmx_gallery.dpr 编译失败：D:\_Progs\02Business\DeepBase\.tmp\wt_d3\FMX\DeepBase.FMX.HB.Choice.pas(940) Error: E2003 Undeclared identifier: 'ColorToARGB'
+Tools/Gallery/hbtheme_gallery.dpr 编译失败：Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+Tools/LogAnalyzer/LogAnalyzer.dpr 编译失败：LogAnalyzer.MainForm.pas(186) Error: E2052 Unterminated string
+Tools/Studio/DeepBaseStudio.dpr 编译失败：Forms\Studio.MainForm.pas(43) Fatal: F2613 Unit 'Studio.ConfigFrame' not found.
+Tools/UniPublisher/DeepPublisher.dpr 编译失败：Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+doQry/examples/DoQryDemo/DoQryDemo.dpr 编译失败：DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.

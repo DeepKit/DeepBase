@@ -1,0 +1,37 @@
+### gate encoding-gate/check_pas_encoding
+编码门禁通过：975 个 .pas + 639 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 4）
+EXIT=0
+### gate eol-gate/check_eol
+行尾门禁通过：检查了 1461 个文件（.pas CRLF / .md LF），跳过目录 4
+EXIT=0
+### gate evidence-encoding-gate/check_evidence_encoding
+证据编码门禁通过：扫描 199 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+### gate managed-copy-gate/check_managed_copy
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+EXIT=1
+### gate build-ownership/check_build_ownership
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+### negative encoding-gate
+参数负样本通过(值形似参数)：[--root --root] => EXIT=3
+NEGATIVE-TEST: PASS
+EXIT=0
+### negative eol-gate
+决定性判据2通过：--root <存在目录> 真按该目录扫描（1 个文件，非全仓量级）
+NEGATIVE-TEST: PASS
+EXIT=0
+### negative evidence-encoding-gate
+清理后复跑: 证据编码门禁通过：扫描 1 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+NEGATIVE-TEST: PASS
+EXIT=0
+### negative managed-copy-gate
+正向样本通过：OK
+NEGATIVE-TEST: PASS
+EXIT=0
+### negative build-ownership
+
+OWNERSHIP-NEGATIVE-TEST: PASS
+EXIT=0

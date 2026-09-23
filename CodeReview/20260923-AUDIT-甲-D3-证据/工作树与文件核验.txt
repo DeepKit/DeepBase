@@ -1,0 +1,29 @@
+隔离工作树与文件一致性核验（2026-09-23）
+
+1) 工作树建立与检出（判定口径：隔离 --detach 工作树 @ 目标 commit）
+   git worktree add --detach .tmp/wt_d3 <commit>
+   最终判定检出 = 424481d9ac40b9eaf437753e8f1653b31684c07a  docs(audit): 验收乙 D4（ACCEPTED，判据 1-7 全成立）+ 派乙 D5 门禁残留三项收口
+
+2) 门禁文件 sha256：主仓 与 隔离工作树 逐字节同一份（被测物唯一）
+   f973f686fdffaf582d81a02496a643c0b2bf43179365f45ec456d8854dbaf661 *09_工程脚本/gate-args.js
+   f973f686fdffaf582d81a02496a643c0b2bf43179365f45ec456d8854dbaf661 *.tmp/wt_d3/09_工程脚本/gate-args.js
+   43ee11d431b0062f3a1d0710ce67b5e687d537ee563cc03b132ec297465c3907 *09_工程脚本/build-gate/check_build.js
+   43ee11d431b0062f3a1d0710ce67b5e687d537ee563cc03b132ec297465c3907 *.tmp/wt_d3/09_工程脚本/build-gate/check_build.js
+   d8ae04a931f8c82c391d60f0d190dfa5c45da8d4b4abd250b21c3463bce3e1a4 *09_工程脚本/build-gate/test_negative_sample.js
+   d8ae04a931f8c82c391d60f0d190dfa5c45da8d4b4abd250b21c3463bce3e1a4 *.tmp/wt_d3/09_工程脚本/build-gate/test_negative_sample.js
+   8b1687c729ffbd440c041169a81db6029f1b0c7fabce2bfc7ddcf16712c0ba0c *09_工程脚本/build-gate/README-编译门禁.md
+   8b1687c729ffbd440c041169a81db6029f1b0c7fabce2bfc7ddcf16712c0ba0c *.tmp/wt_d3/09_工程脚本/build-gate/README-编译门禁.md
+
+3) --dpr 单编译模式（判据 §四 要求的日常快跑形态）在隔离树上的实测
+   命令：node 09_工程脚本/build-gate/check_build.js --dpr Tests/DeepBaseTests.dpr
+   [1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0
+   编译门禁统计：DPR总数=1 成功=1 失败=0 被跳过=0 失败子路径=0 .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+   编译门禁通过：1 个 .dpr 全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）
+   GATE_EXIT=0
+
+4) 跑完后的工作树状态（除本单未入库的门禁文件外不得出现新脏项）
+    M 09_工程脚本/gate-args.js
+   ?? 09_工程脚本/build-gate/
+   ⇒ DCU/EXE/RES 落在 .tmp/build-gate 与 .gitignore 面内；源目录里本次新增的 DCU 由 BUG-285 清理回收。
+   全库被跟踪的 .res 数量（干净检出必然为 0，故门禁须补生成）：
+     0

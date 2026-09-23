@@ -1,0 +1,141 @@
+[1/67] DeepBaseRun/DeepBaseRun.dpr BUILD_EXIT=1
+  DeepBaseRun/DeepBaseRun.dpr 编译失败：Error: E1026 File not found: 'DeepBaseRun.res'
+[2/67] DeepFlow/Source/DeepFlow.dpr BUILD_EXIT=1
+  DeepFlow/Source/DeepFlow.dpr 编译失败：DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+[3/67] Examples/AIErrorHandlerDemo/AIErrorHandlerDemo.dpr BUILD_EXIT=0
+[4/67] Examples/AutoFixDemo/AutoFixDemo.dpr BUILD_EXIT=0
+[5/67] Examples/DataBindingDemo/DataBindingDemo.dpr BUILD_EXIT=1
+  Examples/DataBindingDemo/DataBindingDemo.dpr 编译失败：Error: E1026 File not found: 'DataBindingDemo.res'
+[6/67] Examples/FMXDemo/FMXPlatformDemo.dpr BUILD_EXIT=0
+[7/67] Examples/FullDemo/FullDemo.dpr BUILD_EXIT=1
+  Examples/FullDemo/FullDemo.dpr 编译失败：Error: E1026 File not found: 'FullDemo.res'
+[8/67] Examples/HbColdStartProbe/HbColdStartProbe.dpr BUILD_EXIT=0
+[9/67] Examples/HbSnapshotDemo/HbSnapshotDemo.dpr BUILD_EXIT=0
+[10/67] Examples/MVVMDemo/MVVMDemo.dpr BUILD_EXIT=1
+  Examples/MVVMDemo/MVVMDemo.dpr 编译失败：LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+[11/67] Examples/MicroserviceClientDemo/MicroserviceClientDemo.dpr BUILD_EXIT=0
+[12/67] Examples/MultiLanguageDemo/MultiLanguageDemo.dpr BUILD_EXIT=1
+  Examples/MultiLanguageDemo/MultiLanguageDemo.dpr 编译失败：MainForm.pas(119) Error: E2052 Unterminated string
+[13/67] Examples/Phase0Demo/Phase0Demo.dpr BUILD_EXIT=1
+  Examples/Phase0Demo/Phase0Demo.dpr 编译失败：Error: E1026 File not found: 'Phase0Demo.res'
+[14/67] Examples/Phase1Demo/Phase1Demo.dpr BUILD_EXIT=0
+[15/67] Examples/Templates/CRUDApp/CRUDApp.dpr BUILD_EXIT=1
+  Examples/Templates/CRUDApp/CRUDApp.dpr 编译失败：Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+[16/67] Examples/Templates/DataAnalyzer/DataAnalyzer.dpr BUILD_EXIT=1
+  Examples/Templates/DataAnalyzer/DataAnalyzer.dpr 编译失败：DataAnalyzer.dpr(13) Fatal: F1026 File not found: 'Main.Form.pas'
+[17/67] Examples/Templates/DocManager/DocManager.dpr BUILD_EXIT=1
+  Examples/Templates/DocManager/DocManager.dpr 编译失败：Entity.Document.pas(14) Fatal: F2613 Unit 'DeepBase.ORM.Attributes' not found.
+[18/67] Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr BUILD_EXIT=1
+  Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr 编译失败：Error: E1026 File not found: 'VCLDeepShellDemo.res'
+[19/67] Tests/Acceptance/DeepBaseAcceptanceTest.dpr BUILD_EXIT=1
+  Tests/Acceptance/DeepBaseAcceptanceTest.dpr 编译失败：AcceptanceRunner.pas(158) Error: E2052 Unterminated string
+[20/67] Tests/Architecture/DeepBaseArchitectureTests.dpr BUILD_EXIT=0
+[21/67] Tests/AutoFix/Fixtures/AutoFixHarness.dpr BUILD_EXIT=0
+[22/67] Tests/DebugTest.dpr BUILD_EXIT=0
+[23/67] Tests/DebugTest2.dpr BUILD_EXIT=0
+[24/67] Tests/DebugTest3.dpr BUILD_EXIT=0
+[25/67] Tests/DebugTest4.dpr BUILD_EXIT=0
+[26/67] Tests/DebugTest5.dpr BUILD_EXIT=0
+[27/67] Tests/DebugTest6.dpr BUILD_EXIT=0
+[28/67] Tests/DeepBaseTests.dpr BUILD_EXIT=0
+[29/67] Tests/FMX/TestFMXPlatformStandalone.dpr BUILD_EXIT=0
+[30/67] Tests/GUI/DeepBaseGUITests.dpr BUILD_EXIT=1
+  Tests/GUI/DeepBaseGUITests.dpr 编译失败：DeepBase.GUITest.pas(819) Error: E2029 ')' expected but identifier '?' found
+[31/67] Tests/GUI/PageDriverSmoke.dpr BUILD_EXIT=1
+  Tests/GUI/PageDriverSmoke.dpr 编译失败：PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+[32/67] Tests/Governance/ConfigRegistrarPBT.dpr BUILD_EXIT=1
+  Tests/Governance/ConfigRegistrarPBT.dpr 编译失败：D:\_Progs\02Business\DeepBase\.tmp\wt_d3\Governance\DeepBase.Governance.KeyResolver.pas(14) Fatal: F2613 Unit 'DeepBase.Governance.Interfaces' not found.
+[33/67] Tests/InferenceTests.dpr BUILD_EXIT=0
+[34/67] Tests/Integration/DeepBaseIntegrationTests.dpr BUILD_EXIT=0
+[35/67] Tests/MinimalDUnitX.dpr BUILD_EXIT=0
+[36/67] Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr BUILD_EXIT=1
+  Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr 编译失败：TestPlugin11NoHealth.dpr(21) Fatal: F2613 Unit 'ShareMem' not found.
+[37/67] Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr BUILD_EXIT=1
+  Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr 编译失败：TestPlugin11NoInvoke.dpr(20) Fatal: F2613 Unit 'ShareMem' not found.
+[38/67] Tests/Plugins/Fixture/TestPlugin77.dpr BUILD_EXIT=1
+  Tests/Plugins/Fixture/TestPlugin77.dpr 编译失败：TestPlugin77.dpr(21) Fatal: F2613 Unit 'ShareMem' not found.
+[39/67] Tests/Plugins/Fixture/TestPluginABI10.dpr BUILD_EXIT=1
+  Tests/Plugins/Fixture/TestPluginABI10.dpr 编译失败：TestPluginABI10.dpr(20) Fatal: F2613 Unit 'ShareMem' not found.
+[40/67] Tests/Plugins/PluginLifecycleHarness.dpr BUILD_EXIT=1
+  Tests/Plugins/PluginLifecycleHarness.dpr 编译失败：PluginLifecycleHarness.dpr(29) Fatal: F2613 Unit 'ShareMem' not found.
+[41/67] Tests/SimpleTest.dpr BUILD_EXIT=0
+[42/67] Tests/Speech/SpeechSpike.dpr BUILD_EXIT=1
+  Tests/Speech/SpeechSpike.dpr 编译失败：SpeechSpike.dpr(180) Error: E2003 Undeclared identifier: 'TProcessEntry32'
+[43/67] Tests/Speech/TestSpeechHeadless.dpr BUILD_EXIT=1
+  Tests/Speech/TestSpeechHeadless.dpr 编译失败：D:\_Progs\02Business\DeepBase\.tmp\wt_d3\Features\DeepBase.Speech.WakeWord.pas(260) Error: E2010 Incompatible types: 'Cardinal' and 'DeepBase.Speech.SAPI.Decl.SPRECOSTATE'
+[44/67] Tests/Stress/DeepBaseStressTests.dpr BUILD_EXIT=1
+  Tests/Stress/DeepBaseStressTests.dpr 编译失败：Stress.Database.pas(170) Error: E2010 Incompatible types: 'FireDAC.Comp.Client.TFDConnection' and 'TObject'
+[45/67] Tests/TestBplR7P4.dpr BUILD_EXIT=0
+[46/67] Tests/TestCryptoR7P1.dpr BUILD_EXIT=0
+[47/67] Tests/TestDeepBaseRSA.dpr BUILD_EXIT=0
+[48/67] Tests/TestGateVerdictAndA8.dpr BUILD_EXIT=0
+[49/67] Tests/TestLLMClient.dpr BUILD_EXIT=1
+  Tests/TestLLMClient.dpr 编译失败：TestLLMClient.dpr(35) Error: E2052 Unterminated string
+[50/67] Tests/TestLLMProxyClient.dpr BUILD_EXIT=0
+[51/67] Tests/TestNetR7P2.dpr BUILD_EXIT=0
+[52/67] Tests/TestNewModules.dpr BUILD_EXIT=0
+[53/67] Tests/TestUpdateChainM1.dpr BUILD_EXIT=0
+[54/67] Tools/CLI/DeepBase.dpr BUILD_EXIT=1
+  Tools/CLI/DeepBase.dpr 编译失败：Error: E1026 File not found: 'DeepBase.res'
+[55/67] Tools/Calibration/Calib.Record.dpr BUILD_EXIT=1
+  Tools/Calibration/Calib.Record.dpr 编译失败：Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+[56/67] Tools/Calibration/Calib.Sweep.dpr BUILD_EXIT=0
+[57/67] Tools/FMXGallery/hbtheme_fmx_gallery.dpr BUILD_EXIT=1
+  Tools/FMXGallery/hbtheme_fmx_gallery.dpr 编译失败：D:\_Progs\02Business\DeepBase\.tmp\wt_d3\FMX\DeepBase.FMX.HB.Choice.pas(940) Error: E2003 Undeclared identifier: 'ColorToARGB'
+[58/67] Tools/Gallery/hbtheme_gallery.dpr BUILD_EXIT=1
+  Tools/Gallery/hbtheme_gallery.dpr 编译失败：Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+[59/67] Tools/LogAnalyzer/LogAnalyzer.dpr BUILD_EXIT=1
+  Tools/LogAnalyzer/LogAnalyzer.dpr 编译失败：LogAnalyzer.MainForm.pas(186) Error: E2052 Unterminated string
+[60/67] Tools/SeedTool/SeedTool.dpr BUILD_EXIT=1
+  Tools/SeedTool/SeedTool.dpr 编译失败：Error: E1026 File not found: 'SeedTool.res'
+[61/67] Tools/Studio/DeepBaseStudio.dpr BUILD_EXIT=1
+  Tools/Studio/DeepBaseStudio.dpr 编译失败：Forms\Studio.MainForm.pas(43) Fatal: F2613 Unit 'Studio.ConfigFrame' not found.
+[62/67] Tools/Studio/Studio.dpr BUILD_EXIT=1
+  Tools/Studio/Studio.dpr 编译失败：Frames\Studio.SQLFrame.pas(31) Fatal: F2613 Unit 'DBClient' not found.
+[63/67] Tools/Tray/DeepBaseTray.dpr BUILD_EXIT=1
+  Tools/Tray/DeepBaseTray.dpr 编译失败：Error: E1026 File not found: 'DeepBaseTray.res'
+[64/67] Tools/UniPublisher/DeepPublisher.dpr BUILD_EXIT=1
+  Tools/UniPublisher/DeepPublisher.dpr 编译失败：Forms\DeepPublisher.MainForm.pas(26) Fatal: F2613 Unit 'Publisher.Config' not found.
+[65/67] Tools/UpdaterHelper/UpdaterHelper.dpr BUILD_EXIT=0
+[66/67] doQry/examples/DoQryDemo/DoQryDemo.dpr BUILD_EXIT=1
+  doQry/examples/DoQryDemo/DoQryDemo.dpr 编译失败：DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+[67/67] doQry/prjDoQry.dpr BUILD_EXIT=1
+  doQry/prjDoQry.dpr 编译失败：uDoQryLegacy.pas(8) Fatal: F2613 Unit 'ADODB' not found.
+编译门禁统计：DPR总数=67 成功=31 失败=36 被跳过=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：36 个 .dpr 编译不过
+  DeepBaseRun/DeepBaseRun.dpr EXIT=1  Error: E1026 File not found: 'DeepBaseRun.res'
+  DeepFlow/Source/DeepFlow.dpr EXIT=1  DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+  Examples/DataBindingDemo/DataBindingDemo.dpr EXIT=1  Error: E1026 File not found: 'DataBindingDemo.res'
+  Examples/FullDemo/FullDemo.dpr EXIT=1  Error: E1026 File not found: 'FullDemo.res'
+  Examples/MVVMDemo/MVVMDemo.dpr EXIT=1  LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+  Examples/MultiLanguageDemo/MultiLanguageDemo.dpr EXIT=1  MainForm.pas(119) Error: E2052 Unterminated string
+  Examples/Phase0Demo/Phase0Demo.dpr EXIT=1  Error: E1026 File not found: 'Phase0Demo.res'
+  Examples/Templates/CRUDApp/CRUDApp.dpr EXIT=1  Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+  Examples/Templates/DataAnalyzer/DataAnalyzer.dpr EXIT=1  DataAnalyzer.dpr(13) Fatal: F1026 File not found: 'Main.Form.pas'
+  Examples/Templates/DocManager/DocManager.dpr EXIT=1  Entity.Document.pas(14) Fatal: F2613 Unit 'DeepBase.ORM.Attributes' not found.
+  Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr EXIT=1  Error: E1026 File not found: 'VCLDeepShellDemo.res'
+  Tests/Acceptance/DeepBaseAcceptanceTest.dpr EXIT=1  AcceptanceRunner.pas(158) Error: E2052 Unterminated string
+  Tests/GUI/DeepBaseGUITests.dpr EXIT=1  DeepBase.GUITest.pas(819) Error: E2029 ')' expected but identifier '?' found
+  Tests/GUI/PageDriverSmoke.dpr EXIT=1  PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+  Tests/Governance/ConfigRegistrarPBT.dpr EXIT=1  D:\_Progs\02Business\DeepBase\.tmp\wt_d3\Governance\DeepBase.Governance.KeyResolver.pas(14) Fatal: F2613 Unit 'DeepBase.Governance.Interfaces' not found.
+  Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr EXIT=1  TestPlugin11NoHealth.dpr(21) Fatal: F2613 Unit 'ShareMem' not found.
+  Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr EXIT=1  TestPlugin11NoInvoke.dpr(20) Fatal: F2613 Unit 'ShareMem' not found.
+  Tests/Plugins/Fixture/TestPlugin77.dpr EXIT=1  TestPlugin77.dpr(21) Fatal: F2613 Unit 'ShareMem' not found.
+  Tests/Plugins/Fixture/TestPluginABI10.dpr EXIT=1  TestPluginABI10.dpr(20) Fatal: F2613 Unit 'ShareMem' not found.
+  Tests/Plugins/PluginLifecycleHarness.dpr EXIT=1  PluginLifecycleHarness.dpr(29) Fatal: F2613 Unit 'ShareMem' not found.
+  Tests/Speech/SpeechSpike.dpr EXIT=1  SpeechSpike.dpr(180) Error: E2003 Undeclared identifier: 'TProcessEntry32'
+  Tests/Speech/TestSpeechHeadless.dpr EXIT=1  D:\_Progs\02Business\DeepBase\.tmp\wt_d3\Features\DeepBase.Speech.WakeWord.pas(260) Error: E2010 Incompatible types: 'Cardinal' and 'DeepBase.Speech.SAPI.Decl.SPRECOSTATE'
+  Tests/Stress/DeepBaseStressTests.dpr EXIT=1  Stress.Database.pas(170) Error: E2010 Incompatible types: 'FireDAC.Comp.Client.TFDConnection' and 'TObject'
+  Tests/TestLLMClient.dpr EXIT=1  TestLLMClient.dpr(35) Error: E2052 Unterminated string
+  Tools/CLI/DeepBase.dpr EXIT=1  Error: E1026 File not found: 'DeepBase.res'
+  Tools/Calibration/Calib.Record.dpr EXIT=1  Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+  Tools/FMXGallery/hbtheme_fmx_gallery.dpr EXIT=1  D:\_Progs\02Business\DeepBase\.tmp\wt_d3\FMX\DeepBase.FMX.HB.Choice.pas(940) Error: E2003 Undeclared identifier: 'ColorToARGB'
+  Tools/Gallery/hbtheme_gallery.dpr EXIT=1  Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+  Tools/LogAnalyzer/LogAnalyzer.dpr EXIT=1  LogAnalyzer.MainForm.pas(186) Error: E2052 Unterminated string
+  Tools/SeedTool/SeedTool.dpr EXIT=1  Error: E1026 File not found: 'SeedTool.res'
+  Tools/Studio/DeepBaseStudio.dpr EXIT=1  Forms\Studio.MainForm.pas(43) Fatal: F2613 Unit 'Studio.ConfigFrame' not found.
+  Tools/Studio/Studio.dpr EXIT=1  Frames\Studio.SQLFrame.pas(31) Fatal: F2613 Unit 'DBClient' not found.
+  Tools/Tray/DeepBaseTray.dpr EXIT=1  Error: E1026 File not found: 'DeepBaseTray.res'
+  Tools/UniPublisher/DeepPublisher.dpr EXIT=1  Forms\DeepPublisher.MainForm.pas(26) Fatal: F2613 Unit 'Publisher.Config' not found.
+  doQry/examples/DoQryDemo/DoQryDemo.dpr EXIT=1  DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+  doQry/prjDoQry.dpr EXIT=1  uDoQryLegacy.pas(8) Fatal: F2613 Unit 'ADODB' not found.

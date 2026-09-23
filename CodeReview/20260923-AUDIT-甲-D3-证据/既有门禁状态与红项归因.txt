@@ -1,0 +1,42 @@
+五道既有门禁在判定 commit（424481d，隔离工作树）的状态与本单影响面（2026-09-23）
+
+1) 双版本对照：本单改过的 gate-args.js vs HEAD 版 gate-args.js
+   两份日志逐字节相同 ⇒ 本单对 gate-args.js 的扩展【不改变任何一道既有门禁的判定结果】。
+   原始输出：五道既有门禁-用本单gate-args.log / 五道既有门禁-用HEAD版gate-args.log
+   diff = 空（IDENTICAL）
+
+2) 逐道结果（EXIT 为真实退出码，取自日志 EXIT= 行）
+   ### gate encoding-gate/check_pas_encoding	EXIT=0
+   ### gate eol-gate/check_eol	EXIT=0
+   ### gate evidence-encoding-gate/check_evidence_encoding	EXIT=0
+   ### gate managed-copy-gate/check_managed_copy	EXIT=1
+   ### gate build-ownership/check_build_ownership	EXIT=1
+   ### negative encoding-gate	EXIT=0
+   ### negative eol-gate	EXIT=0
+   ### negative evidence-encoding-gate	EXIT=0
+   ### negative managed-copy-gate	EXIT=0
+   ### negative build-ownership	EXIT=0
+
+3) 两道红门的原文与归属（红在本单之前就已存在，非本单引入）
+   —— 托管拷贝门禁（managed-copy-gate）:
+     托管拷贝门禁失败，违规 6 项:
+       M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+       M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+       M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+       M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+       M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+       M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+   —— 构建归属门禁（build-ownership）:
+     构建归属门禁失败，违规 3 项:
+       O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+       O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+       O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+   —— 逐笔归属（git log -1 --format，按文件而非作者）：
+     Core/DeepBase.SecureMemory.pas                       9387222 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁
+     Core/DeepBase.Security.MasterKey.pas                 65b68fb style(security): 甲A2 建钥拒绝文案改为字面量拼接
+     Core/DeepBase.Security.UBS2.pas                      9387222 feat(security): Top20#05 主口令去机器熵 + UBS2 v2 认证信封 + 机器绑定改 AAD/门禁
+     Core/DeepBase.Gate.Verdict.pas                       17363c6 fix(encoding): 甲R6-M1 甲域/公共层6件.pas补UTF-8 BOM,正文零改动
+     Core/DeepBase.Security.UBS2.Migration.pas            17363c6 fix(encoding): 甲R6-M1 甲域/公共层6件.pas补UTF-8 BOM,正文零改动
+     Features/DeepBase.Update.Contracts.pas               1a6807b feat(update): 甲R5-M1 Top20#01 更新验签链加固（RCE 级·产品干预）
+   ⇒ 两门的红项全部来自甲线早前工单（R5-M1 / R6-M1 / R8 / A2）落库的单元未回写基线：
+      既有债务，登记给主控派单收口，不在本单 scope（本单不得改动其余门禁的判定语义）。

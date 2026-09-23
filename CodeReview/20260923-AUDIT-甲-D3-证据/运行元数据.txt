@@ -1,0 +1,23 @@
+编译门禁 D3 运行元数据（2026-09-23）
+
+判定口径：提交段编译判定 = 隔离 --detach 工作树 @ 目标 commit 的 EXIT；共享工作树结果只作现场观察。
+
+隔离工作树：D:/_Progs/02Business/DeepBase/.tmp/wt_d3（git worktree add --detach）
+判定 commit（最终）= 424481d；其前一次全量跑在 09d0f96（两笔之间 git diff 09d0f96 424481d -- *.dpr 09_工程脚本/ 为空 ⇒ 编译面不变）。
+
+HEAD(判定 commit) = 424481d9 docs(audit): 验收乙 D4（ACCEPTED，判据 1-7 全成立）+ 派乙 D5 门禁残留三项收口
+
+编译器：
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+
+ dcc64 = D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\dcc64.exe
+ brcc32 = 同 bin 目录（用于补生成 IDE 侧的 <project>.res）
+ DUnitX 源 = D:\ProgramData\delphi\DUnitX\Source
+
+两次全量运行的墙钟时间（同一隔离工作树）：
+  2026-09-23 12:31:40 -> 12:35:43 = 4 分 03 秒（commit 09d0f96，输出 全量编译-09d0f96.log）
+  2026-09-23 12:41:29 -> 12:43:06 = 1 分 37 秒（commit 424481d，输出 全量编译-424481d-HEAD.log；缓存已热故更快）
+  工单 §四 预估 20 分钟量级 —— 实测远低于该预估。
+
+运行命令：node 09_工程脚本/build-gate/check_build.js --all
