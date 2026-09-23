@@ -21,6 +21,7 @@ uses
   System.Hash,
   DUnitX.TestFramework,
   Test.Regression.Base,
+  Test.DeepBase.TestPaths,
   DeepBase.Exceptions,
   DeepBase.SchemaAdapter,
   DeepBase.SchemaAdapter.WeChat39x,
@@ -114,21 +115,8 @@ end;
 
 function TBUG332_WeChatSchemaRegistryResolveTest.FixtureDir: string;
 begin
-  // Tests\Regression\Fixtures\WeChat4x relative to exe or project Tests root
-  Result := TPath.Combine(ExtractFilePath(ParamStr(0)),
-    'Tests\Regression\Fixtures\WeChat4x');
-  if not TDirectory.Exists(Result) then
-    Result := TPath.Combine(ExtractFilePath(ParamStr(0)),
-      'Regression\Fixtures\WeChat4x');
-  if not TDirectory.Exists(Result) then
-  begin
-    // DeepBaseTests often runs with cwd = repo root or Tests\
-    Result := TPath.GetFullPath(TPath.Combine(TDirectory.GetCurrentDirectory,
-      'Tests\Regression\Fixtures\WeChat4x'));
-    if not TDirectory.Exists(Result) then
-      Result := TPath.GetFullPath(TPath.Combine(TDirectory.GetCurrentDirectory,
-        'Regression\Fixtures\WeChat4x'));
-  end;
+  // 仓库相对路径统一走仓库根探测，不依赖进程 cwd
+  Result := TTestPaths.RepoPath('Tests\Regression\Fixtures\WeChat4x');
 end;
 
 procedure TBUG332_WeChatSchemaRegistryResolveTest.LoadTableInfoNamesTypes(

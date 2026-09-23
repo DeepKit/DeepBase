@@ -74,7 +74,8 @@ uses
   System.SysUtils,
   System.IOUtils,
   System.JSON,
-  System.Classes;
+  System.Classes,
+  Test.DeepBase.TestPaths;
 
 const
   CFixtureRel     = 'Tests\AutoFix\Fixtures\AutoFixHarness.exe';
@@ -91,12 +92,11 @@ var
 begin
   LBase := TPath.GetDirectoryName(ParamStr(0));
   LCandidates := [
-    TPath.Combine(GetCurrentDir, CFixtureRel),
     TPath.Combine(LBase, '..\' + CFixtureRel),
     TPath.Combine(LBase, '..\..\' + CFixtureRel),
     TPath.Combine(LBase, '..\..\..\' + CFixtureRel),
     TPath.Combine(LBase, '..\..\..\..\' + CFixtureRel),
-    'D:\_Progs\02Business\DeepBase\' + CFixtureRel
+    TTestPaths.RepoPath(CFixtureRel)
   ];
 
   for LCandidate in LCandidates do
@@ -126,9 +126,7 @@ begin
   // Use a repo-relative TestResults dir to avoid spaces in path - the
   // child parses --autofix-output= as a single token, so spaces in the
   // value would require shell-style quoting which we want to avoid.
-  var LRepoRoot := TPath.GetDirectoryName(FHarnessExe);
-  // FHarnessExe is .../Tests/AutoFix/Fixtures/AutoFixHarness.exe; go up 3.
-  LRepoRoot := TPath.GetFullPath(TPath.Combine(LRepoRoot, '..\..\..'));
+  var LRepoRoot := TTestPaths.RepoRoot;
   Result := TPath.Combine(LRepoRoot,
     'TestResults\autofix-pbt-' + ASuffix + '-' + NewRunIdString);
 end;

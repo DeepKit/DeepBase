@@ -599,11 +599,19 @@ begin
     // L0 pixel-diff gate: judge change BEFORE the expensive PNG encode. On a
     // static screen this short-circuits both the Base64 encode and (via the
     // frame cache key matching) the vision provider call downstream.
+    //
+    // The gate feeds FrameDiffer on EVERY capture (including the first frame /
+    // after ResetFrameDiffer, when FLastShot is not yet valid) so FrameDiffer
+    // seeds its internal FLast signature. Otherwise FrameDiffer.FLast stays
+    // Empty and the second frame is mis-seeded as "changed" — the gate never
+    // short-circuits and the L0 cost saving never materialises. Reusing the
+    // previous encoding additionally requires FLastShot.IsValid (there is no
+    // encoding to reuse on the very first capture). See bugfix.md BUG-449.
     LChanged := True;
-    if (FFrameDiffer <> nil) and FLastShot.IsValid then
+    if FFrameDiffer <> nil then
     begin
       LChanged := FFrameDiffer.IsChanged(LBitmap);
-      if not LChanged then
+      if (not LChanged) and FLastShot.IsValid then
       begin
         // Static frame: reuse the previous encoding verbatim. WidthPx/HeightPx
         // and CaptureRect come from FLastShot so the actuation layer still

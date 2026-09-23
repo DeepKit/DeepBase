@@ -15,7 +15,8 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.IOUtils,
-  System.Classes;
+  System.Classes,
+  Test.DeepBase.TestPaths;
 
 type
   [TestFixture]
@@ -45,7 +46,7 @@ procedure TDesignTimeRegistrationTests.VCL_RegisterUnit_Exists;
 var
   LPath: string;
 begin
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'VCL\DeepBase.VCL.Controls.pas');
+  LPath := TTestPaths.RepoPath('VCL\DeepBase.VCL.Controls.pas');
   Assert.IsTrue(TFile.Exists(LPath),
     'VCL design-time registration unit should exist: VCL\DeepBase.VCL.Controls.pas');
 end;
@@ -54,7 +55,7 @@ procedure TDesignTimeRegistrationTests.FMX_RegisterUnit_Exists;
 var
   LPath: string;
 begin
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'FMX\DeepBase.FMX.Controls.pas');
+  LPath := TTestPaths.RepoPath('FMX\DeepBase.FMX.Controls.pas');
   Assert.IsTrue(TFile.Exists(LPath),
     'FMX design-time registration unit should exist: FMX\DeepBase.FMX.Controls.pas');
 end;
@@ -64,7 +65,7 @@ var
   LContent: string;
   LPath: string;
 begin
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'VCL\DeepBase.VCL.Controls.pas');
+  LPath := TTestPaths.RepoPath('VCL\DeepBase.VCL.Controls.pas');
   LContent := TFile.ReadAllText(LPath);
 
   // Check that Register procedure exists
@@ -81,7 +82,7 @@ var
   LContent: string;
   LPath: string;
 begin
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'FMX\DeepBase.FMX.Controls.pas');
+  LPath := TTestPaths.RepoPath('FMX\DeepBase.FMX.Controls.pas');
   LContent := TFile.ReadAllText(LPath);
 
   // Check that Register procedure exists
@@ -99,7 +100,7 @@ var
   LPath: string;
   LComponentCount: Integer;
 begin
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'VCL\DeepBase.VCL.Controls.pas');
+  LPath := TTestPaths.RepoPath('VCL\DeepBase.VCL.Controls.pas');
   LContent := TFile.ReadAllText(LPath);
 
   // Count TComponent registrations (simple heuristic: count T followed by uppercase)
@@ -123,7 +124,7 @@ var
   LPath: string;
   LComponentCount: Integer;
 begin
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'FMX\DeepBase.FMX.Controls.pas');
+  LPath := TTestPaths.RepoPath('FMX\DeepBase.FMX.Controls.pas');
   LContent := TFile.ReadAllText(LPath);
 
   // Count TComponent registrations
@@ -145,17 +146,17 @@ var
   LPath: string;
 begin
   // Check dclDeepBaseCore.dpk
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'dclDeepBaseCore.dpk');
+  LPath := TTestPaths.RepoPath('dclDeepBaseCore.dpk');
   Assert.IsTrue(TFile.Exists(LPath),
     'Design-time package dclDeepBaseCore.dpk should exist');
 
   // Check dclDeepBaseVCL.dpk
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'dclDeepBaseVCL.dpk');
+  LPath := TTestPaths.RepoPath('dclDeepBaseVCL.dpk');
   Assert.IsTrue(TFile.Exists(LPath),
     'Design-time package dclDeepBaseVCL.dpk should exist');
 
   // Check dclDeepBaseFMX.dpk
-  LPath := TPath.Combine(TDirectory.GetCurrentDirectory, 'dclDeepBaseFMX.dpk');
+  LPath := TTestPaths.RepoPath('dclDeepBaseFMX.dpk');
   Assert.IsTrue(TFile.Exists(LPath),
     'Design-time package dclDeepBaseFMX.dpk should exist');
 end;

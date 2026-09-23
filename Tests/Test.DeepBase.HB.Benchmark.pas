@@ -35,7 +35,8 @@ uses
   DeepBase.VCL.HB.Controls,
   DeepBase.VCL.HB.Cards,
   DeepBase.VCL.HB.Grid,
-  DeepBase.VCL.HB.Waterfall;
+  DeepBase.VCL.HB.Waterfall,
+  Test.DeepBase.TestPaths;
 
 type
   [TestFixture]
@@ -203,10 +204,10 @@ var
   ExitCode: DWORD;
   Ok: Boolean;
 begin
-  FProbeExe := TPath.GetFullPath('Examples\HbColdStartProbe\Win64\HbColdStartProbe.exe');
+  FProbeExe := TTestPaths.RepoPath('Examples\HbColdStartProbe\Win64\HbColdStartProbe.exe');
   if TFile.Exists(FProbeExe) then
     Exit;
-  BuildScript := TPath.GetFullPath('Examples\HbColdStartProbe\build.ps1');
+  BuildScript := TTestPaths.RepoPath('Examples\HbColdStartProbe\build.ps1');
   Assert.IsTrue(TFile.Exists(BuildScript), 'Probe build.ps1 missing: ' + BuildScript);
   CmdLine := Format('powershell.exe -ExecutionPolicy Bypass -File "%s"', [BuildScript]);
   FillChar(SI, SizeOf(SI), 0);
@@ -229,7 +230,7 @@ end;
 
 procedure TTestHbBenchmark.SetupFixture;
 begin
-  FEvidenceDir := TPath.GetFullPath('TestResults\WO-20260905-003');
+  FEvidenceDir := TTestPaths.RepoPath('TestResults\WO-20260905-003');
   ForceDirectories(FEvidenceDir);
   ForceDirectories(TPath.Combine(FEvidenceDir, 'gate4-screens'));
   BuildProbeIfNeeded;

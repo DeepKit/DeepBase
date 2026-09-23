@@ -31,6 +31,7 @@ uses
   System.JSON,
   DUnitX.TestFramework,
   DeepBase.Benchmark,
+  Test.DeepBase.TestPaths,
   DeepBase.Cache;
 
 type
@@ -441,8 +442,8 @@ begin
   FBenchmark := TBenchmark.Create('DiskIO');
   FBenchmark.Iterations := 30;
   FBenchmark.WarmupIterations := 3;
-  FTestDir := TPath.Combine(TPath.Combine(TDirectory.GetCurrentDirectory,
-    'TestResults'), 'BenchmarkTemp_' + FormatDateTime('hhnnsszzz', Now));
+  FTestDir := TPath.Combine(TTestPaths.RepoPath('TestResults'),
+    'BenchmarkTemp_' + FormatDateTime('hhnnsszzz', Now));
   ForceDirectories(FTestDir);
 end;
 

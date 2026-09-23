@@ -36,6 +36,7 @@ uses
   DeepBase.HB.AI.Types,
   DeepBase.HB.NavTree.Types,
   DeepBase.HB.PageControl.Types,
+  Test.DeepBase.TestPaths,
   DeepBase.HB.Dock.Types,
   DeepBase.HB.VirtualList.Types,
   DeepBase.HB.CommandPalette.Types,
@@ -1333,11 +1334,7 @@ var
   Kind: THbCardKind;
   KindName: string;
 begin
-  OutDir := TPath.Combine(ExtractFilePath(ParamStr(0)), '..\..\TestResults\WO-20260905-001\screenshots');
-  if not TDirectory.Exists(OutDir) then
-    OutDir := 'TestResults\WO-20260905-001\screenshots';
-  if not TDirectory.Exists(OutDir) then
-    OutDir := TPath.Combine(GetCurrentDir, 'TestResults\WO-20260905-001\screenshots');
+  OutDir := TTestPaths.RepoPath('TestResults\WO-20260905-001\screenshots');
   if not TDirectory.Exists(OutDir) then
     TDirectory.CreateDirectory(OutDir);
 

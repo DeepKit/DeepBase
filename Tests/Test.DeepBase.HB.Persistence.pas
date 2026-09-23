@@ -36,6 +36,7 @@ uses
   FireDAC.Phys.SQLite,
   FireDAC.Stan.Def,
   DeepBase.HB.Core,
+  Test.DeepBase.TestPaths,
   DeepBase.HB.Touchpoint.Types,
   DeepBase.HB.StateSlot.Types,
   DeepBase.HB.Touchpoint.Engine,
@@ -689,12 +690,10 @@ var
   Violations: TStringList;
   P, EndP: Integer;
 begin
-  CoreDir := TPath.GetFullPath(TPath.Combine(ExtractFilePath(ParamStr(0)), '..\..\Core'));
-  if not DirectoryExists(CoreDir) then
-    CoreDir := TPath.GetFullPath('Core');
+  CoreDir := TTestPaths.RepoPath('Core');
 
   if not DirectoryExists(CoreDir) then
-    Exit; // Skip if run from directory without relative Core path
+    Exit;
 
   Violations := TStringList.Create;
   try

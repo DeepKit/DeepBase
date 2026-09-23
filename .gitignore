@@ -114,3 +114,6 @@ root.txt
 *.bpl
 .claude/
 
+# 审计证据日志必须入库（*.log 全局规则会吞掉 CodeReview 下的 .log 证据）
+!CodeReview/**/*.log
+
