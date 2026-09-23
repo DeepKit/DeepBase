@@ -1,13 +1,13 @@
 ﻿{ ============================================================================
-  Test.GUI.VCL - DeepBase VCL 鎺т欢 GUI 娴嬭瘯
+  Test.GUI.VCL - DeepBase VCL 控件 GUI 测试
   
-  鐗堟湰: 1.0
-  璇存槑: 娴嬭瘯 DeepBase 鑷畾涔?VCL 鎺т欢
-  娴嬭瘯鍐呭:
+  版本: 1.0
+  说明: 测试 DeepBase 自定义 VCL 控件
+  测试内容:
     - ConfigEdit / ConfigCheckBox / ConfigSpinEdit
     - I18nLabel / I18nButton
-    - 閰嶇疆缁戝畾
-    - 鍥介檯鍖栨洿鏂?
+    - 配置绑定
+    - 国际化更新
   ============================================================================ }
 
 unit Test.GUI.VCL;
@@ -51,7 +51,7 @@ type
 
 type
   /// <summary>
-  /// 閰嶇疆鎺т欢 GUI 娴嬭瘯
+  /// 配置控件 GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUIConfigControls = class(TGUITestBase)
@@ -68,7 +68,7 @@ type
     [TearDown]
     procedure TearDown; override;
     
-    // ========== ConfigEdit 娴嬭瘯 ==========
+    // ========== ConfigEdit 测试 ==========
     
     [Test]
     procedure Test_ConfigEdit_Load_Value;
@@ -82,7 +82,7 @@ type
     [Test]
     procedure Test_ConfigEdit_DefaultValue;
     
-    // ========== ConfigCheckBox 娴嬭瘯 ==========
+    // ========== ConfigCheckBox 测试 ==========
     
     [Test]
     procedure Test_ConfigCheckBox_Load_Value;
@@ -90,7 +90,7 @@ type
     [Test]
     procedure Test_ConfigCheckBox_Toggle_Save;
     
-    // ========== ConfigSpinEdit 娴嬭瘯 ==========
+    // ========== ConfigSpinEdit 测试 ==========
     
     [Test]
     procedure Test_ConfigSpinEdit_Load_Value;
@@ -98,14 +98,14 @@ type
     [Test]
     procedure Test_ConfigSpinEdit_Change_Value;
     
-    // ========== 闆嗘垚娴嬭瘯 ==========
+    // ========== 集成测试 ==========
     
     [Test]
     procedure Test_Config_Workflow_Complete;
   end;
   
   /// <summary>
-  /// 鍥介檯鍖栨帶浠?GUI 娴嬭瘯
+  /// 国际化控件 GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUII18nControls = class(TGUITestBase)
@@ -122,7 +122,7 @@ type
     [TearDown]
     procedure TearDown; override;
     
-    // ========== I18nLabel 娴嬭瘯 ==========
+    // ========== I18nLabel 测试 ==========
     
     [Test]
     procedure Test_I18nLabel_Initial_Caption;
@@ -130,7 +130,7 @@ type
     [Test]
     procedure Test_I18nLabel_TranslationKey;
     
-    // ========== I18nButton 娴嬭瘯 ==========
+    // ========== I18nButton 测试 ==========
     
     [Test]
     procedure Test_I18nButton_Initial_Caption;
@@ -138,7 +138,7 @@ type
     [Test]
     procedure Test_I18nButton_TranslationKey;
     
-    // ========== 璇█鍒囨崲娴嬭瘯 ==========
+    // ========== 语言切换测试 ==========
     
     [Test]
     procedure Test_LanguageSwitch_Updates_Controls;
@@ -148,7 +148,7 @@ type
   end;
   
   /// <summary>
-  /// 涓婚鎺т欢 GUI 娴嬭瘯
+  /// 主题控件 GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUITheme = class(TGUITestBase)
@@ -215,7 +215,7 @@ end;
 
 function TTestGUIConfigControls.CreateTestForm: TForm;
 begin
-  // 纭繚 DeepBase 鍒濆鍖?
+  // 确保 DeepBase 初始化
   TTestFormFactory.EnsureDeepBaseInitialized;
   
   FConfigForm := TConfigControlsTestForm.Create(nil);
@@ -226,7 +226,7 @@ procedure TTestGUIConfigControls.Setup;
 begin
   inherited;
   
-  // 璁剧疆娴嬭瘯閰嶇疆鍊?
+  // 设置测试配置值
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.Config.SetConfig('test.value', 'Initial Value');
@@ -241,19 +241,19 @@ begin
   FConfigForm := nil;
 end;
 
-// ========== ConfigEdit 娴嬭瘯 ==========
+// ========== ConfigEdit 测试 ==========
 
 procedure TTestGUIConfigControls.Test_ConfigEdit_Load_Value;
 begin
-  Step('娴嬭瘯 ConfigEdit 鍔犺浇鍊?);
+  Step('测试 ConfigEdit 加载值');
   
-  // 璁剧疆閰嶇疆鍊?
+  // 设置配置值
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.Config.SetConfig('test.value', 'Loaded Value');
   end;
   
-  // ConfigEdit 閫氳繃 AutoLoad 鑷姩鍔犺浇锛岃繖閲岄獙璇佹帶浠舵枃鏈?
+  // ConfigEdit 通过 AutoLoad 自动加载，这里验证控件文本
   Assert.IsTrue(FConfigForm.edtConfig.ConfigKey <> '', 'ConfigKey should be set');
   
   Verify(True, 'ConfigEdit load test', 'Passed');
@@ -263,15 +263,15 @@ procedure TTestGUIConfigControls.Test_ConfigEdit_Save_Value;
 const
   NEW_VALUE = 'New Test Value';
 begin
-  Step('娴嬭瘯 ConfigEdit 淇濆瓨鍊?);
+  Step('测试 ConfigEdit 保存值');
   
-  // 杈撳叆鏂板€煎埌鎺т欢
+  // 输入新值到控件
   Input('edtConfig', NEW_VALUE);
   
-  // AutoSave 浼氬湪 Change 浜嬩欢涓嚜鍔ㄤ繚瀛?
+  // AutoSave 会在 Change 事件中自动保存
   ProcessMessages;
   
-  Assert.AreEqual(NEW_VALUE, FConfigForm.edtConfig.Text, '鎺т欢鏂囨湰搴旇鏇存柊');
+  Assert.AreEqual(NEW_VALUE, FConfigForm.edtConfig.Text, '控件文本应该更新');
   
   Verify(True, 'ConfigEdit save test', 'Passed');
 end;
@@ -280,14 +280,14 @@ procedure TTestGUIConfigControls.Test_ConfigEdit_AutoSave;
 const
   AUTO_VALUE = 'Auto Saved Value';
 begin
-  Step('娴嬭瘯 ConfigEdit 鑷姩淇濆瓨');
+  Step('测试 ConfigEdit 自动保存');
   
-  // 鍚敤鑷姩淇濆瓨
+  // 启用自动保存
   FConfigForm.edtConfig.AutoSave := True;
   
-  // 杈撳叆骞剁Щ鍑虹劍鐐?
+  // 输入并移出焦点
   Input('edtConfig', AUTO_VALUE);
-  FConfigForm.btnSave.SetFocus;  // 瑙﹀彂 Exit 浜嬩欢
+  FConfigForm.btnSave.SetFocus;  // 触发 Exit 事件
   ProcessMessages;
   
   Assert.AreEqual(AUTO_VALUE, FConfigForm.edtConfig.Text);
@@ -297,22 +297,22 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigEdit_DefaultValue;
 begin
-  Step('娴嬭瘯 ConfigEdit 榛樿鍊?);
+  Step('测试 ConfigEdit 默认值');
   
-  // 璁剧疆榛樿鍊?
+  // 设置默认值
   FConfigForm.edtConfig.DefaultValue := 'Default Text';
   
   Assert.AreEqual('Default Text', FConfigForm.edtConfig.DefaultValue,
-    '榛樿鍊煎簲璇ヨ璁剧疆');
+    '默认值应该被设置');
   
   Verify(True, 'DefaultValue test', 'Passed');
 end;
 
-// ========== ConfigCheckBox 娴嬭瘯 ==========
+// ========== ConfigCheckBox 测试 ==========
 
 procedure TTestGUIConfigControls.Test_ConfigCheckBox_Load_Value;
 begin
-  Step('娴嬭瘯 ConfigCheckBox 鍔犺浇鍊?);
+  Step('测试 ConfigCheckBox 加载值');
   
   Assert.IsTrue(FConfigForm.chkConfig.ConfigKey <> '', 'ConfigKey should be set');
   
@@ -321,15 +321,15 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigCheckBox_Toggle_Save;
 begin
-  Step('娴嬭瘯 ConfigCheckBox 鍒囨崲淇濆瓨');
+  Step('测试 ConfigCheckBox 切换保存');
   
-  // 鍕鹃€?
+  // 勾选
   Check('chkConfig', True);
   ProcessMessages;
   
   Assert.IsTrue(FConfigForm.chkConfig.Checked);
   
-  // 鍙栨秷鍕鹃€?
+  // 取消勾选
   Check('chkConfig', False);
   ProcessMessages;
   
@@ -338,11 +338,11 @@ begin
   Verify(True, 'ConfigCheckBox toggle test', 'Passed');
 end;
 
-// ========== ConfigSpinEdit 娴嬭瘯 ==========
+// ========== ConfigSpinEdit 测试 ==========
 
 procedure TTestGUIConfigControls.Test_ConfigSpinEdit_Load_Value;
 begin
-  Step('娴嬭瘯 ConfigSpinEdit 鍔犺浇鍊?);
+  Step('测试 ConfigSpinEdit 加载值');
   
   Assert.IsTrue(FConfigForm.spnConfig.ConfigKey <> '', 'ConfigKey should be set');
   
@@ -351,32 +351,32 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigSpinEdit_Change_Value;
 begin
-  Step('娴嬭瘯 ConfigSpinEdit 鏇存敼鍊?);
+  Step('测试 ConfigSpinEdit 更改值');
   
-  // 璁剧疆鏂板€?
+  // 设置新值
   FConfigForm.spnConfig.Value := 100;
   ProcessMessages;
   
-  Assert.AreEqual(100, FConfigForm.spnConfig.Value, '鍊煎簲璇ヨ鏇存柊');
+  Assert.AreEqual(100, FConfigForm.spnConfig.Value, '值应该被更新');
   
   Verify(True, 'ConfigSpinEdit change test', 'Passed');
 end;
 
-// ========== 闆嗘垚娴嬭瘯 ==========
+// ========== 集成测试 ==========
 
 procedure TTestGUIConfigControls.Test_Config_Workflow_Complete;
 begin
-  Step('瀹屾暣閰嶇疆宸ヤ綔娴佹祴璇?);
+  Step('完整配置工作流测试');
   
-  // 1. 淇敼鍊?
+  // 1. 修改值
   Input('edtConfig', 'Modified Value');
   Check('chkConfig', True);
   FConfigForm.spnConfig.Value := 25;
   
-  // 2. 鎴浘
+  // 2. 截图
   CaptureScreenshot('config_modified');
   
-  // 3. 楠岃瘉鎺т欢鍊?
+  // 3. 验证控件值
   Assert.AreEqual('Modified Value', FConfigForm.edtConfig.Text);
   Assert.IsTrue(FConfigForm.chkConfig.Checked);
   Assert.AreEqual(25, FConfigForm.spnConfig.Value);
@@ -388,7 +388,7 @@ end;
 
 function TTestGUII18nControls.CreateTestForm: TForm;
 begin
-  // 纭繚 DeepBase 鍒濆鍖?
+  // 确保 DeepBase 初始化
   TTestFormFactory.EnsureDeepBaseInitialized;
   
   FI18nForm := TI18nControlsTestForm.Create(nil);
@@ -399,7 +399,7 @@ procedure TTestGUII18nControls.Setup;
 begin
   inherited;
   
-  // 璁剧疆娴嬭瘯缈昏瘧
+  // 设置测试翻译
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
@@ -412,60 +412,60 @@ begin
   FI18nForm := nil;
 end;
 
-// ========== I18nLabel 娴嬭瘯 ==========
+// ========== I18nLabel 测试 ==========
 
 procedure TTestGUII18nControls.Test_I18nLabel_Initial_Caption;
 begin
-  Step('娴嬭瘯 I18nLabel 鍒濆鏍囬');
+  Step('测试 I18nLabel 初始标题');
   
-  // 鍒濆搴旇鏄剧ず榛樿 Caption 鎴栫炕璇?
+  // 初始应该显示默认 Caption 或翻译
   Assert.IsNotEmpty(FI18nForm.lblI18n.Caption,
-    'I18nLabel 搴旇鏈夋爣棰?);
+    'I18nLabel 应该有标题');
   
   Verify(FI18nForm.lblI18n.Caption <> '', 'Not empty', FI18nForm.lblI18n.Caption);
 end;
 
 procedure TTestGUII18nControls.Test_I18nLabel_TranslationKey;
 begin
-  Step('娴嬭瘯 I18nLabel 缈昏瘧閿?);
+  Step('测试 I18nLabel 翻译键');
   
   Assert.AreEqual('app.greeting', FI18nForm.lblI18n.TranslationKey,
-    '缈昏瘧閿簲璇ユ纭缃?);
+    '翻译键应该正确设置');
   
   Verify(FI18nForm.lblI18n.TranslationKey = 'app.greeting',
     'app.greeting', FI18nForm.lblI18n.TranslationKey);
 end;
 
-// ========== I18nButton 娴嬭瘯 ==========
+// ========== I18nButton 测试 ==========
 
 procedure TTestGUII18nControls.Test_I18nButton_Initial_Caption;
 begin
-  Step('娴嬭瘯 I18nButton 鍒濆鏍囬');
+  Step('测试 I18nButton 初始标题');
   
   Assert.IsNotEmpty(FI18nForm.btnI18n.Caption,
-    'I18nButton 搴旇鏈夋爣棰?);
+    'I18nButton 应该有标题');
   
   Verify(FI18nForm.btnI18n.Caption <> '', 'Not empty', FI18nForm.btnI18n.Caption);
 end;
 
 procedure TTestGUII18nControls.Test_I18nButton_TranslationKey;
 begin
-  Step('娴嬭瘯 I18nButton 缈昏瘧閿?);
+  Step('测试 I18nButton 翻译键');
   
   Assert.AreEqual('button.submit', FI18nForm.btnI18n.TranslationKey,
-    '缈昏瘧閿簲璇ユ纭缃?);
+    '翻译键应该正确设置');
   
   Verify(FI18nForm.btnI18n.TranslationKey = 'button.submit',
     'button.submit', FI18nForm.btnI18n.TranslationKey);
 end;
 
-// ========== 璇█鍒囨崲娴嬭瘯 ==========
+// ========== 语言切换测试 ==========
 
 procedure TTestGUII18nControls.Test_LanguageSwitch_Updates_Controls;
 begin
-  Step('娴嬭瘯璇█鍒囨崲鏇存柊鎺т欢');
+  Step('测试语言切换更新控件');
   
-  // 鍒囨崲鍒颁腑鏂?
+  // 切换到中文
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'zh-CN';
@@ -473,10 +473,10 @@ begin
   end;
   ProcessMessages;
   
-  // 楠岃瘉鏍囬瀛樺湪
+  // 验证标题存在
   Assert.IsNotEmpty(FI18nForm.lblI18n.Caption);
   
-  // 鍒囧洖鑻辨枃
+  // 切回英文
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
@@ -489,9 +489,9 @@ end;
 
 procedure TTestGUII18nControls.Test_LanguageSwitch_Workflow;
 begin
-  Step('璇█鍒囨崲宸ヤ綔娴佹祴璇?);
+  Step('语言切换工作流测试');
   
-  // 1. 鍒濆鑻辨枃
+  // 1. 初始英文
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
@@ -500,7 +500,7 @@ begin
   ProcessMessages;
   CaptureScreenshot('i18n_english');
   
-  // 2. 閫夋嫨涓枃
+  // 2. 选择中文
   Select('cboLanguage', 'zh-CN');
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
@@ -511,7 +511,7 @@ begin
   
   CaptureScreenshot('i18n_chinese');
   
-  // 3. 鎭㈠鑻辨枃
+  // 3. 恢复英文
   Select('cboLanguage', 'en');
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
@@ -540,9 +540,9 @@ end;
 
 procedure TTestGUITheme.Test_Theme_Apply_Light;
 begin
-  Step('娴嬭瘯搴旂敤娴呰壊涓婚');
+  Step('测试应用浅色主题');
   
-  // 搴旂敤娴呰壊涓婚
+  // 应用浅色主题
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.Theme.ApplyTheme('Light');
@@ -556,9 +556,9 @@ end;
 
 procedure TTestGUITheme.Test_Theme_Apply_Dark;
 begin
-  Step('娴嬭瘯搴旂敤娣辫壊涓婚');
+  Step('测试应用深色主题');
   
-  // 搴旂敤娣辫壊涓婚
+  // 应用深色主题
   if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.Theme.ApplyTheme('Dark');
@@ -567,7 +567,7 @@ begin
   
   CaptureScreenshot('theme_dark');
   
-  // 鎭㈠娴呰壊涓婚
+  // 恢复浅色主题
   if DeepBase.Manager.DeepBase.IsInitialized then
     DeepBase.Manager.DeepBase.Theme.ApplyTheme('Light');
   ProcessMessages;
@@ -579,17 +579,17 @@ procedure TTestGUITheme.Test_Theme_Switch_Updates_Form;
 var
   InitialColor: TColor;
 begin
-  Step('娴嬭瘯涓婚鍒囨崲鏇存柊绐椾綋');
+  Step('测试主题切换更新窗体');
   
-  // 璁板綍鍒濆棰滆壊
+  // 记录初始颜色
   InitialColor := FBasicForm.Color;
   
-  // 鍒囨崲涓婚
+  // 切换主题
   if DeepBase.Manager.DeepBase.IsInitialized then
     DeepBase.Manager.DeepBase.Theme.ApplyTheme('Dark');
   ProcessMessages;
   
-  // 鍒囧洖
+  // 切回
   if DeepBase.Manager.DeepBase.IsInitialized then
     DeepBase.Manager.DeepBase.Theme.ApplyTheme('Light');
   ProcessMessages;

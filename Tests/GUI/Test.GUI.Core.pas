@@ -1,14 +1,14 @@
 ﻿{ ============================================================================
-  Test.GUI.Core - 鏍稿績鎺т欢 GUI 娴嬭瘯
+  Test.GUI.Core - 核心控件 GUI 测试
   
-  鐗堟湰: 1.0
-  璇存槑: 娴嬭瘯鍩虹 VCL 鎺т欢鐨?GUI 浜や簰
-  娴嬭瘯鍐呭:
-    - 鎸夐挳鐐瑰嚮
-    - 鏂囨湰杈撳叆
-    - 澶嶉€夋/鍗曢€夋寜閽?
-    - 涓嬫媺妗?鍒楄〃妗?
-    - 鎺т欢鍙鎬?鍚敤鐘舵€?
+  版本: 1.0
+  说明: 测试基础 VCL 控件的 GUI 交互
+  测试内容:
+    - 按钮点击
+    - 文本输入
+    - 复选框/单选按钮
+    - 下拉框/列表框
+    - 控件可见性/启用状态
   ============================================================================ }
 
 unit Test.GUI.Core;
@@ -36,7 +36,7 @@ uses
 {$IFNDEF HAS_DUNITX}
 type
   /// <summary>
-  /// 绠€鍖栫殑鏂█绫?- 鐢ㄤ簬闈?DUnitX 鐜
+  /// 简化的断言类 - 用于非 DUnitX 环境
   /// </summary>
   Assert = class
   public
@@ -58,7 +58,7 @@ type
 
 type
   /// <summary>
-  /// 鍩虹鎺т欢 GUI 娴嬭瘯
+  /// 基础控件 GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUICore = class(TGUITestBase)
@@ -78,7 +78,7 @@ type
     [TearDown]
     procedure TearDown; override;
     
-    // ========== 鎸夐挳娴嬭瘯 ==========
+    // ========== 按钮测试 ==========
     
     [Test]
     procedure Test_Button_Click_FiresEvent;
@@ -92,7 +92,7 @@ type
     [Test]
     procedure Test_Button_Default_Property;
     
-    // ========== 鏂囨湰杈撳叆娴嬭瘯 ==========
+    // ========== 文本输入测试 ==========
     
     [Test]
     procedure Test_Edit_Input_Text;
@@ -106,7 +106,7 @@ type
     [Test]
     procedure Test_Edit_ReadOnly;
     
-    // ========== 澶嶉€夋娴嬭瘯 ==========
+    // ========== 复选框测试 ==========
     
     [Test]
     procedure Test_CheckBox_Toggle;
@@ -114,7 +114,7 @@ type
     [Test]
     procedure Test_CheckBox_Initial_State;
     
-    // ========== 鍗曢€夋寜閽祴璇?==========
+    // ========== 单选按钮测试 ==========
     
     [Test]
     procedure Test_RadioButton_Selection;
@@ -122,7 +122,7 @@ type
     [Test]
     procedure Test_RadioButton_MutualExclusion;
     
-    // ========== 涓嬫媺妗嗘祴璇?==========
+    // ========== 下拉框测试 ==========
     
     [Test]
     procedure Test_ComboBox_Select_ByIndex;
@@ -133,7 +133,7 @@ type
     [Test]
     procedure Test_ComboBox_Items_Count;
     
-    // ========== 鍒楄〃妗嗘祴璇?==========
+    // ========== 列表框测试 ==========
     
     [Test]
     procedure Test_ListBox_Select_Item;
@@ -141,7 +141,7 @@ type
     [Test]
     procedure Test_ListBox_Items_Count;
     
-    // ========== Memo 娴嬭瘯 ==========
+    // ========== Memo 测试 ==========
     
     [Test]
     procedure Test_Memo_Input_MultiLine;
@@ -149,17 +149,17 @@ type
     [Test]
     procedure Test_Memo_Clear;
     
-    // ========== 婊戝潡娴嬭瘯 ==========
+    // ========== 滑块测试 ==========
     
     [Test]
     procedure Test_TrackBar_Position;
     
-    // ========== 杩涘害鏉℃祴璇?==========
+    // ========== 进度条测试 ==========
     
     [Test]
     procedure Test_ProgressBar_Value;
     
-    // ========== 鎺т欢鐘舵€佹祴璇?==========
+    // ========== 控件状态测试 ==========
     
     [Test]
     procedure Test_Control_FindByName;
@@ -172,7 +172,7 @@ type
   end;
   
   /// <summary>
-  /// 鏁版嵁褰曞叆娴佺▼ GUI 娴嬭瘯
+  /// 数据录入流程 GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUIDataEntry = class(TGUITestBase)
@@ -212,7 +212,7 @@ type
   end;
   
   /// <summary>
-  /// 閿洏浜や簰 GUI 娴嬭瘯
+  /// 键盘交互 GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUIKeyboard = class(TGUITestBase)
@@ -310,7 +310,7 @@ begin
   inherited;
   FButtonClicked := False;
   
-  // 闄勫姞浜嬩欢澶勭悊鍣?
+  // 附加事件处理器
   if Assigned(FBasicForm) then
     FBasicForm.btnOK.OnClick := HandleButtonClick;
 end;
@@ -326,35 +326,35 @@ begin
   FButtonClicked := True;
 end;
 
-// ========== 鎸夐挳娴嬭瘯 ==========
+// ========== 按钮测试 ==========
 
 procedure TTestGUICore.Test_Button_Click_FiresEvent;
 begin
-  Step('鐐瑰嚮 OK 鎸夐挳');
+  Step('点击 OK 按钮');
   
-  Assert.IsFalse(FButtonClicked, '鍒濆鐘舵€佹寜閽湭琚偣鍑?);
+  Assert.IsFalse(FButtonClicked, '初始状态按钮未被点击');
   
   Click('btnOK');
   
-  Assert.IsTrue(FButtonClicked, '鎸夐挳鐐瑰嚮浜嬩欢搴旇瑙﹀彂');
+  Assert.IsTrue(FButtonClicked, '按钮点击事件应该触发');
   
   Verify(FButtonClicked, 'True', BoolToStr(FButtonClicked, True));
 end;
 
 procedure TTestGUICore.Test_Button_Enabled_State;
 begin
-  Step('娴嬭瘯鎸夐挳鍚敤鐘舵€?);
+  Step('测试按钮启用状态');
   
-  // 鍒濆鐘舵€?
+  // 初始状态
   AssertEnabled('btnOK');
   
-  // 绂佺敤鎸夐挳
+  // 禁用按钮
   FBasicForm.btnOK.Enabled := False;
   ProcessMessages;
   
   AssertDisabled('btnOK');
   
-  // 閲嶆柊鍚敤
+  // 重新启用
   FBasicForm.btnOK.Enabled := True;
   ProcessMessages;
   
@@ -365,18 +365,18 @@ end;
 
 procedure TTestGUICore.Test_Button_Visible_State;
 begin
-  Step('娴嬭瘯鎸夐挳鍙鎬?);
+  Step('测试按钮可见性');
   
-  // 鍒濆鍙
+  // 初始可见
   AssertVisible('btnOK');
   
-  // 闅愯棌鎸夐挳
+  // 隐藏按钮
   FBasicForm.btnOK.Visible := False;
   ProcessMessages;
   
   AssertNotVisible('btnOK');
   
-  // 鏄剧ず鎸夐挳
+  // 显示按钮
   FBasicForm.btnOK.Visible := True;
   ProcessMessages;
   
@@ -387,21 +387,21 @@ end;
 
 procedure TTestGUICore.Test_Button_Default_Property;
 begin
-  Step('娴嬭瘯榛樿鎸夐挳灞炴€?);
+  Step('测试默认按钮属性');
   
-  Assert.IsTrue(FBasicForm.btnOK.Default, 'btnOK 搴旇鏄粯璁ゆ寜閽?);
-  Assert.IsTrue(FBasicForm.btnCancel.Cancel, 'btnCancel 搴旇鏄彇娑堟寜閽?);
+  Assert.IsTrue(FBasicForm.btnOK.Default, 'btnOK 应该是默认按钮');
+  Assert.IsTrue(FBasicForm.btnCancel.Cancel, 'btnCancel 应该是取消按钮');
   
   Verify(True, 'Default/Cancel properties set', 'Passed');
 end;
 
-// ========== 鏂囨湰杈撳叆娴嬭瘯 ==========
+// ========== 文本输入测试 ==========
 
 procedure TTestGUICore.Test_Edit_Input_Text;
 const
   TEST_TEXT = 'Hello, World!';
 begin
-  Step('杈撳叆鏂囨湰鍒扮紪杈戞');
+  Step('输入文本到编辑框');
   
   Input('edtInput', TEST_TEXT);
   
@@ -413,13 +413,13 @@ end;
 
 procedure TTestGUICore.Test_Edit_Clear_Text;
 begin
-  Step('娓呯┖缂栬緫妗?);
+  Step('清空编辑框');
   
-  // 鍏堣緭鍏ユ枃鏈?
+  // 先输入文本
   Input('edtInput', 'Test text');
   Assert.AreNotEqual('', FBasicForm.edtInput.Text);
   
-  // 娓呯┖
+  // 清空
   Input('edtInput', '');
   
   Assert.AreEqual('', FBasicForm.edtInput.Text);
@@ -432,7 +432,7 @@ const
   MAX_LEN = 10;
   LONG_TEXT = '12345678901234567890';
 begin
-  Step('娴嬭瘯缂栬緫妗嗘渶澶ч暱搴?);
+  Step('测试编辑框最大长度');
   
   FBasicForm.edtInput.MaxLength := MAX_LEN;
   ProcessMessages;
@@ -440,7 +440,7 @@ begin
   Input('edtInput', LONG_TEXT);
   
   Assert.IsTrue(Length(FBasicForm.edtInput.Text) <= MAX_LEN,
-    '鏂囨湰闀垮害涓嶅簲瓒呰繃 MaxLength');
+    '文本长度不应超过 MaxLength');
   
   Verify(Length(FBasicForm.edtInput.Text) <= MAX_LEN,
     Format('<= %d', [MAX_LEN]),
@@ -452,36 +452,36 @@ const
   ORIGINAL = 'Original';
   NEW_TEXT = 'New Text';
 begin
-  Step('娴嬭瘯鍙缂栬緫妗?);
+  Step('测试只读编辑框');
   
   FBasicForm.edtInput.Text := ORIGINAL;
   FBasicForm.edtInput.ReadOnly := True;
   ProcessMessages;
   
-  // 灏濊瘯杈撳叆锛堥€氳繃鐩存帴璁剧疆锛屽洜涓?SimulateInput 浼氱洿鎺ヨ缃?Text锛?
-  // 鍦ㄥ疄闄?GUI 涓紝鍙浼氶樆姝㈤敭鐩樿緭鍏?
+  // 尝试输入（通过直接设置，因为 SimulateInput 会直接设置 Text）
+  // 在实际 GUI 中，只读会阻止键盘输入
   Assert.AreEqual(ORIGINAL, FBasicForm.edtInput.Text);
   
   Verify(FBasicForm.edtInput.ReadOnly, 'True', BoolToStr(FBasicForm.edtInput.ReadOnly, True));
 end;
 
-// ========== 澶嶉€夋娴嬭瘯 ==========
+// ========== 复选框测试 ==========
 
 procedure TTestGUICore.Test_CheckBox_Toggle;
 begin
-  Step('娴嬭瘯澶嶉€夋鍒囨崲');
+  Step('测试复选框切换');
   
-  // 纭繚鍒濆鏈€変腑
+  // 确保初始未选中
   FBasicForm.chkOption.Checked := False;
   ProcessMessages;
   
   Assert.IsFalse(FBasicForm.chkOption.Checked);
   
-  // 鍕鹃€?
+  // 勾选
   Check('chkOption', True);
   Assert.IsTrue(FBasicForm.chkOption.Checked);
   
-  // 鍙栨秷鍕鹃€?
+  // 取消勾选
   Check('chkOption', False);
   Assert.IsFalse(FBasicForm.chkOption.Checked);
   
@@ -490,49 +490,49 @@ end;
 
 procedure TTestGUICore.Test_CheckBox_Initial_State;
 begin
-  Step('娴嬭瘯澶嶉€夋鍒濆鐘舵€?);
+  Step('测试复选框初始状态');
   
-  // 榛樿搴旇鏈€変腑
-  Assert.IsFalse(FBasicForm.chkOption.Checked, '澶嶉€夋鍒濆搴旇鏈€変腑');
+  // 默认应该未选中
+  Assert.IsFalse(FBasicForm.chkOption.Checked, '复选框初始应该未选中');
   
   Verify(not FBasicForm.chkOption.Checked, 'Unchecked', 
     BoolToStr(FBasicForm.chkOption.Checked, True));
 end;
 
-// ========== 鍗曢€夋寜閽祴璇?==========
+// ========== 单选按钮测试 ==========
 
 procedure TTestGUICore.Test_RadioButton_Selection;
 begin
-  Step('娴嬭瘯鍗曢€夋寜閽€夋嫨');
+  Step('测试单选按钮选择');
   
-  // 鍒濆鐘舵€?
-  Assert.IsTrue(FBasicForm.rbOption1.Checked, 'Option1 搴旇榛樿閫変腑');
-  Assert.IsFalse(FBasicForm.rbOption2.Checked, 'Option2 搴旇鏈€変腑');
+  // 初始状态
+  Assert.IsTrue(FBasicForm.rbOption1.Checked, 'Option1 应该默认选中');
+  Assert.IsFalse(FBasicForm.rbOption2.Checked, 'Option2 应该未选中');
   
-  // 閫夋嫨 Option2
+  // 选择 Option2
   Click('rbOption2');
   
-  Assert.IsFalse(FBasicForm.rbOption1.Checked, 'Option1 搴旇鍙栨秷閫変腑');
-  Assert.IsTrue(FBasicForm.rbOption2.Checked, 'Option2 搴旇琚€変腑');
+  Assert.IsFalse(FBasicForm.rbOption1.Checked, 'Option1 应该取消选中');
+  Assert.IsTrue(FBasicForm.rbOption2.Checked, 'Option2 应该被选中');
   
   Verify(FBasicForm.rbOption2.Checked, 'Option2 selected', 'Passed');
 end;
 
 procedure TTestGUICore.Test_RadioButton_MutualExclusion;
 begin
-  Step('娴嬭瘯鍗曢€夋寜閽簰鏂?);
+  Step('测试单选按钮互斥');
   
-  // 閫夋嫨 Option1
+  // 选择 Option1
   Click('rbOption1');
   Assert.IsTrue(FBasicForm.rbOption1.Checked);
   Assert.IsFalse(FBasicForm.rbOption2.Checked);
   
-  // 閫夋嫨 Option2
+  // 选择 Option2
   Click('rbOption2');
   Assert.IsFalse(FBasicForm.rbOption1.Checked);
   Assert.IsTrue(FBasicForm.rbOption2.Checked);
   
-  // 鍐嶆閫夋嫨 Option1
+  // 再次选择 Option1
   Click('rbOption1');
   Assert.IsTrue(FBasicForm.rbOption1.Checked);
   Assert.IsFalse(FBasicForm.rbOption2.Checked);
@@ -540,19 +540,19 @@ begin
   Verify(True, 'Mutual exclusion works', 'Passed');
 end;
 
-// ========== 涓嬫媺妗嗘祴璇?==========
+// ========== 下拉框测试 ==========
 
 procedure TTestGUICore.Test_ComboBox_Select_ByIndex;
 begin
-  Step('娴嬭瘯涓嬫媺妗嗘寜绱㈠紩閫夋嫨');
+  Step('测试下拉框按索引选择');
   
-  // 閫夋嫨绗簩椤?
+  // 选择第二项
   Select('cboSelect', 1);
   
   Assert.AreEqual(1, FBasicForm.cboSelect.ItemIndex);
   Assert.AreEqual('Item 2', FBasicForm.cboSelect.Text);
   
-  // 閫夋嫨绗笁椤?
+  // 选择第三项
   Select('cboSelect', 2);
   
   Assert.AreEqual(2, FBasicForm.cboSelect.ItemIndex);
@@ -563,7 +563,7 @@ end;
 
 procedure TTestGUICore.Test_ComboBox_Select_ByText;
 begin
-  Step('娴嬭瘯涓嬫媺妗嗘寜鏂囨湰閫夋嫨');
+  Step('测试下拉框按文本选择');
   
   Select('cboSelect', 'Item 2');
   
@@ -575,19 +575,19 @@ end;
 
 procedure TTestGUICore.Test_ComboBox_Items_Count;
 begin
-  Step('娴嬭瘯涓嬫媺妗嗛」鐩暟閲?);
+  Step('测试下拉框项目数量');
   
-  Assert.AreEqual(3, FBasicForm.cboSelect.Items.Count, '搴旇鏈?3 涓」鐩?);
+  Assert.AreEqual(3, FBasicForm.cboSelect.Items.Count, '应该有 3 个项目');
   
   Verify(FBasicForm.cboSelect.Items.Count = 3, '3', 
     IntToStr(FBasicForm.cboSelect.Items.Count));
 end;
 
-// ========== 鍒楄〃妗嗘祴璇?==========
+// ========== 列表框测试 ==========
 
 procedure TTestGUICore.Test_ListBox_Select_Item;
 begin
-  Step('娴嬭瘯鍒楄〃妗嗛€夋嫨');
+  Step('测试列表框选择');
   
   Select('lbxList', 1);
   
@@ -602,7 +602,7 @@ end;
 
 procedure TTestGUICore.Test_ListBox_Items_Count;
 begin
-  Step('娴嬭瘯鍒楄〃妗嗛」鐩暟閲?);
+  Step('测试列表框项目数量');
   
   Assert.AreEqual(3, FBasicForm.lbxList.Items.Count);
   
@@ -610,14 +610,14 @@ begin
     IntToStr(FBasicForm.lbxList.Items.Count));
 end;
 
-// ========== Memo 娴嬭瘯 ==========
+// ========== Memo 测试 ==========
 
 procedure TTestGUICore.Test_Memo_Input_MultiLine;
 const
   LINE1 = 'Line 1';
   LINE2 = 'Line 2';
 begin
-  Step('娴嬭瘯澶氳鏂囨湰杈撳叆');
+  Step('测试多行文本输入');
   
   FBasicForm.mmoText.Clear;
   FBasicForm.mmoText.Lines.Add(LINE1);
@@ -634,13 +634,13 @@ end;
 
 procedure TTestGUICore.Test_Memo_Clear;
 begin
-  Step('娴嬭瘯娓呯┖ Memo');
+  Step('测试清空 Memo');
   
-  // 鍏堟坊鍔犲唴瀹?
+  // 先添加内容
   FBasicForm.mmoText.Lines.Add('Test content');
   Assert.IsTrue(FBasicForm.mmoText.Lines.Count > 0);
   
-  // 娓呯┖
+  // 清空
   FBasicForm.mmoText.Clear;
   ProcessMessages;
   
@@ -650,22 +650,22 @@ begin
     IntToStr(FBasicForm.mmoText.Lines.Count));
 end;
 
-// ========== 婊戝潡娴嬭瘯 ==========
+// ========== 滑块测试 ==========
 
 procedure TTestGUICore.Test_TrackBar_Position;
 begin
-  Step('娴嬭瘯婊戝潡浣嶇疆');
+  Step('测试滑块位置');
   
-  // 鍒濆浣嶇疆
+  // 初始位置
   Assert.AreEqual(50, FBasicForm.trkSlider.Position);
   
-  // 鏀瑰彉浣嶇疆
+  // 改变位置
   FBasicForm.trkSlider.Position := 75;
   ProcessMessages;
   
   Assert.AreEqual(75, FBasicForm.trkSlider.Position);
   
-  // 杈圭晫娴嬭瘯
+  // 边界测试
   FBasicForm.trkSlider.Position := 0;
   Assert.AreEqual(0, FBasicForm.trkSlider.Position);
   
@@ -675,16 +675,16 @@ begin
   Verify(True, 'TrackBar position changes', 'Passed');
 end;
 
-// ========== 杩涘害鏉℃祴璇?==========
+// ========== 进度条测试 ==========
 
 procedure TTestGUICore.Test_ProgressBar_Value;
 begin
-  Step('娴嬭瘯杩涘害鏉″€?);
+  Step('测试进度条值');
   
-  // 鍒濆鍊?
+  // 初始值
   Assert.AreEqual(75, FBasicForm.prgProgress.Position);
   
-  // 鏀瑰彉鍊?
+  // 改变值
   FBasicForm.prgProgress.Position := 50;
   ProcessMessages;
   
@@ -694,38 +694,38 @@ begin
     IntToStr(FBasicForm.prgProgress.Position));
 end;
 
-// ========== 鎺т欢鐘舵€佹祴璇?==========
+// ========== 控件状态测试 ==========
 
 procedure TTestGUICore.Test_Control_FindByName;
 var
   C: TControl;
 begin
-  Step('娴嬭瘯鎸夊悕绉版煡鎵炬帶浠?);
+  Step('测试按名称查找控件');
   
   C := TDeepBaseTestHelper.FindControl(FBasicForm, 'btnOK');
-  Assert.IsNotNull(C, 'btnOK 搴旇琚壘鍒?);
+  Assert.IsNotNull(C, 'btnOK 应该被找到');
   Assert.AreEqual('btnOK', C.Name);
   
   C := TDeepBaseTestHelper.FindControl(FBasicForm, 'edtInput');
-  Assert.IsNotNull(C, 'edtInput 搴旇琚壘鍒?);
+  Assert.IsNotNull(C, 'edtInput 应该被找到');
   
   C := TDeepBaseTestHelper.FindControl(FBasicForm, 'NonExistent');
-  Assert.IsNull(C, '涓嶅瓨鍦ㄧ殑鎺т欢搴旇杩斿洖 nil');
+  Assert.IsNull(C, '不存在的控件应该返回 nil');
   
   Verify(True, 'FindControl works', 'Passed');
 end;
 
 procedure TTestGUICore.Test_Control_Focus;
 begin
-  Step('娴嬭瘯鎺т欢鐒︾偣');
+  Step('测试控件焦点');
   
-  // 璁剧疆鐒︾偣鍒扮紪杈戞
+  // 设置焦点到编辑框
   FBasicForm.edtInput.SetFocus;
   ProcessMessages;
   
   Assert.AreEqual(FBasicForm.edtInput, FBasicForm.ActiveControl);
   
-  // 鍒囨崲鐒︾偣
+  // 切换焦点
   FBasicForm.cboSelect.SetFocus;
   ProcessMessages;
   
@@ -736,11 +736,11 @@ end;
 
 procedure TTestGUICore.Test_Control_TabOrder;
 begin
-  Step('娴嬭瘯 Tab 椤哄簭');
+  Step('测试 Tab 顺序');
   
-  // 楠岃瘉 Tab 椤哄簭璁剧疆
+  // 验证 Tab 顺序设置
   Assert.IsTrue(FBasicForm.edtInput.TabOrder < FBasicForm.btnOK.TabOrder,
-    '缂栬緫妗嗗簲璇ュ湪鎸夐挳涔嬪墠');
+    '编辑框应该在按钮之前');
   
   Verify(True, 'Tab order is correct', 'Passed');
 end;
@@ -775,7 +775,7 @@ end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_FillForm;
 begin
-  Step('濉啓鏁版嵁褰曞叆琛ㄥ崟');
+  Step('填写数据录入表单');
   
   Input('edtName', 'John Doe');
   Input('edtEmail', 'john@example.com');
@@ -790,13 +790,13 @@ end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_ClearForm;
 begin
-  Step('娓呯┖琛ㄥ崟');
+  Step('清空表单');
   
-  // 鍏堝～鍐?
+  // 先填写
   Input('edtName', 'Test Name');
   Input('edtEmail', 'test@test.com');
   
-  // 鐐瑰嚮娓呯┖
+  // 点击清空
   FDataForm.ClearForm;
   ProcessMessages;
   
@@ -808,30 +808,30 @@ end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_Validation_Empty;
 begin
-  Step('楠岃瘉绌鸿〃鍗?);
+  Step('验证空表单');
   
   FDataForm.ClearForm;
   
-  Assert.IsFalse(FDataForm.ValidateForm, '绌鸿〃鍗曢獙璇佸簲璇ュけ璐?);
+  Assert.IsFalse(FDataForm.ValidateForm, '空表单验证应该失败');
   
   Verify(not FDataForm.ValidateForm, 'Invalid', 'Invalid');
 end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_Validation_Valid;
 begin
-  Step('楠岃瘉鏈夋晥琛ㄥ崟');
+  Step('验证有效表单');
   
   Input('edtName', 'John Doe');
   Input('edtEmail', 'john@example.com');
   
-  Assert.IsTrue(FDataForm.ValidateForm, '鏈夋晥琛ㄥ崟楠岃瘉搴旇閫氳繃');
+  Assert.IsTrue(FDataForm.ValidateForm, '有效表单验证应该通过');
   
   Verify(FDataForm.ValidateForm, 'Valid', 'Valid');
 end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_CategorySelection;
 begin
-  Step('娴嬭瘯鍒嗙被閫夋嫨');
+  Step('测试分类选择');
   
   Assert.AreEqual('Personal', FDataForm.cboCategory.Text);
   
@@ -844,25 +844,25 @@ end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_Workflow_Complete;
 begin
-  Step('瀹屾暣鏁版嵁褰曞叆宸ヤ綔娴?);
+  Step('完整数据录入工作流');
   
-  // 1. 濉啓琛ㄥ崟
+  // 1. 填写表单
   Input('edtName', 'Jane Smith');
   Input('edtEmail', 'jane@company.com');
   Input('edtPhone', '555-1234');
   Select('cboCategory', 'Business');
   Check('chkActive', True);
   
-  // 鎴浘
+  // 截图
   CaptureScreenshot('data_entry_filled');
   
-  // 2. 楠岃瘉
+  // 2. 验证
   Assert.IsTrue(FDataForm.ValidateForm);
   
-  // 3. 鎻愪氦
+  // 3. 提交
   Click('btnSubmit');
   
-  Assert.IsTrue(FSubmitClicked, '鎻愪氦鎸夐挳搴旇琚偣鍑?);
+  Assert.IsTrue(FSubmitClicked, '提交按钮应该被点击');
   
   Verify(FSubmitClicked, 'Submitted', BoolToStr(FSubmitClicked, True));
 end;
@@ -882,25 +882,25 @@ end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Tab_Navigation;
 begin
-  Step('娴嬭瘯 Tab 閿鑸?);
+  Step('测试 Tab 键导航');
   
-  // 璁剧疆鍒濆鐒︾偣
+  // 设置初始焦点
   FBasicForm.edtInput.SetFocus;
   ProcessMessages;
   
   Assert.AreEqual(FBasicForm.edtInput, FBasicForm.ActiveControl);
   
-  // 妯℃嫙 Tab 閿?- 杩欓噷绠€鍖栨祴璇?
-  // 瀹為檯娴嬭瘯涓簲璇ヤ娇鐢?SendInput 鎴栫被浼兼柟娉?
+  // 模拟 Tab 键 - 这里简化测试
+  // 实际测试中应该使用 SendInput 或类似方法
   
   Verify(True, 'Tab navigation works', 'Passed');
 end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Enter_Default_Button;
 begin
-  Step('娴嬭瘯 Enter 閿Е鍙戦粯璁ゆ寜閽?);
+  Step('测试 Enter 键触发默认按钮');
   
-  // btnOK 鏄粯璁ゆ寜閽?
+  // btnOK 是默认按钮
   Assert.IsTrue(FBasicForm.btnOK.Default);
   
   Verify(FBasicForm.btnOK.Default, 'True', BoolToStr(FBasicForm.btnOK.Default, True));
@@ -908,9 +908,9 @@ end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Escape_Cancel_Button;
 begin
-  Step('娴嬭瘯 Escape 閿Е鍙戝彇娑堟寜閽?);
+  Step('测试 Escape 键触发取消按钮');
   
-  // btnCancel 鏄彇娑堟寜閽?
+  // btnCancel 是取消按钮
   Assert.IsTrue(FBasicForm.btnCancel.Cancel);
   
   Verify(FBasicForm.btnCancel.Cancel, 'True', BoolToStr(FBasicForm.btnCancel.Cancel, True));
@@ -918,13 +918,13 @@ end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Shortcuts;
 begin
-  Step('娴嬭瘯閿洏蹇嵎閿?);
+  Step('测试键盘快捷键');
   
-  // 鍩烘湰娴嬭瘯 - 楠岃瘉鎺т欢鍙互鎺ユ敹閿洏杈撳叆
+  // 基本测试 - 验证控件可以接收键盘输入
   FBasicForm.edtInput.SetFocus;
   ProcessMessages;
   
-  // 杈撳叆涓€浜涙枃鏈?
+  // 输入一些文本
   Input('edtInput', 'Keyboard Test');
   
   Assert.AreEqual('Keyboard Test', FBasicForm.edtInput.Text);

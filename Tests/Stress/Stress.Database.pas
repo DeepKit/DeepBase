@@ -167,7 +167,8 @@ const
 // Helper function to get database connection from DeepBase Manager
 function GetDBConnection: TFDConnection;
 begin
-  Result := DeepBase.Manager.DeepBase.ConfigDB;
+  // ConfigDB 在 Core 面按 TObject 擦除以免 Core 接口绑定 FireDAC，消费方显式下行转型
+  Result := TFDConnection(DeepBase.Manager.DeepBase.ConfigDB);
 end;
 
 // Helper IfThen for integers

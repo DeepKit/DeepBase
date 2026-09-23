@@ -1,11 +1,11 @@
 { ============================================================================
-  DeepBaseGUITests - DeepBase GUI 自动化测试项�?
+  DeepBaseGUITests - DeepBase GUI 自动化测试项目
   
   版本: 1.0
   说明: GUI 自动化测试主程序
   
   运行方式:
-    DeepBaseGUITests.exe           - 运行所�?GUI 测试
+    DeepBaseGUITests.exe           - 运行所有 GUI 测试
     DeepBaseGUITests.exe -v        - 详细输出
     DeepBaseGUITests.exe -r:HTML   - 生成 HTML 报告
   ============================================================================ }
@@ -62,7 +62,7 @@ var
 
 begin
   try
-    // 初始�?VCL 应用
+    // 初始化 VCL 应用
     Application.Initialize;
     
     // 设置输出路径
@@ -85,11 +85,11 @@ begin
     end
     else
     begin
-      // 创建测试运行�?
+      // 创建测试运行器
       Runner := TDUnitX.CreateRunner;
       Runner.UseRTTI := True;
       
-      // 控制台日�?
+      // 控制台日志
       Logger := TDUnitXConsoleLogger.Create(True);
       Runner.AddLogger(Logger);
       

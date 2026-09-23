@@ -1,8 +1,8 @@
 ﻿{ ============================================================================
-  DeepBase.GUITest - GUI 自动化测试框�?
+  DeepBase.GUITest - GUI 自动化测试框架
   
   版本: 1.0
-  说明: 提供完整�?GUI 自动化测试基础设施
+  说明: 提供完整的 GUI 自动化测试基础设施
   功能:
     - 测试生命周期管理
     - 截图比对测试
@@ -44,7 +44,7 @@ const
 
 type
   /// <summary>
-  /// 时间戳辅�?
+  /// 时间戳辅助
   /// </summary>
   TStopwatch = record
   private
@@ -134,7 +134,7 @@ type
   end;
   
   /// <summary>
-  /// GUI 测试上下�?
+  /// GUI 测试上下文
   /// </summary>
   TGUITestContext = class
   private
@@ -153,7 +153,7 @@ type
     constructor Create(const ATestName: string; AConfig: TGUITestConfig);
     destructor Destroy; override;
     
-    /// <summary>记录步骤开�?/summary>
+    /// <summary>记录步骤开始</summary>
     procedure BeginStep(const Description: string);
     
     /// <summary>记录步骤完成</summary>
@@ -179,7 +179,7 @@ type
   end;
   
   /// <summary>
-  /// 截图比较�?
+  /// 截图比较器
   /// </summary>
   TScreenshotComparer = class
   private
@@ -195,13 +195,13 @@ type
     class function Compare(Baseline, Actual: TBitmap;
       Options: TScreenshotCompareOptions): TScreenshotCompareResult; overload;
     
-    /// <summary>生成差异�?/summary>
+    /// <summary>生成差异图</summary>
     class function GenerateDiffImage(Baseline, Actual: TBitmap;
       Options: TScreenshotCompareOptions): TBitmap;
   end;
   
   /// <summary>
-  /// GUI 测试报告生成�?
+  /// GUI 测试报告生成器
   /// </summary>
   TGUITestReporter = class
   public
@@ -214,7 +214,7 @@ type
   end;
   
   /// <summary>
-  /// GUI 测试基类 - 可独立使用或�?DUnitX 集成
+  /// GUI 测试基类 - 可独立使用或与 DUnitX 集成
   /// </summary>
   TGUITestBase = class
   private
@@ -227,13 +227,13 @@ type
     /// <summary>创建测试窗体 - 子类重写</summary>
     function CreateTestForm: TForm; virtual; abstract;
     
-    /// <summary>销毁测试窗�?/summary>
+    /// <summary>销毁测试窗体</summary>
     procedure DestroyTestForm; virtual;
     
     /// <summary>当前测试窗体</summary>
     property Form: TForm read FForm;
     
-    /// <summary>测试上下�?/summary>
+    /// <summary>测试上下文</summary>
     property Context: TGUITestContext read FContext;
     
     /// <summary>测试配置</summary>
@@ -257,7 +257,7 @@ type
     procedure Select(const ControlName: string; Index: Integer); overload;
     procedure Select(const ControlName, Text: string); overload;
     
-    /// <summary>模拟勾�?/summary>
+    /// <summary>模拟勾选</summary>
     procedure Check(const ControlName: string; Checked: Boolean);
     
     /// <summary>模拟按键</summary>
@@ -274,7 +274,7 @@ type
     /// <summary>断言控件可见</summary>
     procedure AssertVisible(const ControlName: string; const Msg: string = '');
     
-    /// <summary>断言控件不可�?/summary>
+    /// <summary>断言控件不可见</summary>
     procedure AssertNotVisible(const ControlName: string; const Msg: string = '');
     
     /// <summary>断言控件启用</summary>
@@ -286,7 +286,7 @@ type
     /// <summary>断言控件文本</summary>
     procedure AssertText(const ControlName, Expected: string; const Msg: string = '');
     
-    /// <summary>断言控件�?/summary>
+    /// <summary>断言控件值</summary>
     procedure AssertValue(const ControlName, Expected: string; const Msg: string = '');
     
     /// <summary>断言控件存在</summary>
@@ -303,10 +303,10 @@ type
     /// <summary>捕获当前截图</summary>
     function CaptureScreenshot(const Suffix: string = ''): string;
     
-    /// <summary>保存为基准截�?/summary>
+    /// <summary>保存为基准截图</summary>
     procedure SaveBaseline(const Name: string);
     
-    /// <summary>与基准截图比�?/summary>
+    /// <summary>与基准截图比对</summary>
     function CompareWithBaseline(const Name: string): TScreenshotCompareResult;
     
     /// <summary>断言截图匹配</summary>
@@ -315,28 +315,28 @@ type
     
     // ========== 步骤记录 ==========
     
-    /// <summary>开始步�?/summary>
+    /// <summary>开始步骤</summary>
     procedure Step(const Description: string);
     
     /// <summary>验证步骤</summary>
     procedure Verify(Condition: Boolean; const Expected, Actual: string);
     
   public
-    /// <summary>Setup - 在每个测试之前调�?/summary>
+    /// <summary>Setup - 在每个测试之前调用</summary>
     procedure Setup; virtual;
     
-    /// <summary>TearDown - 在每个测试之后调�?/summary>
+    /// <summary>TearDown - 在每个测试之后调用</summary>
     procedure TearDown; virtual;
     
     constructor Create;
     destructor Destroy; override;
     
-    /// <summary>获取所有测试结�?/summary>
+    /// <summary>获取所有测试结果</summary>
     function GetAllResults: TArray<TGUITestResult>;
   end;
   
   /// <summary>
-  /// GUI 测试运行�?
+  /// GUI 测试运行器
   /// </summary>
   TGUITestRunner = class
   private
@@ -347,7 +347,7 @@ type
     constructor Create(AConfig: TGUITestConfig);
     destructor Destroy; override;
     
-    /// <summary>运行测试�?/summary>
+    /// <summary>运行测试类</summary>
     procedure RunTests(TestClass: TClass);
     
     /// <summary>运行单个测试</summary>
@@ -591,7 +591,7 @@ begin
   Baseline := TBitmap.Create;
   Actual := TBitmap.Create;
   try
-    // 加载基准�?
+    // 加载基准图
     if LowerCase(TPath.GetExtension(BaselinePath)) = '.png' then
     begin
       PNG := TPngImage.Create;
@@ -605,7 +605,7 @@ begin
     else
       Baseline.LoadFromFile(BaselinePath);
     
-    // 加载实际�?
+    // 加载实际图
     if LowerCase(TPath.GetExtension(ActualPath)) = '.png' then
     begin
       PNG := TPngImage.Create;
@@ -635,7 +635,7 @@ var
 begin
   Result.Clear;
   
-  // 尺寸不匹�?
+  // 尺寸不匹配
   if (Baseline.Width <> Actual.Width) or (Baseline.Height <> Actual.Height) then
   begin
     Result.IsMatch := False;
@@ -671,7 +671,7 @@ begin
   else
     Result.DifferencePercent := 0;
     
-  Result.IsMatch := Result.DifferencePercent < 0.1; // 默认 0.1% 阈�?
+  Result.IsMatch := Result.DifferencePercent < 0.1; // 默认 0.1% 阈值
 end;
 
 class function TScreenshotComparer.GenerateDiffImage(Baseline, Actual: TBitmap;
@@ -795,13 +795,13 @@ begin
       HTML.Add('</div>');
       
       HTML.Add('<div class="test-details">');
-      HTML.Add(Format('<p><strong>窗体�?</strong> %s</p>', [R.FormClass]));
-      HTML.Add(Format('<p><strong>开始时�?</strong> %s</p>', [FormatDateTime('hh:nn:ss.zzz', R.StartTime)]));
+      HTML.Add(Format('<p><strong>窗体类:</strong> %s</p>', [R.FormClass]));
+      HTML.Add(Format('<p><strong>开始时间:</strong> %s</p>', [FormatDateTime('hh:nn:ss.zzz', R.StartTime)]));
       
       if Length(R.Steps) > 0 then
       begin
         HTML.Add('<table class="steps-table">');
-        HTML.Add('<tr><th>#</th><th>描述</th><th>操作</th><th>预期</th><th>实际</th><th>状�?/th><th>截图</th></tr>');
+        HTML.Add('<tr><th>#</th><th>描述</th><th>操作</th><th>预期</th><th>实际</th><th>状态</th><th>截图</th></tr>');
         
         for S in R.Steps do
         begin
@@ -816,7 +816,7 @@ begin
           HTML.Add(Format('<td>%s %s</td>', [S.Action, S.ControlName]));
           HTML.Add(Format('<td>%s</td>', [S.Expected]));
           HTML.Add(Format('<td>%s</td>', [S.Actual]));
-          HTML.Add(Format('<td class="%s">%s</td>', [StatusClass, IfThen(S.Success, '�?, '�?)]));
+          HTML.Add(Format('<td class="%s">%s</td>', [StatusClass, IfThen(S.Success, '✓', '✗')]));
           if S.ScreenshotPath <> '' then
             HTML.Add(Format('<td><img src="%s" class="screenshot" onclick="window.open(this.src)"></td>', [S.ScreenshotPath]))
           else
@@ -944,7 +944,7 @@ begin
   ForceDirectories(FConfig.BaselinesPath);
   ForceDirectories(FConfig.OutputPath);
   
-  // 创建上下�?
+  // 创建上下文
   FContext := TGUITestContext.Create(TestName, FConfig);
   
   // 创建测试窗体
@@ -969,7 +969,7 @@ begin
     FreeAndNil(FContext);
   end;
   
-  // 销毁窗�?
+  // 销毁窗体
   DestroyTestForm;
 end;
 
@@ -1147,7 +1147,7 @@ var
 begin
   C := TDeepBaseTestHelper.FindControl(FForm, ControlName);
   if C = nil then
-    Exit; // 不存在等同于不可�?
+    Exit; // 不存在等同于不可见
     
   if C.Visible then
   begin
@@ -1352,7 +1352,7 @@ end;
 procedure TGUITestRunner.RunTests(TestClass: TClass);
 begin
   // 使用 DUnitX 运行
-  // 这里提供一个简化的运行器接�?
+  // 这里提供一个简化的运行器接口
 end;
 
 procedure TGUITestRunner.RunTest(Test: TGUITestBase; const MethodName: string);

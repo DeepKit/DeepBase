@@ -33,13 +33,13 @@ type
   /// 测试窗体类型
   /// </summary>
   TTestFormType = (
-    tftEmpty,           // 空窗�?
+    tftEmpty,           // 空窗体
     tftBasicControls,   // 基础控件窗体
     tftConfigControls,  // 配置控件窗体
-    tftI18nControls,    // 国际化控件窗�?
+    tftI18nControls,    // 国际化控件窗体
     tftDataEntry,       // 数据录入窗体
     tftMasterDetail,    // 主从窗体
-    tftDialog           // 对话框窗�?
+    tftDialog           // 对话框窗体
   );
   
   /// <summary>
@@ -84,13 +84,13 @@ type
     class function CreateForm(FormType: TTestFormType): TForm; overload;
     
     /// <summary>
-    /// 创建空窗�?
+    /// 创建空窗体
     /// </summary>
     class function CreateEmptyForm(const Caption: string = 'Test Form';
       Width: Integer = 400; Height: Integer = 300): TForm;
     
     /// <summary>
-    /// 创建带基础控件的窗�?
+    /// 创建带基础控件的窗体
     /// </summary>
     class function CreateBasicControlsForm: TForm;
     
@@ -100,7 +100,7 @@ type
     class function CreateConfigTestForm: TForm;
     
     /// <summary>
-    /// 创建国际化测试窗�?
+    /// 创建国际化测试窗体
     /// </summary>
     class function CreateI18nTestForm: TForm;
     
@@ -159,7 +159,7 @@ type
   end;
   
   /// <summary>
-  /// 国际化控件测试窗�?- 带辅助属性的包装�?
+  /// 国际化控件测试窗体 - 带辅助属性的包装类
   /// </summary>
   TI18nLabelHelper = class helper for TI18nLabel
     function GetTranslationKey: string;
@@ -174,7 +174,7 @@ type
   end;
   
   /// <summary>
-  /// 国际化控件测试窗�?
+  /// 国际化控件测试窗体
   /// </summary>
   TI18nControlsTestForm = class(TForm)
   public
@@ -242,7 +242,7 @@ end;
 class function TTestFormFactory.CreateForm(FormType: TTestFormType;
   Config: TTestFormConfig): TForm;
 begin
-  // 确保 DeepBase 初始�?
+  // 确保 DeepBase 初始化
   if Config.InitializeDeepBase then
     EnsureDeepBaseInitialized(Config.DBPath);
   

@@ -15,9 +15,17 @@ uses
   System.Classes,
   System.Diagnostics,
   Winapi.Windows,
+  Winapi.TlHelp32,
   Winapi.ActiveX,
   Winapi.MMSystem,
   DeepBase.Speech.SAPI.Decl;
+
+{ 本 spike 声明「无生产依赖」，故 DPAPI 走裸 Win32 声明而非复用 Core 的 DPAPI 包装。
+  形参按 Pointer 收，调用点直接传本地 DATA_BLOB 结构的地址。 }
+function CryptProtectData(pDataIn: Pointer; szDataDescr: PWideChar;
+  pOptionalEntropy: Pointer; pvReserved: Pointer; pPromptStruct: Pointer;
+  dwFlags: DWORD; pDataOut: Pointer): BOOL; stdcall;
+  external 'crypt32.dll' name 'CryptProtectData';
 
 var
   GTestCount, GPassCount, GFailCount, GSkipCount: Integer;

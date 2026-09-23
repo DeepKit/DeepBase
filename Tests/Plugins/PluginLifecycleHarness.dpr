@@ -55,15 +55,15 @@ begin
   end;
 end;
 
-function NewMgr: TDeepBasePluginManager;
+function NewMgr: TDllPluginManager;
 begin
   { 每个用例独立 Manager + 独立 Verifier（避免全局单例与 psError 残留） }
-  Result := TDeepBasePluginManager.Create(ExtractFilePath(GDllPath));
+  Result := TDllPluginManager.Create(ExtractFilePath(GDllPath));
   Result.Verifier := TPluginVerifier.Create;  // StrictMode 默认 True，空白名单
   Result.RegisterPluginKind('echo', 'Create');
 end;
 
-procedure RegEcho(AMgr: TDeepBasePluginManager; const AName: string);
+procedure RegEcho(AMgr: TDllPluginManager; const AName: string);
 begin
   AMgr.RegisterPlugin(AName, 'echo');
   AMgr.SetPluginDllPath(AName, GDllPath);
@@ -72,7 +72,7 @@ end;
 { --- T01: 依赖环注册即拒（ADR §4 验收点 3） --- }
 procedure Test_CycleDetection;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LRaised: Boolean;
 begin
   Writeln('[01] dependency cycle detection at registration');
@@ -139,7 +139,7 @@ end;
 { --- T02: 签名严格模式（ADR §2.6 白名单 SHA-256） --- }
 procedure Test_Signature;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   LV: TPluginVerifier;
 begin
@@ -188,7 +188,7 @@ end;
 { --- T03: ABI major 不兼容必须拒载（ADR §2.1） --- }
 procedure Test_AbiNegotiation;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
 begin
   Writeln('[03] ABI negotiation');
@@ -210,7 +210,7 @@ end;
 { --- T04: Lease 获取/释放计数 --- }
 procedure Test_LeaseAcquireRelease;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   L1, L2: TPluginLease;
   LCode: Integer;
   LMeta: TBytes;
@@ -248,7 +248,7 @@ end;
          （ADR §4 验收点 2；注入 LeaseDrainTimeoutMs 短超时） --- }
 procedure Test_LeaseDrainTimeout;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LLease, LHeldLease: TPluginLease;
   LCode, LCode2: Integer;
   LThreadCode: Integer;
@@ -311,7 +311,7 @@ procedure Test_HotReload100;
 const
   RELOADS = 100;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   I: Integer;
   LBefore, LAfter, LFinal: DWORD;
@@ -375,7 +375,7 @@ const
   TOTAL_RELOADS = 500;
   ROUND = 100;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   I, LRound: Integer;
   LBefore, LRoundStart, LAfter, LFinal: DWORD;
@@ -449,7 +449,7 @@ end;
 { --- T07: SafeGuard 崩溃隔离 + 熔断 + 恢复 --- }
 procedure Test_SafeGuardCrash;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   I: Integer;
   LLease: TPluginLease;
@@ -543,7 +543,7 @@ end;
 type
   TLeaseWorker = class(TThread)
   private
-    FMgr: TDeepBasePluginManager;
+    FMgr: TDllPluginManager;
     FName: string;
     FRounds: Integer;
     FOkCount: Integer;
@@ -553,14 +553,14 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AMgr: TDeepBasePluginManager; const AName: string; ARounds: Integer);
+    constructor Create(AMgr: TDllPluginManager; const AName: string; ARounds: Integer);
     property OkCount: Integer read FOkCount;
     property BusyCount: Integer read FBusyCount;
     property FailCount: Integer read FFailCount;
     property ExceptionMsg: string read FException;
   end;
 
-constructor TLeaseWorker.Create(AMgr: TDeepBasePluginManager;
+constructor TLeaseWorker.Create(AMgr: TDllPluginManager;
   const AName: string; ARounds: Integer);
 begin
   inherited Create(True);  { 挂起启动,主线程 Ready 后统一 Start }
@@ -604,7 +604,7 @@ end;
 
 procedure Test_ConcurrentLeaseAcquire;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   LWorkers: array of TLeaseWorker;
   LThreads, LRounds, I, LTotalOk, LExpected, LBefore, LAfter, LCur: Cardinal;
@@ -669,7 +669,7 @@ end;
 { --- T08: 依赖加载（失败传播 + 正向链） --- }
 procedure Test_DependencyLoad;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
 begin
   Writeln('[08] dependency loading');
@@ -988,7 +988,7 @@ procedure Test_ManagerCAbi;
 const
   DBPDLL = 'TestPlugin77.dll';
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   LLease: TPluginLease;
   LInfo: TPluginInfo;
@@ -1026,7 +1026,7 @@ end;
 { --- T11: psPendingRestart 状态路径（通过 ReloadPluginConfig 触发） --- }
 procedure Test_PendingRestart;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   LLease: TPluginLease;
   LInfo: TPluginInfo;
@@ -1094,7 +1094,7 @@ end;
   故测试分别用插件实例名 'Echo' / 'Base' 命中，Kind 用 'echo' / 'base' 走门禁。 }
 procedure Test_CapabilityGate;
 var
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
   LCode: Integer;
   LInfo: TPluginInfo;
 begin
@@ -1171,7 +1171,7 @@ var
   LRaised: Boolean;
   LEMsg: string;
   LResp: TBytes;
-  M: TDeepBasePluginManager;
+  M: TDllPluginManager;
 begin
   Writeln('[13] ABI 1.0 / 缺 capability gate (task#11 A11-1/A11-2)');
 
