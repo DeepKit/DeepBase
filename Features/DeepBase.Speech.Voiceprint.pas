@@ -39,7 +39,8 @@ type
   // TVoiceProfileId, TVoiceProfileInfo, IVoiceProfileStorage are declared in
   // DeepBase.Speech.Voiceprint.Contracts so the Persistence-layer
   // TDBVoiceProfileStorage can implement them without Features <-> Persistence
-  // coupling. Re-exported here for source-compat.
+  // coupling. Delphi 无传递可见性：使用这些类型的客户端必须自己 uses Contracts，
+  // 只 uses 本单元不会把类型带进作用域。
 
   TVerifyResult = record
     Match: Boolean;

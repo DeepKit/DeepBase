@@ -31,6 +31,7 @@ uses
   System.Math,
   DeepBase.HB.Core,
   DeepBase.HB.Grid.Types,
+  DeepBase.VCL.HB.Controls,
   DeepBase.VCL.HB.Theme;
 
 type
@@ -123,19 +124,6 @@ type
   end;
 
 implementation
-
-function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
-var
-  A, R, G, B: Byte;
-begin
-  A := TAlphaColorRec(AColor).A;
-  R := TAlphaColorRec(AColor).R;
-  G := TAlphaColorRec(AColor).G;
-  B := TAlphaColorRec(AColor).B;
-  if AAlphaOverride > 0 then
-    A := AAlphaOverride;
-  Result := (ARGB(A) shl 24) or (ARGB(R) shl 16) or (ARGB(G) shl 8) or ARGB(B);
-end;
 
 function ScaleDIP(APixels: Single): Single;
 begin

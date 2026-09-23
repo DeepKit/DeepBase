@@ -154,6 +154,8 @@ type
   );
 
   // Grammar load options
+  // 坑：序号与 SAPI 5.4 原生 SPLOADOPTIONS（SPLO_NONE=0/SPLO_STATIC=1/SPLO_DYNAMIC=2）不一致，
+  // 本声明把 DYNAMIC 定在 0；仓内调用点一律按本声明取值，改序号会同时改变这些调用的运行时传参。
   SPLOADOPTIONS = (
     SPLO_DYNAMIC = 0,
     SPLO_STATIC = 1
@@ -375,7 +377,7 @@ type
       Options: SPLOADOPTIONS): HRESULT; stdcall;      // 16
     function Slot17: HRESULT; stdcall;
     function SetRuleState(pszName: PWideChar; pReserved: Pointer;
-      NewState: DWORD): HRESULT; stdcall;             // 18
+      NewState: SPRECOSTATE): HRESULT; stdcall;             // 18
     function Slot19: HRESULT; stdcall;
     function LoadDictation(pszTopicName: PWideChar;
       Options: SPLOADOPTIONS): HRESULT; stdcall;      // 20 VERIFIED

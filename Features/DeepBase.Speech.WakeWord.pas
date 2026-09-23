@@ -262,7 +262,7 @@ begin
     else
     begin
       // Grammar load failed — fall back to dictation mode (degraded, but functional)
-      FGrammar.LoadDictation(nil, 0);
+      FGrammar.LoadDictation(nil, SPLO_DYNAMIC);
       FGrammar.SetDictationState(SPRS_ACTIVE);
     end;
   finally
@@ -277,7 +277,6 @@ var
   LHR: HRESULT;
   LResult: ISpRecoResult;
   LText: PWideChar;
-  LAttr: Byte;
   LRecognized: string;
   LWord: string;
   LConfidence: Single;
@@ -312,13 +311,13 @@ begin
       begin
         if LEvents[I].eEventId <> SPEI_RECOGNITION then
           Continue;
-        if LEvents[I].elParam = nil then
+        if LEvents[I].wParam = 0 then
           Continue;
 
-        // elParam points to ISpRecoResult (SAPI has incremented refcount for this event)
-        LResult := ISpRecoResult(LEvents[I].elParam);
+        // wParam carries the ISpRecoResult* for SPEI_RECOGNITION (SAPI has incremented refcount for this event)
+        LResult := ISpRecoResult(Pointer(LEvents[I].wParam));
         try
-          LHR := LResult.GetText(0, 0, False, LText, LAttr);
+          LHR := LResult.GetText(0, 0, False, LText, nil, nil);
           if Succeeded(LHR) and (LText <> nil) then
           try
             LRecognized := LText;

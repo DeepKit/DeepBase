@@ -61,7 +61,6 @@ type
     procedure CreateParams(var Params: TCreateParams); override;
     procedure Paint; override;
     function CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
-    function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
     function GetParentSurfaceColor: TAlphaColor;
   public
     constructor Create(AOwner: TComponent); override;
@@ -328,21 +327,6 @@ begin
     FElevation := EnsureRange(Value, 0, 3);
     Invalidate;
   end;
-end;
-
-function THbCard.ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte): ARGB;
-var
-  A: Byte;
-begin
-  if AAlphaOverride > 0 then
-    A := AAlphaOverride
-  else
-    A := TAlphaColorRec(AColor).A;
-
-  Result := (A shl 24) or
-            (TAlphaColorRec(AColor).R shl 16) or
-            (TAlphaColorRec(AColor).G shl 8) or
-            TAlphaColorRec(AColor).B;
 end;
 
 function THbCard.CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;

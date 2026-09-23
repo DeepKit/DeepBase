@@ -1,0 +1,54 @@
+WO-20260923-AUDIT-乙-D5 交付前门禁族复跑（原始输出）
+取证时刻: 2026-09-23T08:31:22.427Z   HEAD: e423153
+复算命令: node CodeReview/20260923-AUDIT-乙-D5-证据/d5_final_rerun.js
+说明: 托管拷贝/构建归属两道门在开工前即为红（存量基线外违规），判据 6 要求的是「违规行逐行与开工前一致」，非本次转绿；详见 双树diff-五道门.txt。
+==============================================================================
+
+########## 共享守卫负向样本（gate-skip / gate-baseline）
+$ node 09_工程脚本/test_negative_sample.js 
+EXIT=0
+A2 通过：TestResults/StrayRunner.dpr 被跳过 ⇒ Core/FooOrphan.pas 如实报孤儿
+A2 修前对照通过：旧 11 项 SKIP 口径下 CI 产物把孤儿判成已引用（假绿实锤）
+B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSON/跨门顶替/文件缺失）全部 EXIT=2 拒绝放行
+B 溯源判据生效：无溯源同形基线 EXIT=2
+B 正向对照通过：可信基线正常放行（未过度兜底）
+SHARED-GUARD-TEST: PASS
+
+########## 编码门禁
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js --root .
+EXIT=0
+编码门禁通过：977 个 .pas + 662 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+
+########## 行尾门禁
+$ node 09_工程脚本/eol-gate/check_eol.js --root .
+EXIT=0
+行尾门禁通过：检查了 1486 个文件（.pas CRLF / .md LF），跳过目录 11
+
+########## 证据编码门禁（已跟踪口径）
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js 
+EXIT=0
+证据编码门禁通过：扫描 408 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+
+########## 证据编码门禁（工作树口径，含本单新建证据件）
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --all-worktree
+EXIT=0
+证据编码门禁通过：扫描 449 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+
+########## 托管拷贝门禁
+$ node 09_工程脚本/managed-copy-gate/check_managed_copy.js --root .
+EXIT=1
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+
+########## 构建归属门禁
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .
+EXIT=1
+构建归属门禁失败，违规 3 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)

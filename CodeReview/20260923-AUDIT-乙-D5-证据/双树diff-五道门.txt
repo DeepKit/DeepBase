@@ -1,0 +1,69 @@
+WO-20260923-AUDIT-乙-D5 §三-6 证据：隔离工作树双树 diff（五道门 改前 vs 改后）
+取证时刻: 2026-09-23 16:02:02   工作树: D:/_ProgData/DeepBase-D5-wt @ detached HEAD 72fa744（干净树，无在途件）
+方法: 同一工作树、同一干净检出，只替换 09_工程脚本 下的门禁源码——先跑 HEAD 版（改前），再跑 D5 版（改后），逐行 diff 两份输出。
+      构建归属门默认根为本机绝对路径（README §三 已登记），故两趟都显式 --root . 指向该工作树。
+复算命令:
+  git worktree add --detach D:/_ProgData/DeepBase-D5-wt HEAD
+  cd D:/_ProgData/DeepBase-D5-wt && for g in encoding-gate/check_pas_encoding.js eol-gate/check_eol.js evidence-encoding-gate/check_evidence_encoding.js managed-copy-gate/check_managed_copy.js build-ownership/check_build_ownership.js; do node "09_工程脚本/$g" --root .; done   # 改前
+  # 用主树的 D5 版覆盖 09_工程脚本/{gate-skip,gate-baseline}.js 与五道 check_*.js 后复跑                  # 改后
+
+########## 改前（HEAD 门禁源码）##########
+########## encoding-gate/check_pas_encoding.js
+编码门禁通过：975 个 .pas + 644 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 3）
+EXIT=0
+########## eol-gate/check_eol.js
+行尾门禁通过：检查了 1466 个文件（.pas CRLF / .md LF），跳过目录 3
+EXIT=0
+########## evidence-encoding-gate/check_evidence_encoding.js
+证据编码门禁通过：扫描 211 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+########## managed-copy-gate/check_managed_copy.js
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+EXIT=1
+########## build-ownership/check_build_ownership.js
+构建归属门禁失败，违规 3 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+########## 改后（D5 门禁源码）##########
+########## encoding-gate/check_pas_encoding.js
+编码门禁通过：975 个 .pas + 644 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 3）
+EXIT=0
+########## eol-gate/check_eol.js
+行尾门禁通过：检查了 1466 个文件（.pas CRLF / .md LF），跳过目录 3
+EXIT=0
+########## evidence-encoding-gate/check_evidence_encoding.js
+证据编码门禁通过：扫描 408 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+########## managed-copy-gate/check_managed_copy.js
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+EXIT=1
+########## build-ownership/check_build_ownership.js
+构建归属门禁失败，违规 3 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+########## diff（唯一差异 = 证据门扫描面 211→408；两道的违规行逐行相同）##########
+8c8
+< 证据编码门禁通过：扫描 211 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+---
+> 证据编码门禁通过：扫描 408 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+DIFF_EXIT=1（1=有差异，差异内容见上）
+
+结论: 三道 EXIT=0（编码/行尾/证据编码）；托管拷贝 6 项、构建归属 3 项违规行与开工前逐行一致，diff 中不含任何违规行增删 ⇒ 本单未新增噪声，也未因把 TestResults/ 纳入 SKIP 而暴露出新孤儿。

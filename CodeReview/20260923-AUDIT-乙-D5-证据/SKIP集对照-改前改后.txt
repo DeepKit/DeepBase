@@ -1,0 +1,42 @@
+WO-20260923-AUDIT-乙-D5 §一-2 证据：SKIP 目录名集 改前/改后 逐项对照
+取证时刻: 2026-09-23 15:56:04   HEAD: 72fa744
+复算命令（改前 = HEAD 内的门禁源码；本单改动尚未提交，故 HEAD 即改前状态）:
+  for f in encoding-gate/check_pas_encoding.js eol-gate/check_eol.js evidence-encoding-gate/check_evidence_encoding.js managed-copy-gate/check_managed_copy.js build-ownership/check_build_ownership.js build-gate/check_build.js; do echo "== $f"; git show HEAD:09_工程脚本/$f | grep -n 'const SKIP'; done
+复算命令（改后 = 工作树）: 同上，把 git show HEAD: 换成 cat
+
+########## 改前（HEAD）##########
+== encoding-gate/check_pas_encoding.js
+44:const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+== eol-gate/check_eol.js
+31:const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+== evidence-encoding-gate/check_evidence_encoding.js
+26:const SKIP_DIRS = new Set(['.git', '__history', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+== managed-copy-gate/check_managed_copy.js
+24:const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+== build-ownership/check_build_ownership.js
+22:const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy']);
+== build-gate/check_build.js
+19:const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults', 'Logs']);
+
+########## 改后（工作树）##########
+== encoding-gate/check_pas_encoding.js
+28:const { gateSkipSet } = require('../gate-skip');
+47:const SKIP = gateSkipSet();
+== eol-gate/check_eol.js
+13:const { gateSkipSet } = require('../gate-skip');
+34:const SKIP = gateSkipSet();
+== evidence-encoding-gate/check_evidence_encoding.js
+19:const { gateSkipSet } = require('../gate-skip');
+30:const SKIP_DIRS = gateSkipSet();
+== managed-copy-gate/check_managed_copy.js
+16:const { gateSkipSet } = require('../gate-skip');
+26:const SKIP = gateSkipSet();
+== build-ownership/check_build_ownership.js
+13:const { gateSkipSet } = require('../gate-skip');
+24:const SKIP = gateSkipSet();
+== build-gate/check_build.js
+19:const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults', 'Logs']);
+
+########## 共享集单一真相源 ##########
+node -e "console.log(require('./09_工程脚本/gate-skip').GATE_SKIP_DIRS.join(' '))"
+.git .claude __history BuildOutput DCUOutput bin dcu node_modules .tmp .superpowers .workbuddy TestResults

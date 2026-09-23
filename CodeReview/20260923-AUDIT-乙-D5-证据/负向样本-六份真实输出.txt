@@ -1,0 +1,119 @@
+WO-20260923-AUDIT-乙-D5 §二-3 证据：六份负向样本真实输出（五道门各自 + 共享守卫）
+取证时刻: 2026-09-23 15:59:39   HEAD: 72fa744
+复算命令: for t in 09_工程脚本/test_negative_sample.js 09_工程脚本/{encoding-gate,eol-gate,evidence-encoding-gate,managed-copy-gate,build-ownership}/test_negative_sample.js; do node "$t"; done
+
+########## node 09_工程脚本/test_negative_sample.js ##########
+A2 通过：TestResults/StrayRunner.dpr 被跳过 ⇒ Core/FooOrphan.pas 如实报孤儿
+A2 修前对照通过：旧 11 项 SKIP 口径下 CI 产物把孤儿判成已引用（假绿实锤）
+B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSON/跨门顶替/文件缺失）全部 EXIT=2 拒绝放行
+B 溯源判据生效：无溯源同形基线 EXIT=2
+B 正向对照通过：可信基线正常放行（未过度兜底）
+SHARED-GUARD-TEST: PASS
+EXIT=0
+
+########## node 09_工程脚本/encoding-gate/test_negative_sample.js ##########
+门禁输出（预期包含 6 类违规）:
+编码门禁失败，违规 12 项:
+  G2 扩展面非法UTF-8(GBK/ANSI原始字节): src/Broken.dpr
+  G4 扩展面含NUL/UTF-16/32 BOM(NUL=4): src/Utf16Doc.md
+  G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas
+  G1 U+FFFD 1 > 基线 0: src/Injected.pas
+  G5 孤立CR 1 > 基线 0: src/LoneCr.pas
+  G6 双重编码乱码 2 行 > 基线 0: src/MojibakeOnly.pas
+    └─ G6 样例 L6: const S1 = '鏃ュ織瀵煎嚭';
+    └─ G6 还原: const S1 = '日志导出';
+  G3 缺UTF-8 BOM: src/NoBom.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=1): src/NulIn.pas
+  G3 缺UTF-8 BOM: src/Utf16.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=46): src/Utf16.pas
+
+G6 负样本通过：MojibakeOnly.pas 被 G6 拦下并还原出「日志导出」
+G6 双向留证通过：「修前」对照放行同一文件 ⇒ 确证旧门禁假绿
+负向样本①通过：不存在目录被 fail-closed 拦截
+负向样本②通过：空扫描被 fail-closed 拦截
+决定性判据2通过：--root <存在目录> 真按该目录扫描（1 个 .pas，非全仓 975 量级）
+参数负样本通过(未知参数)：[--rot .] => EXIT=3
+参数负样本通过(已知参数缺值)：[--root] => EXIT=3
+参数负样本通过(裸位置参数)：[stray] => EXIT=3
+参数负样本通过(大小写不符)：[--ROOT /nonexistent] => EXIT=3
+参数负样本通过(值形似参数)：[--root --root] => EXIT=3
+NEGATIVE-TEST: PASS
+EXIT=0
+
+########## node 09_工程脚本/eol-gate/test_negative_sample.js ##########
+门禁输出（预期包含 L1, L2, L3, L4 违规）:
+行尾门禁失败，违规 5 项:
+  L2 .md 文档非预期包含 CR (要求 LF): docs/Bad_CRLF.md
+  L1 .pas 源码非预期纯 LF (要求 CRLF): src/Bad_LF.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=2, lf=2): src/Bad_Mixed.pas
+  L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=4, crlf=0, lf=0): src/Bad_MultiCR.pas
+  L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=1, crlf=2, lf=1): src/Bad_MultiCR_Mixed.pas
+
+负向样本①通过：不存在目录被 fail-closed 拦截
+负向样本②通过：空扫描被 fail-closed 拦截
+参数负样本通过(未知参数)：[--rot .] => EXIT=3
+参数负样本通过(已知参数缺值)：[--root] => EXIT=3
+参数负样本通过(裸位置参数)：[stray] => EXIT=3
+参数负样本通过(大小写不符)：[--ROOT /nonexistent] => EXIT=3
+参数负样本通过(值形似参数)：[--root --root] => EXIT=3
+决定性判据2通过：--root <存在目录> 真按该目录扫描（1 个文件，非全仓量级）
+NEGATIVE-TEST: PASS
+EXIT=0
+
+########## node 09_工程脚本/evidence-encoding-gate/test_negative_sample.js ##########
+门禁输出（预期包含 E1 两类 + E2 一类违规）:
+证据编码门禁失败：扫描 8 个 CodeReview 证据文件，违规 7 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=20, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+
+修前对照通过：旧白名单口径对 build-commands.cmd / scan-list.md / summary.json / raw-console-output 全部视而不见（假绿实锤）
+存量基线（ps-redirect.log=20）命中输出:
+证据编码门禁失败：扫描 8 个 CodeReview 证据文件，违规 6 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+
+存量件 NUL 上升后输出:
+证据编码门禁失败：扫描 8 个 CodeReview 证据文件，违规 7 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=21, 首偏移=3, 存量基线=20)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+
+清理后复跑: 证据编码门禁通过：扫描 1 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+NEGATIVE-TEST: PASS
+EXIT=0
+
+########## node 09_工程脚本/managed-copy-gate/test_negative_sample.js ##########
+门禁输出（预期包含 M1, M2 违规）:
+托管拷贝门禁失败，违规 3 项:
+  M1 Move/托管类型裸拷贝: src/Bad_M1.pas:7
+  M2 未评审的裸内存 Move 调用 (当前 1 > 基线 0): src/Bad_M1.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): src/Bad_M2.pas
+
+正向样本通过：OK
+NEGATIVE-TEST: PASS
+EXIT=0
+
+########## node 09_工程脚本/build-ownership/test_negative_sample.js ##########
+门禁输出（预期包含 O1/O2/O4 违规；O3 因 tmp 无新轨 Manager.pas 文件不适用）:
+构建归属门禁失败，违规 4 项:
+  O2/C2 BLOCK 新轨单元进入生产构建: DeepBase.Plugins.Manager ∈ prod.dpk
+  O4/C2 BLOCK 生产单元引用新轨: Core/Evil.pas -> DeepBase.Plugins.Manager
+  O1 FAIL 新增孤儿单元（不在基线）: Core/Evil.pas (unit Evil)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/FooOrphan.pas (unit FooOrphan)
+
+OWNERSHIP-NEGATIVE-TEST: PASS
+EXIT=0
+

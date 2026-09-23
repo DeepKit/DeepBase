@@ -27,6 +27,7 @@ uses
   DeepBase.Speech.WakeWord,
   DeepBase.Speech.Intent,
   DeepBase.Speech.Voiceprint,
+  DeepBase.Speech.Voiceprint.Contracts,
   DeepBase.Speech.Policy;
 
 var

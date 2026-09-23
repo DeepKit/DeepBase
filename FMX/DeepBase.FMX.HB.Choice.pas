@@ -937,15 +937,15 @@ begin
     BorderColor := AccentColor;
     if not Item.Enabled then
     begin
-      FillColor := ColorToARGB(Tokens.Sunken, Round(160 * DimFactor));
-      BorderColor := ColorToARGB(Tokens.Border, Round(100 * DimFactor));
+      FillColor := HbColorWithAlpha(Tokens.Sunken, Round(160 * DimFactor));
+      BorderColor := HbColorWithAlpha(Tokens.Border, Round(100 * DimFactor));
     end
     else if IsItemHover then
-      FillColor := ColorToARGB(AccentColor, Round(35 * DimFactor))
+      FillColor := HbColorWithAlpha(AccentColor, Round(35 * DimFactor))
     else if Item.IsSelected and (Item.Kind = ckOption) then
-      FillColor := ColorToARGB(AccentColor, Round(25 * DimFactor))
+      FillColor := HbColorWithAlpha(AccentColor, Round(25 * DimFactor))
     else
-      FillColor := ColorToARGB(Tokens.Surface, Round(255 * DimFactor));
+      FillColor := HbColorWithAlpha(Tokens.Surface, Round(255 * DimFactor));
 
     // Draw container card
     Canvas.Fill.Kind := TBrushKind.Solid;
@@ -965,7 +965,7 @@ begin
     end
     else
     begin
-      Canvas.Stroke.Color := ColorToARGB(BorderColor, Round(180 * DimFactor));
+      Canvas.Stroke.Color := HbColorWithAlpha(BorderColor, Round(180 * DimFactor));
       Canvas.Stroke.Thickness := 1.0;
     end;
     Canvas.DrawRect(R, Tokens.RadiusM, Tokens.RadiusM, AllCorners, 1.0);
@@ -976,31 +976,31 @@ begin
     begin
       if Item.IsSelected then
       begin
-        Canvas.Fill.Color := ColorToARGB(AccentColor, Round(220 * DimFactor));
+        Canvas.Fill.Color := HbColorWithAlpha(AccentColor, Round(220 * DimFactor));
         Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
         Canvas.Font.Size := Tokens.SizeS;
         Canvas.Font.Style := [TFontStyle.fsBold];
-        Canvas.Fill.Color := ColorToARGB(Tokens.Surface, Round(255 * DimFactor));
+        Canvas.Fill.Color := HbColorWithAlpha(Tokens.Surface, Round(255 * DimFactor));
         Canvas.FillText(BadgeR, '✓ ' + IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
       end
       else
       begin
-        Canvas.Fill.Color := ColorToARGB(AccentColor, Round(35 * DimFactor));
+        Canvas.Fill.Color := HbColorWithAlpha(AccentColor, Round(35 * DimFactor));
         Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
         Canvas.Font.Size := Tokens.SizeM;
         Canvas.Font.Style := [TFontStyle.fsBold];
-        Canvas.Fill.Color := ColorToARGB(AccentColor, Round(255 * DimFactor));
+        Canvas.Fill.Color := HbColorWithAlpha(AccentColor, Round(255 * DimFactor));
         Canvas.FillText(BadgeR, IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
       end;
     end
     else
     begin
-      Canvas.Fill.Color := ColorToARGB(AccentColor, Round(35 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(AccentColor, Round(35 * DimFactor));
       Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
       Canvas.Font.Size := Tokens.SizeM;
       Canvas.Font.Style := [TFontStyle.fsBold];
-      Canvas.Fill.Color := ColorToARGB(AccentColor, Round(255 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(AccentColor, Round(255 * DimFactor));
       Canvas.FillText(BadgeR, IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
     end;
 
@@ -1013,18 +1013,18 @@ begin
 
       Canvas.Font.Size := Tokens.SizeM;
       Canvas.Font.Style := [];
-      Canvas.Fill.Color := ColorToARGB(Tokens.Ink, Round(255 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.Ink, Round(255 * DimFactor));
       Canvas.FillText(TitleR, Item.Text, False, 1.0, [], TTextAlign.Leading, TTextAlign.Center);
 
       Canvas.Font.Size := Tokens.SizeS;
-      Canvas.Fill.Color := ColorToARGB(Tokens.InkMuted, Round(255 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.InkMuted, Round(255 * DimFactor));
       Canvas.FillText(DescR, Item.Description, False, 1.0, [], TTextAlign.Leading, TTextAlign.Center);
     end
     else
     begin
       Canvas.Font.Size := Tokens.SizeM;
       Canvas.Font.Style := [];
-      Canvas.Fill.Color := ColorToARGB(Tokens.Ink, Round(255 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.Ink, Round(255 * DimFactor));
       Canvas.FillText(TextR, Item.Text, False, 1.0, [], TTextAlign.Leading, TTextAlign.Center);
     end;
 
@@ -1032,16 +1032,16 @@ begin
     if Item.IsRecommended then
     begin
       RecR := RectF(R.Right - 54, R.Top + (R.Height - 20) * 0.5, R.Right - 8, R.Top + (R.Height + 20) * 0.5);
-      Canvas.Fill.Color := ColorToARGB(Tokens.ChoiceRecommended, Round(30 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.ChoiceRecommended, Round(30 * DimFactor));
       Canvas.FillRect(RecR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
-      Canvas.Stroke.Color := ColorToARGB(Tokens.ChoiceRecommended, Round(160 * DimFactor));
+      Canvas.Stroke.Color := HbColorWithAlpha(Tokens.ChoiceRecommended, Round(160 * DimFactor));
       Canvas.Stroke.Thickness := 1.0;
       Canvas.DrawRect(RecR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
       Canvas.Font.Size := Tokens.SizeXS;
       Canvas.Font.Style := [TFontStyle.fsBold];
-      Canvas.Fill.Color := ColorToARGB(Tokens.ChoiceRecommended, Round(255 * DimFactor));
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.ChoiceRecommended, Round(255 * DimFactor));
       Canvas.FillText(RecR, '推荐', False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
     end;
   end;
@@ -1076,9 +1076,9 @@ begin
 
     BorderColor := AccentColor;
     if IsItemHover then
-      FillColor := ColorToARGB(AccentColor, 40)
+      FillColor := HbColorWithAlpha(AccentColor, 40)
     else if Item.IsSelected and (Item.Kind = ckOption) then
-      FillColor := ColorToARGB(AccentColor, 60)
+      FillColor := HbColorWithAlpha(AccentColor, 60)
     else
       FillColor := Tokens.Surface;
 
@@ -1094,7 +1094,7 @@ begin
     end
     else
     begin
-      Canvas.Stroke.Color := ColorToARGB(BorderColor, 180);
+      Canvas.Stroke.Color := HbColorWithAlpha(BorderColor, 180);
       Canvas.Stroke.Thickness := 1.0;
     end;
     Canvas.DrawRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
@@ -1127,7 +1127,7 @@ begin
     if (FHoverIndex = I) or (FSelectedIndex = I) then
     begin
       Canvas.Fill.Kind := TBrushKind.Solid;
-      Canvas.Fill.Color := ColorToARGB(Tokens.Primary, 30);
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.Primary, 30);
       Canvas.FillRect(R, 0, 0, [], 1.0);
     end;
 
@@ -1165,14 +1165,14 @@ begin
 
     Canvas.Fill.Kind := TBrushKind.Solid;
     if (FHoverIndex = I) or (FSelectedIndex = I) or (Item.IsSelected and (Item.Kind = ckOption)) then
-      Canvas.Fill.Color := ColorToARGB(Tokens.ChoiceOption, 40)
+      Canvas.Fill.Color := HbColorWithAlpha(Tokens.ChoiceOption, 40)
     else
       Canvas.Fill.Color := Tokens.Surface;
 
     Canvas.FillRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
     Canvas.Stroke.Kind := TBrushKind.Solid;
-    Canvas.Stroke.Color := ColorToARGB(Tokens.ChoiceOption, 160);
+    Canvas.Stroke.Color := HbColorWithAlpha(Tokens.ChoiceOption, 160);
     Canvas.Stroke.Thickness := 1.0;
     Canvas.DrawRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
@@ -1207,7 +1207,7 @@ begin
 
   BoxR := RectF(16, Height - 42, Width - 16, Height - 8);
   Canvas.Fill.Kind := TBrushKind.Solid;
-  Canvas.Fill.Color := ColorToARGB(Tokens.SurfaceAlt, 240);
+  Canvas.Fill.Color := HbColorWithAlpha(Tokens.SurfaceAlt, 240);
   Canvas.FillRect(BoxR, Tokens.RadiusM, Tokens.RadiusM, AllCorners, 1.0);
 
   Canvas.Font.Family := Tokens.FontFamily;

@@ -116,7 +116,6 @@ type
     procedure EraseBackground(AGraphics: TGPGraphics); virtual;
     procedure DrawFocusRing(AGraphics: TGPGraphics; const ARect: TGPRectF; ARadius: Single);
     function CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
-    function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -399,6 +398,9 @@ type
     property Enabled;
     property Visible;
   end;
+
+// HB VCL 面唯一的 token 色 -> GDI+ ARGB 打包；透明度覆盖语义走 DeepBase.HB.Core.HbColorWithAlpha（SSOT）
+function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
 
 implementation
 
@@ -739,19 +741,15 @@ begin
   Result := THbTheme.GetScaledPixels(AValue, CurrentPPI);
 end;
 
-function THbCustomControl.ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte): ARGB;
+function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte): ARGB;
 var
-  A: Byte;
+  T: TAlphaColor;
 begin
-  if AAlphaOverride > 0 then
-    A := AAlphaOverride
-  else
-    A := TAlphaColorRec(AColor).A;
-
-  Result := (A shl 24) or
-            (TAlphaColorRec(AColor).R shl 16) or
-            (TAlphaColorRec(AColor).G shl 8) or
-            TAlphaColorRec(AColor).B;
+  T := HbColorWithAlpha(AColor, AAlphaOverride);
+  Result := (ARGB(TAlphaColorRec(T).A) shl 24) or
+            (ARGB(TAlphaColorRec(T).R) shl 16) or
+            (ARGB(TAlphaColorRec(T).G) shl 8) or
+            ARGB(TAlphaColorRec(T).B);
 end;
 
 function THbCustomControl.CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;

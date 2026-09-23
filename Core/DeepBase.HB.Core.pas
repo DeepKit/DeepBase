@@ -263,6 +263,8 @@ function CalculateContrastRatio(AColor1, AColor2: TAlphaColor): Double;
 function RelativeLuminance(AColor: TAlphaColor): Double;
 function GetHbSeedColor(const ASeed: string; const ATokens: THbTokens): TAlphaColor;
 function BlendAlphaColor(AColor1, AColor2: TAlphaColor; ARatio: Single): TAlphaColor;
+// HB 面统一的透明度覆盖：AAlphaOverride=0 表示沿用原色 alpha（调用面大量依赖此语义）
+function HbColorWithAlpha(AColor: TAlphaColor; AAlphaOverride: Byte = 0): TAlphaColor;
 
 implementation
 
@@ -1313,6 +1315,21 @@ begin
   B := Round(B1 + (B2 - B1) * ClampedRatio);
 
   Result := (TAlphaColor(A) shl 24) or (TAlphaColor(R) shl 16) or (TAlphaColor(G) shl 8) or TAlphaColor(B);
+end;
+
+function HbColorWithAlpha(AColor: TAlphaColor; AAlphaOverride: Byte): TAlphaColor;
+var
+  R, G, B: Byte;
+begin
+  R := TAlphaColorRec(AColor).R;
+  G := TAlphaColorRec(AColor).G;
+  B := TAlphaColorRec(AColor).B;
+  if AAlphaOverride = 0 then
+    Result := (TAlphaColor(TAlphaColorRec(AColor).A) shl 24) or
+      (TAlphaColor(R) shl 16) or (TAlphaColor(G) shl 8) or TAlphaColor(B)
+  else
+    Result := (TAlphaColor(AAlphaOverride) shl 24) or
+      (TAlphaColor(R) shl 16) or (TAlphaColor(G) shl 8) or TAlphaColor(B);
 end;
 
 end.
