@@ -1086,41 +1086,38 @@ if ($CI -and $IncludeStubApis) {
     }
 }
 
-# REVIEW-P0-001: -IncludeEncoding secondary gate. Under -CI, when the flag
-# is set, scan runtime sources and docs for encoding violations. Hard
-# violations (invalid UTF-8, mojibake) fail the gate; soft violations
-# (BOM presence/absence) are reported as warnings. A known-legacy allow-list
-# (Scripts/encoding-allowlist.txt) downgrades historically corrupted files.
+# Encoding gate. Only one scanner may legislate source/doc encoding: the Node
+# gate under the repo's "09_" script directory. A second gate with a different
+# scan face produces contradictory verdicts, so nothing here re-implements it.
+# That directory name is non-ASCII and this file has no UTF-8 BOM, so Windows
+# PowerShell would mis-decode a literal path and silently skip the gate: the
+# gate is discovered, never spelled. Missing node or missing gate must fail the
+# run -- "did not scan" may never be reported as "clean".
 if ($CI -and $IncludeEncoding) {
     Write-Host ""
     Write-Host "=============================================="
-    Write-Host "   Encoding Gate (REVIEW-P0-001)"
+    Write-Host "   Encoding Gate (check_pas_encoding.js)"
     Write-Host "=============================================="
 
-    $encodingCheckScript = Join-Path $PSScriptRoot "check_encoding.ps1"
-    $encodingReport = Join-Path $OutputPath "EncodingGate.json"
-    $encodingAllowlist = Join-Path $BaseDir "Scripts\encoding-allowlist.txt"
-
-    if (Test-Path $encodingCheckScript) {
-        $encArgs = @(
-            "-ExecutionPolicy", "Bypass",
-            "-File", $encodingCheckScript,
-            "-SourcePath", $BaseDir,
-            "-ReportPath", $encodingReport,
-            "-AllowlistPath", $encodingAllowlist,
-            "-FailOnViolation"
-        )
-        $encProc = Start-Process -FilePath "powershell.exe" `
-            -ArgumentList $encArgs `
-            -Wait -PassThru -NoNewWindow
-        if ($encProc.ExitCode -ne 0) {
+    $encodingGate = $null
+    Get-ChildItem -LiteralPath $BaseDir -Directory -Filter '09_*' -ErrorAction SilentlyContinue | ForEach-Object {
+        $candidate = Join-Path $_.FullName 'encoding-gate\check_pas_encoding.js'
+        if (Test-Path -LiteralPath $candidate) { $encodingGate = $candidate }
+    }
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        $allPassed = $false
+        Write-Host "Encoding Gate: FAILED - node.exe not on PATH; gate did not run" -ForegroundColor Red
+    } elseif (-not $encodingGate) {
+        $allPassed = $false
+        Write-Host "Encoding Gate: FAILED - gate script not found under $BaseDir\09_*; gate did not run" -ForegroundColor Red
+    } else {
+        & node $encodingGate --root $BaseDir
+        if ($LASTEXITCODE -ne 0) {
             $allPassed = $false
-            Write-Host "Encoding Gate: FAILED" -ForegroundColor Red
+            Write-Host "Encoding Gate: FAILED (exit $LASTEXITCODE)" -ForegroundColor Red
         } else {
             Write-Host "Encoding Gate: PASSED" -ForegroundColor Green
         }
-    } else {
-        Write-Host "WARNING: check_encoding.ps1 not found at $encodingCheckScript" -ForegroundColor Yellow
     }
 }
 

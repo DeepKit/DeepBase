@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-19 WO-20260919-AUDIT-乙 B1；来源 CodeReview/_audit_recheck/乙-B1-scan-after.json。loneCr 基线：2026-09-20 WO-20260920-AUDIT-乙-R4 L4；来源 CodeReview/_audit_recheck/乙-R4-schema-text-诊断.txt（全工作树 960 个 .pas 实测，仅 Schema.pas 命中）。bomExceptions 收口：2026-09-20 WO-20260920-AUDIT-乙-R6 N1 移除 2 项 HEAD blob 已含 UTF-8 BOM 的死条目（Governance/DeepBase.Governance.ActionExecutor.pas / Governance/DeepBase.Governance.ReviewQueue.pas），47→45",
+  "generated": "2026-09-19 WO-20260919-AUDIT-乙 B1；来源 CodeReview/_audit_recheck/乙-B1-scan-after.json。loneCr 基线：2026-09-20 WO-20260920-AUDIT-乙-R4 L4；来源 CodeReview/_audit_recheck/乙-R4-schema-text-诊断.txt（全工作树 960 个 .pas 实测，仅 Schema.pas 命中）。bomExceptions 收口：2026-09-20 WO-20260920-AUDIT-乙-R6 N1 移除 2 项 HEAD blob 已含 UTF-8 BOM 的死条目（Governance/DeepBase.Governance.ActionExecutor.pas / Governance/DeepBase.Governance.ReviewQueue.pas），47→45。hardUtf8Exceptions 建基：2026-09-23 WO-20260923-AUDIT-乙-D4 N1.1，旧 Scripts/check_encoding.ps1 的「非 .pas 硬编码违规」独有能力并入本门禁扩展面后实测的 13 件存量损坏（全部 G2 非法 UTF-8，G4 为 0），清一件删一件；来源 CodeReview/20260923-AUDIT-乙-D4-证据/扩展面存量损坏清单.txt",
   "loneCr": {},
   "fffd": {
     "Core/DeepBase.Hotkeys.pas": 128,
@@ -120,5 +120,20 @@
     "Tools/SeedTool/uAntiTamperPackage.pas": 77,
     "Tools/Studio/Studio.Resources.pas": 21
   },
+  "hardUtf8Exceptions": [
+    "Examples/FullDemo/FullDemo.dpr",
+    "Tests/Acceptance/DeepBaseAcceptanceTest.dpr",
+    "Tests/GUI/DeepBaseGUITests.dpr",
+    "Tools/LogAnalyzer/LogAnalyzer.dpr",
+    "Tools/SeedTool/SeedTool.dpr",
+    "Tools/Studio/Studio.dpr",
+    "history.md",
+    "sql/llm_prompts_init.sql",
+    "sql/studio_init.sql",
+    "sql/tier0_init.sql",
+    "sql/tier1_init.sql",
+    "sql/tier2_init.sql",
+    "sql/upgrade_v0.3_schema_fix.sql"
+  ],
   "mojibakeExceptions": []
 }

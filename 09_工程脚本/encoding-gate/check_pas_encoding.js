@@ -1,4 +1,4 @@
-// DeepBase .pas 源码编码门禁（WO-20260919-AUDIT-乙 B1-④；L4 扩展 WO-20260920-AUDIT-乙-R4）
+// DeepBase 源码与文档编码门禁（文件名保留 pas：CI 与本仓文档均以该路径为引用键）
 // 规则：
 //  G1 任何 .pas 禁止引入基线之外的 U+FFFD（按文件计数，超过基线即失败；新文件出现 U+FFFD 即失败）
 //  G2 任何 .pas 必须是合法 UTF-8（禁止 GBK/ANSI 原始字节入库）
@@ -11,6 +11,14 @@
 // G6 任何 .pas 禁止含双重编码乱码（GBK 误读→以 UTF-8 重编码；正文仍是合法 UTF-8，G1/G2 零感知）。
 //     判据: 行内同时满足 (a) 含中日韩表意文字 (b) 该行 GBK→UTF-8 可逆 (c) 含双重编码高频标记字。
 //     典型样本: 「日志导出」→「鏃ュ織瀵煎嚭」。基线 mojibake 按文件计数给存量豁免，新文件出现即失败。
+//
+// 扫描面（本门禁是仓库编码完整性的唯一立法，不允许第二套扫描器并存）：
+//   源码面 .pas                        → G1…G6 全量规则
+//   扩展面 .dpr/.dpk/.dfm/.fmx/.md/.sql → 仅 G2/G4（与扩展名无关的编码完整性）
+// 扩展面刻意不跑其余规则，理由各有一条会被误报撑爆：
+//   · G1/G6：docs 与审计件合法含 U+FFFD（原文就记录了损坏字符），G6 判据对自然语言中文误报率高；
+//   · G3：文档 BOM 口径与 .pas 相反（源码要 BOM，文档不要求）；
+//   · G5：行尾由 eol-gate 唯一立法，此处重复判定即双真源。
 // 用法: node check_pas_encoding.js [--root <dir>] [--baseline <file>]
 // 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
 const fs = require('fs');
@@ -33,7 +41,10 @@ const { parseGateArgs } = require('../gate-args');
   var ROOT = opts.root;
   var BASELINE_P = opts.baseline;
 }
-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy']);
+const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
+// 扩展硬违规面：只跑 G2/G4（见文件头「扫描面」）。目录名与 eol-gate / managed-copy-gate 完全一致，
+// 三道门禁的扫描面差异必须只剩「扩展名」这一个维度，否则「门禁覆盖了什么」永远说不清。
+const EXT_HARD = new Set(['.dpr', '.dpk', '.dfm', '.fmx', '.md', '.sql']);
 // 记录被 SKIP 规则吃掉的顶层目录，让「扫描面缩了什么」可见（WO-20260921-AUDIT-乙-P1 §〇 第 3 条）。
 const skippedDirs = new Set();
 
@@ -49,7 +60,10 @@ function walk(dir, out) {
     if (SKIP.has(e.name)) { skippedDirs.add(e.name); continue; }
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
-    else if (e.isFile() && /\.pas$/i.test(e.name)) out.push(p);
+    else if (e.isFile()) {
+      const ext = path.extname(e.name).toLowerCase();
+      if (ext === '.pas' || EXT_HARD.has(ext)) out.push(p);
+    }
   }
   return out;
 }
@@ -61,6 +75,8 @@ const loneCrAllowed = baseline.loneCr || {};
 const bomExcepts = new Set(baseline.bomExceptions || []);
 const mojibakeAllowed = baseline.mojibake || {};
 const mojibakeExempt = new Set(baseline.mojibakeExceptions || []);
+// 扩展硬违规面（.dpr/.dpk/.dfm/.fmx/.md/.sql）的存量 G2/G4 损坏豁免，清一件删一件。
+const hardUtf8Excepts = new Set(baseline.hardUtf8Exceptions || []);
 const violations = [];
 const files = walk(ROOT, []);
 function countLoneCr(buf) {
@@ -136,11 +152,30 @@ function detectMojibake(line) {
   return back;
 }
 // 空扫描即失败：仓库内必有 .pas；扫到 0 个说明 root 指错或 SKIP 规则吃掉了源码树。
-if (files.length === 0) {
+// 判据用 .pas 面而非全量面：只有 .md 没有 .pas 的 root 同样是「指错了目录」。
+const pasFiles = [], extFiles = [];
+for (const f of files) (path.extname(f).toLowerCase() === '.pas' ? pasFiles : extFiles).push(f);
+if (pasFiles.length === 0) {
   console.error(`编码门禁失败：扫描 0 个 .pas（root=${ROOT}）。根因通常是 --root 指错目录；已按 fail-closed 拒绝放行。`);
   process.exit(3);
 }
-for (const f of files) {
+// ── 扩展硬违规面（仅 G2/G4，口径见文件头「扫描面」）──
+// 只做 G2/G4；存量损坏登记在 baseline.hardUtf8Exceptions，清一件删一件，新增即红。
+for (const f of extFiles) {
+  const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+  if (hardUtf8Excepts.has(rel)) continue;
+  let buf;
+  try { buf = fs.readFileSync(f); } catch (e) {
+    console.error(`G0 读取失败: ${rel} (${e.message})`);
+    process.exit(3);
+  }
+  const nulCount = countByte(buf, 0x00);
+  const u16bom = buf.length >= 2 && ((buf[0] === 0xFF && buf[1] === 0xFE) || (buf[0] === 0xFE && buf[1] === 0xFF));
+  const u32bom = buf.length >= 4 && buf[0] === 0x00 && (buf[1] === 0xFE || buf[1] === 0xFF) && buf[2] === 0x00;
+  if (u16bom || u32bom || nulCount > 0) violations.push(`G4 扩展面含NUL/UTF-16/32 BOM(NUL=${nulCount}): ${rel}`);
+  else if (!validUtf8(buf)) violations.push(`G2 扩展面非法UTF-8(GBK/ANSI原始字节): ${rel}`);
+}
+for (const f of pasFiles) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
   let buf;
   try { buf = fs.readFileSync(f); } catch (e) {
@@ -186,4 +221,4 @@ if (violations.length) {
   violations.slice(0, 50).forEach(v => console.error('  ' + v));
   process.exit(1);
 }
-console.log(`编码门禁通过：${files.length} 个 .pas（基线残留U+FFFD文件 ${Object.keys(allowed).length}，BOM例外 ${bomExcepts.size}，孤立CR基线文件 ${Object.keys(loneCrAllowed).length}，双重编码基线文件 ${Object.keys(mojibakeAllowed).length}，跳过目录 ${skippedDirs.size}）`);
+console.log(`编码门禁通过：${pasFiles.length} 个 .pas + ${extFiles.length} 个扩展面文件（基线残留U+FFFD文件 ${Object.keys(allowed).length}，BOM例外 ${bomExcepts.size}，孤立CR基线文件 ${Object.keys(loneCrAllowed).length}，双重编码基线文件 ${Object.keys(mojibakeAllowed).length}，扩展面存量损坏豁免 ${hardUtf8Excepts.size}，跳过目录 ${skippedDirs.size}）`);

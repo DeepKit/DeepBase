@@ -61,6 +61,14 @@ fs.writeFileSync(path.join(tmp, 'src', 'MojibakeOnly.pas'), Buffer.concat([
 
 const emptyBaseline = path.join(tmp, 'baseline.json');
 fs.writeFileSync(emptyBaseline, JSON.stringify({ fffd: {}, loneCr: {}, bomExceptions: [] }));
+// ── 扩展硬违规面（.dpr/.dpk/.dfm/.fmx/.md/.sql）───────────────────────────────
+// 「非 .pas 文件的编码完整性」只在本门禁立法；没有这组样本，收紧扫描面会悄悄缩小覆盖面。
+// 样本 10：.dpr 含 GBK 原始字节 ⇒ G2 必红；样本 11：.md 为 UTF-16LE ⇒ G4 必红。
+fs.writeFileSync(path.join(tmp, 'src', 'Broken.dpr'), Buffer.concat([Buffer.from('program Broken;\n', 'utf8'), gbkBytes]));
+fs.writeFileSync(path.join(tmp, 'src', 'Utf16Doc.md'), Buffer.concat([Buffer.from([0xFF, 0xFE]), Buffer.from('# 文档\r\n', 'utf16le')]));
+// 样本 12：口径对照——含 UTF-8 BOM 与 U+FFFD 的 .md 必须放行。
+// G1/G3 只立法于 .pas 面（文档合法含 U+FFFD、BOM 口径与源码相反），此样本证明规则不外溢。
+fs.writeFileSync(path.join(tmp, 'src', 'DocWithFffd.md'), Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), Buffer.from('# 记录损坏字符 \uFFFD 的原文\n', 'utf8')]));
 let failed = false;
 try {
   execFileSync(process.execPath, [path.join(HERE, 'check_pas_encoding.js'), '--root', tmp, '--baseline', emptyBaseline], { stdio: 'pipe' });
@@ -77,6 +85,10 @@ try {
   if (!/G3 .*NoBom\.pas/.test(out)) { console.error('G3 未拦截 NoBom.pas（含非 ASCII 且缺 BOM 应报错）'); failed = true; }
   // G3 口径（乙R6-N1）：纯 ASCII + 无 BOM 必须放行，不得出现在任何违规行
   if (out.includes('AsciiNoBom.pas')) { console.error('G3 误报纯 ASCII 件 AsciiNoBom.pas（判据未收窄为「含非 ASCII」）'); failed = true; }
+  // 扩展硬违规面必须真的在扫（非 .pas 文件编码完整性的唯一覆盖来源）
+  if (!/G2 扩展面非法UTF-8.*Broken\.dpr/.test(out)) { console.error('扩展面 G2 失效：.dpr 含 GBK 原始字节未被拦截'); failed = true; }
+  if (!/G4 扩展面含NUL.*Utf16Doc\.md/.test(out)) { console.error('扩展面 G4 失效：UTF-16LE .md 未被拦截'); failed = true; }
+  if (out.includes('DocWithFffd.md')) { console.error('扩展面规则外溢：含 U+FFFD/BOM 的 .md 被 G1/G3 误报（口径应只管 G2/G4）'); failed = true; }
 }
 // WO-20260922-AUDIT-乙-P2 §3.1 验收判据3：G6 负样本「修前假绿 / 修后必红」双向留证。
 // 把 MojibakeOnly.pas 单独隔离成 root：修 G6 之前它必被放行（假绿），修 G6 之后必红。

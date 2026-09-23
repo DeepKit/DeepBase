@@ -71,14 +71,19 @@ These options align with how the DUnitX bootstrap code in `DeepBaseTests.dpr` an
 
 DUnitX supports filtering which tests run via standard command-line options parsed by `TDUnitX.CheckCommandLine`.
 
-To run a single fixture (or a specific test method) from the unit test binary:
+To run a single fixture (or a specific test method), prefer the guarded entry point:
+
+- `powershell -File Scripts\run_tests.ps1 -Type Unit -SkipCompile -Run <FixtureOrTestName>`
+
+The bare binary form below is for interactive diagnosis only — it is **not** a pass/fail signal:
 
 - `& .\Tests\DeepBaseTests.exe --run:<FixtureOrTestName>`
 
 Guidance:
 
-- `<FixtureOrTestName>` must match the `[TestFixture]` class name or a fully-qualified test method name defined in the relevant `Tests/Test.DeepBase.*.pas` file (e.g., a fixture in `Test.DeepBase.Manager.pas`).
+- `<FixtureOrTestName>` must match the `[TestFixture]` class name or a fully-qualified test method name defined in the relevant `Tests/Test.DeepBase.*.pas` file (e.g., a fixture in `Test.DeepBase.Manager.pas`). **Short names do not match**: DUnitX resolves the filter against the registered fixture name, so a truncated or misspelled name silently selects nothing.
 - When you need to run only a portion of the suite, open the target test unit, locate the `[TestFixture]` declaration, and use that name in the `--run:` argument.
+- DUnitX returns process exit code `0` when the filter matches zero tests (实测：`--run:NoSuchFixtureZZZ` ⇒ `Tests Found : 0`、`total="0"`、`EXIT=0`). Never treat the binary's exit code as evidence that a filtered test ran. `run_tests.ps1 -Run` exists precisely to close that hole: it parses the NUnit XML and fails when executed tests < 1.
 
 (If you need more advanced filters such as categories or name patterns, follow the standard DUnitX command-line conventions.)
 
@@ -241,7 +246,7 @@ When you change behavior in Core, UI components, or Tools:
 
 - **Unit tests:** locate the closest `Tests/Test.DeepBase.*.pas` file(s) for the module you are touching (e.g., `Config`, `i18n`, `FormState`, `Logging`, `DB.DoQry`, `Security`, `StateMachine`, etc.). If tests exist, update them; if none exist for that module but the pattern is established, add new DUnitX fixtures aligned with existing style.
 - **Integration/GUI tests:** for high-level flows or UI-visible behavior, check whether there is an appropriate integration or GUI test and extend it where reasonable.
-- After modifications, run `Scripts/run_tests.ps1` with the appropriate `-Type` or run the specific DUnitX executables you affected (using the `--run:` filter when targeting individual fixtures).
+- After modifications, run `Scripts/run_tests.ps1` with the appropriate `-Type`. To target individual fixtures use `run_tests.ps1 -Type Unit -SkipCompile -Run <Fixture>`; see §2.3 for why the bare `--run:` binary form must never be used as the pass/fail evidence.
 
 ### 4.5 How to approach new feature requests
 
