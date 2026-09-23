@@ -1,0 +1,108 @@
+[1/67] DeepBaseRun/DeepBaseRun.dpr CONFIG=DeepBaseRun.dproj BUILD_EXIT=0
+[2/67] DeepFlow/Source/DeepFlow.dpr CONFIG=default BUILD_EXIT=1
+  DeepFlow/Source/DeepFlow.dpr 编译失败：DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+[3/67] Examples/AIErrorHandlerDemo/AIErrorHandlerDemo.dpr CONFIG=AIErrorHandlerDemo.dproj BUILD_EXIT=0
+[4/67] Examples/AutoFixDemo/AutoFixDemo.dpr CONFIG=AutoFixDemo.dproj BUILD_EXIT=0
+[5/67] Examples/DataBindingDemo/DataBindingDemo.dpr CONFIG=default BUILD_EXIT=0
+[6/67] Examples/FMXDemo/FMXPlatformDemo.dpr CONFIG=default BUILD_EXIT=0
+[7/67] Examples/FullDemo/FullDemo.dpr CONFIG=FullDemo.dproj BUILD_EXIT=0
+[8/67] Examples/HbColdStartProbe/HbColdStartProbe.dpr CONFIG=default BUILD_EXIT=0
+[9/67] Examples/HbSnapshotDemo/HbSnapshotDemo.dpr CONFIG=HbSnapshotDemo.dproj BUILD_EXIT=0
+[10/67] Examples/MVVMDemo/MVVMDemo.dpr CONFIG=default BUILD_EXIT=1
+  Examples/MVVMDemo/MVVMDemo.dpr 编译失败：LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+[11/67] Examples/MicroserviceClientDemo/MicroserviceClientDemo.dpr CONFIG=default BUILD_EXIT=0
+[12/67] Examples/MultiLanguageDemo/MultiLanguageDemo.dpr CONFIG=default BUILD_EXIT=1
+  Examples/MultiLanguageDemo/MultiLanguageDemo.dpr 编译失败：MainForm.pas(119) Error: E2052 Unterminated string
+[13/67] Examples/Phase0Demo/Phase0Demo.dpr CONFIG=Phase0Demo.dproj BUILD_EXIT=0
+[14/67] Examples/Phase1Demo/Phase1Demo.dpr CONFIG=default BUILD_EXIT=0
+[15/67] Examples/Templates/CRUDApp/CRUDApp.dpr CONFIG=default BUILD_EXIT=1
+  Examples/Templates/CRUDApp/CRUDApp.dpr 编译失败：Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+[16/67] Examples/Templates/DataAnalyzer/DataAnalyzer.dpr CONFIG=default BUILD_EXIT=1
+  Examples/Templates/DataAnalyzer/DataAnalyzer.dpr 编译失败：DataAnalyzer.dpr(13) Fatal: F1026 File not found: 'Main.Form.pas'
+[17/67] Examples/Templates/DocManager/DocManager.dpr CONFIG=default BUILD_EXIT=1
+  Examples/Templates/DocManager/DocManager.dpr 编译失败：Entity.Document.pas(14) Fatal: F2613 Unit 'DeepBase.ORM.Attributes' not found.
+[18/67] Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr CONFIG=VCLDeepShellDemo.dproj BUILD_EXIT=0
+[19/67] Tests/Acceptance/DeepBaseAcceptanceTest.dpr CONFIG=default BUILD_EXIT=1
+  Tests/Acceptance/DeepBaseAcceptanceTest.dpr 编译失败：AcceptanceRunner.pas(158) Error: E2052 Unterminated string
+[20/67] Tests/Architecture/DeepBaseArchitectureTests.dpr CONFIG=default BUILD_EXIT=0
+[21/67] Tests/AutoFix/Fixtures/AutoFixHarness.dpr CONFIG=AutoFixHarness.dproj BUILD_EXIT=0
+[22/67] Tests/DebugTest.dpr CONFIG=default BUILD_EXIT=0
+[23/67] Tests/DebugTest2.dpr CONFIG=default BUILD_EXIT=0
+[24/67] Tests/DebugTest3.dpr CONFIG=default BUILD_EXIT=0
+[25/67] Tests/DebugTest4.dpr CONFIG=default BUILD_EXIT=0
+[26/67] Tests/DebugTest5.dpr CONFIG=default BUILD_EXIT=0
+[27/67] Tests/DebugTest6.dpr CONFIG=default BUILD_EXIT=0
+[28/67] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0
+[29/67] Tests/FMX/TestFMXPlatformStandalone.dpr CONFIG=default BUILD_EXIT=0
+[30/67] Tests/GUI/DeepBaseGUITests.dpr CONFIG=default BUILD_EXIT=1
+  Tests/GUI/DeepBaseGUITests.dpr 编译失败：DeepBase.GUITest.pas(819) Error: E2029 ')' expected but identifier '?' found
+[31/67] Tests/GUI/PageDriverSmoke.dpr CONFIG=default BUILD_EXIT=1
+  Tests/GUI/PageDriverSmoke.dpr 编译失败：PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+[32/67] Tests/Governance/ConfigRegistrarPBT.dpr CONFIG=default BUILD_EXIT=0
+[33/67] Tests/InferenceTests.dpr CONFIG=default BUILD_EXIT=0
+[34/67] Tests/Integration/DeepBaseIntegrationTests.dpr CONFIG=default BUILD_EXIT=0
+[35/67] Tests/MinimalDUnitX.dpr CONFIG=default BUILD_EXIT=0
+[36/67] Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr CONFIG=default BUILD_EXIT=0
+[37/67] Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr CONFIG=default BUILD_EXIT=0
+[38/67] Tests/Plugins/Fixture/TestPlugin77.dpr CONFIG=default BUILD_EXIT=0
+[39/67] Tests/Plugins/Fixture/TestPluginABI10.dpr CONFIG=default BUILD_EXIT=0
+[40/67] Tests/Plugins/PluginLifecycleHarness.dpr CONFIG=default BUILD_EXIT=1
+  Tests/Plugins/PluginLifecycleHarness.dpr 编译失败：PluginLifecycleHarness.dpr(58) Error: E2003 Undeclared identifier: 'TDeepBasePluginManager'
+[41/67] Tests/SimpleTest.dpr CONFIG=default BUILD_EXIT=0
+[42/67] Tests/Speech/SpeechSpike.dpr CONFIG=default BUILD_EXIT=1
+  Tests/Speech/SpeechSpike.dpr 编译失败：SpeechSpike.dpr(180) Error: E2003 Undeclared identifier: 'TProcessEntry32'
+[43/67] Tests/Speech/TestSpeechHeadless.dpr CONFIG=default BUILD_EXIT=0
+[44/67] Tests/Stress/DeepBaseStressTests.dpr CONFIG=default BUILD_EXIT=1
+  Tests/Stress/DeepBaseStressTests.dpr 编译失败：Stress.Database.pas(170) Error: E2010 Incompatible types: 'FireDAC.Comp.Client.TFDConnection' and 'TObject'
+[45/67] Tests/TestBplR7P4.dpr CONFIG=default BUILD_EXIT=0
+[46/67] Tests/TestCryptoR7P1.dpr CONFIG=default BUILD_EXIT=0
+[47/67] Tests/TestDeepBaseRSA.dpr CONFIG=default BUILD_EXIT=0
+[48/67] Tests/TestGateVerdictAndA8.dpr CONFIG=default BUILD_EXIT=0
+[49/67] Tests/TestLLMClient.dpr CONFIG=default BUILD_EXIT=1
+  Tests/TestLLMClient.dpr 编译失败：TestLLMClient.dpr(35) Error: E2052 Unterminated string
+[50/67] Tests/TestLLMProxyClient.dpr CONFIG=default BUILD_EXIT=0
+[51/67] Tests/TestNetR7P2.dpr CONFIG=default BUILD_EXIT=0
+[52/67] Tests/TestNewModules.dpr CONFIG=default BUILD_EXIT=0
+[53/67] Tests/TestUpdateChainM1.dpr CONFIG=default BUILD_EXIT=0
+[54/67] Tools/CLI/DeepBase.dpr CONFIG=default BUILD_EXIT=0
+[55/67] Tools/Calibration/Calib.Record.dpr CONFIG=default BUILD_EXIT=1
+  Tools/Calibration/Calib.Record.dpr 编译失败：Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+[56/67] Tools/Calibration/Calib.Sweep.dpr CONFIG=default BUILD_EXIT=0
+[57/67] Tools/FMXGallery/hbtheme_fmx_gallery.dpr CONFIG=default BUILD_EXIT=0
+[58/67] Tools/Gallery/hbtheme_gallery.dpr CONFIG=default BUILD_EXIT=1
+  Tools/Gallery/hbtheme_gallery.dpr 编译失败：Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+[59/67] Tools/LogAnalyzer/LogAnalyzer.dpr CONFIG=default BUILD_EXIT=1
+  Tools/LogAnalyzer/LogAnalyzer.dpr 编译失败：LogAnalyzer.MainForm.pas(186) Error: E2052 Unterminated string
+[60/67] Tools/SeedTool/SeedTool.dpr CONFIG=SeedTool.dproj BUILD_EXIT=0
+[61/67] Tools/Studio/DeepBaseStudio.dpr CONFIG=DeepBaseStudio.dproj BUILD_EXIT=1
+  Tools/Studio/DeepBaseStudio.dpr 编译失败：DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+[62/67] Tools/Studio/Studio.dpr CONFIG=Studio.dproj BUILD_EXIT=0
+[63/67] Tools/Tray/DeepBaseTray.dpr CONFIG=default BUILD_EXIT=0
+[64/67] Tools/UniPublisher/DeepPublisher.dpr CONFIG=DeepPublisher.dproj BUILD_EXIT=1
+  Tools/UniPublisher/DeepPublisher.dpr 编译失败：Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+[65/67] Tools/UpdaterHelper/UpdaterHelper.dpr CONFIG=default BUILD_EXIT=0
+[66/67] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=1
+  doQry/examples/DoQryDemo/DoQryDemo.dpr 编译失败：DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+[67/67] doQry/prjDoQry.dpr CONFIG=prjDoQry.dproj BUILD_EXIT=0
+编译门禁统计：DPR总数=67 成功=48 失败=19 被跳过=0 失败子路径=0 .res生成=21 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：19 个 .dpr 编译不过
+  DeepFlow/Source/DeepFlow.dpr EXIT=1  DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+  Examples/MVVMDemo/MVVMDemo.dpr EXIT=1  LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+  Examples/MultiLanguageDemo/MultiLanguageDemo.dpr EXIT=1  MainForm.pas(119) Error: E2052 Unterminated string
+  Examples/Templates/CRUDApp/CRUDApp.dpr EXIT=1  Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+  Examples/Templates/DataAnalyzer/DataAnalyzer.dpr EXIT=1  DataAnalyzer.dpr(13) Fatal: F1026 File not found: 'Main.Form.pas'
+  Examples/Templates/DocManager/DocManager.dpr EXIT=1  Entity.Document.pas(14) Fatal: F2613 Unit 'DeepBase.ORM.Attributes' not found.
+  Tests/Acceptance/DeepBaseAcceptanceTest.dpr EXIT=1  AcceptanceRunner.pas(158) Error: E2052 Unterminated string
+  Tests/GUI/DeepBaseGUITests.dpr EXIT=1  DeepBase.GUITest.pas(819) Error: E2029 ')' expected but identifier '?' found
+  Tests/GUI/PageDriverSmoke.dpr EXIT=1  PageDriverSmoke.dpr(20) Fatal: F2613 Unit 'uWVLoader' not found.
+  Tests/Plugins/PluginLifecycleHarness.dpr EXIT=1  PluginLifecycleHarness.dpr(58) Error: E2003 Undeclared identifier: 'TDeepBasePluginManager'
+  Tests/Speech/SpeechSpike.dpr EXIT=1  SpeechSpike.dpr(180) Error: E2003 Undeclared identifier: 'TProcessEntry32'
+  Tests/Stress/DeepBaseStressTests.dpr EXIT=1  Stress.Database.pas(170) Error: E2010 Incompatible types: 'FireDAC.Comp.Client.TFDConnection' and 'TObject'
+  Tests/TestLLMClient.dpr EXIT=1  TestLLMClient.dpr(35) Error: E2052 Unterminated string
+  Tools/Calibration/Calib.Record.dpr EXIT=1  Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+  Tools/Gallery/hbtheme_gallery.dpr EXIT=1  Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+  Tools/LogAnalyzer/LogAnalyzer.dpr EXIT=1  LogAnalyzer.MainForm.pas(186) Error: E2052 Unterminated string
+  Tools/Studio/DeepBaseStudio.dpr EXIT=1  DeepBaseStudio.dpr(31) Error: E2003 Undeclared identifier: 'TStudioMainForm'
+  Tools/UniPublisher/DeepPublisher.dpr EXIT=1  Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+  doQry/examples/DoQryDemo/DoQryDemo.dpr EXIT=1  DoQryDemo.dpr(31) Fatal: F2613 Unit 'DBClient' not found.
+BUILD_EXIT=1

@@ -1,0 +1,1555 @@
+==============================================================================
+##### Examples/MultiLanguageDemo/MainForm.pas   编译门首个报错行 L119   工作树 BOM=有
+  base 7516962d 标记计数 U+FFFD=0 `?`=0（=> 该祖先编码干净，可作补回依据）
+  L113 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Welcome', 'zh-CN', '娆㈣繋');
+    补回后     |     UB.I18n.AddTranslation('Welcome', 'zh-CN', '欢迎');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Welcome', 'zh-CN', '欢迎');
+    骨架 cur |     UB.I18n.AddTranslation('Welcome', 'zh-CN', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Welcome', 'zh-CN', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L114 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Hello', 'zh-CN', '浣犲ソ');
+    补回后     |     UB.I18n.AddTranslation('Hello', 'zh-CN', '你好');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Hello', 'zh-CN', '你好');
+    骨架 cur |     UB.I18n.AddTranslation('Hello', 'zh-CN', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Hello', 'zh-CN', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L115 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Save', 'zh-CN', '淇濆瓨');
+    补回后     |     UB.I18n.AddTranslation('Save', 'zh-CN', '保存');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Save', 'zh-CN', '保存');
+    骨架 cur |     UB.I18n.AddTranslation('Save', 'zh-CN', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Save', 'zh-CN', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L116 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Cancel', 'zh-CN', '鍙栨秷');
+    补回后     |     UB.I18n.AddTranslation('Cancel', 'zh-CN', '取消');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Cancel', 'zh-CN', '取消');
+    骨架 cur |     UB.I18n.AddTranslation('Cancel', 'zh-CN', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Cancel', 'zh-CN', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L117 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Open File', 'zh-CN', '鎵撳紑鏂囦欢');
+    补回后     |     UB.I18n.AddTranslation('Open File', 'zh-CN', '打开文件');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Open File', 'zh-CN', '打开文件');
+    骨架 cur |     UB.I18n.AddTranslation('Open File', 'zh-CN', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Open File', 'zh-CN', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L118 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Settings', 'zh-CN', '璁剧疆');
+    补回后     |     UB.I18n.AddTranslation('Settings', 'zh-CN', '设置');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Settings', 'zh-CN', '设置');
+    骨架 cur |     UB.I18n.AddTranslation('Settings', 'zh-CN', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Settings', 'zh-CN', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L119 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '浣犲ソ锛?s锛佷綘浠婂勾 %d 宀併€?);
+    补回后     |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '你好，%s！你今年 %d 岁。');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '你好�?s！你今年 %d 岁�?);
+    骨架 cur |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', 's %d );
+    骨架 补回 |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '%s %d ');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L120 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 涓」鐩?);
+    补回后     |     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 个项目');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 个项�?);
+    骨架 cur |     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d );
+    骨架 补回 |     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d ');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L121 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 涓」鐩?);
+    补回后     |     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 个项目');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 个项�?);
+    骨架 cur |     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d );
+    骨架 补回 |     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d ');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L124 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Welcome', 'ja-JP', '銈堛亞銇撱仢');
+    补回后     |     UB.I18n.AddTranslation('Welcome', 'ja-JP', 'ようこそ');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Welcome', 'ja-JP', 'ようこそ');
+    骨架 cur |     UB.I18n.AddTranslation('Welcome', 'ja-JP', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Welcome', 'ja-JP', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L125 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Hello', 'ja-JP', '銇撱倱銇仭銇?);
+    补回后     |     UB.I18n.AddTranslation('Hello', 'ja-JP', 'こんにちは');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Hello', 'ja-JP', 'こんにち�?);
+    骨架 cur |     UB.I18n.AddTranslation('Hello', 'ja-JP', ');
+    骨架 补回 |     UB.I18n.AddTranslation('Hello', 'ja-JP', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L126 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Save', 'ja-JP', '淇濆瓨');
+    补回后     |     UB.I18n.AddTranslation('Save', 'ja-JP', '保存');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Save', 'ja-JP', '保存');
+    骨架 cur |     UB.I18n.AddTranslation('Save', 'ja-JP', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Save', 'ja-JP', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L127 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Cancel', 'ja-JP', '銈儯銉炽偦銉?);
+    补回后     |     UB.I18n.AddTranslation('Cancel', 'ja-JP', 'キャンセル');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Cancel', 'ja-JP', 'キャンセ�?);
+    骨架 cur |     UB.I18n.AddTranslation('Cancel', 'ja-JP', ');
+    骨架 补回 |     UB.I18n.AddTranslation('Cancel', 'ja-JP', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L128 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Open File', 'ja-JP', '銉曘偂銈ゃ儷銈掗枊銇?);
+    补回后     |     UB.I18n.AddTranslation('Open File', 'ja-JP', 'ファイルを開く');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Open File', 'ja-JP', 'ファイルを開�?);
+    骨架 cur |     UB.I18n.AddTranslation('Open File', 'ja-JP', ');
+    骨架 补回 |     UB.I18n.AddTranslation('Open File', 'ja-JP', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L129 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Settings', 'ja-JP', '瑷畾');
+    补回后     |     UB.I18n.AddTranslation('Settings', 'ja-JP', '設定');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Settings', 'ja-JP', '設定');
+    骨架 cur |     UB.I18n.AddTranslation('Settings', 'ja-JP', '');
+    骨架 补回 |     UB.I18n.AddTranslation('Settings', 'ja-JP', '');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L130 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', '銇撱倱銇仭銇€?s銇曘倱锛併亗銇仧銇?d姝炽仹銇欍€?);
+    补回后     |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'こんにちは、%sさん！あなたは%d歳です。');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'こんにちは�?sさん！あなた�?d歳です�?);
+    骨架 cur |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'sd);
+    骨架 补回 |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', '%s%d');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L131 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d 銈€偆銉嗐儬');
+    补回后     |     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d アイテム');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d アイテム');
+    骨架 cur |     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d ');
+    骨架 补回 |     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d ');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L132 REPAIR [AFTERMATH_EDIT]
+    补回前     |     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d 銈€偆銉嗐儬');
+    补回后     |     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d アイテム');
+    mid(ca3364ee)|     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d アイテム');
+    骨架 cur |     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d ');
+    骨架 补回 |     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d ');
+    依据    | 7516962d(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  SAME      256
+  REPAIR    18
+  MISMATCH  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=18
+  => 已写入（18 行补回，其余 256 行字节不动）；写后自检 BOM=保 U+FFFD=0
+==============================================================================
+##### Tests/Acceptance/AcceptanceRunner.pas   编译门首个报错行 L158   工作树 BOM=有
+  base 42664177 标记计数 U+FFFD=0 `?`=0（=> 该祖先编码干净，可作补回依据）
+  L2 REPAIR [AFTERMATH_EDIT]
+    补回前     |   AcceptanceRunner - 楠屾敹娴嬭瘯杩愯鍣?
+    补回后     |   AcceptanceRunner - 验收测试运行器
+    mid(ca3364ee)|   AcceptanceRunner - 验收测试运行�?
+    骨架 cur |   AcceptanceRunner - 
+    骨架 补回 |   AcceptanceRunner - 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L4 REPAIR [AFTERMATH_EDIT]
+    补回前     |   鐗堟湰: 1.0
+    补回后     |   版本: 1.0
+    mid(ca3364ee)|   版本: 1.0
+    骨架 cur |   : 1.0
+    骨架 补回 |   : 1.0
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L5 REPAIR [AFTERMATH_EDIT]
+    补回前     |   璇存槑: 鎵ц鍚勯樁娈甸獙鏀舵祴璇曠殑鏍稿績閫昏緫
+    补回后     |   说明: 执行各阶段验收测试的核心逻辑
+    mid(ca3364ee)|   说明: 执行各阶段验收测试的核心逻辑
+    骨架 cur |   : 
+    骨架 补回 |   : 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L64 REPAIR [AFTERMATH_EDIT]
+    补回前     |     // 鍚勯樁娈垫祴璇曟柟娉?
+    补回后     |     // 各阶段测试方法
+    mid(ca3364ee)|     // 各阶段测试方�?
+    骨架 cur |     // 
+    骨架 补回 |     // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L133 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 鍚戜笂涓ょ骇鍒伴」鐩牴鐩綍
+    补回后     |   // 向上两级到项目根目录
+    mid(ca3364ee)|   // 向上两级到项目根目录
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L156 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗竴闃舵: 鏂囨。涓庢灦鏋勫鏌?==========
+    补回后     |   // ========== 第一阶段: 文档与架构审查 ==========
+    mid(ca3364ee)|   // ========== 第一阶段: 文档与架构审�?==========
+    骨架 cur |   // ========== : ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L158 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P1-001'; T.Name := 'README.md 瀹屾暣鎬?; T.Phase := 1;
+    补回后     |   T.ID := 'P1-001'; T.Name := 'README.md 完整性'; T.Phase := 1;
+    mid(ca3364ee)|   T.ID := 'P1-001'; T.Name := 'README.md 完整�?; T.Phase := 1;
+    骨架 cur |   T.ID := 'P1-001'; T.Name := 'README.md ; T.Phase := 1;
+    骨架 补回 |   T.ID := 'P1-001'; T.Name := 'README.md '; T.Phase := 1;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L159 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '妫€鏌?README.md 鍖呭惈瀹夎銆侀厤缃€佸揩閫熷紑濮?;
+    补回后     |   T.Description := '检查 README.md 包含安装、配置、快速开始';
+    mid(ca3364ee)|   T.Description := '检�?README.md 包含安装、配置、快速开�?;
+    骨架 cur |   T.Description := 'README.md ;
+    骨架 补回 |   T.Description := ' README.md ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L164 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P1-002'; T.Name := 'CHANGELOG.md 瀛樺湪'; T.Phase := 1;
+    补回后     |   T.ID := 'P1-002'; T.Name := 'CHANGELOG.md 存在'; T.Phase := 1;
+    mid(ca3364ee)|   T.ID := 'P1-002'; T.Name := 'CHANGELOG.md 存在'; T.Phase := 1;
+    骨架 cur |   T.ID := 'P1-002'; T.Name := 'CHANGELOG.md '; T.Phase := 1;
+    骨架 补回 |   T.ID := 'P1-002'; T.Name := 'CHANGELOG.md '; T.Phase := 1;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L165 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '妫€鏌?CHANGELOG.md 璁板綍鐗堟湰鍙樻洿';
+    补回后     |   T.Description := '检查 CHANGELOG.md 记录版本变更';
+    mid(ca3364ee)|   T.Description := '检�?CHANGELOG.md 记录版本变更';
+    骨架 cur |   T.Description := 'CHANGELOG.md ';
+    骨架 补回 |   T.Description := ' CHANGELOG.md ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L170 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P1-003'; T.Name := '妯″潡渚濊禆妫€鏌?; T.Phase := 1;
+    补回后     |   T.ID := 'P1-003'; T.Name := '模块依赖检查'; T.Phase := 1;
+    mid(ca3364ee)|   T.ID := 'P1-003'; T.Name := '模块依赖检�?; T.Phase := 1;
+    骨架 cur |   T.ID := 'P1-003'; T.Name := '; T.Phase := 1;
+    骨架 补回 |   T.ID := 'P1-003'; T.Name := ''; T.Phase := 1;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L171 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '妫€鏌ユ棤寰幆渚濊禆';
+    补回后     |   T.Description := '检查无循环依赖';
+    mid(ca3364ee)|   T.Description := '检查无循环依赖';
+    骨架 cur |   T.Description := '';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L175 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗簩闃舵: 闈欐€佷唬鐮佸垎鏋?==========
+    补回后     |   // ========== 第二阶段: 静态代码分析 ==========
+    mid(ca3364ee)|   // ========== 第二阶段: 静态代码分�?==========
+    骨架 cur |   // ========== : ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L177 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P2-001'; T.Name := 'Win32 缂栬瘧'; T.Phase := 2;
+    补回后     |   T.ID := 'P2-001'; T.Name := 'Win32 编译'; T.Phase := 2;
+    mid(ca3364ee)|   T.ID := 'P2-001'; T.Name := 'Win32 编译'; T.Phase := 2;
+    骨架 cur |   T.ID := 'P2-001'; T.Name := 'Win32 '; T.Phase := 2;
+    骨架 补回 |   T.ID := 'P2-001'; T.Name := 'Win32 '; T.Phase := 2;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L178 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '缂栬瘧 Win32 鐗堟湰锛岄浂閿欒闆惰鍛?;
+    补回后     |   T.Description := '编译 Win32 版本，零错误零警告';
+    mid(ca3364ee)|   T.Description := '编译 Win32 版本，零错误零警�?;
+    骨架 cur |   T.Description := ' Win32 ;
+    骨架 补回 |   T.Description := ' Win32 ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L183 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P2-002'; T.Name := 'Win64 缂栬瘧'; T.Phase := 2;
+    补回后     |   T.ID := 'P2-002'; T.Name := 'Win64 编译'; T.Phase := 2;
+    mid(ca3364ee)|   T.ID := 'P2-002'; T.Name := 'Win64 编译'; T.Phase := 2;
+    骨架 cur |   T.ID := 'P2-002'; T.Name := 'Win64 '; T.Phase := 2;
+    骨架 补回 |   T.ID := 'P2-002'; T.Name := 'Win64 '; T.Phase := 2;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L184 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '缂栬瘧 Win64 鐗堟湰锛岄浂閿欒闆惰鍛?;
+    补回后     |   T.Description := '编译 Win64 版本，零错误零警告';
+    mid(ca3364ee)|   T.Description := '编译 Win64 版本，零错误零警�?;
+    骨架 cur |   T.Description := ' Win64 ;
+    骨架 补回 |   T.Description := ' Win64 ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L189 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P2-003'; T.Name := '鏃?TODO/FIXME'; T.Phase := 2;
+    补回后     |   T.ID := 'P2-003'; T.Name := '无 TODO/FIXME'; T.Phase := 2;
+    mid(ca3364ee)|   T.ID := 'P2-003'; T.Name := '�?TODO/FIXME'; T.Phase := 2;
+    骨架 cur |   T.ID := 'P2-003'; T.Name := 'TODO/FIXME'; T.Phase := 2;
+    骨架 补回 |   T.ID := 'P2-003'; T.Name := ' TODO/FIXME'; T.Phase := 2;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L190 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '妫€鏌ヤ唬鐮佷腑鏃犳湭瀹屾垚鐨?TODO/FIXME';
+    补回后     |   T.Description := '检查代码中无未完成的 TODO/FIXME';
+    mid(ca3364ee)|   T.Description := '检查代码中无未完成�?TODO/FIXME';
+    骨架 cur |   T.Description := 'TODO/FIXME';
+    骨架 补回 |   T.Description := ' TODO/FIXME';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L195 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P2-004'; T.Name := '鏃犵‖缂栫爜瀵嗛挜'; T.Phase := 2;
+    补回后     |   T.ID := 'P2-004'; T.Name := '无硬编码密钥'; T.Phase := 2;
+    mid(ca3364ee)|   T.ID := 'P2-004'; T.Name := '无硬编码密钥'; T.Phase := 2;
+    骨架 cur |   T.ID := 'P2-004'; T.Name := ''; T.Phase := 2;
+    骨架 补回 |   T.ID := 'P2-004'; T.Name := ''; T.Phase := 2;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L196 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '妫€鏌ユ棤纭紪鐮佺殑瀵嗛挜鎴栧瘑鐮?;
+    补回后     |   T.Description := '检查无硬编码的密钥或密码';
+    mid(ca3364ee)|   T.Description := '检查无硬编码的密钥或密�?;
+    骨架 cur |   T.Description := ';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L200 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗笁闃舵: 鍗曞厓娴嬭瘯楠岃瘉 ==========
+    补回后     |   // ========== 第三阶段: 单元测试验证 ==========
+    mid(ca3364ee)|   // ========== 第三阶段: 单元测试验证 ==========
+    骨架 cur |   // ========== :  ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L202 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P3-001'; T.Name := '鍗曞厓娴嬭瘯鎵ц'; T.Phase := 3;
+    补回后     |   T.ID := 'P3-001'; T.Name := '单元测试执行'; T.Phase := 3;
+    mid(ca3364ee)|   T.ID := 'P3-001'; T.Name := '单元测试执行'; T.Phase := 3;
+    骨架 cur |   T.ID := 'P3-001'; T.Name := ''; T.Phase := 3;
+    骨架 补回 |   T.ID := 'P3-001'; T.Name := ''; T.Phase := 3;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L203 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '杩愯鎵€鏈夊崟鍏冩祴璇?;
+    补回后     |   T.Description := '运行所有单元测试';
+    mid(ca3364ee)|   T.Description := '运行所有单元测�?;
+    骨架 cur |   T.Description := ';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L208 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P3-002'; T.Name := '娴嬭瘯瑕嗙洊鐜?; T.Phase := 3;
+    补回后     |   T.ID := 'P3-002'; T.Name := '测试覆盖率'; T.Phase := 3;
+    mid(ca3364ee)|   T.ID := 'P3-002'; T.Name := '测试覆盖�?; T.Phase := 3;
+    骨架 cur |   T.ID := 'P3-002'; T.Name := '; T.Phase := 3;
+    骨架 补回 |   T.ID := 'P3-002'; T.Name := ''; T.Phase := 3;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L209 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '妫€鏌ユ祴璇曡鐩栫巼 >= 80%';
+    补回后     |   T.Description := '检查测试覆盖率 >= 80%';
+    mid(ca3364ee)|   T.Description := '检查测试覆盖率 >= 80%';
+    骨架 cur |   T.Description := ' >= 80%';
+    骨架 补回 |   T.Description := ' >= 80%';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L213 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗洓闃舵: 闆嗘垚娴嬭瘯 ==========
+    补回后     |   // ========== 第四阶段: 集成测试 ==========
+    mid(ca3364ee)|   // ========== 第四阶段: 集成测试 ==========
+    骨架 cur |   // ========== :  ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L215 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P4-001'; T.Name := '闆嗘垚娴嬭瘯鎵ц'; T.Phase := 4;
+    补回后     |   T.ID := 'P4-001'; T.Name := '集成测试执行'; T.Phase := 4;
+    mid(ca3364ee)|   T.ID := 'P4-001'; T.Name := '集成测试执行'; T.Phase := 4;
+    骨架 cur |   T.ID := 'P4-001'; T.Name := ''; T.Phase := 4;
+    骨架 补回 |   T.ID := 'P4-001'; T.Name := ''; T.Phase := 4;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L216 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '杩愯鎵€鏈夐泦鎴愭祴璇?;
+    补回后     |   T.Description := '运行所有集成测试';
+    mid(ca3364ee)|   T.Description := '运行所有集成测�?;
+    骨架 cur |   T.Description := ';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L221 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P4-002'; T.Name := '鍘嬪姏娴嬭瘯'; T.Phase := 4;
+    补回后     |   T.ID := 'P4-002'; T.Name := '压力测试'; T.Phase := 4;
+    mid(ca3364ee)|   T.ID := 'P4-002'; T.Name := '压力测试'; T.Phase := 4;
+    骨架 cur |   T.ID := 'P4-002'; T.Name := ''; T.Phase := 4;
+    骨架 补回 |   T.ID := 'P4-002'; T.Name := ''; T.Phase := 4;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L222 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '杩愯鍘嬪姏娴嬭瘯锛岄獙璇佺ǔ瀹氭€?;
+    补回后     |   T.Description := '运行压力测试，验证稳定性';
+    mid(ca3364ee)|   T.Description := '运行压力测试，验证稳定�?;
+    骨架 cur |   T.Description := ';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L226 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗簲闃舵: 瀹夊叏涓撻」娴嬭瘯 ==========
+    补回后     |   // ========== 第五阶段: 安全专项测试 ==========
+    mid(ca3364ee)|   // ========== 第五阶段: 安全专项测试 ==========
+    骨架 cur |   // ========== :  ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L228 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P5-001'; T.Name := '鍔犲瘑妯″潡楠岃瘉'; T.Phase := 5;
+    补回后     |   T.ID := 'P5-001'; T.Name := '加密模块验证'; T.Phase := 5;
+    mid(ca3364ee)|   T.ID := 'P5-001'; T.Name := '加密模块验证'; T.Phase := 5;
+    骨架 cur |   T.ID := 'P5-001'; T.Name := ''; T.Phase := 5;
+    骨架 补回 |   T.ID := 'P5-001'; T.Name := ''; T.Phase := 5;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L229 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '楠岃瘉 AES-256, RSA, HMAC 瀹炵幇';
+    补回后     |   T.Description := '验证 AES-256, RSA, HMAC 实现';
+    mid(ca3364ee)|   T.Description := '验证 AES-256, RSA, HMAC 实现';
+    骨架 cur |   T.Description := ' AES-256, RSA, HMAC ';
+    骨架 补回 |   T.Description := ' AES-256, RSA, HMAC ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L234 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P5-002'; T.Name := '鏀粯绛惧悕楠岃瘉'; T.Phase := 5;
+    补回后     |   T.ID := 'P5-002'; T.Name := '支付签名验证'; T.Phase := 5;
+    mid(ca3364ee)|   T.ID := 'P5-002'; T.Name := '支付签名验证'; T.Phase := 5;
+    骨架 cur |   T.ID := 'P5-002'; T.Name := ''; T.Phase := 5;
+    骨架 补回 |   T.ID := 'P5-002'; T.Name := ''; T.Phase := 5;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L235 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '楠岃瘉寰俊/Stripe/鏀粯瀹濈鍚?;
+    补回后     |   T.Description := '验证微信/Stripe/支付宝签名';
+    mid(ca3364ee)|   T.Description := '验证微信/Stripe/支付宝签�?;
+    骨架 cur |   T.Description := '/Stripe/;
+    骨架 补回 |   T.Description := '/Stripe/';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L240 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P5-003'; T.Name := 'Webhook 瀹夊叏'; T.Phase := 5;
+    补回后     |   T.ID := 'P5-003'; T.Name := 'Webhook 安全'; T.Phase := 5;
+    mid(ca3364ee)|   T.ID := 'P5-003'; T.Name := 'Webhook 安全'; T.Phase := 5;
+    骨架 cur |   T.ID := 'P5-003'; T.Name := 'Webhook '; T.Phase := 5;
+    骨架 补回 |   T.ID := 'P5-003'; T.Name := 'Webhook '; T.Phase := 5;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L241 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '楠岃瘉 Webhook 绛惧悕楠岃瘉';
+    补回后     |   T.Description := '验证 Webhook 签名验证';
+    mid(ca3364ee)|   T.Description := '验证 Webhook 签名验证';
+    骨架 cur |   T.Description := ' Webhook ';
+    骨架 补回 |   T.Description := ' Webhook ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L245 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗叚闃舵: 鍏煎鎬ф祴璇?==========
+    补回后     |   // ========== 第六阶段: 兼容性测试 ==========
+    mid(ca3364ee)|   // ========== 第六阶段: 兼容性测�?==========
+    骨架 cur |   // ========== : ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L247 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P6-001'; T.Name := 'Delphi 11 鍏煎'; T.Phase := 6;
+    补回后     |   T.ID := 'P6-001'; T.Name := 'Delphi 11 兼容'; T.Phase := 6;
+    mid(ca3364ee)|   T.ID := 'P6-001'; T.Name := 'Delphi 11 兼容'; T.Phase := 6;
+    骨架 cur |   T.ID := 'P6-001'; T.Name := 'Delphi 11 '; T.Phase := 6;
+    骨架 补回 |   T.ID := 'P6-001'; T.Name := 'Delphi 11 '; T.Phase := 6;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L248 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '鍦?Delphi 11 Alexandria 缂栬瘧娴嬭瘯';
+    补回后     |   T.Description := '在 Delphi 11 Alexandria 编译测试';
+    mid(ca3364ee)|   T.Description := '�?Delphi 11 Alexandria 编译测试';
+    骨架 cur |   T.Description := 'Delphi 11 Alexandria ';
+    骨架 补回 |   T.Description := ' Delphi 11 Alexandria ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L253 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P6-002'; T.Name := 'Delphi 12 鍏煎'; T.Phase := 6;
+    补回后     |   T.ID := 'P6-002'; T.Name := 'Delphi 12 兼容'; T.Phase := 6;
+    mid(ca3364ee)|   T.ID := 'P6-002'; T.Name := 'Delphi 12 兼容'; T.Phase := 6;
+    骨架 cur |   T.ID := 'P6-002'; T.Name := 'Delphi 12 '; T.Phase := 6;
+    骨架 补回 |   T.ID := 'P6-002'; T.Name := 'Delphi 12 '; T.Phase := 6;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L254 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '鍦?Delphi 12 Athens 缂栬瘧娴嬭瘯';
+    补回后     |   T.Description := '在 Delphi 12 Athens 编译测试';
+    mid(ca3364ee)|   T.Description := '�?Delphi 12 Athens 编译测试';
+    骨架 cur |   T.Description := 'Delphi 12 Athens ';
+    骨架 补回 |   T.Description := ' Delphi 12 Athens ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L258 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗竷闃舵: 绀轰緥椤圭洰楠岃瘉 ==========
+    补回后     |   // ========== 第七阶段: 示例项目验证 ==========
+    mid(ca3364ee)|   // ========== 第七阶段: 示例项目验证 ==========
+    骨架 cur |   // ========== :  ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L260 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P7-001'; T.Name := '绀轰緥椤圭洰缂栬瘧'; T.Phase := 7;
+    补回后     |   T.ID := 'P7-001'; T.Name := '示例项目编译'; T.Phase := 7;
+    mid(ca3364ee)|   T.ID := 'P7-001'; T.Name := '示例项目编译'; T.Phase := 7;
+    骨架 cur |   T.ID := 'P7-001'; T.Name := ''; T.Phase := 7;
+    骨架 补回 |   T.ID := 'P7-001'; T.Name := ''; T.Phase := 7;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L261 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '缂栬瘧鎵€鏈夌ず渚嬮」鐩?;
+    补回后     |   T.Description := '编译所有示例项目';
+    mid(ca3364ee)|   T.Description := '编译所有示例项�?;
+    骨架 cur |   T.Description := ';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L266 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P7-002'; T.Name := '绀轰緥椤圭洰杩愯'; T.Phase := 7;
+    补回后     |   T.ID := 'P7-002'; T.Name := '示例项目运行'; T.Phase := 7;
+    mid(ca3364ee)|   T.ID := 'P7-002'; T.Name := '示例项目运行'; T.Phase := 7;
+    骨架 cur |   T.ID := 'P7-002'; T.Name := ''; T.Phase := 7;
+    骨架 补回 |   T.ID := 'P7-002'; T.Name := ''; T.Phase := 7;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L267 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '杩愯绀轰緥椤圭洰楠岃瘉鍔熻兘';
+    补回后     |   T.Description := '运行示例项目验证功能';
+    mid(ca3364ee)|   T.Description := '运行示例项目验证功能';
+    骨架 cur |   T.Description := '';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L271 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // ========== 绗叓闃舵: 鏈€缁堥獙鏀?==========
+    补回后     |   // ========== 第八阶段: 最终验收 ==========
+    mid(ca3364ee)|   // ========== 第八阶段: 最终验�?==========
+    骨架 cur |   // ========== : ==========
+    骨架 补回 |   // ========== :  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L273 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P8-001'; T.Name := '鍐呭瓨娉勬紡妫€鏌?; T.Phase := 8;
+    补回后     |   T.ID := 'P8-001'; T.Name := '内存泄漏检查'; T.Phase := 8;
+    mid(ca3364ee)|   T.ID := 'P8-001'; T.Name := '内存泄漏检�?; T.Phase := 8;
+    骨架 cur |   T.ID := 'P8-001'; T.Name := '; T.Phase := 8;
+    骨架 补回 |   T.ID := 'P8-001'; T.Name := ''; T.Phase := 8;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L274 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '浣跨敤 ReportMemoryLeaksOnShutdown 妫€鏌?;
+    补回后     |   T.Description := '使用 ReportMemoryLeaksOnShutdown 检查';
+    mid(ca3364ee)|   T.Description := '使用 ReportMemoryLeaksOnShutdown 检�?;
+    骨架 cur |   T.Description := ' ReportMemoryLeaksOnShutdown ;
+    骨架 补回 |   T.Description := ' ReportMemoryLeaksOnShutdown ';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L279 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.ID := 'P8-002'; T.Name := '鏈€缁堢瀛楃‘璁?; T.Phase := 8;
+    补回后     |   T.ID := 'P8-002'; T.Name := '最终签字确认'; T.Phase := 8;
+    mid(ca3364ee)|   T.ID := 'P8-002'; T.Name := '最终签字确�?; T.Phase := 8;
+    骨架 cur |   T.ID := 'P8-002'; T.Name := '; T.Phase := 8;
+    骨架 补回 |   T.ID := 'P8-002'; T.Name := ''; T.Phase := 8;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L280 REPAIR [AFTERMATH_EDIT]
+    补回前     |   T.Description := '楠屾敹缁勯暱绛惧瓧纭';
+    补回后     |   T.Description := '验收组长签字确认';
+    mid(ca3364ee)|   T.Description := '验收组长签字确认';
+    骨架 cur |   T.Description := '';
+    骨架 补回 |   T.Description := '';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L288 REPAIR [AFTERMATH_EDIT]
+    补回前     |   Log(Format('宸插姞杞?%d 涓祴璇曢」', [FTests.Count]));
+    补回后     |   Log(Format('已加载 %d 个测试项', [FTests.Count]));
+    mid(ca3364ee)|   Log(Format('已加�?%d 个测试项', [FTests.Count]));
+    骨架 cur |   Log(Format('%d ', [FTests.Count]));
+    骨架 补回 |   Log(Format(' %d ', [FTests.Count]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L304 REPAIR [AFTERMATH_EDIT]
+    补回前     |     // 鏍规嵁娴嬭瘯 ID 鎵ц瀵瑰簲娴嬭瘯
+    补回后     |     // 根据测试 ID 执行对应测试
+    mid(ca3364ee)|     // 根据测试 ID 执行对应测试
+    骨架 cur |     //  ID 
+    骨架 补回 |     //  ID 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L332 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Result := True; // 榛樿閫氳繃
+    补回后     |       Result := True; // 默认通过
+    mid(ca3364ee)|       Result := True; // 默认通过
+    骨架 cur |       Result := True; // 
+    骨架 补回 |       Result := True; // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L344 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Log('娴嬭瘯寮傚父: ' + E.Message, True);
+    补回后     |       Log('测试异常: ' + E.Message, True);
+    mid(ca3364ee)|       Log('测试异常: ' + E.Message, True);
+    骨架 cur |       Log(': ' + E.Message, True);
+    骨架 补回 |       Log(': ' + E.Message, True);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L364 REPAIR [AFTERMATH_EDIT]
+    补回前     |   PhaseResult.PhaseName := Format('绗?%d 闃舵', [PhaseNumber]);
+    补回后     |   PhaseResult.PhaseName := Format('第 %d 阶段', [PhaseNumber]);
+    mid(ca3364ee)|   PhaseResult.PhaseName := Format('�?%d 阶段', [PhaseNumber]);
+    骨架 cur |   PhaseResult.PhaseName := Format('%d ', [PhaseNumber]);
+    骨架 补回 |   PhaseResult.PhaseName := Format(' %d ', [PhaseNumber]);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L372 REPAIR [AFTERMATH_EDIT]
+    补回前     |   Log(Format('寮€濮嬫墽琛岀 %d 闃舵娴嬭瘯...', [PhaseNumber]));
+    补回后     |   Log(Format('开始执行第 %d 阶段测试...', [PhaseNumber]));
+    mid(ca3364ee)|   Log(Format('开始执行第 %d 阶段测试...', [PhaseNumber]));
+    骨架 cur |   Log(Format(' %d ...', [PhaseNumber]));
+    骨架 补回 |   Log(Format(' %d ...', [PhaseNumber]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L380 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Log(Format('鎵ц: %s - %s', [Item.ID, Item.Name]));
+    补回后     |       Log(Format('执行: %s - %s', [Item.ID, Item.Name]));
+    mid(ca3364ee)|       Log(Format('执行: %s - %s', [Item.ID, Item.Name]));
+    骨架 cur |       Log(Format(': %s - %s', [Item.ID, Item.Name]));
+    骨架 补回 |       Log(Format(': %s - %s', [Item.ID, Item.Name]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L392 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Log(Format('  缁撴灉: %s (%d ms)', [
+    补回后     |       Log(Format('  结果: %s (%d ms)', [
+    mid(ca3364ee)|       Log(Format('  结果: %s (%d ms)', [
+    骨架 cur |       Log(Format('  : %s (%d ms)', [
+    骨架 补回 |       Log(Format('  : %s (%d ms)', [
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L405 REPAIR [AFTERMATH_EDIT]
+    补回前     |   Log(Format('绗?%d 闃舵瀹屾垚: %d/%d 閫氳繃', 
+    补回后     |   Log(Format('第 %d 阶段完成: %d/%d 通过', 
+    mid(ca3364ee)|   Log(Format('�?%d 阶段完成: %d/%d 通过', 
+    骨架 cur |   Log(Format('%d : %d/%d ', 
+    骨架 补回 |   Log(Format(' %d : %d/%d ', 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L435 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Log(Format('鎵嬪姩娴嬭瘯 %s 鏍囪涓? %s', [TestID, IfThen(Passed, '閫氳繃', '澶辫触')]));
+    补回后     |       Log(Format('手动测试 %s 标记为: %s', [TestID, IfThen(Passed, '通过', '失败')]));
+    mid(ca3364ee)|       Log(Format('手动测试 %s 标记�? %s', [TestID, IfThen(Passed, '通过', '失败')]));
+    骨架 cur |       Log(Format(' %s  %s', [TestID, IfThen(Passed, '', '')]));
+    骨架 补回 |       Log(Format(' %s : %s', [TestID, IfThen(Passed, '', '')]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L453 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Log(Format('娴嬭瘯 %s 宸茶烦杩?, [TestID]));
+    补回后     |       Log(Format('测试 %s 已跳过', [TestID]));
+    mid(ca3364ee)|       Log(Format('测试 %s 已跳�?, [TestID]));
+    骨架 cur |       Log(Format(' %s , [TestID]));
+    骨架 补回 |       Log(Format(' %s ', [TestID]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L501 REPAIR [AFTERMATH_EDIT]
+    补回前     | // ========== 鍏蜂綋娴嬭瘯瀹炵幇 ==========
+    补回后     | // ========== 具体测试实现 ==========
+    mid(ca3364ee)| // ========== 具体测试实现 ==========
+    骨架 cur | // ==========  ==========
+    骨架 补回 | // ==========  ==========
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L510 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Log('DeepBaseCore.dpk 涓嶅瓨鍦?, True);
+    补回后     |     Log('DeepBaseCore.dpk 不存在', True);
+    mid(ca3364ee)|     Log('DeepBaseCore.dpk 不存�?, True);
+    骨架 cur |     Log('DeepBaseCore.dpk , True);
+    骨架 补回 |     Log('DeepBaseCore.dpk ', True);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L515 REPAIR [AFTERMATH_EDIT]
+    补回前     |   Result := Test_Compile_Win32; // 绠€鍖栧疄鐜?
+    补回后     |   Result := Test_Compile_Win32; // 简化实现
+    mid(ca3364ee)|   Result := Test_Compile_Win32; // 简化实�?
+    骨架 cur |   Result := Test_Compile_Win32; // 
+    骨架 补回 |   Result := Test_Compile_Win32; // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L534 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Log(Format('鍙戠幇 %d 涓枃浠跺寘鍚?TODO/FIXME', [TodoCount]), True);
+    补回后     |     Log(Format('发现 %d 个文件包含 TODO/FIXME', [TodoCount]), True);
+    mid(ca3364ee)|     Log(Format('发现 %d 个文件包�?TODO/FIXME', [TodoCount]), True);
+    骨架 cur |     Log(Format(' %d TODO/FIXME', [TodoCount]), True);
+    骨架 补回 |     Log(Format(' %d  TODO/FIXME', [TodoCount]), True);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L548 REPAIR [AFTERMATH_EDIT]
+    补回前     |     // 妫€鏌ュ父瑙佺殑纭紪鐮佸瘑閽ユā寮?
+    补回后     |     // 检查常见的硬编码密钥模式
+    mid(ca3364ee)|     // 检查常见的硬编码密钥模�?
+    骨架 cur |     // 
+    骨架 补回 |     // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L554 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Log('鍙戠幇鍙兘鐨勭‖缂栫爜瀵嗛挜: ' + ExtractFileName(F), True);
+    补回后     |       Log('发现可能的硬编码密钥: ' + ExtractFileName(F), True);
+    mid(ca3364ee)|       Log('发现可能的硬编码密钥: ' + ExtractFileName(F), True);
+    骨架 cur |       Log(': ' + ExtractFileName(F), True);
+    骨架 补回 |       Log(': ' + ExtractFileName(F), True);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L567 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Log('鍗曞厓娴嬭瘯鍙墽琛屾枃浠朵笉瀛樺湪', True);
+    补回后     |     Log('单元测试可执行文件不存在', True);
+    mid(ca3364ee)|     Log('单元测试可执行文件不存在', True);
+    骨架 cur |     Log('', True);
+    骨架 补回 |     Log('', True);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L599 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 绠€鍖栧疄鐜?- 瀹為檯搴旇繍琛屾祴璇曞苟妫€鏌ュ唴瀛樻硠婕?
+    补回后     |   // 简化实现 - 实际应运行测试并检查内存泄漏
+    mid(ca3364ee)|   // 简化实�?- 实际应运行测试并检查内存泄�?
+    骨架 cur |   // - 
+    骨架 补回 |   //  - 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L614 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Log(Format('鍙戠幇 %d 涓ず渚嬮」鐩?, [Length(Dirs)]));
+    补回后     |     Log(Format('发现 %d 个示例项目', [Length(Dirs)]));
+    mid(ca3364ee)|     Log(Format('发现 %d 个示例项�?, [Length(Dirs)]));
+    骨架 cur |     Log(Format(' %d , [Length(Dirs)]));
+    骨架 补回 |     Log(Format(' %d ', [Length(Dirs)]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L643 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add('<title>DeepBase 楠屾敹鎶ュ憡</title>');
+    补回后     |     HTML.Add('<title>DeepBase 验收报告</title>');
+    mid(ca3364ee)|     HTML.Add('<title>DeepBase 验收报告</title>');
+    骨架 cur |     HTML.Add('<title>DeepBase </title>');
+    骨架 补回 |     HTML.Add('<title>DeepBase </title>');
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L661 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add('<h1>馃И DeepBase 楠屾敹鎶ュ憡</h1>');
+    补回后     |     HTML.Add('<h1>🧪 DeepBase 验收报告</h1>');
+    mid(ca3364ee)|     HTML.Add('<h1>🧪 DeepBase 验收报告</h1>');
+    骨架 cur |     HTML.Add('<h1> DeepBase </h1>');
+    骨架 补回 |     HTML.Add('<h1> DeepBase </h1>');
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L662 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add('<p>鐢熸垚鏃堕棿: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '</p>');
+    补回后     |     HTML.Add('<p>生成时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '</p>');
+    mid(ca3364ee)|     HTML.Add('<p>生成时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '</p>');
+    骨架 cur |     HTML.Add('<p>: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '</p>');
+    骨架 补回 |     HTML.Add('<p>: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '</p>');
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L665 REPAIR [AFTERMATH_EDIT]
+    补回前     |     // 缁熻
+    补回后     |     // 统计
+    mid(ca3364ee)|     // 统计
+    骨架 cur |     // 
+    骨架 补回 |     // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L667 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add(Format('<div class="stat stat-total"><div style="font-size:24px">%d</div>鎬昏</div>', [FTests.Count]));
+    补回后     |     HTML.Add(Format('<div class="stat stat-total"><div style="font-size:24px">%d</div>总计</div>', [FTests.Count]));
+    mid(ca3364ee)|     HTML.Add(Format('<div class="stat stat-total"><div style="font-size:24px">%d</div>总计</div>', [FTests.Count]));
+    骨架 cur |     HTML.Add(Format('<div class="stat stat-total"><div style="font-size:24px">%d</div></div>', [FTests.Count]));
+    骨架 补回 |     HTML.Add(Format('<div class="stat stat-total"><div style="font-size:24px">%d</div></div>', [FTests.Count]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L668 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add(Format('<div class="stat stat-pass"><div style="font-size:24px">%d</div>閫氳繃</div>', [TotalPassed]));
+    补回后     |     HTML.Add(Format('<div class="stat stat-pass"><div style="font-size:24px">%d</div>通过</div>', [TotalPassed]));
+    mid(ca3364ee)|     HTML.Add(Format('<div class="stat stat-pass"><div style="font-size:24px">%d</div>通过</div>', [TotalPassed]));
+    骨架 cur |     HTML.Add(Format('<div class="stat stat-pass"><div style="font-size:24px">%d</div></div>', [TotalPassed]));
+    骨架 补回 |     HTML.Add(Format('<div class="stat stat-pass"><div style="font-size:24px">%d</div></div>', [TotalPassed]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L669 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add(Format('<div class="stat stat-fail"><div style="font-size:24px">%d</div>澶辫触</div>', [TotalFailed]));
+    补回后     |     HTML.Add(Format('<div class="stat stat-fail"><div style="font-size:24px">%d</div>失败</div>', [TotalFailed]));
+    mid(ca3364ee)|     HTML.Add(Format('<div class="stat stat-fail"><div style="font-size:24px">%d</div>失败</div>', [TotalFailed]));
+    骨架 cur |     HTML.Add(Format('<div class="stat stat-fail"><div style="font-size:24px">%d</div></div>', [TotalFailed]));
+    骨架 补回 |     HTML.Add(Format('<div class="stat stat-fail"><div style="font-size:24px">%d</div></div>', [TotalFailed]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L670 REPAIR [AFTERMATH_EDIT]
+    补回前     |     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>寰呬汉宸?/div>', [TotalManual]));
+    补回后     |     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>待人工</div>', [TotalManual]));
+    mid(ca3364ee)|     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>待人�?/div>', [TotalManual]));
+    骨架 cur |     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>/div>', [TotalManual]));
+    骨架 补回 |     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div></div>', [TotalManual]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L673 REPAIR [AFTERMATH_EDIT]
+    补回前     |     // 鍚勯樁娈?
+    补回后     |     // 各阶段
+    mid(ca3364ee)|     // 各阶�?
+    骨架 cur |     // 
+    骨架 补回 |     // 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L677 REPAIR [AFTERMATH_EDIT]
+    补回前     |       HTML.Add(Format('<div class="phase-header">绗?%d 闃舵</div>', [Phase]));
+    补回后     |       HTML.Add(Format('<div class="phase-header">第 %d 阶段</div>', [Phase]));
+    mid(ca3364ee)|       HTML.Add(Format('<div class="phase-header">�?%d 阶段</div>', [Phase]));
+    骨架 cur |       HTML.Add(Format('<div class="phase-header">%d </div>', [Phase]));
+    骨架 补回 |       HTML.Add(Format('<div class="phase-header"> %d </div>', [Phase]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L684 REPAIR [AFTERMATH_EDIT]
+    补回前     |             tsPassed: begin StatusClass := 'pass'; StatusText := '鉁?閫氳繃'; end;
+    补回后     |             tsPassed: begin StatusClass := 'pass'; StatusText := '✓ 通过'; end;
+    mid(ca3364ee)|             tsPassed: begin StatusClass := 'pass'; StatusText := '�?通过'; end;
+    骨架 cur |             tsPassed: begin StatusClass := 'pass'; StatusText := ''; end;
+    骨架 补回 |             tsPassed: begin StatusClass := 'pass'; StatusText := ' '; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L685 REPAIR [AFTERMATH_EDIT]
+    补回前     |             tsFailed: begin StatusClass := 'fail'; StatusText := '鉁?澶辫触'; end;
+    补回后     |             tsFailed: begin StatusClass := 'fail'; StatusText := '✗ 失败'; end;
+    mid(ca3364ee)|             tsFailed: begin StatusClass := 'fail'; StatusText := '�?失败'; end;
+    骨架 cur |             tsFailed: begin StatusClass := 'fail'; StatusText := ''; end;
+    骨架 补回 |             tsFailed: begin StatusClass := 'fail'; StatusText := ' '; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L686 REPAIR [AFTERMATH_EDIT]
+    补回前     |             tsManual: begin StatusClass := 'manual'; StatusText := '鈿?寰呬汉宸?; end;
+    补回后     |             tsManual: begin StatusClass := 'manual'; StatusText := '⚠ 待人工'; end;
+    mid(ca3364ee)|             tsManual: begin StatusClass := 'manual'; StatusText := '�?待人�?; end;
+    骨架 cur |             tsManual: begin StatusClass := 'manual'; StatusText := '; end;
+    骨架 补回 |             tsManual: begin StatusClass := 'manual'; StatusText := ' '; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L687 REPAIR [AFTERMATH_EDIT]
+    补回前     |             tsSkipped: begin StatusClass := 'skip'; StatusText := '鈼?璺宠繃'; end;
+    补回后     |             tsSkipped: begin StatusClass := 'skip'; StatusText := '○ 跳过'; end;
+    mid(ca3364ee)|             tsSkipped: begin StatusClass := 'skip'; StatusText := '�?跳过'; end;
+    骨架 cur |             tsSkipped: begin StatusClass := 'skip'; StatusText := ''; end;
+    骨架 补回 |             tsSkipped: begin StatusClass := 'skip'; StatusText := ' '; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L689 REPAIR [AFTERMATH_EDIT]
+    补回前     |             begin StatusClass := 'notrun'; StatusText := '- 鏈墽琛?; end;
+    补回后     |             begin StatusClass := 'notrun'; StatusText := '- 未执行'; end;
+    mid(ca3364ee)|             begin StatusClass := 'notrun'; StatusText := '- 未执�?; end;
+    骨架 cur |             begin StatusClass := 'notrun'; StatusText := '- ; end;
+    骨架 补回 |             begin StatusClass := 'notrun'; StatusText := '- '; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L706 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Log('楠屾敹鎶ュ憡宸茬敓鎴? ' + OutputPath);
+    补回后     |     Log('验收报告已生成: ' + OutputPath);
+    mid(ca3364ee)|     Log('验收报告已生�? ' + OutputPath);
+    骨架 cur |     Log(' ' + OutputPath);
+    骨架 补回 |     Log(': ' + OutputPath);
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  SAME      624
+  REPAIR    89
+  MISMATCH  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=89
+  => 已写入（89 行补回，其余 624 行字节不动）；写后自检 BOM=保 U+FFFD=0
+==============================================================================
+##### Tools/LogAnalyzer/LogAnalyzer.MainForm.pas   编译门首个报错行 L186   工作树 BOM=有
+  base 69d3f66c 标记计数 U+FFFD=0 `?`=1（=> 该祖先编码干净，可作补回依据）
+  L2 REPAIR [AFTERMATH_EDIT]
+    补回前     |   LogAnalyzer.MainForm - 鏃ュ織鍒嗘瀽鍣ㄤ富绐椾綋
+    补回后     |   LogAnalyzer.MainForm - 日志分析器主窗体
+    mid(ca3364ee)|   LogAnalyzer.MainForm - 日志分析器主窗体
+    骨架 cur |   LogAnalyzer.MainForm - 
+    骨架 补回 |   LogAnalyzer.MainForm - 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L4 REPAIR [AFTERMATH_EDIT]
+    补回前     |   鐗堟湰: 1.0
+    补回后     |   版本: 1.0
+    mid(ca3364ee)|   版本: 1.0
+    骨架 cur |   : 1.0
+    骨架 补回 |   : 1.0
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L5 REPAIR [AFTERMATH_EDIT]
+    补回前     |   鍔熻兘:
+    补回后     |   功能:
+    mid(ca3364ee)|   功能:
+    骨架 cur |   :
+    骨架 补回 |   :
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L6 REPAIR [AFTERMATH_EDIT]
+    补回前     |     - 鎵撳紑澶氫釜鏁版嵁搴?
+    补回后     |     - 打开多个数据库
+    mid(ca3364ee)|     - 打开多个数据�?
+    骨架 cur |     - 
+    骨架 补回 |     - 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L7 REPAIR [AFTERMATH_EDIT]
+    补回前     |     - 鏃ュ織鍒楄〃鏄剧ず
+    补回后     |     - 日志列表显示
+    mid(ca3364ee)|     - 日志列表显示
+    骨架 cur |     - 
+    骨架 补回 |     - 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L8 REPAIR [AFTERMATH_EDIT]
+    补回前     |     - 鏃堕棿/绾у埆/鍏抽敭璇嶈繃婊?
+    补回后     |     - 时间/级别/关键词过滤
+    mid(ca3364ee)|     - 时间/级别/关键词过�?
+    骨架 cur |     - //
+    骨架 补回 |     - //
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L9 REPAIR [AFTERMATH_EDIT]
+    补回前     |     - 缁熻闈㈡澘
+    补回后     |     - 统计面板
+    mid(ca3364ee)|     - 统计面板
+    骨架 cur |     - 
+    骨架 补回 |     - 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L10 REPAIR [AFTERMATH_EDIT]
+    补回前     |     - 瀵煎嚭鍔熻兘
+    补回后     |     - 导出功能
+    mid(ca3364ee)|     - 导出功能
+    骨架 cur |     - 
+    骨架 补回 |     - 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L61 REPAIR [AFTERMATH_EDIT]
+    补回前     |     { 鑿滃崟 }
+    补回后     |     { 菜单 }
+    mid(ca3364ee)|     { 菜单 }
+    骨架 cur |     {  }
+    骨架 补回 |     {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L78 REPAIR [AFTERMATH_EDIT]
+    补回前     |     { 宸ュ叿鏍?}
+    补回后     |     { 工具栏 }
+    mid(ca3364ee)|     { 工具�?}
+    骨架 cur |     { }
+    骨架 补回 |     {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L86 REPAIR [AFTERMATH_EDIT]
+    补回前     |     { 杩囨护闈㈡澘 }
+    补回后     |     { 过滤面板 }
+    mid(ca3364ee)|     { 过滤面板 }
+    骨架 cur |     {  }
+    骨架 补回 |     {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L106 REPAIR [AFTERMATH_EDIT]
+    补回前     |     { 涓诲唴瀹瑰尯 }
+    补回后     |     { 主内容区 }
+    mid(ca3364ee)|     { 主内容区 }
+    骨架 cur |     {  }
+    骨架 补回 |     {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L119 REPAIR [AFTERMATH_EDIT]
+    补回前     |     { 鐘舵€佹爮 }
+    补回后     |     { 状态栏 }
+    mid(ca3364ee)|     { 状态栏 }
+    骨架 cur |     {  }
+    骨架 补回 |     {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L122 REPAIR [AFTERMATH_EDIT]
+    补回前     |     { 瀵硅瘽妗?}
+    补回后     |     { 对话框 }
+    mid(ca3364ee)|     { 对话�?}
+    骨架 cur |     { }
+    骨架 补回 |     {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L186 REPAIR [AFTERMATH_EDIT]
+    补回前     |   APP_TITLE = 'DeepBase 鏃ュ織鍒嗘瀽鍣?;
+    补回后     |   APP_TITLE = 'DeepBase 日志分析器';
+    mid(ca3364ee)|   APP_TITLE = 'DeepBase 日志分析�?;
+    骨架 cur |   APP_TITLE = 'DeepBase ;
+    骨架 补回 |   APP_TITLE = 'DeepBase ';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L204 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 榛樿鏃堕棿鑼冨洿: 鏈€杩?4灏忔椂
+    补回后     |   // 默认时间范围: 最近24小时
+    mid(ca3364ee)|   // 默认时间范围: 最�?4小时
+    骨架 cur |   // : 4
+    骨架 补回 |   // : 24
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L208 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 榛樿绾у埆
+    补回后     |   // 默认级别
+    mid(ca3364ee)|   // 默认级别
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L236 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 鏂囦欢鑿滃崟
+    补回后     |   // 文件菜单
+    mid(ca3364ee)|   // 文件菜单
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L238 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFile.Caption := '鏂囦欢(&F)';
+    补回后     |   mnuFile.Caption := '文件(&F)';
+    mid(ca3364ee)|   mnuFile.Caption := '文件(&F)';
+    骨架 cur |   mnuFile.Caption := '(&F)';
+    骨架 补回 |   mnuFile.Caption := '(&F)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L242 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFileOpen.Caption := '鎵撳紑鏁版嵁搴?&O)...';
+    补回后     |   mnuFileOpen.Caption := '打开数据库(&O)...';
+    mid(ca3364ee)|   mnuFileOpen.Caption := '打开数据�?&O)...';
+    骨架 cur |   mnuFileOpen.Caption := '&O)...';
+    骨架 补回 |   mnuFileOpen.Caption := '(&O)...';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L248 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFileClose.Caption := '鍏抽棴鏁版嵁搴?&C)';
+    补回后     |   mnuFileClose.Caption := '关闭数据库(&C)';
+    mid(ca3364ee)|   mnuFileClose.Caption := '关闭数据�?&C)';
+    骨架 cur |   mnuFileClose.Caption := '&C)';
+    骨架 补回 |   mnuFileClose.Caption := '(&C)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L257 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFileExportCSV.Caption := '瀵煎嚭涓?CSV...';
+    补回后     |   mnuFileExportCSV.Caption := '导出为 CSV...';
+    mid(ca3364ee)|   mnuFileExportCSV.Caption := '导出�?CSV...';
+    骨架 cur |   mnuFileExportCSV.Caption := 'CSV...';
+    骨架 补回 |   mnuFileExportCSV.Caption := ' CSV...';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L262 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFileExportJSON.Caption := '瀵煎嚭涓?JSON...';
+    补回后     |   mnuFileExportJSON.Caption := '导出为 JSON...';
+    mid(ca3364ee)|   mnuFileExportJSON.Caption := '导出�?JSON...';
+    骨架 cur |   mnuFileExportJSON.Caption := 'JSON...';
+    骨架 补回 |   mnuFileExportJSON.Caption := ' JSON...';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L267 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFileExportHTML.Caption := '瀵煎嚭涓?HTML...';
+    补回后     |   mnuFileExportHTML.Caption := '导出为 HTML...';
+    mid(ca3364ee)|   mnuFileExportHTML.Caption := '导出�?HTML...';
+    骨架 cur |   mnuFileExportHTML.Caption := 'HTML...';
+    骨架 补回 |   mnuFileExportHTML.Caption := ' HTML...';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L276 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuFileExit.Caption := '閫€鍑?&X)';
+    补回后     |   mnuFileExit.Caption := '退出(&X)';
+    mid(ca3364ee)|   mnuFileExit.Caption := '退�?&X)';
+    骨架 cur |   mnuFileExit.Caption := '&X)';
+    骨架 补回 |   mnuFileExit.Caption := '(&X)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L281 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 瑙嗗浘鑿滃崟
+    补回后     |   // 视图菜单
+    mid(ca3364ee)|   // 视图菜单
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L283 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuView.Caption := '瑙嗗浘(&V)';
+    补回后     |   mnuView.Caption := '视图(&V)';
+    mid(ca3364ee)|   mnuView.Caption := '视图(&V)';
+    骨架 cur |   mnuView.Caption := '(&V)';
+    骨架 补回 |   mnuView.Caption := '(&V)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L287 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuViewRefresh.Caption := '鍒锋柊(&R)';
+    补回后     |   mnuViewRefresh.Caption := '刷新(&R)';
+    mid(ca3364ee)|   mnuViewRefresh.Caption := '刷新(&R)';
+    骨架 cur |   mnuViewRefresh.Caption := '(&R)';
+    骨架 补回 |   mnuViewRefresh.Caption := '(&R)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L293 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuViewStats.Caption := '鏄剧ず缁熻(&S)';
+    补回后     |   mnuViewStats.Caption := '显示统计(&S)';
+    mid(ca3364ee)|   mnuViewStats.Caption := '显示统计(&S)';
+    骨架 cur |   mnuViewStats.Caption := '(&S)';
+    骨架 补回 |   mnuViewStats.Caption := '(&S)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L297 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 甯姪鑿滃崟
+    补回后     |   // 帮助菜单
+    mid(ca3364ee)|   // 帮助菜单
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L299 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuHelp.Caption := '甯姪(&H)';
+    补回后     |   mnuHelp.Caption := '帮助(&H)';
+    mid(ca3364ee)|   mnuHelp.Caption := '帮助(&H)';
+    骨架 cur |   mnuHelp.Caption := '(&H)';
+    骨架 补回 |   mnuHelp.Caption := '(&H)';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L303 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mnuHelpAbout.Caption := '鍏充簬(&A)...';
+    补回后     |   mnuHelpAbout.Caption := '关于(&A)...';
+    mid(ca3364ee)|   mnuHelpAbout.Caption := '关于(&A)...';
+    骨架 cur |   mnuHelpAbout.Caption := '(&A)...';
+    骨架 补回 |   mnuHelpAbout.Caption := '(&A)...';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L320 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblDatabase.Caption := '鏁版嵁搴?';
+    补回后     |   lblDatabase.Caption := '数据库:';
+    mid(ca3364ee)|   lblDatabase.Caption := '数据�?';
+    骨架 cur |   lblDatabase.Caption := '';
+    骨架 补回 |   lblDatabase.Caption := ':';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L331 REPAIR [AFTERMATH_EDIT]
+    补回前     |   btnOpenDB.Caption := '鎵撳紑...';
+    补回后     |   btnOpenDB.Caption := '打开...';
+    mid(ca3364ee)|   btnOpenDB.Caption := '打开...';
+    骨架 cur |   btnOpenDB.Caption := '...';
+    骨架 补回 |   btnOpenDB.Caption := '...';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L337 REPAIR [AFTERMATH_EDIT]
+    补回前     |   btnCloseDB.Caption := '鍏抽棴';
+    补回后     |   btnCloseDB.Caption := '关闭';
+    mid(ca3364ee)|   btnCloseDB.Caption := '关闭';
+    骨架 cur |   btnCloseDB.Caption := '';
+    骨架 补回 |   btnCloseDB.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L343 REPAIR [AFTERMATH_EDIT]
+    补回前     |   btnRefresh.Caption := '鍒锋柊';
+    补回后     |   btnRefresh.Caption := '刷新';
+    mid(ca3364ee)|   btnRefresh.Caption := '刷新';
+    骨架 cur |   btnRefresh.Caption := '';
+    骨架 补回 |   btnRefresh.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L346 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 瀵硅瘽妗?
+    补回后     |   // 对话框
+    mid(ca3364ee)|   // 对话�?
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L348 REPAIR [AFTERMATH_EDIT]
+    补回前     |   dlgOpen.Filter := 'SQLite 鏁版嵁搴搢*.db;*.sqlite;*.sqlite3|鎵€鏈夋枃浠秥*.*';
+    补回后     |   dlgOpen.Filter := 'SQLite 数据库|*.db;*.sqlite;*.sqlite3|所有文件|*.*';
+    mid(ca3364ee)|   dlgOpen.Filter := 'SQLite 数据库|*.db;*.sqlite;*.sqlite3|所有文件|*.*';
+    骨架 cur |   dlgOpen.Filter := 'SQLite *.db;*.sqlite;*.sqlite3|*.*';
+    骨架 补回 |   dlgOpen.Filter := 'SQLite |*.db;*.sqlite;*.sqlite3||*.*';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L349 REPAIR [AFTERMATH_EDIT]
+    补回前     |   dlgOpen.Title := '鎵撳紑鏃ュ織鏁版嵁搴?;
+    补回后     |   dlgOpen.Title := '打开日志数据库';
+    mid(ca3364ee)|   dlgOpen.Title := '打开日志数据�?;
+    骨架 cur |   dlgOpen.Title := ';
+    骨架 补回 |   dlgOpen.Title := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L352 REPAIR [AFTERMATH_EDIT]
+    补回前     |   dlgSave.Title := '瀵煎嚭鏃ュ織';
+    补回后     |   dlgSave.Title := '导出日志';
+    mid(ca3364ee)|   dlgSave.Title := '导出日志';
+    骨架 cur |   dlgSave.Title := '';
+    骨架 补回 |   dlgSave.Title := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L364 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 绗竴琛? 鏃堕棿鑼冨洿
+    补回后     |   // 第一行: 时间范围
+    mid(ca3364ee)|   // 第一�? 时间范围
+    骨架 cur |   //  
+    骨架 补回 |   // : 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L368 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblFromTime.Caption := '浠?';
+    补回后     |   lblFromTime.Caption := '从:';
+    mid(ca3364ee)|   lblFromTime.Caption := '�?';
+    骨架 cur |   lblFromTime.Caption := '';
+    骨架 补回 |   lblFromTime.Caption := ':';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L378 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblToTime.Caption := '鍒?';
+    补回后     |   lblToTime.Caption := '到:';
+    mid(ca3364ee)|   lblToTime.Caption := '�?';
+    骨架 cur |   lblToTime.Caption := '';
+    骨架 补回 |   lblToTime.Caption := ':';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L388 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblLevel.Caption := '绾у埆:';
+    补回后     |   lblLevel.Caption := '级别:';
+    mid(ca3364ee)|   lblLevel.Caption := '级别:';
+    骨架 cur |   lblLevel.Caption := ':';
+    骨架 补回 |   lblLevel.Caption := ':';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L420 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 绗簩琛? 鍏抽敭璇嶆悳绱?
+    补回后     |   // 第二行: 关键词搜索
+    mid(ca3364ee)|   // 第二�? 关键词搜�?
+    骨架 cur |   //  
+    骨架 补回 |   // : 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L424 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblSource.Caption := '鏉ユ簮:';
+    补回后     |   lblSource.Caption := '来源:';
+    mid(ca3364ee)|   lblSource.Caption := '来源:';
+    骨架 cur |   lblSource.Caption := ':';
+    骨架 补回 |   lblSource.Caption := ':';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L433 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblMessage.Caption := '娑堟伅:';
+    补回后     |   lblMessage.Caption := '消息:';
+    mid(ca3364ee)|   lblMessage.Caption := '消息:';
+    骨架 cur |   lblMessage.Caption := ':';
+    骨架 补回 |   lblMessage.Caption := ':';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L442 REPAIR [AFTERMATH_EDIT]
+    补回前     |   btnSearch.Caption := '鎼滅储';
+    补回后     |   btnSearch.Caption := '搜索';
+    mid(ca3364ee)|   btnSearch.Caption := '搜索';
+    骨架 cur |   btnSearch.Caption := '';
+    骨架 补回 |   btnSearch.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L448 REPAIR [AFTERMATH_EDIT]
+    补回前     |   btnClear.Caption := '娓呴櫎';
+    补回后     |   btnClear.Caption := '清除';
+    mid(ca3364ee)|   btnClear.Caption := '清除';
+    骨架 cur |   btnClear.Caption := '';
+    骨架 补回 |   btnClear.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L454 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 宸︿晶鏃ュ織鍒楄〃
+    补回后     |   // 左侧日志列表
+    mid(ca3364ee)|   // 左侧日志列表
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L476 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '鏃堕棿';
+    补回后     |     Caption := '时间';
+    mid(ca3364ee)|     Caption := '时间';
+    骨架 cur |     Caption := '';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L481 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '绾у埆';
+    补回后     |     Caption := '级别';
+    mid(ca3364ee)|     Caption := '级别';
+    骨架 cur |     Caption := '';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L486 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '鏉ユ簮';
+    补回后     |     Caption := '来源';
+    mid(ca3364ee)|     Caption := '来源';
+    骨架 cur |     Caption := '';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L491 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '娑堟伅';
+    补回后     |     Caption := '消息';
+    mid(ca3364ee)|     Caption := '消息';
+    骨架 cur |     Caption := '';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L495 REPAIR [AFTERMATH_EDIT]
+    补回前     |   // 鍙充晶璇︽儏闈㈡澘
+    补回后     |   // 右侧详情面板
+    mid(ca3364ee)|   // 右侧详情面板
+    骨架 cur |   // 
+    骨架 补回 |   // 
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L513 REPAIR [AFTERMATH_EDIT]
+    补回前     |   tabDetails.Caption := '璇︽儏';
+    补回后     |   tabDetails.Caption := '详情';
+    mid(ca3364ee)|   tabDetails.Caption := '详情';
+    骨架 cur |   tabDetails.Caption := '';
+    骨架 补回 |   tabDetails.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L526 REPAIR [AFTERMATH_EDIT]
+    补回前     |   tabStats.Caption := '缁熻';
+    补回后     |   tabStats.Caption := '统计';
+    mid(ca3364ee)|   tabStats.Caption := '统计';
+    骨架 cur |   tabStats.Caption := '';
+    骨架 补回 |   tabStats.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L536 REPAIR [AFTERMATH_EDIT]
+    补回前     |   lblStatsTitle.Caption := '鏃ュ織缁熻';
+    补回后     |   lblStatsTitle.Caption := '日志统计';
+    mid(ca3364ee)|   lblStatsTitle.Caption := '日志统计';
+    骨架 cur |   lblStatsTitle.Caption := '';
+    骨架 补回 |   lblStatsTitle.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L549 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '椤圭洰';
+    补回后     |     Caption := '项目';
+    mid(ca3364ee)|     Caption := '项目';
+    骨架 cur |     Caption := '';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L554 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '鏁伴噺';
+    补回后     |     Caption := '数量';
+    mid(ca3364ee)|     Caption := '数量';
+    骨架 cur |     Caption := '';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L560 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Caption := '鐧惧垎姣?;
+    补回后     |     Caption := '百分比';
+    mid(ca3364ee)|     Caption := '百分�?;
+    骨架 cur |     Caption := ';
+    骨架 补回 |     Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L575 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Text := '灏辩华';
+    补回后     |     Text := '就绪';
+    mid(ca3364ee)|     Text := '就绪';
+    骨架 cur |     Text := '';
+    骨架 补回 |     Text := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L580 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Text := '鏃ュ織: 0';
+    补回后     |     Text := '日志: 0';
+    mid(ca3364ee)|     Text := '日志: 0';
+    骨架 cur |     Text := ': 0';
+    骨架 补回 |     Text := ': 0';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L603 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('鏁版嵁搴撴枃浠朵笉瀛樺湪: ' + APath, mtError, [mbOK], 0);
+    补回后     |     MessageDlg('数据库文件不存在: ' + APath, mtError, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('数据库文件不存在: ' + APath, mtError, [mbOK], 0);
+    骨架 cur |     MessageDlg(': ' + APath, mtError, [mbOK], 0);
+    骨架 补回 |     MessageDlg(': ' + APath, mtError, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L626 REPAIR [AFTERMATH_EDIT]
+    补回前     |       MessageDlg('鎵撳紑鏁版嵁搴撳け璐? ' + E.Message, mtError, [mbOK], 0);
+    补回后     |       MessageDlg('打开数据库失败: ' + E.Message, mtError, [mbOK], 0);
+    mid(ca3364ee)|       MessageDlg('打开数据库失�? ' + E.Message, mtError, [mbOK], 0);
+    骨架 cur |       MessageDlg(' ' + E.Message, mtError, [mbOK], 0);
+    骨架 补回 |       MessageDlg(': ' + E.Message, mtError, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L756 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mmoDetails.Lines.Add('=== 鏃ュ織璇︽儏 ===');
+    补回后     |   mmoDetails.Lines.Add('=== 日志详情 ===');
+    mid(ca3364ee)|   mmoDetails.Lines.Add('=== 日志详情 ===');
+    骨架 cur |   mmoDetails.Lines.Add('===  ===');
+    骨架 补回 |   mmoDetails.Lines.Add('===  ===');
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L759 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mmoDetails.Lines.Add('鏃堕棿: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
+    补回后     |   mmoDetails.Lines.Add('时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
+    mid(ca3364ee)|   mmoDetails.Lines.Add('时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
+    骨架 cur |   mmoDetails.Lines.Add(': ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
+    骨架 补回 |   mmoDetails.Lines.Add(': ' + FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp));
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L760 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mmoDetails.Lines.Add('绾у埆: ' + LevelToString(AEntry.Level));
+    补回后     |   mmoDetails.Lines.Add('级别: ' + LevelToString(AEntry.Level));
+    mid(ca3364ee)|   mmoDetails.Lines.Add('级别: ' + LevelToString(AEntry.Level));
+    骨架 cur |   mmoDetails.Lines.Add(': ' + LevelToString(AEntry.Level));
+    骨架 补回 |   mmoDetails.Lines.Add(': ' + LevelToString(AEntry.Level));
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L761 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mmoDetails.Lines.Add('鏉ユ簮: ' + AEntry.Source);
+    补回后     |   mmoDetails.Lines.Add('来源: ' + AEntry.Source);
+    mid(ca3364ee)|   mmoDetails.Lines.Add('来源: ' + AEntry.Source);
+    骨架 cur |   mmoDetails.Lines.Add(': ' + AEntry.Source);
+    骨架 补回 |   mmoDetails.Lines.Add(': ' + AEntry.Source);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L763 REPAIR [AFTERMATH_EDIT]
+    补回前     |   mmoDetails.Lines.Add('=== 娑堟伅 ===');
+    补回后     |   mmoDetails.Lines.Add('=== 消息 ===');
+    mid(ca3364ee)|   mmoDetails.Lines.Add('=== 消息 ===');
+    骨架 cur |   mmoDetails.Lines.Add('===  ===');
+    骨架 补回 |   mmoDetails.Lines.Add('===  ===');
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L769 REPAIR [AFTERMATH_EDIT]
+    补回前     |     mmoDetails.Lines.Add('=== 璇︾粏淇℃伅 ===');
+    补回后     |     mmoDetails.Lines.Add('=== 详细信息 ===');
+    mid(ca3364ee)|     mmoDetails.Lines.Add('=== 详细信息 ===');
+    骨架 cur |     mmoDetails.Lines.Add('===  ===');
+    骨架 补回 |     mmoDetails.Lines.Add('===  ===');
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L789 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Item.Caption := '鎬绘暟';
+    补回后     |     Item.Caption := '总数';
+    mid(ca3364ee)|     Item.Caption := '总数';
+    骨架 cur |     Item.Caption := '';
+    骨架 补回 |     Item.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L810 REPAIR [AFTERMATH_EDIT]
+    补回前     |     Item.Caption := '鍞竴鏉ユ簮鏁?;
+    补回后     |     Item.Caption := '唯一来源数';
+    mid(ca3364ee)|     Item.Caption := '唯一来源�?;
+    骨架 cur |     Item.Caption := ';
+    骨架 补回 |     Item.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L817 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Item.Caption := '鏈€鏃╂椂闂?;
+    补回后     |       Item.Caption := '最早时间';
+    mid(ca3364ee)|       Item.Caption := '最早时�?;
+    骨架 cur |       Item.Caption := ';
+    骨架 补回 |       Item.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L822 REPAIR [AFTERMATH_EDIT]
+    补回前     |       Item.Caption := '鏈€鏅氭椂闂?;
+    补回后     |       Item.Caption := '最晚时间';
+    mid(ca3364ee)|       Item.Caption := '最晚时�?;
+    骨架 cur |       Item.Caption := ';
+    骨架 补回 |       Item.Caption := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L834 REPAIR [AFTERMATH_EDIT]
+    补回前     |     StatusBar.Panels[0].Text := '宸茶繛鎺? ' + ExtractFileName(FCurrentDB)
+    补回后     |     StatusBar.Panels[0].Text := '已连接: ' + ExtractFileName(FCurrentDB)
+    mid(ca3364ee)|     StatusBar.Panels[0].Text := '已连�? ' + ExtractFileName(FCurrentDB)
+    骨架 cur |     StatusBar.Panels[0].Text := ' ' + ExtractFileName(FCurrentDB)
+    骨架 补回 |     StatusBar.Panels[0].Text := ': ' + ExtractFileName(FCurrentDB)
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L836 REPAIR [AFTERMATH_EDIT]
+    补回前     |     StatusBar.Panels[0].Text := '鏈繛鎺?;
+    补回后     |     StatusBar.Panels[0].Text := '未连接';
+    mid(ca3364ee)|     StatusBar.Panels[0].Text := '未连�?;
+    骨架 cur |     StatusBar.Panels[0].Text := ';
+    骨架 补回 |     StatusBar.Panels[0].Text := '';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L838 REPAIR [AFTERMATH_EDIT]
+    补回前     |   StatusBar.Panels[1].Text := Format('鏃ュ織: %d', [Length(FLogs)]);
+    补回后     |   StatusBar.Panels[1].Text := Format('日志: %d', [Length(FLogs)]);
+    mid(ca3364ee)|   StatusBar.Panels[1].Text := Format('日志: %d', [Length(FLogs)]);
+    骨架 cur |   StatusBar.Panels[1].Text := Format(': %d', [Length(FLogs)]);
+    骨架 补回 |   StatusBar.Panels[1].Text := Format(': %d', [Length(FLogs)]);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L839 REPAIR [AFTERMATH_EDIT]
+    补回前     |   StatusBar.Panels[2].Text := Format('鏁版嵁搴? %d', [FConnections.Count]);
+    补回后     |   StatusBar.Panels[2].Text := Format('数据库: %d', [FConnections.Count]);
+    mid(ca3364ee)|   StatusBar.Panels[2].Text := Format('数据�? %d', [FConnections.Count]);
+    骨架 cur |   StatusBar.Panels[2].Text := Format(' %d', [FConnections.Count]);
+    骨架 补回 |   StatusBar.Panels[2].Text := Format(': %d', [FConnections.Count]);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L884 REPAIR [AFTERMATH_EDIT]
+    补回前     | { 浜嬩欢澶勭悊 }
+    补回后     | { 事件处理 }
+    mid(ca3364ee)| { 事件处理 }
+    骨架 cur | {  }
+    骨架 补回 | {  }
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L949 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+    补回后     |     MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);
+    骨架 cur |     MessageDlg(', mtInformation, [mbOK], 0);
+    骨架 补回 |     MessageDlg('', mtInformation, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L953 REPAIR [AFTERMATH_EDIT]
+    补回前     |   dlgSave.Filter := 'CSV 鏂囦欢|*.csv';
+    补回后     |   dlgSave.Filter := 'CSV 文件|*.csv';
+    mid(ca3364ee)|   dlgSave.Filter := 'CSV 文件|*.csv';
+    骨架 cur |   dlgSave.Filter := 'CSV |*.csv';
+    骨架 补回 |   dlgSave.Filter := 'CSV |*.csv';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L960 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('瀵煎嚭鎴愬姛: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    补回后     |     MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    骨架 cur |     MessageDlg(': ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    骨架 补回 |     MessageDlg(': ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L968 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+    补回后     |     MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);
+    骨架 cur |     MessageDlg(', mtInformation, [mbOK], 0);
+    骨架 补回 |     MessageDlg('', mtInformation, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L972 REPAIR [AFTERMATH_EDIT]
+    补回前     |   dlgSave.Filter := 'JSON 鏂囦欢|*.json';
+    补回后     |   dlgSave.Filter := 'JSON 文件|*.json';
+    mid(ca3364ee)|   dlgSave.Filter := 'JSON 文件|*.json';
+    骨架 cur |   dlgSave.Filter := 'JSON |*.json';
+    骨架 补回 |   dlgSave.Filter := 'JSON |*.json';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L979 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('瀵煎嚭鎴愬姛: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    补回后     |     MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    骨架 cur |     MessageDlg(': ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    骨架 补回 |     MessageDlg(': ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L987 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+    补回后     |     MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);
+    骨架 cur |     MessageDlg(', mtInformation, [mbOK], 0);
+    骨架 补回 |     MessageDlg('', mtInformation, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L991 REPAIR [AFTERMATH_EDIT]
+    补回前     |   dlgSave.Filter := 'HTML 鏂囦欢|*.html';
+    补回后     |   dlgSave.Filter := 'HTML 文件|*.html';
+    mid(ca3364ee)|   dlgSave.Filter := 'HTML 文件|*.html';
+    骨架 cur |   dlgSave.Filter := 'HTML |*.html';
+    骨架 补回 |   dlgSave.Filter := 'HTML |*.html';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L997 REPAIR [AFTERMATH_EDIT]
+    补回前     |     TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '鏃ュ織瀵煎嚭 - ' + ExtractFileName(FCurrentDB));
+    补回后     |     TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '日志导出 - ' + ExtractFileName(FCurrentDB));
+    mid(ca3364ee)|     TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '日志导出 - ' + ExtractFileName(FCurrentDB));
+    骨架 cur |     TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, ' - ' + ExtractFileName(FCurrentDB));
+    骨架 补回 |     TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, ' - ' + ExtractFileName(FCurrentDB));
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L998 REPAIR [AFTERMATH_EDIT]
+    补回前     |     MessageDlg('瀵煎嚭鎴愬姛: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    补回后     |     MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    mid(ca3364ee)|     MessageDlg('导出成功: ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    骨架 cur |     MessageDlg(': ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    骨架 补回 |     MessageDlg(': ' + dlgSave.FileName, mtInformation, [mbOK], 0);
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L1022 REPAIR [AFTERMATH_EDIT]
+    补回前     |     'DeepBase 鏃ュ織鍒嗘瀽宸ュ叿' + #13#10 +
+    补回后     |     'DeepBase 日志分析工具' + #13#10 +
+    mid(ca3364ee)|     'DeepBase 日志分析工具' + #13#10 +
+    骨架 cur |     'DeepBase ' + #13#10 +
+    骨架 补回 |     'DeepBase ' + #13#10 +
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L1023 REPAIR [AFTERMATH_EDIT]
+    补回前     |     '鐢ㄤ簬鏌ョ湅鍜屽垎鏋?DeepBase 妗嗘灦鐢熸垚鐨勬棩蹇楁暟鎹€? + #13#10#13#10 +
+    补回后     |     '用于查看和分析 DeepBase 框架生成的日志数据。' + #13#10#13#10 +
+    mid(ca3364ee)|     '用于查看和分�?DeepBase 框架生成的日志数据�? + #13#10#13#10 +
+    骨架 cur |     'DeepBase  + #13#10#13#10 +
+    骨架 补回 |     ' DeepBase ' + #13#10#13#10 +
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L1024 REPAIR [AFTERMATH_EDIT]
+    补回前     |     '鍔熻兘:' + #13#10 +
+    补回后     |     '功能:' + #13#10 +
+    mid(ca3364ee)|     '功能:' + #13#10 +
+    骨架 cur |     ':' + #13#10 +
+    骨架 补回 |     ':' + #13#10 +
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L1025 REPAIR [AFTERMATH_EDIT]
+    补回前     |     '- 澶氭暟鎹簱鏀寔' + #13#10 +
+    补回后     |     '- 多数据库支持' + #13#10 +
+    mid(ca3364ee)|     '- 多数据库支持' + #13#10 +
+    骨架 cur |     '- ' + #13#10 +
+    骨架 补回 |     '- ' + #13#10 +
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L1026 REPAIR [AFTERMATH_EDIT]
+    补回前     |     '- 鏃堕棿/绾у埆/鍏抽敭璇嶈繃婊? + #13#10 +
+    补回后     |     '- 时间/级别/关键词过滤' + #13#10 +
+    mid(ca3364ee)|     '- 时间/级别/关键词过�? + #13#10 +
+    骨架 cur |     '- // + #13#10 +
+    骨架 补回 |     '- //' + #13#10 +
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L1027 REPAIR [AFTERMATH_EDIT]
+    补回前     |     '- 缁熻淇℃伅' + #13#10 +
+    补回后     |     '- 统计信息' + #13#10 +
+    mid(ca3364ee)|     '- 统计信息' + #13#10 +
+    骨架 cur |     '- ' + #13#10 +
+    骨架 补回 |     '- ' + #13#10 +
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L1028 REPAIR [AFTERMATH_EDIT]
+    补回前     |     '- CSV/JSON/HTML 瀵煎嚭',
+    补回后     |     '- CSV/JSON/HTML 导出',
+    mid(ca3364ee)|     '- CSV/JSON/HTML 导出',
+    骨架 cur |     '- CSV/JSON/HTML ',
+    骨架 补回 |     '- CSV/JSON/HTML ',
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  SAME      936
+  REPAIR    97
+  MISMATCH  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=97
+  => 已写入（97 行补回，其余 936 行字节不动）；写后自检 BOM=保 U+FFFD=0
+==============================================================================
+##### Tests/TestLLMClient.dpr   编译门首个报错行 L35   工作树 BOM=有
+  base ccfc338b 标记计数 U+FFFD=0 `?`=1（=> 该祖先编码干净，可作补回依据）
+  L13 REPAIR [DAMAGE_ONLY]
+    补回前     |   // 使用环境变量或直接填�?API Key 测试
+    补回后     |   // 使用环境变量或直接填入 API Key 测试
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L27 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('加密�?(Base64): ', Copy(Encrypted, 1, 50), '...');
+    补回后     |     WriteLn('加密后 (Base64): ', Copy(Encrypted, 1, 50), '...');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L30 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('解密�? ', Decrypted);
+    补回后     |     WriteLn('解密后: ', Decrypted);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L33 REPAIR [DAMAGE_ONLY]
+    补回前     |       WriteLn('�?DPAPI 测试通过!')
+    补回后     |       WriteLn('✓ DPAPI 测试通过!')
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L35 REPAIR [DAMAGE_ONLY]
+    补回前     |       WriteLn('�?DPAPI 测试失败: 解密结果不匹�?);
+    补回后     |       WriteLn('✗ DPAPI 测试失败: 解密结果不匹配');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L38 REPAIR [DAMAGE_ONLY]
+    补回前     |       WriteLn('�?DPAPI 测试失败: ', E.Message);
+    补回后     |       WriteLn('✗ DPAPI 测试失败: ', E.Message);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L64 REPAIR [DAMAGE_ONLY]
+    补回前     |       WriteLn('�?ChatHistory 测试通过!')
+    补回后     |       WriteLn('✓ ChatHistory 测试通过!')
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L66 REPAIR [DAMAGE_ONLY]
+    补回前     |       WriteLn('�?ChatHistory 测试失败');
+    补回后     |       WriteLn('✗ ChatHistory 测试失败');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L83 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('�?跳过: 未提�?API Key');
+    补回后     |     WriteLn('⚠ 跳过: 未提供 API Key');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L84 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('  请设�?SILICONFLOW_API_KEY 环境变量或直接修改代�?);
+    补回后     |     WriteLn('  请设置 SILICONFLOW_API_KEY 环境变量或直接修改代码');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L94 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('发送请�?..');
+    补回后     |     WriteLn('发送请求...');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L98 REPAIR [DAMAGE_ONLY]
+    补回前     |     // 测试非流�?
+    补回后     |     // 测试非流式
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L100 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('--- 非流式测�?---');
+    补回后     |     WriteLn('--- 非流式测试 ---');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L107 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?非流式测试通过!');
+    补回后     |         WriteLn('✓ 非流式测试通过!');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L111 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?请求失败: ', Response.ErrorMessage);
+    补回后     |         WriteLn('✗ 请求失败: ', Response.ErrorMessage);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L115 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?认证失败: ', E.Message);
+    补回后     |         WriteLn('✗ 认证失败: ', E.Message);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L117 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?余额不足: ', E.Message);
+    补回后     |         WriteLn('✗ 余额不足: ', E.Message);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L119 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?API 错误: ', E.Message);
+    补回后     |         WriteLn('✗ API 错误: ', E.Message);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L121 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?异常: ', E.ClassName, ' - ', E.Message);
+    补回后     |         WriteLn('✗ 异常: ', E.ClassName, ' - ', E.Message);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L143 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?流式测试通过!');
+    补回后     |         WriteLn('✓ 流式测试通过!');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L147 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?流式请求失败');
+    补回后     |         WriteLn('✗ 流式请求失败');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L151 REPAIR [DAMAGE_ONLY]
+    补回前     |         WriteLn('�?流式异常: ', E.ClassName, ' - ', E.Message);
+    补回后     |         WriteLn('✗ 流式异常: ', E.ClassName, ' - ', E.Message);
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L181 REPAIR [DAMAGE_ONLY]
+    补回前     |     WriteLn('按回车键退�?..');
+    补回后     |     WriteLn('按回车键退出...');
+    依据    | ccfc338b(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  SAME      168
+  REPAIR    23
+  MISMATCH  0
+  REPAIR 来源分档 DAMAGE_ONLY=23 AFTERMATH_EDIT=0
+  => 已写入（23 行补回，其余 168 行字节不动）；写后自检 BOM=保 U+FFFD=0
+==============================================================================
+合计  SAME=1984 REPAIR=227 MISMATCH=0
+合计  REPAIR 来源分档 DAMAGE_ONLY=23 AFTERMATH_EDIT=204

@@ -1,0 +1,501 @@
+Examples/MultiLanguageDemo/MainForm.pas L119 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', 's %d );"
+   后ASCII "    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '%s %d ');"
+   前 |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '浣犲ソ锛?s锛佷綘浠婂勾 %d 宀併€?);
+   后 |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '你好，%s！你今年 %d 岁。');
+Examples/MultiLanguageDemo/MainForm.pas L120 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('%d item', 'zh-CN', '%d );"
+   后ASCII "    UB.I18n.AddTranslation('%d item', 'zh-CN', '%d ');"
+   前 |     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 涓」鐩?);
+   后 |     UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 个项目');
+Examples/MultiLanguageDemo/MainForm.pas L121 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('%d items', 'zh-CN', '%d );"
+   后ASCII "    UB.I18n.AddTranslation('%d items', 'zh-CN', '%d ');"
+   前 |     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 涓」鐩?);
+   后 |     UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 个项目');
+Examples/MultiLanguageDemo/MainForm.pas L125 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('Hello', 'ja-JP', ');"
+   后ASCII "    UB.I18n.AddTranslation('Hello', 'ja-JP', '');"
+   前 |     UB.I18n.AddTranslation('Hello', 'ja-JP', '銇撱倱銇仭銇?);
+   后 |     UB.I18n.AddTranslation('Hello', 'ja-JP', 'こんにちは');
+Examples/MultiLanguageDemo/MainForm.pas L127 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('Cancel', 'ja-JP', ');"
+   后ASCII "    UB.I18n.AddTranslation('Cancel', 'ja-JP', '');"
+   前 |     UB.I18n.AddTranslation('Cancel', 'ja-JP', '銈儯銉炽偦銉?);
+   后 |     UB.I18n.AddTranslation('Cancel', 'ja-JP', 'キャンセル');
+Examples/MultiLanguageDemo/MainForm.pas L128 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('Open File', 'ja-JP', ');"
+   后ASCII "    UB.I18n.AddTranslation('Open File', 'ja-JP', '');"
+   前 |     UB.I18n.AddTranslation('Open File', 'ja-JP', '銉曘偂銈ゃ儷銈掗枊銇?);
+   后 |     UB.I18n.AddTranslation('Open File', 'ja-JP', 'ファイルを開く');
+Examples/MultiLanguageDemo/MainForm.pas L130 REPAIR
+   前ASCII "    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'sd);"
+   后ASCII "    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', '%s%d');"
+   前 |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', '銇撱倱銇仭銇€?s銇曘倱锛併亗銇仧銇?d姝炽仹銇欍€?);
+   后 |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'こんにちは、%sさん！あなたは%d歳です。');
+Tests/Acceptance/AcceptanceRunner.pas L156 REPAIR
+   前ASCII '  // ========== : =========='
+   后ASCII '  // ========== :  =========='
+   前 |   // ========== 绗竴闃舵: 鏂囨。涓庢灦鏋勫鏌?==========
+   后 |   // ========== 第一阶段: 文档与架构审查 ==========
+Tests/Acceptance/AcceptanceRunner.pas L158 REPAIR
+   前ASCII "  T.ID := 'P1-001'; T.Name := 'README.md ; T.Phase := 1;"
+   后ASCII "  T.ID := 'P1-001'; T.Name := 'README.md '; T.Phase := 1;"
+   前 |   T.ID := 'P1-001'; T.Name := 'README.md 瀹屾暣鎬?; T.Phase := 1;
+   后 |   T.ID := 'P1-001'; T.Name := 'README.md 完整性'; T.Phase := 1;
+Tests/Acceptance/AcceptanceRunner.pas L159 REPAIR
+   前ASCII "  T.Description := 'README.md ;"
+   后ASCII "  T.Description := ' README.md ';"
+   前 |   T.Description := '妫€鏌?README.md 鍖呭惈瀹夎銆侀厤缃€佸揩閫熷紑濮?;
+   后 |   T.Description := '检查 README.md 包含安装、配置、快速开始';
+Tests/Acceptance/AcceptanceRunner.pas L165 REPAIR
+   前ASCII "  T.Description := 'CHANGELOG.md ';"
+   后ASCII "  T.Description := ' CHANGELOG.md ';"
+   前 |   T.Description := '妫€鏌?CHANGELOG.md 璁板綍鐗堟湰鍙樻洿';
+   后 |   T.Description := '检查 CHANGELOG.md 记录版本变更';
+Tests/Acceptance/AcceptanceRunner.pas L170 REPAIR
+   前ASCII "  T.ID := 'P1-003'; T.Name := '; T.Phase := 1;"
+   后ASCII "  T.ID := 'P1-003'; T.Name := ''; T.Phase := 1;"
+   前 |   T.ID := 'P1-003'; T.Name := '妯″潡渚濊禆妫€鏌?; T.Phase := 1;
+   后 |   T.ID := 'P1-003'; T.Name := '模块依赖检查'; T.Phase := 1;
+Tests/Acceptance/AcceptanceRunner.pas L175 REPAIR
+   前ASCII '  // ========== : =========='
+   后ASCII '  // ========== :  =========='
+   前 |   // ========== 绗簩闃舵: 闈欐€佷唬鐮佸垎鏋?==========
+   后 |   // ========== 第二阶段: 静态代码分析 ==========
+Tests/Acceptance/AcceptanceRunner.pas L178 REPAIR
+   前ASCII "  T.Description := ' Win32 ;"
+   后ASCII "  T.Description := ' Win32 ';"
+   前 |   T.Description := '缂栬瘧 Win32 鐗堟湰锛岄浂閿欒闆惰鍛?;
+   后 |   T.Description := '编译 Win32 版本，零错误零警告';
+Tests/Acceptance/AcceptanceRunner.pas L184 REPAIR
+   前ASCII "  T.Description := ' Win64 ;"
+   后ASCII "  T.Description := ' Win64 ';"
+   前 |   T.Description := '缂栬瘧 Win64 鐗堟湰锛岄浂閿欒闆惰鍛?;
+   后 |   T.Description := '编译 Win64 版本，零错误零警告';
+Tests/Acceptance/AcceptanceRunner.pas L189 REPAIR
+   前ASCII "  T.ID := 'P2-003'; T.Name := 'TODO/FIXME'; T.Phase := 2;"
+   后ASCII "  T.ID := 'P2-003'; T.Name := ' TODO/FIXME'; T.Phase := 2;"
+   前 |   T.ID := 'P2-003'; T.Name := '鏃?TODO/FIXME'; T.Phase := 2;
+   后 |   T.ID := 'P2-003'; T.Name := '无 TODO/FIXME'; T.Phase := 2;
+Tests/Acceptance/AcceptanceRunner.pas L190 REPAIR
+   前ASCII "  T.Description := 'TODO/FIXME';"
+   后ASCII "  T.Description := ' TODO/FIXME';"
+   前 |   T.Description := '妫€鏌ヤ唬鐮佷腑鏃犳湭瀹屾垚鐨?TODO/FIXME';
+   后 |   T.Description := '检查代码中无未完成的 TODO/FIXME';
+Tests/Acceptance/AcceptanceRunner.pas L196 REPAIR
+   前ASCII "  T.Description := ';"
+   后ASCII "  T.Description := '';"
+   前 |   T.Description := '妫€鏌ユ棤纭紪鐮佺殑瀵嗛挜鎴栧瘑鐮?;
+   后 |   T.Description := '检查无硬编码的密钥或密码';
+Tests/Acceptance/AcceptanceRunner.pas L203 REPAIR
+   前ASCII "  T.Description := ';"
+   后ASCII "  T.Description := '';"
+   前 |   T.Description := '杩愯鎵€鏈夊崟鍏冩祴璇?;
+   后 |   T.Description := '运行所有单元测试';
+Tests/Acceptance/AcceptanceRunner.pas L208 REPAIR
+   前ASCII "  T.ID := 'P3-002'; T.Name := '; T.Phase := 3;"
+   后ASCII "  T.ID := 'P3-002'; T.Name := ''; T.Phase := 3;"
+   前 |   T.ID := 'P3-002'; T.Name := '娴嬭瘯瑕嗙洊鐜?; T.Phase := 3;
+   后 |   T.ID := 'P3-002'; T.Name := '测试覆盖率'; T.Phase := 3;
+Tests/Acceptance/AcceptanceRunner.pas L216 REPAIR
+   前ASCII "  T.Description := ';"
+   后ASCII "  T.Description := '';"
+   前 |   T.Description := '杩愯鎵€鏈夐泦鎴愭祴璇?;
+   后 |   T.Description := '运行所有集成测试';
+Tests/Acceptance/AcceptanceRunner.pas L222 REPAIR
+   前ASCII "  T.Description := ';"
+   后ASCII "  T.Description := '';"
+   前 |   T.Description := '杩愯鍘嬪姏娴嬭瘯锛岄獙璇佺ǔ瀹氭€?;
+   后 |   T.Description := '运行压力测试，验证稳定性';
+Tests/Acceptance/AcceptanceRunner.pas L235 REPAIR
+   前ASCII "  T.Description := '/Stripe/;"
+   后ASCII "  T.Description := '/Stripe/';"
+   前 |   T.Description := '楠岃瘉寰俊/Stripe/鏀粯瀹濈鍚?;
+   后 |   T.Description := '验证微信/Stripe/支付宝签名';
+Tests/Acceptance/AcceptanceRunner.pas L245 REPAIR
+   前ASCII '  // ========== : =========='
+   后ASCII '  // ========== :  =========='
+   前 |   // ========== 绗叚闃舵: 鍏煎鎬ф祴璇?==========
+   后 |   // ========== 第六阶段: 兼容性测试 ==========
+Tests/Acceptance/AcceptanceRunner.pas L248 REPAIR
+   前ASCII "  T.Description := 'Delphi 11 Alexandria ';"
+   后ASCII "  T.Description := ' Delphi 11 Alexandria ';"
+   前 |   T.Description := '鍦?Delphi 11 Alexandria 缂栬瘧娴嬭瘯';
+   后 |   T.Description := '在 Delphi 11 Alexandria 编译测试';
+Tests/Acceptance/AcceptanceRunner.pas L254 REPAIR
+   前ASCII "  T.Description := 'Delphi 12 Athens ';"
+   后ASCII "  T.Description := ' Delphi 12 Athens ';"
+   前 |   T.Description := '鍦?Delphi 12 Athens 缂栬瘧娴嬭瘯';
+   后 |   T.Description := '在 Delphi 12 Athens 编译测试';
+Tests/Acceptance/AcceptanceRunner.pas L261 REPAIR
+   前ASCII "  T.Description := ';"
+   后ASCII "  T.Description := '';"
+   前 |   T.Description := '缂栬瘧鎵€鏈夌ず渚嬮」鐩?;
+   后 |   T.Description := '编译所有示例项目';
+Tests/Acceptance/AcceptanceRunner.pas L271 REPAIR
+   前ASCII '  // ========== : =========='
+   后ASCII '  // ========== :  =========='
+   前 |   // ========== 绗叓闃舵: 鏈€缁堥獙鏀?==========
+   后 |   // ========== 第八阶段: 最终验收 ==========
+Tests/Acceptance/AcceptanceRunner.pas L273 REPAIR
+   前ASCII "  T.ID := 'P8-001'; T.Name := '; T.Phase := 8;"
+   后ASCII "  T.ID := 'P8-001'; T.Name := ''; T.Phase := 8;"
+   前 |   T.ID := 'P8-001'; T.Name := '鍐呭瓨娉勬紡妫€鏌?; T.Phase := 8;
+   后 |   T.ID := 'P8-001'; T.Name := '内存泄漏检查'; T.Phase := 8;
+Tests/Acceptance/AcceptanceRunner.pas L274 REPAIR
+   前ASCII "  T.Description := ' ReportMemoryLeaksOnShutdown ;"
+   后ASCII "  T.Description := ' ReportMemoryLeaksOnShutdown ';"
+   前 |   T.Description := '浣跨敤 ReportMemoryLeaksOnShutdown 妫€鏌?;
+   后 |   T.Description := '使用 ReportMemoryLeaksOnShutdown 检查';
+Tests/Acceptance/AcceptanceRunner.pas L279 REPAIR
+   前ASCII "  T.ID := 'P8-002'; T.Name := '; T.Phase := 8;"
+   后ASCII "  T.ID := 'P8-002'; T.Name := ''; T.Phase := 8;"
+   前 |   T.ID := 'P8-002'; T.Name := '鏈€缁堢瀛楃‘璁?; T.Phase := 8;
+   后 |   T.ID := 'P8-002'; T.Name := '最终签字确认'; T.Phase := 8;
+Tests/Acceptance/AcceptanceRunner.pas L288 REPAIR
+   前ASCII "  Log(Format('%d ', [FTests.Count]));"
+   后ASCII "  Log(Format(' %d ', [FTests.Count]));"
+   前 |   Log(Format('宸插姞杞?%d 涓祴璇曢」', [FTests.Count]));
+   后 |   Log(Format('已加载 %d 个测试项', [FTests.Count]));
+Tests/Acceptance/AcceptanceRunner.pas L364 REPAIR
+   前ASCII "  PhaseResult.PhaseName := Format('%d ', [PhaseNumber]);"
+   后ASCII "  PhaseResult.PhaseName := Format(' %d ', [PhaseNumber]);"
+   前 |   PhaseResult.PhaseName := Format('绗?%d 闃舵', [PhaseNumber]);
+   后 |   PhaseResult.PhaseName := Format('第 %d 阶段', [PhaseNumber]);
+Tests/Acceptance/AcceptanceRunner.pas L405 REPAIR
+   前ASCII "  Log(Format('%d : %d/%d ', "
+   后ASCII "  Log(Format(' %d : %d/%d ', "
+   前 |   Log(Format('绗?%d 闃舵瀹屾垚: %d/%d 閫氳繃', 
+   后 |   Log(Format('第 %d 阶段完成: %d/%d 通过', 
+Tests/Acceptance/AcceptanceRunner.pas L435 REPAIR
+   前ASCII "      Log(Format(' %s  %s', [TestID, IfThen(Passed, '', '')]));"
+   后ASCII "      Log(Format(' %s : %s', [TestID, IfThen(Passed, '', '')]));"
+   前 |       Log(Format('鎵嬪姩娴嬭瘯 %s 鏍囪涓? %s', [TestID, IfThen(Passed, '閫氳繃', '澶辫触')]));
+   后 |       Log(Format('手动测试 %s 标记为: %s', [TestID, IfThen(Passed, '通过', '失败')]));
+Tests/Acceptance/AcceptanceRunner.pas L453 REPAIR
+   前ASCII "      Log(Format(' %s , [TestID]));"
+   后ASCII "      Log(Format(' %s ', [TestID]));"
+   前 |       Log(Format('娴嬭瘯 %s 宸茶烦杩?, [TestID]));
+   后 |       Log(Format('测试 %s 已跳过', [TestID]));
+Tests/Acceptance/AcceptanceRunner.pas L510 REPAIR
+   前ASCII "    Log('DeepBaseCore.dpk , True);"
+   后ASCII "    Log('DeepBaseCore.dpk ', True);"
+   前 |     Log('DeepBaseCore.dpk 涓嶅瓨鍦?, True);
+   后 |     Log('DeepBaseCore.dpk 不存在', True);
+Tests/Acceptance/AcceptanceRunner.pas L534 REPAIR
+   前ASCII "    Log(Format(' %d TODO/FIXME', [TodoCount]), True);"
+   后ASCII "    Log(Format(' %d  TODO/FIXME', [TodoCount]), True);"
+   前 |     Log(Format('鍙戠幇 %d 涓枃浠跺寘鍚?TODO/FIXME', [TodoCount]), True);
+   后 |     Log(Format('发现 %d 个文件包含 TODO/FIXME', [TodoCount]), True);
+Tests/Acceptance/AcceptanceRunner.pas L599 REPAIR
+   前ASCII '  // - '
+   后ASCII '  //  - '
+   前 |   // 绠€鍖栧疄鐜?- 瀹為檯搴旇繍琛屾祴璇曞苟妫€鏌ュ唴瀛樻硠婕?
+   后 |   // 简化实现 - 实际应运行测试并检查内存泄漏
+Tests/Acceptance/AcceptanceRunner.pas L614 REPAIR
+   前ASCII "    Log(Format(' %d , [Length(Dirs)]));"
+   后ASCII "    Log(Format(' %d ', [Length(Dirs)]));"
+   前 |     Log(Format('鍙戠幇 %d 涓ず渚嬮」鐩?, [Length(Dirs)]));
+   后 |     Log(Format('发现 %d 个示例项目', [Length(Dirs)]));
+Tests/Acceptance/AcceptanceRunner.pas L670 REPAIR
+   前ASCII '    HTML.Add(Format(\'<div class="stat stat-manual"><div style="font-size:24px">%d</div>/div>\', [TotalManual]));'
+   后ASCII '    HTML.Add(Format(\'<div class="stat stat-manual"><div style="font-size:24px">%d</div></div>\', [TotalManual]));'
+   前 |     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>寰呬汉宸?/div>', [TotalManual]));
+   后 |     HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>待人工</div>', [TotalManual]));
+Tests/Acceptance/AcceptanceRunner.pas L677 REPAIR
+   前ASCII '      HTML.Add(Format(\'<div class="phase-header">%d </div>\', [Phase]));'
+   后ASCII '      HTML.Add(Format(\'<div class="phase-header"> %d </div>\', [Phase]));'
+   前 |       HTML.Add(Format('<div class="phase-header">绗?%d 闃舵</div>', [Phase]));
+   后 |       HTML.Add(Format('<div class="phase-header">第 %d 阶段</div>', [Phase]));
+Tests/Acceptance/AcceptanceRunner.pas L684 REPAIR
+   前ASCII "            tsPassed: begin StatusClass := 'pass'; StatusText := ''; end;"
+   后ASCII "            tsPassed: begin StatusClass := 'pass'; StatusText := ' '; end;"
+   前 |             tsPassed: begin StatusClass := 'pass'; StatusText := '鉁?閫氳繃'; end;
+   后 |             tsPassed: begin StatusClass := 'pass'; StatusText := '✓ 通过'; end;
+Tests/Acceptance/AcceptanceRunner.pas L685 REPAIR
+   前ASCII "            tsFailed: begin StatusClass := 'fail'; StatusText := ''; end;"
+   后ASCII "            tsFailed: begin StatusClass := 'fail'; StatusText := ' '; end;"
+   前 |             tsFailed: begin StatusClass := 'fail'; StatusText := '鉁?澶辫触'; end;
+   后 |             tsFailed: begin StatusClass := 'fail'; StatusText := '✗ 失败'; end;
+Tests/Acceptance/AcceptanceRunner.pas L686 REPAIR
+   前ASCII "            tsManual: begin StatusClass := 'manual'; StatusText := '; end;"
+   后ASCII "            tsManual: begin StatusClass := 'manual'; StatusText := ' '; end;"
+   前 |             tsManual: begin StatusClass := 'manual'; StatusText := '鈿?寰呬汉宸?; end;
+   后 |             tsManual: begin StatusClass := 'manual'; StatusText := '⚠ 待人工'; end;
+Tests/Acceptance/AcceptanceRunner.pas L687 REPAIR
+   前ASCII "            tsSkipped: begin StatusClass := 'skip'; StatusText := ''; end;"
+   后ASCII "            tsSkipped: begin StatusClass := 'skip'; StatusText := ' '; end;"
+   前 |             tsSkipped: begin StatusClass := 'skip'; StatusText := '鈼?璺宠繃'; end;
+   后 |             tsSkipped: begin StatusClass := 'skip'; StatusText := '○ 跳过'; end;
+Tests/Acceptance/AcceptanceRunner.pas L689 REPAIR
+   前ASCII "            begin StatusClass := 'notrun'; StatusText := '- ; end;"
+   后ASCII "            begin StatusClass := 'notrun'; StatusText := '- '; end;"
+   前 |             begin StatusClass := 'notrun'; StatusText := '- 鏈墽琛?; end;
+   后 |             begin StatusClass := 'notrun'; StatusText := '- 未执行'; end;
+Tests/Acceptance/AcceptanceRunner.pas L706 REPAIR
+   前ASCII "    Log(' ' + OutputPath);"
+   后ASCII "    Log(': ' + OutputPath);"
+   前 |     Log('楠屾敹鎶ュ憡宸茬敓鎴? ' + OutputPath);
+   后 |     Log('验收报告已生成: ' + OutputPath);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L78 REPAIR
+   前ASCII '    { }'
+   后ASCII '    {  }'
+   前 |     { 宸ュ叿鏍?}
+   后 |     { 工具栏 }
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L122 REPAIR
+   前ASCII '    { }'
+   后ASCII '    {  }'
+   前 |     { 瀵硅瘽妗?}
+   后 |     { 对话框 }
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L186 REPAIR
+   前ASCII "  APP_TITLE = 'DeepBase ;"
+   后ASCII "  APP_TITLE = 'DeepBase ';"
+   前 |   APP_TITLE = 'DeepBase 鏃ュ織鍒嗘瀽鍣?;
+   后 |   APP_TITLE = 'DeepBase 日志分析器';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L204 REPAIR
+   前ASCII '  // : 4'
+   后ASCII '  // : 24'
+   前 |   // 榛樿鏃堕棿鑼冨洿: 鏈€杩?4灏忔椂
+   后 |   // 默认时间范围: 最近24小时
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L242 REPAIR
+   前ASCII "  mnuFileOpen.Caption := '&O)...';"
+   后ASCII "  mnuFileOpen.Caption := '(&O)...';"
+   前 |   mnuFileOpen.Caption := '鎵撳紑鏁版嵁搴?&O)...';
+   后 |   mnuFileOpen.Caption := '打开数据库(&O)...';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L248 REPAIR
+   前ASCII "  mnuFileClose.Caption := '&C)';"
+   后ASCII "  mnuFileClose.Caption := '(&C)';"
+   前 |   mnuFileClose.Caption := '鍏抽棴鏁版嵁搴?&C)';
+   后 |   mnuFileClose.Caption := '关闭数据库(&C)';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L257 REPAIR
+   前ASCII "  mnuFileExportCSV.Caption := 'CSV...';"
+   后ASCII "  mnuFileExportCSV.Caption := ' CSV...';"
+   前 |   mnuFileExportCSV.Caption := '瀵煎嚭涓?CSV...';
+   后 |   mnuFileExportCSV.Caption := '导出为 CSV...';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L262 REPAIR
+   前ASCII "  mnuFileExportJSON.Caption := 'JSON...';"
+   后ASCII "  mnuFileExportJSON.Caption := ' JSON...';"
+   前 |   mnuFileExportJSON.Caption := '瀵煎嚭涓?JSON...';
+   后 |   mnuFileExportJSON.Caption := '导出为 JSON...';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L267 REPAIR
+   前ASCII "  mnuFileExportHTML.Caption := 'HTML...';"
+   后ASCII "  mnuFileExportHTML.Caption := ' HTML...';"
+   前 |   mnuFileExportHTML.Caption := '瀵煎嚭涓?HTML...';
+   后 |   mnuFileExportHTML.Caption := '导出为 HTML...';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L276 REPAIR
+   前ASCII "  mnuFileExit.Caption := '&X)';"
+   后ASCII "  mnuFileExit.Caption := '(&X)';"
+   前 |   mnuFileExit.Caption := '閫€鍑?&X)';
+   后 |   mnuFileExit.Caption := '退出(&X)';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L320 REPAIR
+   前ASCII "  lblDatabase.Caption := '';"
+   后ASCII "  lblDatabase.Caption := ':';"
+   前 |   lblDatabase.Caption := '鏁版嵁搴?';
+   后 |   lblDatabase.Caption := '数据库:';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L348 REPAIR
+   前ASCII "  dlgOpen.Filter := 'SQLite *.db;*.sqlite;*.sqlite3|*.*';"
+   后ASCII "  dlgOpen.Filter := 'SQLite |*.db;*.sqlite;*.sqlite3||*.*';"
+   前 |   dlgOpen.Filter := 'SQLite 鏁版嵁搴搢*.db;*.sqlite;*.sqlite3|鎵€鏈夋枃浠秥*.*';
+   后 |   dlgOpen.Filter := 'SQLite 数据库|*.db;*.sqlite;*.sqlite3|所有文件|*.*';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L349 REPAIR
+   前ASCII "  dlgOpen.Title := ';"
+   后ASCII "  dlgOpen.Title := '';"
+   前 |   dlgOpen.Title := '鎵撳紑鏃ュ織鏁版嵁搴?;
+   后 |   dlgOpen.Title := '打开日志数据库';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L364 REPAIR
+   前ASCII '  //  '
+   后ASCII '  // : '
+   前 |   // 绗竴琛? 鏃堕棿鑼冨洿
+   后 |   // 第一行: 时间范围
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L368 REPAIR
+   前ASCII "  lblFromTime.Caption := '';"
+   后ASCII "  lblFromTime.Caption := ':';"
+   前 |   lblFromTime.Caption := '浠?';
+   后 |   lblFromTime.Caption := '从:';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L378 REPAIR
+   前ASCII "  lblToTime.Caption := '';"
+   后ASCII "  lblToTime.Caption := ':';"
+   前 |   lblToTime.Caption := '鍒?';
+   后 |   lblToTime.Caption := '到:';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L420 REPAIR
+   前ASCII '  //  '
+   后ASCII '  // : '
+   前 |   // 绗簩琛? 鍏抽敭璇嶆悳绱?
+   后 |   // 第二行: 关键词搜索
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L560 REPAIR
+   前ASCII "    Caption := ';"
+   后ASCII "    Caption := '';"
+   前 |     Caption := '鐧惧垎姣?;
+   后 |     Caption := '百分比';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L626 REPAIR
+   前ASCII "      MessageDlg(' ' + E.Message, mtError, [mbOK], 0);"
+   后ASCII "      MessageDlg(': ' + E.Message, mtError, [mbOK], 0);"
+   前 |       MessageDlg('鎵撳紑鏁版嵁搴撳け璐? ' + E.Message, mtError, [mbOK], 0);
+   后 |       MessageDlg('打开数据库失败: ' + E.Message, mtError, [mbOK], 0);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L810 REPAIR
+   前ASCII "    Item.Caption := ';"
+   后ASCII "    Item.Caption := '';"
+   前 |     Item.Caption := '鍞竴鏉ユ簮鏁?;
+   后 |     Item.Caption := '唯一来源数';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L817 REPAIR
+   前ASCII "      Item.Caption := ';"
+   后ASCII "      Item.Caption := '';"
+   前 |       Item.Caption := '鏈€鏃╂椂闂?;
+   后 |       Item.Caption := '最早时间';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L822 REPAIR
+   前ASCII "      Item.Caption := ';"
+   后ASCII "      Item.Caption := '';"
+   前 |       Item.Caption := '鏈€鏅氭椂闂?;
+   后 |       Item.Caption := '最晚时间';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L834 REPAIR
+   前ASCII "    StatusBar.Panels[0].Text := ' ' + ExtractFileName(FCurrentDB)"
+   后ASCII "    StatusBar.Panels[0].Text := ': ' + ExtractFileName(FCurrentDB)"
+   前 |     StatusBar.Panels[0].Text := '宸茶繛鎺? ' + ExtractFileName(FCurrentDB)
+   后 |     StatusBar.Panels[0].Text := '已连接: ' + ExtractFileName(FCurrentDB)
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L836 REPAIR
+   前ASCII "    StatusBar.Panels[0].Text := ';"
+   后ASCII "    StatusBar.Panels[0].Text := '';"
+   前 |     StatusBar.Panels[0].Text := '鏈繛鎺?;
+   后 |     StatusBar.Panels[0].Text := '未连接';
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L839 REPAIR
+   前ASCII "  StatusBar.Panels[2].Text := Format(' %d', [FConnections.Count]);"
+   后ASCII "  StatusBar.Panels[2].Text := Format(': %d', [FConnections.Count]);"
+   前 |   StatusBar.Panels[2].Text := Format('鏁版嵁搴? %d', [FConnections.Count]);
+   后 |   StatusBar.Panels[2].Text := Format('数据库: %d', [FConnections.Count]);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L949 REPAIR
+   前ASCII "    MessageDlg(', mtInformation, [mbOK], 0);"
+   后ASCII "    MessageDlg('', mtInformation, [mbOK], 0);"
+   前 |     MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+   后 |     MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L968 REPAIR
+   前ASCII "    MessageDlg(', mtInformation, [mbOK], 0);"
+   后ASCII "    MessageDlg('', mtInformation, [mbOK], 0);"
+   前 |     MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+   后 |     MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L987 REPAIR
+   前ASCII "    MessageDlg(', mtInformation, [mbOK], 0);"
+   后ASCII "    MessageDlg('', mtInformation, [mbOK], 0);"
+   前 |     MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0);
+   后 |     MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L1023 REPAIR
+   前ASCII "    'DeepBase  + #13#10#13#10 +"
+   后ASCII "    ' DeepBase ' + #13#10#13#10 +"
+   前 |     '鐢ㄤ簬鏌ョ湅鍜屽垎鏋?DeepBase 妗嗘灦鐢熸垚鐨勬棩蹇楁暟鎹€? + #13#10#13#10 +
+   后 |     '用于查看和分析 DeepBase 框架生成的日志数据。' + #13#10#13#10 +
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas L1026 REPAIR
+   前ASCII "    '- // + #13#10 +"
+   后ASCII "    '- //' + #13#10 +"
+   前 |     '- 鏃堕棿/绾у埆/鍏抽敭璇嶈繃婊? + #13#10 +
+   后 |     '- 时间/级别/关键词过滤' + #13#10 +
+Tests/TestLLMClient.dpr L13 REPAIR
+   前ASCII '  // API Key '
+   后ASCII '  //  API Key '
+   前 |   // 使用环境变量或直接填�?API Key 测试
+   后 |   // 使用环境变量或直接填入 API Key 测试
+Tests/TestLLMClient.dpr L27 REPAIR
+   前ASCII "    WriteLn('(Base64): ', Copy(Encrypted, 1, 50), '...');"
+   后ASCII "    WriteLn(' (Base64): ', Copy(Encrypted, 1, 50), '...');"
+   前 |     WriteLn('加密�?(Base64): ', Copy(Encrypted, 1, 50), '...');
+   后 |     WriteLn('加密后 (Base64): ', Copy(Encrypted, 1, 50), '...');
+Tests/TestLLMClient.dpr L30 REPAIR
+   前ASCII "    WriteLn(' ', Decrypted);"
+   后ASCII "    WriteLn(': ', Decrypted);"
+   前 |     WriteLn('解密�? ', Decrypted);
+   后 |     WriteLn('解密后: ', Decrypted);
+Tests/TestLLMClient.dpr L33 REPAIR
+   前ASCII "      WriteLn('DPAPI !')"
+   后ASCII "      WriteLn(' DPAPI !')"
+   前 |       WriteLn('�?DPAPI 测试通过!')
+   后 |       WriteLn('✓ DPAPI 测试通过!')
+Tests/TestLLMClient.dpr L35 REPAIR
+   前ASCII "      WriteLn('DPAPI : );"
+   后ASCII "      WriteLn(' DPAPI : ');"
+   前 |       WriteLn('�?DPAPI 测试失败: 解密结果不匹�?);
+   后 |       WriteLn('✗ DPAPI 测试失败: 解密结果不匹配');
+Tests/TestLLMClient.dpr L38 REPAIR
+   前ASCII "      WriteLn('DPAPI : ', E.Message);"
+   后ASCII "      WriteLn(' DPAPI : ', E.Message);"
+   前 |       WriteLn('�?DPAPI 测试失败: ', E.Message);
+   后 |       WriteLn('✗ DPAPI 测试失败: ', E.Message);
+Tests/TestLLMClient.dpr L64 REPAIR
+   前ASCII "      WriteLn('ChatHistory !')"
+   后ASCII "      WriteLn(' ChatHistory !')"
+   前 |       WriteLn('�?ChatHistory 测试通过!')
+   后 |       WriteLn('✓ ChatHistory 测试通过!')
+Tests/TestLLMClient.dpr L66 REPAIR
+   前ASCII "      WriteLn('ChatHistory ');"
+   后ASCII "      WriteLn(' ChatHistory ');"
+   前 |       WriteLn('�?ChatHistory 测试失败');
+   后 |       WriteLn('✗ ChatHistory 测试失败');
+Tests/TestLLMClient.dpr L83 REPAIR
+   前ASCII "    WriteLn(': API Key');"
+   后ASCII "    WriteLn(' :  API Key');"
+   前 |     WriteLn('�?跳过: 未提�?API Key');
+   后 |     WriteLn('⚠ 跳过: 未提供 API Key');
+Tests/TestLLMClient.dpr L84 REPAIR
+   前ASCII "    WriteLn('  SILICONFLOW_API_KEY );"
+   后ASCII "    WriteLn('   SILICONFLOW_API_KEY ');"
+   前 |     WriteLn('  请设�?SILICONFLOW_API_KEY 环境变量或直接修改代�?);
+   后 |     WriteLn('  请设置 SILICONFLOW_API_KEY 环境变量或直接修改代码');
+Tests/TestLLMClient.dpr L94 REPAIR
+   前ASCII "    WriteLn('..');"
+   后ASCII "    WriteLn('...');"
+   前 |     WriteLn('发送请�?..');
+   后 |     WriteLn('发送请求...');
+Tests/TestLLMClient.dpr L100 REPAIR
+   前ASCII "    WriteLn('--- ---');"
+   后ASCII "    WriteLn('---  ---');"
+   前 |     WriteLn('--- 非流式测�?---');
+   后 |     WriteLn('--- 非流式测试 ---');
+Tests/TestLLMClient.dpr L107 REPAIR
+   前ASCII "        WriteLn('!');"
+   后ASCII "        WriteLn(' !');"
+   前 |         WriteLn('�?非流式测试通过!');
+   后 |         WriteLn('✓ 非流式测试通过!');
+Tests/TestLLMClient.dpr L111 REPAIR
+   前ASCII "        WriteLn(': ', Response.ErrorMessage);"
+   后ASCII "        WriteLn(' : ', Response.ErrorMessage);"
+   前 |         WriteLn('�?请求失败: ', Response.ErrorMessage);
+   后 |         WriteLn('✗ 请求失败: ', Response.ErrorMessage);
+Tests/TestLLMClient.dpr L115 REPAIR
+   前ASCII "        WriteLn(': ', E.Message);"
+   后ASCII "        WriteLn(' : ', E.Message);"
+   前 |         WriteLn('�?认证失败: ', E.Message);
+   后 |         WriteLn('✗ 认证失败: ', E.Message);
+Tests/TestLLMClient.dpr L117 REPAIR
+   前ASCII "        WriteLn(': ', E.Message);"
+   后ASCII "        WriteLn(' : ', E.Message);"
+   前 |         WriteLn('�?余额不足: ', E.Message);
+   后 |         WriteLn('✗ 余额不足: ', E.Message);
+Tests/TestLLMClient.dpr L119 REPAIR
+   前ASCII "        WriteLn('API : ', E.Message);"
+   后ASCII "        WriteLn(' API : ', E.Message);"
+   前 |         WriteLn('�?API 错误: ', E.Message);
+   后 |         WriteLn('✗ API 错误: ', E.Message);
+Tests/TestLLMClient.dpr L121 REPAIR
+   前ASCII "        WriteLn(': ', E.ClassName, ' - ', E.Message);"
+   后ASCII "        WriteLn(' : ', E.ClassName, ' - ', E.Message);"
+   前 |         WriteLn('�?异常: ', E.ClassName, ' - ', E.Message);
+   后 |         WriteLn('✗ 异常: ', E.ClassName, ' - ', E.Message);
+Tests/TestLLMClient.dpr L143 REPAIR
+   前ASCII "        WriteLn('!');"
+   后ASCII "        WriteLn(' !');"
+   前 |         WriteLn('�?流式测试通过!');
+   后 |         WriteLn('✓ 流式测试通过!');
+Tests/TestLLMClient.dpr L147 REPAIR
+   前ASCII "        WriteLn('');"
+   后ASCII "        WriteLn(' ');"
+   前 |         WriteLn('�?流式请求失败');
+   后 |         WriteLn('✗ 流式请求失败');
+Tests/TestLLMClient.dpr L151 REPAIR
+   前ASCII "        WriteLn(': ', E.ClassName, ' - ', E.Message);"
+   后ASCII "        WriteLn(' : ', E.ClassName, ' - ', E.Message);"
+   前 |         WriteLn('�?流式异常: ', E.ClassName, ' - ', E.Message);
+   后 |         WriteLn('✗ 流式异常: ', E.ClassName, ' - ', E.Message);
+Tests/TestLLMClient.dpr L181 REPAIR
+   前ASCII "    WriteLn('..');"
+   后ASCII "    WriteLn('...');"
+   前 |     WriteLn('按回车键退�?..');
+   后 |     WriteLn('按回车键退出...');
+ASCII 有实际得失的 REPAIR 行数 = 100 （其余为纯乱码→原文，ASCII 结构未变）

@@ -1,0 +1,36 @@
+目的：量本单落笔后 `09_工程脚本/encoding-gate/pas_encoding_baseline.json` 里与这 8 件相关的豁免额度是否还对应真实状态。
+方法：把受影响条目的基线值删掉（等价于把 cap 降为 0）后在隔离检出树 `.tmp/wt_d6_final` @2dc149d 复跑编码门禁；
+      门禁仍 EXIT=0 ⇒ 这些文件的实际 G1（U+FFFD）/G6（双重编码）计数都已不大于 0，即真实值为 0。
+      不改动仓库内基线文件（改基线=改门禁数据，超出本单 §四 边界）。
+
+=== 一、临时基线的生成与跑法 ===
+  python - <<'PY'   # 从仓库基线复制一份，删掉本单 5 个有条目的文件
+  删除项：fffd['Tests/Acceptance/AcceptanceMain.pas']=33
+          mojibake['Examples/MultiLanguageDemo/MainForm.pas']=8
+          mojibake['Tests/Acceptance/AcceptanceRunner.pas']=40
+          mojibake['Tools/LogAnalyzer/LogAnalyzer.MainForm.pas']=63
+          mojibake['Tests/Acceptance/AcceptanceReport.pas']=17
+  输出： .tmp/d6_baseline_zero.json
+  PY
+  cd .tmp/wt_d6_final && node 09_工程脚本/encoding-gate/check_pas_encoding.js --root . --baseline ../../.tmp/d6_baseline_zero.json
+
+=== 二、实测输出（逐字）===
+编码门禁通过：975 个 .pas + 646 个扩展面文件（基线残留U+FFFD文件 17，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 46，扩展面存量损坏豁免 13，跳过目录 4）
+EXIT=0
+  → 违规列表为空，即上述 5 件删掉额度后无 G1/G6 命中。
+
+=== 三、逐件实际编码状态（修后，共享树与检出树同内容）===
+  Examples/MultiLanguageDemo/MainForm.pas        UTF-8 合法   基线 mojibake=8   → 实际 0
+  Tests/Acceptance/AcceptanceRunner.pas          UTF-8 合法   基线 mojibake=40  → 实际 0
+  Tools/LogAnalyzer/LogAnalyzer.MainForm.pas     UTF-8 合法   基线 mojibake=63  → 实际 0
+  Tests/Acceptance/AcceptanceReport.pas          UTF-8 合法   基线 mojibake=17  → 实际 0
+  Tests/Acceptance/AcceptanceMain.pas            UTF-8 合法   基线 fffd=33      → 实际 0
+  Tests/TestLLMClient.dpr                        UTF-8 合法   基线无条目        → 实际 0（修前 U+FFFD=26）
+  Tools/LogAnalyzer/LogAnalyzer.dpr              UTF-8 合法   hardUtf8Exceptions 在册 → 已不该再豁免
+  Tests/Acceptance/DeepBaseAcceptanceTest.dpr    UTF-8 仍非法 hardUtf8Exceptions 在册 → 仍应豁免（L2/L9/L10 注释尾部吞位未补，见回执遗留 2）
+
+=== 四、结论（交回执 §六 遗留 3）===
+  陈旧豁免额度合计 128 处（33 + 8 + 40 + 63 + 17）+ 1 条 hardUtf8Exceptions 死条目（Tools/LogAnalyzer/LogAnalyzer.dpr）。
+  基线自述口径为「清一件删一件」（generated 字段，2026-09-23 D4 N1.1 建 hardUtf8Exceptions 时写明），本单已把对应存量清掉，
+  但删除基线条目属修改门禁数据、本单 §四 禁止 ⇒ 只登记不执行。
+  风险量化：门禁判据是「实际 > 基线才红」，因此这 5 个文件现在可以在不触发任何红的前提下复活 128 处 U+FFFD/双重编码损坏。

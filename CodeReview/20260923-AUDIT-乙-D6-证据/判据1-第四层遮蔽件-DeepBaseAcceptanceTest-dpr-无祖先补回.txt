@@ -1,0 +1,44 @@
+=== 一、祖先面：本单之前该路径的全部提交 ===
+git rev-list 47dc031 -- Tests/Acceptance/DeepBaseAcceptanceTest.dpr 命中 1 笔: ['ca3364ee']
+  ca3364ee  U+FFFD=0  该行末 8 字节=b6e6b58be8af3f3b
+  → 唯一祖先即损坏态 ⇒ 干净祖先不存在，本件无法按「取祖先行」补回；这正是工单 §〇 所说「不可逆」唯一真实成立的那一类。
+
+=== 二、算子标定：两处有干净祖先的同型被害行（末字 + 右引号被吞）===
+  Tools/LogAnalyzer/LogAnalyzer.dpr（祖先 69d3f66c）
+    祖先行末 8 字节 = e69e90e599a8273b
+    损坏行末 8 字节 = 86e69e90e5993f3b
+  Tests/Acceptance/AcceptanceMain.pas（祖先 42664177）
+    祖先行末 8 字节 = e5aea1e69fa5272c
+    损坏行末 8 字节 = e5aea1efbfbd3f2c
+  两例共同的、与本件反解相关的不变量：
+    损坏行的 `3F`（?）之后紧跟的就是原文里右引号后面的那个分隔符（`;` 或 `,`），
+    即被吞的是「末字节的残尾 + 右引号 0x27」，字符串内容与分隔符之间不存在其他存活字节；
+    LogAnalyzer.dpr 那例还表明：末字的前两字节可以原样存活（e599a8→e599 + 3f）。
+
+=== 三、反解本件 L27 ===
+  损坏 L27 hex = 20204170706c69636174696f6e2e5469746c65203a3d2027446565704261736520e58fafe8a786e58c96e9aa8ce694b6e6b58be8af3f3b0d
+  损坏 L27 文本 =   Application.Title := 'DeepBase 可视化验收测�?;
+  逐段：…e6b58b=测 | e8af=试的前两字节 | 3f=吞位 | 3b=; | 0d=（隔离检出树行尾，共享树本件为 LF）
+  补回值      =   Application.Title := 'DeepBase 可视化验收测试';
+  补回 hex    = 20204170706c69636174696f6e2e5469746c65203a3d2027446565704261736520e58fafe8a786e58c96e9aa8ce694b6e6b58be8af95273b
+  与标定同型：末字前两字节(e8af)存活 + 3f 吞掉「末字第三字节 95 + 右引号 27」+ 紧跟 3b。
+  排除更长候选：若原文是「…测试工具」，`3f` 之前必须留下 工=E5B7A5 与 具=E585xx 的字节
+  （对照本文件 L2 注释里 `工具` 仍以 e5b7a5 e585 3f 的形态存活）；实测 3f 之前只有 e8af ⇒ 串尾即「试」。
+
+=== 四、独立平行原文（同工程、编码完好、本单从未改动该件）===
+  AcceptanceMain.dfm:4    Caption = 'DeepBase 可视化验收测试工具'
+  AcceptanceMain.dfm:34        Caption = 'DeepBase 可视化验收测试'
+  → 补回值的字符串内容与 dfm:34 逐字相同；该 .dfm 自 ca3364ee 起未被本单触碰（见 git diff 清单）。
+
+=== 五、落笔后状态（2dc149d，共享工作树）===
+  行数=31  BOM=False  CR 字节=0  U+FFFD=0  0x3F 个数=3
+  git diff --numstat 47dc031..HEAD -- 本件 = 1	1	Tests/Acceptance/DeepBaseAcceptanceTest.dpr
+  改动行 = [27]
+  其余 30 行逐字节不变；L2/L9/L10 三处注释尾部的吞位仍在（无祖先且不影响编译，按 §2.2「禁止造文」不补，登记为遗留，见回执 §五）。
+
+=== 六、判据1 实测 ===
+  [12/67] Examples/MultiLanguageDemo/MultiLanguageDemo.dpr CONFIG=default BUILD_EXIT=0
+  [19/67] Tests/Acceptance/DeepBaseAcceptanceTest.dpr CONFIG=default BUILD_EXIT=0
+  [49/67] Tests/TestLLMClient.dpr CONFIG=default BUILD_EXIT=0
+  [59/67] Tools/LogAnalyzer/LogAnalyzer.dpr CONFIG=default BUILD_EXIT=0
+  编译门禁统计：DPR总数=67 成功=52 失败=15 被跳过=0 失败子路径=0 .res生成=21 编译器=dcc64.exe 陈旧DCU清理=0

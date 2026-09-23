@@ -1,0 +1,36 @@
+# 判据 C 附证：共享工作树行尾形态为「检出前既有」，非本单写入所致
+# 生成命令：git ls-files --eol -- 'Tests/Acceptance/*' 'Tools/LogAnalyzer/*' 'Examples/MultiLanguageDemo/*'
+# 口径：i/ = 仓库内 blob（*.pas/*.dpr 经 text eol=crlf clean 后恒为 lf）；w/ = 共享工作树现场字节
+
+i/lf    w/crlf  attr/text eol=crlf    	Examples/MultiLanguageDemo/MainForm.dfm
+i/lf    w/crlf  attr/text eol=crlf    	Examples/MultiLanguageDemo/MainForm.pas
+i/lf    w/crlf  attr/text eol=crlf    	Examples/MultiLanguageDemo/MultiLanguageDemo.dpr
+i/lf    w/crlf  attr/text eol=lf      	Examples/MultiLanguageDemo/README.md
+i/lf    w/crlf  attr/text eol=crlf    	Tests/Acceptance/AcceptanceMain.dfm
+i/lf    w/lf    attr/text eol=crlf    	Tests/Acceptance/AcceptanceMain.pas
+i/lf    w/lf    attr/text eol=crlf    	Tests/Acceptance/AcceptanceReport.pas
+i/lf    w/crlf  attr/text eol=crlf    	Tests/Acceptance/AcceptanceRunner.pas
+i/lf    w/lf    attr/text eol=crlf    	Tests/Acceptance/DeepBaseAcceptanceTest.dpr
+i/lf    w/mixed attr/text eol=crlf    	Tests/Acceptance/RunAcceptanceTest.bat
+i/lf    w/crlf  attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.Data.pas
+i/lf    w/lf    attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.Export.pas
+i/lf    w/crlf  attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.MainForm.dfm
+i/lf    w/crlf  attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.MainForm.pas
+i/lf    w/lf    attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.Stats.pas
+i/lf    w/lf    attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.dpr
+
+# ---- 全库 w/lf 计数（本单未触碰的件也在里面）----
+      4 w/
+     10 w/-text
+    792 w/crlf
+   1250 w/lf
+     99 w/mixed
+     10 w/none
+
+# ---- 本单六件 ----
+i/lf    w/crlf  attr/text eol=crlf    	Examples/MultiLanguageDemo/MainForm.pas
+i/lf    w/lf    attr/text eol=crlf    	Tests/Acceptance/AcceptanceMain.pas
+i/lf    w/crlf  attr/text eol=crlf    	Tests/Acceptance/AcceptanceRunner.pas
+i/lf    w/crlf  attr/text eol=crlf    	Tests/TestLLMClient.dpr
+i/lf    w/crlf  attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.MainForm.pas
+i/lf    w/lf    attr/text eol=crlf    	Tools/LogAnalyzer/LogAnalyzer.dpr

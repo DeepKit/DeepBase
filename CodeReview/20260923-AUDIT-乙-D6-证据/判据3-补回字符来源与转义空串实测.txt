@@ -1,0 +1,34 @@
+判据 3 专项实测：补回是否构成「为了绿而乱补」（加引号/空串/转义绕过）
+测量对象：本单 8 件源码，对比基线 = 修前 47dc031 的 git blob vs HEAD 的 git blob（字节级，非字符级）
+脚本：d6_criterion3_quote_count.py（本目录内，可直接复跑；输出对比基线 47dc031，当前 HEAD=2babf13，8 件 blob 与 2dc149d 逐一同 hash，已实测）
+口径说明：' = 0x27 单引号字节出现次数；'' = 双写转义/空串字面量的 0x27 0x27 非重叠出现次数
+行尾 CRLF/LF 差异不影响 0x27 计数，故 blob 与工作树在此项等价
+====== 原始输出 ======
+file                                                 q_before  q_after     dq_b     dq_a  empty_b
+Examples/MultiLanguageDemo/MainForm.pas                   213      220        2        2
+Tests/Acceptance/AcceptanceRunner.pas                     302      322        4        4
+Tests/TestLLMClient.dpr                                   118      120        4        4
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas                256      268       17       17
+Tests/Acceptance/AcceptanceMain.pas                       105      116        5        5
+Tools/LogAnalyzer/LogAnalyzer.dpr                           9       10        0        0
+Tests/Acceptance/AcceptanceReport.pas                     317      330        2        2
+Tests/Acceptance/DeepBaseAcceptanceTest.dpr                 7        8        0        0
+TOTAL 单引号字节数 before=1327 after=1394 delta=+67
+
+说明：after>before 是被吞右引号回来的直接计量；本单未新增任何 #39/#+十进制转义写法。
+Examples/MultiLanguageDemo/MainForm.pas              #39转义出现=0
+Tests/Acceptance/AcceptanceRunner.pas                #39转义出现=0
+Tests/TestLLMClient.dpr                              #39转义出现=0
+Tools/LogAnalyzer/LogAnalyzer.MainForm.pas           #39转义出现=0
+Tests/Acceptance/AcceptanceMain.pas                  #39转义出现=0
+Tools/LogAnalyzer/LogAnalyzer.dpr                    #39转义出现=0
+Tests/Acceptance/AcceptanceReport.pas                #39转义出现=0
+Tests/Acceptance/DeepBaseAcceptanceTest.dpr          #39转义出现=0
+====== 逐项判定 ======
+1) 整段删除：无。行数 8 件全不变（274/713/191/1033/364/32/419/31）；
+   d6_verify_after.py D 项「改动删掉修前已有 ASCII 的行数 = 0」×8（只补不删），见 判据2-3-4-落笔后核验-七件.txt。
+2) 改空串：无。'' 出现次数 8 件前后逐项相等（2/4/4/17/5/0/2/0），总量未增 ⇒ 没有任何一处把字符串改成 ''。
+3) 新增转义绕过：无。'#' 后接数字的字符转义写法在 HEAD 的 8 件里出现 0 次。
+4) 「随便加一个引号」：不成立。0x27 总量 1327 -> 1394（+67），且这 67 个字节不是手写的：
+   296 行补回值中 295 行与干净祖先行整行字节相同、第 27 行与 AcceptanceMain.dfm:34 平行原文逐字节相同
+   （B 项命中校验，d6_verify_after.py）。补回的引号是被 3F 覆盖掉的右引号回归，属于原文还原而非新增语法糖。

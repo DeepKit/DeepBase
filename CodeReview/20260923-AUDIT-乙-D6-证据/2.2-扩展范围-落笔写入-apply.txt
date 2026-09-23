@@ -1,0 +1,204 @@
+==============================================================================
+##### Examples/MultiLanguageDemo/MainForm.pas   编译门首个报错行 L119   现场=.   工作树 BOM=有
+  对齐：cur=274 行，祖先=274 行，未映射块=无（行行对应）
+  base 7516962d 标记计数 U+FFFD=0 `?`=0（=> 该祖先编码干净，可作补回依据）
+  SAME      274
+  REPAIR    0
+  MISMATCH  0
+  UNMAPPED  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=0
+  => dry-run（未写入）
+==============================================================================
+##### Tests/Acceptance/AcceptanceRunner.pas   编译门首个报错行 L158   现场=.   工作树 BOM=有
+  对齐：cur=713 行，祖先=713 行，未映射块=无（行行对应）
+  base 42664177 标记计数 U+FFFD=0 `?`=0（=> 该祖先编码干净，可作补回依据）
+  SAME      713
+  REPAIR    0
+  MISMATCH  0
+  UNMAPPED  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=0
+  => dry-run（未写入）
+==============================================================================
+##### Tools/LogAnalyzer/LogAnalyzer.MainForm.pas   编译门首个报错行 L186   现场=.   工作树 BOM=有
+  对齐：cur=1033 行，祖先=1033 行，未映射块=无（行行对应）
+  base 69d3f66c 标记计数 U+FFFD=0 `?`=1（=> 该祖先编码干净，可作补回依据）
+  SAME      1033
+  REPAIR    0
+  MISMATCH  0
+  UNMAPPED  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=0
+  => dry-run（未写入）
+==============================================================================
+##### Tests/TestLLMClient.dpr   编译门首个报错行 L35   现场=.   工作树 BOM=有
+  对齐：cur=191 行，祖先=191 行，未映射块=无（行行对应）
+  base ccfc338b 标记计数 U+FFFD=0 `?`=1（=> 该祖先编码干净，可作补回依据）
+  SAME      191
+  REPAIR    0
+  MISMATCH  0
+  UNMAPPED  0
+  REPAIR 来源分档 DAMAGE_ONLY=0 AFTERMATH_EDIT=0
+  => dry-run（未写入）
+==============================================================================
+##### Tests/Acceptance/AcceptanceMain.pas   编译门首个报错行 L77   现场=.   工作树 BOM=有
+  对齐：cur=364 行，祖先=362 行，未映射块=[('replace', 111, 111, 111, 113)]
+  base 42664177 标记计数 U+FFFD=0 `?`=0（=> 该祖先编码干净，可作补回依据）
+  L2 REPAIR [DAMAGE_ONLY]（祖先 L2）
+    补回前     |   AcceptanceMain - 验收测试主窗�?
+    补回后     |   AcceptanceMain - 验收测试主窗体
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L5 REPAIR [DAMAGE_ONLY]（祖先 L5）
+    补回前     |   说明: 可视化验收测试界�?
+    补回后     |   说明: 可视化验收测试界面
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L77 REPAIR [DAMAGE_ONLY]（祖先 L77）
+    补回前     |     '文档与架构审�?,
+    补回后     |     '文档与架构审查',
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L78 REPAIR [DAMAGE_ONLY]（祖先 L78）
+    补回前     |     '静态代码分�?,
+    补回后     |     '静态代码分析',
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L82 REPAIR [DAMAGE_ONLY]（祖先 L82）
+    补回前     |     '兼容性测�?,
+    补回后     |     '兼容性测试',
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L84 REPAIR [DAMAGE_ONLY]（祖先 L84）
+    补回前     |     '最终验�?
+    补回后     |     '最终验收'
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L108 REPAIR [DAMAGE_ONLY]（祖先 L108）
+    补回前     |   Caption := 'DeepBase 可视化验收测试工�?v1.0';
+    补回后     |   Caption := 'DeepBase 可视化验收测试工具 v1.0';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  L111 UNMAPPED（祖先侧无可对应的 1:1 行——合法增删行，本行不动）
+    mid     |   Position := poDesigned;
+    cur     |   Position := poDesigned;
+  L112 UNMAPPED（祖先侧无可对应的 1:1 行——合法增删行，本行不动）
+    mid     |   Left := 100;
+    cur     |   Left := 100;
+  L113 UNMAPPED（祖先侧无可对应的 1:1 行——合法增删行，本行不动）
+    mid     |   Top := 300;
+    cur     |   Top := 300;
+  L115 REPAIR [DAMAGE_ONLY]（祖先 L113）
+    补回前     |   // 设置 ListView �?
+    补回后     |   // 设置 ListView 列
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L123 REPAIR [DAMAGE_ONLY]（祖先 L121）
+    补回前     |   with lvTests.Columns.Add do begin Caption := '优先�?; Width := 60; end;
+    补回后     |   with lvTests.Columns.Add do begin Caption := '优先级'; Width := 60; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L124 REPAIR [DAMAGE_ONLY]（祖先 L122）
+    补回前     |   with lvTests.Columns.Add do begin Caption := '状�?; Width := 80; end;
+    补回后     |   with lvTests.Columns.Add do begin Caption := '状态'; Width := 80; end;
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L142 REPAIR [DAMAGE_ONLY]（祖先 L140）
+    补回前     |     Node := tvPhases.Items.Add(nil, Format('�?%d 阶段: %s', [I, PHASE_NAMES[I]]));
+    补回后     |     Node := tvPhases.Items.Add(nil, Format('第 %d 阶段: %s', [I, PHASE_NAMES[I]]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L175 REPAIR [DAMAGE_ONLY]（祖先 L173）
+    补回前     |       tsNotRun: StatusText := '未执�?;
+    补回后     |       tsNotRun: StatusText := '未执行';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L176 REPAIR [DAMAGE_ONLY]（祖先 L174）
+    补回前     |       tsRunning: StatusText := '执行�?..';
+    补回后     |       tsRunning: StatusText := '执行中...';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L177 REPAIR [DAMAGE_ONLY]（祖先 L175）
+    补回前     |       tsPassed: StatusText := '�?通过';
+    补回后     |       tsPassed: StatusText := '✓ 通过';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L178 REPAIR [DAMAGE_ONLY]（祖先 L176）
+    补回前     |       tsFailed: StatusText := '�?失败';
+    补回后     |       tsFailed: StatusText := '✗ 失败';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L179 REPAIR [DAMAGE_ONLY]（祖先 L177）
+    补回前     |       tsSkipped: StatusText := '�?跳过';
+    补回后     |       tsSkipped: StatusText := '○ 跳过';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L180 REPAIR [DAMAGE_ONLY]（祖先 L178）
+    补回前     |       tsManual: StatusText := '�?待人�?;
+    补回后     |       tsManual: StatusText := '⚠ 待人工';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L187 REPAIR [DAMAGE_ONLY]（祖先 L185）
+    补回前     |   lblStatus.Caption := Format('�?%d 阶段: %s - �?%d 个测试项', 
+    补回后     |   lblStatus.Caption := Format('第 %d 阶段: %s - 共 %d 个测试项', 
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L204 REPAIR [DAMAGE_ONLY]（祖先 L202）
+    补回前     |     ShowMessage('测试正在运行�?..');
+    补回后     |     ShowMessage('测试正在运行中...');
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L223 REPAIR [DAMAGE_ONLY]（祖先 L221）
+    补回前     |     ShowMessage('测试正在运行�?..');
+    补回后     |     ShowMessage('测试正在运行中...');
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L249 REPAIR [DAMAGE_ONLY]（祖先 L247）
+    补回前     |   if MessageDlg('验收报告已生成，是否打开�?, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    补回后     |   if MessageDlg('验收报告已生成，是否打开？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L280 REPAIR [DAMAGE_ONLY]（祖先 L278）
+    补回前     |   Notes := InputBox('标记失败', '请输入失败原�?', '');
+    补回后     |   Notes := InputBox('标记失败', '请输入失败原因:', '');
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L316 REPAIR [DAMAGE_ONLY]（祖先 L314）
+    补回前     |     mmoLog.Lines.Add(Format('=== �?%d 阶段完成 ===', [Result.PhaseNumber]));
+    补回后     |     mmoLog.Lines.Add(Format('=== 第 %d 阶段完成 ===', [Result.PhaseNumber]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L319 REPAIR [DAMAGE_ONLY]（祖先 L317）
+    补回前     |     mmoLog.Lines.Add(Format('  待人�? %d', [Result.ManualTests]));
+    补回后     |     mmoLog.Lines.Add(Format('  待人工: %d', [Result.ManualTests]));
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L349 REPAIR [DAMAGE_ONLY]（祖先 L347）
+    补回前     |         tsNotRun: StatusText := '未执�?;
+    补回后     |         tsNotRun: StatusText := '未执行';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L350 REPAIR [DAMAGE_ONLY]（祖先 L348）
+    补回前     |         tsRunning: StatusText := '执行�?..';
+    补回后     |         tsRunning: StatusText := '执行中...';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L351 REPAIR [DAMAGE_ONLY]（祖先 L349）
+    补回前     |         tsPassed: StatusText := '�?通过';
+    补回后     |         tsPassed: StatusText := '✓ 通过';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L352 REPAIR [DAMAGE_ONLY]（祖先 L350）
+    补回前     |         tsFailed: StatusText := '�?失败';
+    补回后     |         tsFailed: StatusText := '✗ 失败';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L353 REPAIR [DAMAGE_ONLY]（祖先 L351）
+    补回前     |         tsSkipped: StatusText := '�?跳过';
+    补回后     |         tsSkipped: StatusText := '○ 跳过';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L354 REPAIR [DAMAGE_ONLY]（祖先 L352）
+    补回前     |         tsManual: StatusText := '�?待人�?;
+    补回后     |         tsManual: StatusText := '⚠ 待人工';
+    依据    | 42664177(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  SAME      331
+  REPAIR    30
+  MISMATCH  0
+  UNMAPPED  3
+  REPAIR 来源分档 DAMAGE_ONLY=30 AFTERMATH_EDIT=0
+  => 已写入（30 行补回，其余 334 行字节不动）；写后自检 BOM=保 U+FFFD=0
+==============================================================================
+##### Tools/LogAnalyzer/LogAnalyzer.dpr   编译门首个报错行 L28   现场=.   工作树 BOM=无
+  对齐：cur=32 行，祖先=32 行，未映射块=无（行行对应）
+  base 69d3f66c 标记计数 U+FFFD=0 `?`=0（=> 该祖先编码干净，可作补回依据）
+  L8 REPAIR [DAMAGE_ONLY]（祖先 L8）
+    补回前     |     - 时间范围和级别过�?
+    补回后     |     - 时间范围和级别过滤
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L9 REPAIR [DAMAGE_ONLY]（祖先 L9）
+    补回前     |     - 关键词搜�?
+    补回后     |     - 关键词搜索
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文
+  L28 REPAIR [DAMAGE_ONLY]（祖先 L28）
+    补回前     |   Application.Title := 'DeepBase 日志分析�?;
+    补回后     |   Application.Title := 'DeepBase 日志分析器';
+    依据    | 69d3f66c(该祖先此文件 U+FFFD=0 且 `?`=0) 该行原文； + 机械改名 UniBase→DeepBase
+  SAME      29
+  REPAIR    3
+  MISMATCH  0
+  UNMAPPED  0
+  REPAIR 来源分档 DAMAGE_ONLY=3 AFTERMATH_EDIT=0
+  => 已写入（3 行补回，其余 29 行字节不动）；写后自检 BOM=丢 U+FFFD=0
+==============================================================================
+合计  SAME=2571 REPAIR=33 MISMATCH=0 UNMAPPED=3
+合计  REPAIR 来源分档 DAMAGE_ONLY=33 AFTERMATH_EDIT=0

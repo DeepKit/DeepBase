@@ -1,0 +1,15 @@
+落笔前 L27 = 20204170706c69636174696f6e2e5469746c65203a3d2027446565704261736520e58fafe8a786e58c96e9aa8ce694b6e6b58be8af3f3b
+落笔后 L27 = 20204170706c69636174696f6e2e5469746c65203a3d2027446565704261736520e58fafe8a786e58c96e9aa8ce694b6e6b58be8af95273b
+落笔后 L27 文本 =   Application.Title := 'DeepBase 可视化验收测试';
+平行原文 AcceptanceMain.dfm:34 = Caption = 'DeepBase 可视化验收测试'
+行数 前=31 后=31 | 改动行号=[27]
+git diff --numstat: 1	1	Tests/Acceptance/DeepBaseAcceptanceTest.dpr
+git diff（逐行）:
+diff --git a/Tests/Acceptance/DeepBaseAcceptanceTest.dpr b/Tests/Acceptance/DeepBaseAcceptanceTest.dpr
+index 8d086a51..b46f7b23 100644
+--- a/Tests/Acceptance/DeepBaseAcceptanceTest.dpr
++++ b/Tests/Acceptance/DeepBaseAcceptanceTest.dpr
+@@ -27 +27 @@ begin
+-  Application.Title := 'DeepBase 可视化验收测�?;
++  Application.Title := 'DeepBase 可视化验收测试';
+
