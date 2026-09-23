@@ -1,0 +1,82 @@
+WO-20260922-AUDIT-乙-B0 提交前归因核验（乙，真实命令与真实退出码）
+工作目录 = D:\_Progs\02Business\DeepBase
+HEAD = cf2d945ff46bb415316f4b229168c328b13396e7
+取样时刻 = Wed Sep 23 2026 09:12:43 GMT+0800 (中国标准时间)
+
+== A. H16 前置：共享索引必须为空 ==
+$ git diff --cached --name-only
+  条目 = 0（空 ⇒ 允许提交）
+
+== B. 20 件 ` M` 逐件字节级判定：git hash-object --path f f  vs  git rev-parse HEAD:f ==
+REAL  .gitignore  work=5dd215252879 head=f22faecb5c84
+FAKE  Core/DeepBase.License.pas  work=4f6c775e84ae head=4f6c775e84ae
+FAKE  Core/DeepBase.SecureMemory.pas  work=2d1f659e96fc head=2d1f659e96fc
+FAKE  Core/DeepBase.Security.DPAPI.pas  work=02c9228c5e02 head=02c9228c5e02
+FAKE  Core/DeepBase.Security.MachineIdentity.pas  work=bceecaadb85b head=bceecaadb85b
+FAKE  Core/DeepBase.Security.UBS2.Migration.pas  work=119f2fd7ad3b head=119f2fd7ad3b
+FAKE  Core/DeepBase.Security.UBS2.pas  work=a0fadc2924ed head=a0fadc2924ed
+FAKE  Core/DeepBase.Storage.Interfaces.pas  work=13c1591e9a55 head=13c1591e9a55
+REAL  Features/DeepBase.Desktop.Perception.Engine.pas  work=aee7e2cdb73d head=d20e37967847
+FAKE  Persistence/DeepBase.Persistence.Security.FireDAC.pas  work=b69a0c4a8839 head=b69a0c4a8839
+REAL  Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas  work=76a6bf0a1910 head=0a0c8a6d95ef
+REAL  Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas  work=0d86ee8e9072 head=45651527b5c5
+REAL  Tests/Test.DeepBase.DesignTime.Registration.pas  work=18cd4ca6db4d head=b9d55975bd36
+REAL  Tests/Test.DeepBase.HB.Benchmark.pas  work=53984dee78b8 head=5275cdb99607
+REAL  Tests/Test.DeepBase.HB.Persistence.pas  work=4344e83dd41b head=cc53a80fe7c6
+REAL  Tests/Test.DeepBase.HB.Suite.pas  work=f2ae729d5a6a head=ffa1ec8f7c6b
+REAL  Tests/Test.DeepBase.PerformanceSuite.pas  work=7975263ee2e6 head=0a6d9d0fe811
+FAKE  Tests/Test.DeepBase.SecureMemory.pas  work=19481f395948 head=19481f395948
+FAKE  Tests/Test.DeepBase.Security.MachineIdentity.pas  work=1cdddd327905 head=1cdddd327905
+FAKE  Tests/Test.DeepBase.Security.UBS2.pas  work=65fd08c9e068 head=65fd08c9e068
+FAKE  ThirdParty/Social/DeepBase.Social.OAuth.pas  work=5e5bf28dd049 head=5e5bf28dd049
+REAL  docs/规范历史版本与对比库/README-版本对比台账.md  work=d437a9897191 head=562b3a56e3b6
+  小计：` M` 共 22 件，REAL 10 件 / FAKE-stat 12 件
+  REAL 清单 = [".gitignore","Features/DeepBase.Desktop.Perception.Engine.pas","Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas","Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas","Tests/Test.DeepBase.DesignTime.Registration.pas","Tests/Test.DeepBase.HB.Benchmark.pas","Tests/Test.DeepBase.HB.Persistence.pas","Tests/Test.DeepBase.HB.Suite.pas","Tests/Test.DeepBase.PerformanceSuite.pas","docs/规范历史版本与对比库/README-版本对比台账.md"]
+
+== C. 决定性实测（临时索引，不碰 .git/index）==
+$ GIT_INDEX_FILE=D:\_Progs\02Business\DeepBase\.tmp\b0\tmp-index git read-tree HEAD
+  read-tree EXIT=0
+$ GIT_INDEX_FILE=... git add -- <全部 22 件 M>
+  ! warning: in the working copy of '.gitignore', CRLF will be replaced by LF the next time Git touches it
+  ! warning: in the working copy of 'Features/DeepBase.Desktop.Perception.Engine.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'Tests/Test.DeepBase.DesignTime.Registration.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'Tests/Test.DeepBase.HB.Persistence.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'Tests/Test.DeepBase.HB.Suite.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'Tests/Test.DeepBase.PerformanceSuite.pas', LF will be replaced by CRLF the next time Git touches it
+  ! warning: in the working copy of 'docs/规范历史版本与对比库/README-版本对比台账.md', CRLF will be replaced by LF the next time Git touches it
+  add EXIT=0
+$ GIT_INDEX_FILE=... git diff --cached --name-only HEAD
+  会进 commit: .gitignore
+  会进 commit: Features/DeepBase.Desktop.Perception.Engine.pas
+  会进 commit: Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas
+  会进 commit: Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas
+  会进 commit: Tests/Test.DeepBase.DesignTime.Registration.pas
+  会进 commit: Tests/Test.DeepBase.HB.Benchmark.pas
+  会进 commit: Tests/Test.DeepBase.HB.Persistence.pas
+  会进 commit: Tests/Test.DeepBase.HB.Suite.pas
+  会进 commit: Tests/Test.DeepBase.PerformanceSuite.pas
+  会进 commit: "docs/\350\247\204\350\214\203\345\216\206\345\217\262\347\211\210\346\234\254\344\270\216\345\257\271\346\257\224\345\272\223/README-\347\211\210\346\234\254\345\257\271\346\257\224\345\217\260\350\264\246.md"
+  ⇒ 数量 = 10（预期 8）
+  ⇒ 与 B 段 REAL 集合差集：多出的 ["\"docs/\\350\\247\\204\\350\\214\\203\\345\\216\\206\\345\\217\\262\\347\\211\\210\\346\\234\\254\\344\\270\\216\\345\\257\\271\\346\\257\\224\\345\\272\\223/README-\\347\\211\\210\\346\\234\\254\\345\\257\\271\\346\\257\\224\\345\\217\\260\\350\\264\\246.md\""] / 缺的 ["docs/规范历史版本与对比库/README-版本对比台账.md"]
+
+== D. 新增件（当前未跟踪，须随第一笔入库）==
+  Tests/Test.DeepBase.TestPaths.pas  bytes=3617 sha256=55515d0ada18821e8ed3f8544c9a172838a91373a775be06f924ac2342e582f9 CRLF=120 BOM=true tracked=false
+
+== E. §3.3 两个 XML 大件不入库指纹（sha256sum 等价）==
+  p1-compile.log  bytes=40297  sha256=67810bf5ee7a9f006e4668cc2e9ce710370517ee2be2bd5553960d5fa61d530b
+  p1-gates-exit.txt  bytes=602  sha256=75caf7e883dc8784c7050a0238122237e1693ab66705e61b5286c1d7718e5b6e
+  p1-negative-samples.txt  bytes=1643  sha256=c58edbb117ceda7d95ce64c815ec7f3cd7826f415b30e37aafe08fc7c2448c5a
+  p1-reporoot.xml  bytes=975946  sha256=1a67b8db440adf4da3bea24d34c9bf7a0a3c6381c9b00caa6257c262968ffd1f
+  p1-run-reporoot.log  bytes=15235  sha256=b4197ce402aac954df9e54ede6fd656f8f8412401856b8dd43f1d16ce5d18a58
+  p1-run-wrongcwd.log  bytes=15236  sha256=b479c9b209bf27ed9fe637fdb8931770888d39c63747e4e390983e1ebaa1af8b
+  p1-wrongcwd.xml  bytes=976490  sha256=6998d42eb8684fbb58ef00ddc64d1b309021bd9c9eb3f696d72cd03a83744d45
+
+== F. 第二笔 pathspec 现状（存在性 / 是否已被忽略）==
+  在位=true  仍被忽略=NO  tracked=false  CodeReview/20260921-AUDIT-乙-P1-交付回执.md
+  在位=true  仍被忽略=NO  tracked=false  CodeReview/20260921-AUDIT-乙-P1-证据/p1-compile.log
+  在位=true  仍被忽略=NO  tracked=false  CodeReview/20260921-AUDIT-乙-P1-证据/p1-gates-exit.txt
+  在位=true  仍被忽略=NO  tracked=false  CodeReview/20260921-AUDIT-乙-P1-证据/p1-negative-samples.txt
+  在位=true  仍被忽略=NO  tracked=false  CodeReview/20260921-AUDIT-乙-P1-证据/p1-run-reporoot.log
+  在位=true  仍被忽略=NO  tracked=false  CodeReview/20260921-AUDIT-乙-P1-证据/p1-run-wrongcwd.log

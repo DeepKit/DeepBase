@@ -1,0 +1,8 @@
+$ sha256sum CodeReview/20260921-AUDIT-乙-P1-证据/p1-reporoot.xml p1-wrongcwd.xml   # 2026-09-23 09:24:08 +0800，cwd=仓库根
+1a67b8db440adf4da3bea24d34c9bf7a0a3c6381c9b00caa6257c262968ffd1f *CodeReview/20260921-AUDIT-乙-P1-证据/p1-reporoot.xml
+6998d42eb8684fbb58ef00ddc64d1b309021bd9c9eb3f696d72cd03a83744d45 *CodeReview/20260921-AUDIT-乙-P1-证据/p1-wrongcwd.xml
+
+$ wc -c
+ 975946 CodeReview/20260921-AUDIT-乙-P1-证据/p1-reporoot.xml
+ 976490 CodeReview/20260921-AUDIT-乙-P1-证据/p1-wrongcwd.xml
+1952436 total

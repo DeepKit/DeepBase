@@ -1,0 +1,46 @@
+=== B0 判据1：9 件代码产物在 git 里（git cat-file -e $1^$path） ===
+OK   4d818af:Features/DeepBase.Desktop.Perception.Engine.pas
+OK   4d818af:Tests/Test.DeepBase.TestPaths.pas
+OK   4d818af:Tests/Test.DeepBase.HB.Benchmark.pas
+OK   4d818af:Tests/Test.DeepBase.HB.Persistence.pas
+OK   4d818af:Tests/Test.DeepBase.HB.Suite.pas
+OK   4d818af:Tests/Test.DeepBase.PerformanceSuite.pas
+OK   4d818af:Tests/Test.DeepBase.DesignTime.Registration.pas
+OK   4d818af:Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas
+OK   4d818af:Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas
+
+=== 判据3：两笔提交逐笔文件数 ===
+commit1 4d818af name-only count = 10
+commit2 154025a name-only count = 6
+
+=== git show --stat 4d818af（第一笔） ===
+4d818af02058a57eeea05a6f9220fc8359e2fbdd
+fuyi4it <fuyi.it@live.cn>
+Wed Sep 23 09:13:46 2026 +0800
+fix(audit-P1/P2a): 乙 P1 cwd 裂缝路径解析 + P2-a BUG-449 闸门解耦落地
+
+ .gitignore                                         |   3 +
+ Features/DeepBase.Desktop.Perception.Engine.pas    |  12 ++-
+ Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas  |  10 +-
+ ...gression.BUG332_WeChatSchemaRegistryResolve.pas |  18 +---
+ Tests/Test.DeepBase.DesignTime.Registration.pas    |  21 ++--
+ Tests/Test.DeepBase.HB.Benchmark.pas               |   9 +-
+ Tests/Test.DeepBase.HB.Persistence.pas             |   7 +-
+ Tests/Test.DeepBase.HB.Suite.pas                   |   7 +-
+ Tests/Test.DeepBase.PerformanceSuite.pas           |   5 +-
+ Tests/Test.DeepBase.TestPaths.pas                  | 120 +++++++++++++++++++++
+ 10 files changed, 164 insertions(+), 48 deletions(-)
+
+=== git show --stat 154025a（第二笔） ===
+154025a5f4d0bdadd15a7fb4dafc2c28fcd66c35
+fuyi4it <fuyi.it@live.cn>
+Wed Sep 23 09:23:23 2026 +0800
+docs(audit-P1): 乙 P1 交付回执与证据入库（B0 补提交第二笔）
+
+ ...272\244\344\273\230\345\233\236\346\211\247.md" | 233 ++++++++++++++++++++
+ .../p1-compile.log"                                | 243 +++++++++++++++++++++
+ .../p1-gates-exit.txt"                             |  10 +
+ .../p1-negative-samples.txt"                       |  33 +++
+ .../p1-run-reporoot.log"                           | 134 ++++++++++++
+ .../p1-run-wrongcwd.log"                           | 134 ++++++++++++
+ 6 files changed, 787 insertions(+)
