@@ -1,0 +1,33 @@
+=== 负向样本（rep先说 fail-open 已修复，实测复现）===
+门禁输出（预期包含 5 类违规）:
+编码门禁失败，违规 7 项:
+  G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas
+  G1 U+FFFD 1 > 基线 0: src/Injected.pas
+  G5 孤立CR 1 > 基线 0: src/LoneCr.pas
+  G3 缺UTF-8 BOM: src/NoBom.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=1): src/NulIn.pas
+  G3 缺UTF-8 BOM: src/Utf16.pas
+  G4 含NUL/UTF-16/32 BOM(NUL=46): src/Utf16.pas
+
+负向样本①通过：不存在目录被 fail-closed 拦截
+负向样本②通过：空扫描被 fail-closed 拦截
+NEGATIVE-TEST: PASS
+enc-neg EXIT=0
+门禁输出（预期包含 L1, L2, L3, L4 违规）:
+行尾门禁失败，违规 5 项:
+  L2 .md 文档非预期包含 CR (要求 LF): docs/Bad_CRLF.md
+  L1 .pas 源码非预期纯 LF (要求 CRLF): src/Bad_LF.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=2, lf=2): src/Bad_Mixed.pas
+  L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=4, crlf=0, lf=0): src/Bad_MultiCR.pas
+  L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=1, crlf=2, lf=1): src/Bad_MultiCR_Mixed.pas
+
+负向样本①通过：不存在目录被 fail-closed 拦截
+负向样本②通过：空扫描被 fail-closed 拦截
+NEGATIVE-TEST: PASS
+eol-neg EXIT=0
+
+=== --root 指向不存在目录（fail-closed 实弹）===
+编码门禁无法读取目录: D:\Program Files\Git\definitely-not-here (ENOENT: no such file or directory, scandir 'D:\Program Files\Git\definitely-not-here')
+enc-badroot EXIT=3
+行尾门禁无法读取目录: D:\Program Files\Git\definitely-not-here (ENOENT: no such file or directory, scandir 'D:\Program Files\Git\definitely-not-here')
+eol-badroot EXIT=3
