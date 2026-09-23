@@ -1,0 +1,69 @@
+program d2_probe;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils, System.IOUtils, Winapi.Windows,
+  DeepBase.Plugin, DeepBase.PluginManager;
+
+type
+  TProbeAddFunc = function(A, B: Integer): Integer; stdcall;
+  TProbeCountFunc = function: Integer; stdcall;
+
+var
+  Handle: HMODULE;
+  Mode: string;
+
+procedure Step(const S: string);
+begin
+  WriteLn('step ', S);
+end;
+
+procedure RunIt;
+var
+  Reg: TRegisterPluginFunc;
+  AddFn: TProbeAddFunc;
+  InitFn, FinFn: TProbeCountFunc;
+  Plugin: IDeepBasePlugin;
+  Info: TPluginInfo;
+begin
+  Handle := LoadPackage(ParamStr(1));
+  Step('loaded');
+  if Mode = 'loadcall' then
+  begin
+    AddFn := TProbeAddFunc(GetProcAddress(Handle, 'ProbeAdd'));
+    WriteLn('add=', AddFn(3, 4));
+    Step('pod call ok');
+  end
+  else
+  begin
+    Reg := TRegisterPluginFunc(GetProcAddress(Handle, REGISTER_PLUGIN_FUNC));
+    Plugin := Reg();
+    Step('intf call ok');
+    if SameText(Mode, 'lifecycle') then
+    begin
+      Plugin.Initialize;
+      Plugin.Finalize;
+      InitFn := TProbeCountFunc(GetProcAddress(Handle, 'ProbeInitCount'));
+      FinFn := TProbeCountFunc(GetProcAddress(Handle, 'ProbeFinalizeCount'));
+      WriteLn('counts=', InitFn(), '/', FinFn());
+      Step('lifecycle ok');
+    end;
+    if not SameText(Mode, 'intfonly') and not SameText(Mode, 'lifecycle') then
+    begin
+      Info := Plugin.GetPluginInfo;
+      WriteLn('name=', Info.Name, ' ver=', Info.Version);
+      Step('getinfo ok');
+    end;
+    Plugin := nil;
+    Step('released plugin');
+  end;
+  UnloadPackage(Handle);
+  Step('unloaded');
+end;
+
+begin
+  Mode := ParamStr(2);
+  RunIt;
+  WriteLn('END mode=', Mode);
+end.

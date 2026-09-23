@@ -1,0 +1,35 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.PluginManager.pas(1095) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+3514 lines, 0.28 seconds, 1347492 bytes code, 189152 bytes data.
+PROBE_BUILD_EXIT=0
+step loaded
+add=7
+step pod call ok
+step unloaded
+END mode=loadcall
+PROBE_LOADCALL_EXIT=0
+step loaded
+step intf call ok
+step released plugin
+step unloaded
+END mode=intfonly
+PROBE_INTFONLY_EXIT=0
+step loaded
+step intf call ok
+counts=1/1
+step lifecycle ok
+step released plugin
+step unloaded
+END mode=lifecycle
+PROBE_LIFECYCLE_EXIT=0
+step loaded
+step intf call ok
+name=R7P4 Probe Plugin ver=1.0.0
+step getinfo ok
+step released plugin
+step unloaded
+Exception EAccessViolation in module d2_probe.exe at 000000000001039B.
+Access violation at address 00007FF74A7C039B in module 'd2_probe.exe' (offset 1039B). Read of address 000001E2023C0D38.
+
+PROBE_FULL_EXIT=1

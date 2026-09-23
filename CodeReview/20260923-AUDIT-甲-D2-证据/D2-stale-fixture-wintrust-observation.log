@@ -1,0 +1,23 @@
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [TestBplR7P4.exe] - Starting Tests.
+
+.....E......
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 1
+
+Tests With Errors
+
+  Test.DeepBase.PluginBplUnload.TPluginBplUnloadTests.Test_LoadPlugin_UnsignedFixture_FailClosed
+  Message: Access violation at address 00007FFCF5024C04 in module 'wintrust.dll' (offset 4C04). Read of address 0000000000000001
+
+

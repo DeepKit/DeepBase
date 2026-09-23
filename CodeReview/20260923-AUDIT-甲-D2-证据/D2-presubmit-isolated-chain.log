@@ -1,0 +1,45 @@
+=== [1/4] BUILD fixture package (real dcc64 BPL chain) ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\R7P4Probe.dpk(22) Warning: W1033 Unit 'DeepBase.Plugin' implicitly imported into package 'R7P4Probe'
+Tests\Regression\R7P4Probe.dpk(22) Warning: W1033 Unit 'DeepBase.Types' implicitly imported into package 'R7P4Probe'
+844 lines, 0.08 seconds, 21340 bytes code, 1872 bytes data.
+FIXTURE_BUILD_EXIT=0
+FIXTURE_BYTES=43008
+31634202021eb1df02f6fb1b70ab97efee730cee90a09386f72d49d44d64b148
+FIXTURE_INSTALL_EXIT=0
+COMMITTED_FIXTURE_BYTES=43008
+31634202021eb1df02f6fb1b70ab97efee730cee90a09386f72d49d44d64b148
+
+=== [2/4] BUILD narrow runner TestBplR7P4.dpr ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.PluginManager.pas(1095) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+27948 lines, 1.23 seconds, 2874020 bytes code, 390896 bytes data.
+RUNNER_BUILD_EXIT=0
+
+=== [3/4] RUN (CWD = tree root) ===
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [TestBplR7P4.exe] - Starting Tests.
+
+............
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+TEST_RUN_EXIT=0
+
+=== [4/4] GIT PROOF ===
+7ec93818428956a825f615f08badc6bb04933f45
+ M Tests/Regression/R7P4Probe.bpl
+ M Tests/Regression/R7P4Probe.dpk
+ M Tests/Regression/R7P4ProbeUnit.pas
+ M Tests/Test.DeepBase.PluginBplUnload.pas
