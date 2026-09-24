@@ -173,7 +173,7 @@ type
     class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string): string; static;
     class function EncryptBinaryData(const AData: TBytes; const APassword: string): TBytes; static;
     class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
-    // 瀹屾暣鎬ф牎楠?
+    // 完整性校验
     class function CalculateHMAC(const AData: string; const APassword: string): string; static;
     class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string): Boolean; static;
     class function CalculateFileHash(const AFileName: string): string; static;

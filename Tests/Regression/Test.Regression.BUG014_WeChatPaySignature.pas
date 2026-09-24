@@ -3,7 +3,7 @@
 
   BUG-014: 微信支付签名验证缺失
   
-  鍘熼棶棰? RSA绛惧悕浣跨敤绠€鍗昐HA256鑰岄潪PKCS#1 v1.5 RSA-SHA256锛?
+  原问题 RSA绛惧悕浣跨敤绠€鍗昐HA256而非PKCS#1 v1.5 RSA-SHA256锛?
           Webhook楠岃瘉閫昏緫鏈畬鏁村疄鐜般€?
   
   修复方案: 实现完整的RSA-SHA256签名和验签功能，添加WeChatPublicKey配置项?
@@ -11,7 +11,7 @@
   修复日期: 2025-12-16
   文件: ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
   浼樺厛绾? P0 (Critical)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG014_WeChatPaySignature;
@@ -39,7 +39,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('楠岃瘉 TWeChatPayConfig 鍖呭惈 WeChatPublicKey 灞炴€?)]
+    [Description('验证 TWeChatPayConfig 包含 WeChatPublicKey 灞炴€?)]
     procedure Test_Config_HasWeChatPublicKeyProperty;
     
     [Test]
@@ -113,7 +113,7 @@ begin
   
   Config := TWeChatPayConfig.Create;
   try
-    // 楠岃瘉 WeChatPublicKey 灞炴€у瓨鍦ㄤ笖鍙鍐?
+    // 验证 WeChatPublicKey 灞炴€у瓨鍦ㄤ笖鍙鍐?
     Config.WeChatPublicKey := 'test_public_key';
     Assert.AreEqual('test_public_key', Config.WeChatPublicKey,
       'WeChatPublicKey 灞炴€у簲璇ュ彲浠ユ纭鍐?);

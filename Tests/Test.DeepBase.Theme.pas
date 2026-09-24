@@ -257,7 +257,7 @@ begin
     Info := Themes[0];
     
     Assert.IsNotEmpty(Info.Name, 'Name field should not be empty');
-    // DisplayName 鍙互涓虹┖锛屼娇鐢?Name 浣滀负鏄剧ず鍚?
+    // DisplayName 可以为空，使用Name 浣滀负鏄剧ず鍚?
   end;
 end;
 

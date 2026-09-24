@@ -10,7 +10,7 @@
   修复日期: 2025-01-27
   文件: VCL/DeepBase.VCL.WaitForm.pas
   浼樺厛绾? P1 (High)
-  鍒嗙被: Memory
+  分类: Memory
   ============================================================================ }
 
 unit Test.Regression.BUG001_AnimationMemoryLeak;
@@ -40,7 +40,7 @@ type
     procedure Test_WaitForm_NoMemoryLeak;
     
     [Test]
-    [Description('楠岃瘉澶氭鍒涘缓閿€姣?WaitForm 鍐呭瓨绋冲畾')]
+    [Description('楠岃瘉澶氭鍒涘缓閿€姣?WaitForm 内存稳定')]
     procedure Test_WaitForm_RepeatedCreateDestroy_MemoryStable;
     
     [Test]

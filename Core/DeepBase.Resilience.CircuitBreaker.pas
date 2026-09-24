@@ -177,7 +177,7 @@ begin
   FLock := TCriticalSection.Create;
   // BUG-119 FIX: 初始化HalfOpen状态跟踪变�?
   FHalfOpenActiveCount := 0;
-  FMaxHalfOpenRequests := 1;  // 榛樿鍙厑璁?涓帰娴嬭姹?
+  FMaxHalfOpenRequests := 1;  // 榛樿鍙厑璁?个探测请求
 end;
 
 destructor TCircuitBreaker.Destroy;

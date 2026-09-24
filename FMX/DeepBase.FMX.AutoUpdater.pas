@@ -4,11 +4,11 @@
   版本: 1.0
   说明: 跨平台非可视组件，封装自动更新核心模块和 UI 交互
   
-  鏀寔骞冲彴:
+  支持平台:
     - Windows: 直接下载安装?
-    - macOS: 鐩存帴涓嬭浇 DMG/PKG
-    - iOS: 璺宠浆 App Store
-    - Android: 涓嬭浇 APK 鎴栬烦杞?Play Store
+    - macOS: 直接下载 DMG/PKG
+    - iOS: 跳转 App Store
+    - Android: 下载 APK 或跳转Play Store
   ============================================================================ }
 
 unit DeepBase.FMX.AutoUpdater;
@@ -76,7 +76,7 @@ type
     /// <summary>下载并安装更?/summary>
     procedure DownloadAndInstall;
     
-    /// <summary>浠呬笅杞芥洿鏂?/summary>
+    /// <summary>仅下载更新</summary>
     procedure DownloadOnly;
     
     /// <summary>取消当前操作</summary>
@@ -104,7 +104,7 @@ type
     /// <summary>褰撳墠鐗堟湰鍙?/summary>
     property CurrentVersion: string read FCurrentVersion write FCurrentVersion;
     
-    /// <summary>鏇存柊棰戦亾</summary>
+    /// <summary>更新频道</summary>
     property Channel: TUpdateChannel read FChannel write FChannel default ucStable;
     
     /// <summary>妫€鏌ユā寮?/summary>
@@ -131,7 +131,7 @@ type
     /// <summary>下载进度</summary>
     property OnProgress: TUpdateProgressEvent read FOnProgress write FOnProgress;
     
-    /// <summary>鏇存柊瀹屾垚</summary>
+    /// <summary>更新完成</summary>
     property OnUpdateComplete: TUpdateCompleteEvent read FOnUpdateComplete write FOnUpdateComplete;
     
     /// <summary>没有更新时触?/summary>
@@ -199,7 +199,7 @@ begin
         Updater.SetPublicKey(FPublicKey);
     end;
     
-    // 鍚姩鏃舵鏌?
+    // 启动时检查
     if ShouldCheckOnStartup then
     begin
       TThread.ForceQueue(nil,
@@ -233,7 +233,7 @@ begin
   {$IF DEFINED(IOS)}
   Result := 'appstore';
   {$ELSEIF DEFINED(ANDROID)}
-  Result := 'playstore'; // 鎴?'apk'
+  Result := 'playstore'; // 成'apk'
   {$ELSEIF DEFINED(MACOS)}
   Result := 'dmg';
   {$ELSE}

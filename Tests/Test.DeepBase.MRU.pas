@@ -164,11 +164,11 @@ var
   Items: TArray<string>;
   I: Integer;
 begin
-  // 娣诲姞 10 涓」鐩?
+  // 添加 10 个项目
   for I := 1 to 10 do
     FMRU.AddMRU(FTestCategory, 'key' + IntToStr(I), 'Display ' + IntToStr(I));
   
-  // 鍙幏鍙?5 涓?
+  // 只获取5 涓?
   Items := FMRU.GetMRUList(FTestCategory, 5);
   
   Assert.AreEqual(Integer(5), Integer(Length(Items)), 'should return only 5 items');
@@ -298,8 +298,8 @@ begin
   
   Assert.AreEqual(Integer(1), Integer(Length(Items1)), 'Cat1 should have 1 item');
   Assert.AreEqual(Integer(1), Integer(Length(Items2)), 'Cat2 should have 1 item');
-  Assert.AreEqual('key1', string(Items1[0]), string('Cat1 鐨?key 搴旇姝ｇ‘'));
-  Assert.AreEqual('key2', string(Items2[0]), string('Cat2 鐨?key 搴旇姝ｇ‘'));
+  Assert.AreEqual('key1', string(Items1[0]), string('Cat1 的key 应该正确'));
+  Assert.AreEqual('key2', string(Items2[0]), string('Cat2 的key 应该正确'));
   
   // 清理
   FMRU.ClearMRU(Cat1);

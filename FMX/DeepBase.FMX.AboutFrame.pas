@@ -4,11 +4,11 @@
   DeepBase FMX AboutFrame - FireMonkey 版关?打赏页面组件
 
   功能:
-  - 6 涓爣鍑?Tab 椤?(鍏紬鍙?寰俊/鏀粯瀹?BTC/USDT/鍏充簬鎴?
+  - 6 个标准Tab 项(公众号微信/鏀粯瀹?BTC/USDT/鍏充簬鎴?
   - ?SQLite 数据库安全加载图?(HMAC 签名验证)
   - BTC/USDT 地址复制功能
-  - 鏈哄櫒鐮佹樉绀?
-  - 鏍规嵁 enabled 瀛楁鍔ㄦ€佹樉绀?闅愯棌 Tab
+  - 机器码显示
+  - 根据 enabled 瀛楁鍔ㄦ€佹樉绀?隐藏 Tab
 
   使用方法:
     var Frame := TFMXAboutFrame.Create(Self);
@@ -96,7 +96,7 @@ type
     /// <summary>初始化组件并加载数据</summary>
     procedure Initialize;
 
-    /// <summary>鏁版嵁搴撹矾寰?/summary>
+    /// <summary>数据库路径</summary>
     property DatabasePath: string read FDatabasePath write FDatabasePath;
   end;
 
@@ -140,7 +140,7 @@ begin
   FTabControl.Align := TAlignLayout.Client;
   FTabControl.TabPosition := TTabPosition.Top;
 
-  // 鍒涘缓鍚勪釜 Tab 椤?
+  // 创建各个 Tab 项
   CreateTabPage(FTabOfficialGzh, FImgOfficialGzh, FLblOfficialGzhTip, 'Official', TIP_OFFICIAL_GZH);
   CreateTabPage(FTabWechat, FImgWechat, FLblWechatTip, '微信', TIP_WECHAT);
   CreateTabPage(FTabAlipay, FImgAlipay, FLblAlipayTip, 'Alipay', TIP_ALIPAY);
@@ -267,7 +267,7 @@ begin
   FLblAboutMeTip.TextSettings.HorzAlign := TTextAlign.Center;
   FLblAboutMeTip.Margins.Top := 10;
 
-  // 搴曢儴甯冨眬 (鏈哄櫒鐮?
+  // 底部布局 (鏈哄櫒鐮?
   BottomLayout := TLayout.Create(Layout);
   BottomLayout.Parent := Layout;
   BottomLayout.Align := TAlignLayout.Bottom;

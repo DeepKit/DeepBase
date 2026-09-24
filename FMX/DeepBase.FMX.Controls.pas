@@ -2,7 +2,7 @@
   DeepBase.FMX.Controls - FMX 控件注册单元
   
   版本: 1.1
-  璇存槑: 娉ㄥ唽鎵€鏈?DeepBase FMX 鎺т欢
+  说明: 娉ㄥ唽鎵€鏈?DeepBase FMX 控件
   
   新增:
   - Cross-platform controls (ListView, FormControls)

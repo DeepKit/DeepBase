@@ -10,7 +10,7 @@
   修复日期: 2025-01-27
   文件: Core/DeepBase.EventBus.pas
   浼樺厛绾? P1 (High)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG073_EventTypeInjection;
@@ -112,7 +112,7 @@ procedure TBug073_EventTypeInjectionTest.Test_MaliciousEventType_IsRejected;
 begin
   LogTestStart('Test_MaliciousEventType_IsRejected');
   
-  // 瀹為檯娴嬭瘯闇€瑕?EventBus 妯″潡鐨勫叿浣撳疄鐜?
+  // 瀹為檯娴嬭瘯闇€瑕?EventBus 模块的具体实现
   Assert.Pass('恶意事件类型拒绝测试通过代码审查确认');
   
   LogTestEnd('Test_MaliciousEventType_IsRejected', True);

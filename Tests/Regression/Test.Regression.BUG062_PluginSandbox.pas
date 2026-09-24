@@ -3,7 +3,7 @@
 
   BUG-062: 鎻掍欢娌欑閫冮€搁闄?
   
-  鍘熼棶棰? 鎻掍欢鍔犺浇缂轰箯瀹夊叏楠岃瘉锛屽瓨鍦ㄨ矾寰勯亶鍘嗗拰浠ｇ爜瀹屾暣鎬ч闄┿€?
+  原问题 鎻掍欢鍔犺浇缂轰箯瀹夊叏楠岃瘉锛屽瓨鍦ㄨ矾寰勯亶鍘嗗拰浠ｇ爜瀹屾暣鎬ч闄┿€?
           恶意插件可能通过 ../.. 路径访问系统敏感文件?
   
   修复方案: 添加插件路径验证 (IsValidPluginPath) 和数字签名验证机?
@@ -12,7 +12,7 @@
   修复日期: 2025-01-27
   文件: Core/DeepBase.PluginManager.pas
   浼樺厛绾? P0 (Critical)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG062_PluginSandbox;
@@ -51,7 +51,7 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('楠岃瘉璺緞閬嶅巻鏀诲嚮琚樆姝?- 浣跨敤 ../ 灏濊瘯閫冮€?)]
+    [Description('楠岃瘉璺緞閬嶅巻鏀诲嚮琚樆姝?- 使用 ../ 灏濊瘯閫冮€?)]
     procedure Test_PathTraversal_WithDotDot_ShouldBeBlocked;
     
     [Test]
@@ -106,7 +106,7 @@ end;
 procedure TBug062_PluginSandboxTest.SetUp;
 begin
   inherited;
-  // 鍒涘缓涓存椂鎻掍欢鐩綍
+  // 创建临时插件目录
   FTempPluginsDir := TPath.Combine(TPath.GetTempPath, 'DeepBasePluginTest_' + IntToStr(TThread.GetTickCount));
   TDirectory.CreateDirectory(FTempPluginsDir);
 end;
@@ -204,7 +204,7 @@ begin
     ValidPath := DummyBPLPath;
     
     // 注意：这里会因为文件不是真正?BPL 而失败，
-    // 浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛堥敊璇簲璇ユ槸 "Failed to load BPL" 鑰屼笉鏄?"Invalid path"锛?
+    // 浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛堥敊璇簲璇ユ槸 "Failed to load BPL" 而不是"Invalid path"锛?
     FErrorFired := False;
     FLastErrorMessage := '';
     PluginManager.OnPluginError := HandlePluginError;

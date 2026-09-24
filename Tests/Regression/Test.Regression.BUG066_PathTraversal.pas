@@ -1,7 +1,7 @@
 ﻿{ ============================================================================
-  Test.Regression.BUG066_PathTraversal - 璺緞閬嶅巻鏀诲嚮婕忔礊鍥炲綊娴嬭瘯
+  Test.Regression.BUG066_PathTraversal - 路径遍历攻击漏洞回归测试
 
-  BUG-066: 璺緞閬嶅巻鏀诲嚮婕忔礊
+  BUG-066: 路径遍历攻击漏洞
   
   原问? 文件监控缺乏路径遍历验证，可通过../访问系统敏感文件
   
@@ -10,7 +10,7 @@
   修复日期: 2025-01-27
   文件: Core/DeepBase.FileWatcher.pas
   浼樺厛绾? P1 (High)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG066_PathTraversal;
@@ -67,7 +67,7 @@ end;
 
 function TBug066_PathTraversalTest.GetBugDescription: string;
 begin
-  Result := '璺緞閬嶅巻鏀诲嚮婕忔礊';
+  Result := '路径遍历攻击漏洞';
 end;
 
 function TBug066_PathTraversalTest.GetFixDate: string;

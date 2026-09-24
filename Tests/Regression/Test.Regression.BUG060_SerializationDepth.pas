@@ -10,7 +10,7 @@
   修复日期: 2025-01-27
   文件: Core/DeepBase.Serialization.pas
   浼樺厛绾? P1 (High)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG060_SerializationDepth;

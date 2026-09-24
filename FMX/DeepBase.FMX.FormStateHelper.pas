@@ -2,7 +2,7 @@
   DeepBase.FMX.FormStateHelper - FMX 绐椾綋鐘舵€佸姪鎵嬬粍浠?
   
   版本: 1.0
-  璇存槑: 鎷栨斁鍒?FMX 绐椾綋涓婂嵆鍙嚜鍔ㄤ繚瀛?鎭㈠绐椾綋鐘舵€?
+  说明: 拖放到FMX 绐椾綋涓婂嵆鍙嚜鍔ㄤ繚瀛?鎭㈠绐椾綋鐘舵€?
   功能:
     - 自动保存窗体位置、大小、WindowState
     - 自动恢复时检查显示器边界
@@ -200,11 +200,11 @@ procedure TFMXFormStateHelper.HookFormEvents;
 begin
   if FForm = nil then Exit;
   
-  // 淇濆瓨骞舵浛鎹?OnShow
+  // 保存并替换OnShow
   FOldOnShow := FForm.OnShow;
   FForm.OnShow := InternalOnShow;
   
-  // 淇濆瓨骞舵浛鎹?OnClose
+  // 保存并替换OnClose
   FOldOnClose := FForm.OnClose;
   FForm.OnClose := InternalOnClose;
 end;

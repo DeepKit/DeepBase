@@ -115,7 +115,7 @@ begin
   Q := TFDQuery.Create(nil);
   try
     Q.Connection := FConnection;
-    // 鍒涘缓 LLMPromptTemplates 琛?
+    // 创建 LLMPromptTemplates 行
     Q.SQL.Text := SQL_TIER2_LLM_PROMPTS;
     Q.ExecSQL;
     // 创建 LLMConfiguration 表（FLLM 构造函数需要）

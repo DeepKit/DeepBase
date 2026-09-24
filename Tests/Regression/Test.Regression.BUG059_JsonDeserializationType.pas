@@ -6,12 +6,12 @@
   原问? JsonToObject方法缺少类型白名单验证，直接创建任意类型实例
   
   修复方案: 添加类型白名单验证机制，只允许安全的基础类型和标记了
-            SerializableAttribute鐨勭被
+            SerializableAttribute的类
   
   修复日期: 2025-01-27
   文件: Core/DeepBase.Serialization.pas
   浼樺厛绾? P1 (High)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG059_JsonDeserializationType;

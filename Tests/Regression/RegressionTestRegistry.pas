@@ -2,14 +2,14 @@
   RegressionTestRegistry - 回归测试注册?
 
   此文件列出所有回归测试，用于?
-  1. 蹇€熸煡鎵剧壒瀹?Bug 鐨勬祴璇?
+  1. 蹇€熸煡鎵剧壒瀹?Bug 的测试
   2. 验证所有已修复 Bug 都有对应测试
   3. CI 报告生成
   4. 测试覆盖率统?
 
   鏇存柊璇存槑锛?
   - 添加新的回归测试时，请同时更新此文件
-  - 淇濇寔 Bug 缂栧彿涓?docs/bugFixed.md 涓€鑷?
+  - 保持 Bug 缂栧彿涓?docs/bugFixed.md 涓€鑷?
   ============================================================================ }
 
 unit RegressionTestRegistry;
@@ -196,7 +196,7 @@ const
      Description: 'HTTP请求头注入风?;
      FixDate: '2025-01-27'),
 
-    // 瀵嗙爜瀛︾浉鍏?
+    // 密码学相关
     (BugNumber: 'BUG-037'; Priority: bpP1; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG037_KeyDerivation';
      SourceFile: 'Features/DeepBase.AntiTamper.pas';
@@ -241,16 +241,16 @@ const
      FixDate: '2026-09-02')
   );
 
-/// <summary>鑾峰彇鎵€鏈?P0 娴嬭瘯鍗曞厓鍚嶇О</summary>
+/// <summary>鑾峰彇鎵€鏈?P0 测试单元名称</summary>
 function GetP0TestUnits: TArray<string>;
 
-/// <summary>鑾峰彇鎵€鏈?P1 娴嬭瘯鍗曞厓鍚嶇О</summary>
+/// <summary>鑾峰彇鎵€鏈?P1 测试单元名称</summary>
 function GetP1TestUnits: TArray<string>;
 
 /// <summary>根据 Bug 编号查找测试信息</summary>
 function FindBugTestInfo(const BugNumber: string): TBugTestInfo;
 
-/// <summary>妫€鏌ユ槸鍚︽墍鏈?Bug 閮芥湁瀵瑰簲娴嬭瘯</summary>
+/// <summary>妫€鏌ユ槸鍚︽墍鏈?Bug 都有对应测试</summary>
 function ValidateTestCoverage: Boolean;
 
 implementation
@@ -292,7 +292,7 @@ begin
     if SameText(P1_TESTS[I].BugNumber, BugNumber) then
       Exit(P1_TESTS[I]);
 
-  // 鏈壘鍒?
+  // 未找到
   Result := Default(TBugTestInfo);
   Result.BugNumber := '';
 end;

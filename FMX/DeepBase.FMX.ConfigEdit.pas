@@ -36,7 +36,7 @@ type
   );
 
   /// <summary>
-  /// FMX 閰嶇疆缂栬緫鎺т欢 - 瀛楃涓插€?
+  /// FMX 配置编辑控件 - 瀛楃涓插€?
   /// </summary>
   TFMXConfigEdit = class(TEdit)
   private
@@ -84,7 +84,7 @@ type
     property ConfigKey: string read FConfigKey write SetConfigKey;
     
     /// <summary>
-    /// 閰嶇疆鍒嗙被锛堥粯璁?'General'锛?
+    /// 配置分类（默认'General'锛?
     /// </summary>
     property ConfigCategory: string read FConfigCategory write FConfigCategory;
     
@@ -95,7 +95,7 @@ type
   end;
 
   /// <summary>
-  /// FMX 閰嶇疆缂栬緫鎺т欢 - 鏁板€?
+  /// FMX 配置编辑控件 - 鏁板€?
   /// </summary>
   TFMXConfigSpinBox = class(TSpinBox)
   private
@@ -128,7 +128,7 @@ type
     property AutoSaveMode: TConfigAutoSaveMode read FAutoSaveMode write FAutoSaveMode default asmOnExit;
     
     /// <summary>
-    /// 鏄惁浣滀负鏁存暟淇濆瓨锛堥粯璁?True锛?
+    /// 是否作为整数保存（默认True锛?
     /// </summary>
     property IsInteger: Boolean read FIsInteger write FIsInteger default True;
   end;

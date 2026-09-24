@@ -7,7 +7,7 @@
   - T() 函数
   - TFmt() 函数
   - TN() 复数形式
-  - 璇█鍒囨崲
+  - 语言切换
   - 缓存机制
 *******************************************************************************}
 
@@ -238,7 +238,7 @@ begin
   Original := 'Hello';
   Translation := '你好';
   
-  // 娣诲姞缈昏瘧
+  // 添加翻译
   FI18n.AddTranslation(Original, 'zh-CN', Translation);
   FI18n.CurrentLanguage := 'zh-CN';
   
@@ -323,10 +323,10 @@ begin
   OriginalText := 'Test ' + TGUID.NewGuid.ToString;
   TranslatedText := '测试翻译';
   
-  // 娣诲姞缈昏瘧 (SourceText, LangCode, TranslatedText)
+  // 添加翻译 (SourceText, LangCode, TranslatedText)
   FI18n.AddTranslation(OriginalText, 'zh-CN', TranslatedText);
   
-  // 鍒囨崲鍒颁腑鏂?
+  // 切换到中文
   FI18n.CurrentLanguage := 'zh-CN';
   
   Assert.AreEqual(TranslatedText, FI18n.Translate(OriginalText), 
@@ -371,7 +371,7 @@ begin
   
   // 10000 次查询应该在 500ms 内完成（平均每次 < 0.05ms?
   Assert.IsTrue(Elapsed < 500, 
-    Format('缂撳瓨鎬ц兘涓嶄匠: 10000 娆℃煡璇㈣€楁椂 %d ms', [Elapsed]));
+    Format('缓存性能不佳: 10000 娆℃煡璇㈣€楁椂 %d ms', [Elapsed]));
 end;
 
 procedure TTestDeepBaseI18n.Test_LanguageSwitch_ClearCache;
@@ -380,11 +380,11 @@ var
   Res: string;
 begin
   Text := 'Switch test ' + TGUID.NewGuid.ToString;
-  Translation1 := '缈昏瘧1';
+  Translation1 := '翻译1';
   Translation2 := 'Translation2';
   
-  // 璇存槑:
-  // DeepBase 灏?en-US 瑙嗕负鈥滆嫳鏂囨簮璇█鈥濓紝TranslateTo('en-US') 浼氱洿鎺ヨ繑鍥炲師鏂囥€?
+  // 说明:
+  // DeepBase 灏?en-US 视为“英文源语言”，TranslateTo('en-US') 浼氱洿鎺ヨ繑鍥炲師鏂囥€?
   // 因此这里?fr-FR 作为第二语言，以验证切换语言后缓存不会误命中?
 
   // 添加两种语言的翻?(SourceText, LangCode, TranslatedText)

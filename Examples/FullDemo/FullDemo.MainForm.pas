@@ -2,7 +2,7 @@
   FullDemo.MainForm - 综合演示主窗?
   
   版本: 1.0
-  璇存槑: 婕旂ず DeepBase 妗嗘灦鎵€鏈夋牳蹇冨姛鑳?
+  说明: 演示 DeepBase 妗嗘灦鎵€鏈夋牳蹇冨姛鑳?
   ============================================================================ }
 
 unit FullDemo.MainForm;
@@ -44,7 +44,7 @@ uses
 type
   TMainForm = class(TForm)
   private
-    // 涓荤晫闈?
+    // 主界面
     FPageControl: TPageControl;
     FStatusBar: TStatusBar;
     FMainMenu: TMainMenu;
@@ -157,20 +157,20 @@ begin
   Height := 600;
   Position := poScreenCenter;
   
-  // 鍒濆鍖?DeepBase
+  // 初始化DeepBase
   DBPath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'demo.db');
   if not DeepBase.Manager.DeepBase.InitializeWithDB(DBPath) then
   begin
-    ShowMessage('DeepBase 鍒濆鍖栧け璐�: ' + DeepBase.Manager.DeepBase.LastError);
+    ShowMessage('DeepBase 初始化失败: ' + DeepBase.Manager.DeepBase.LastError);
   end;
   
-  // 鍒涘缓鐣岄潰
+  // 创建界面
   CreateUI;
   
   // 鎭㈠绐椾綋鐘舵€?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
   
   // 记录启动日志
-  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤宸插惎鍔�', 'App');
+  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启动', 'App');
   
   UpdateStatusBar;
 end;
@@ -196,7 +196,7 @@ begin
   FStatusBar.Panels.Add.Width := 150;
   FStatusBar.Panels.Add.Width := 100;
   
-  // 涓昏彍鍗?
+  // 主菜单
   CreateMainMenu;
   
   // 页面控件

@@ -6,8 +6,8 @@
   测试内容:
   - License Key 验证
   - 设备指纹
-  - 璁稿彲璇佺被鍨?
-  - 婵€娲?鍋滅敤
+  - 许可证类型
+  - 婵€娲?停用
 *******************************************************************************}
 
 interface
@@ -167,7 +167,7 @@ var
 begin
   Info := FLicense.ValidateLicense('');
   
-  Assert.AreEqual(Ord(lsInvalid), Ord(Info.Status), '绌?Key 搴旇鏃犳晥');
+  Assert.AreEqual(Ord(lsInvalid), Ord(Info.Status), '空Key 应该无效');
 end;
 
 procedure TTestDeepBaseLicense.Test_ValidateLicense_InvalidFormat;

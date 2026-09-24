@@ -134,7 +134,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Delete: string;
   begin
-    Result := WideChar($5220) + WideChar($9664); // 鍒犻櫎
+    Result := WideChar($5220) + WideChar($9664); // 删除
   end;
   
   function ZH_Settings: string;
@@ -154,12 +154,12 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Data: string;
   begin
-    Result := WideChar($6570) + WideChar($636E); // 鏁版嵁
+    Result := WideChar($6570) + WideChar($636E); // 数据
   end;
   
   function ZH_Hotkeys: string;
   begin
-    Result := WideChar($5FEB) + WideChar($6377) + WideChar($952E); // 蹇嵎閿?
+    Result := WideChar($5FEB) + WideChar($6377) + WideChar($952E); // 快捷键
   end;
   
   function ZH_Themes: string;
@@ -169,7 +169,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_SQLQuery: string;
   begin
-    Result := 'SQL ' + WideChar($67E5) + WideChar($8BE2); // SQL 鏌ヨ
+    Result := 'SQL ' + WideChar($67E5) + WideChar($8BE2); // SQL 查询
   end;
   
   function ZH_Queries: string;
@@ -180,7 +180,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Schema: string;
   begin
-    // 鏁版嵁缁撴瀯
+    // 数据结构
     Result := WideChar($6570) + WideChar($636E) + WideChar($7ED3) + WideChar($6784);
   end;
   
@@ -208,7 +208,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_PromptTemplates: string;
   begin
-    // 鎻愮ず璇嶆ā鏉?
+    // 提示词模板
     Result := WideChar($63D0) + WideChar($793A) + WideChar($8BCD) + WideChar($6A21) + WideChar($677F);
   end;
   
@@ -258,7 +258,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Refreshed: string;
   begin
-    // 宸插埛鏂?
+    // 已刷新
     Result := WideChar($5DF2) + WideChar($5237) + WideChar($65B0);
   end;
   

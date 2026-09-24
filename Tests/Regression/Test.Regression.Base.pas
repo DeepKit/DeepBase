@@ -3,7 +3,7 @@
 
   提供扢有回归测试的通用基础设施?
   - 标准化的 Bug 信息获取接口
-  - 閫氱敤鐨?SetUp/TearDown 閫昏緫
+  - 通用的SetUp/TearDown 逻辑
   - 测试辅助方法
 
   浣跨敤鏂规硶锛?
@@ -33,13 +33,13 @@ type
     /// <summary>获取 Bug 编号，如 'BUG-058'</summary>
     function GetBugNumber: string; virtual; abstract;
 
-    /// <summary>鑾峰彇 Bug 绠€鐭弿杩?/summary>
+    /// <summary>获取 Bug 绠€鐭弿杩?/summary>
     function GetBugDescription: string; virtual; abstract;
 
     /// <summary>获取修复日期，格?'YYYY-MM-DD'</summary>
     function GetFixDate: string; virtual; abstract;
 
-    /// <summary>鑾峰彇 Bug 浼樺厛绾э紝濡?'P0', 'P1'</summary>
+    /// <summary>获取 Bug 浼樺厛绾э紝濡?'P0', 'P1'</summary>
     function GetPriority: string; virtual;
 
     /// <summary>获取受影响的源文件路?/summary>
@@ -143,7 +143,7 @@ end;
 
 function TRegressionTestBase.GetAffectedFile: string;
 begin
-  Result := ''; // 瀛愮被鍙鐩?
+  Result := ''; // 子类可覆盖
 end;
 
 function TRegressionTestBase.GetBugInfo: string;
@@ -310,7 +310,7 @@ begin
 end;
 {$ELSE}
 begin
-  Result := 0; // 闈?Windows 骞冲彴鏆備笉鏀寔
+  Result := 0; // 闈?Windows 平台暂不支持
 end;
 {$ENDIF}
 

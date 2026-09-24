@@ -286,7 +286,7 @@ begin
     Exit(False);
 
   {$IFDEF MSWINDOWS}
-  // 鍏煎浠呬紶鍏?Base64 涓讳綋鐨勫叕閽ラ厤缃?  NormalizedKey := PublicKey;
+  // 鍏煎浠呬紶鍏?Base64 主体的公钥配置  NormalizedKey := PublicKey;
   if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
     NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
       NormalizedKey + sLineBreak +

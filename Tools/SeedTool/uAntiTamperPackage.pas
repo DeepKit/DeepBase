@@ -5,7 +5,7 @@
   
   鍔熻兘锛?
   1. 图像数据加密/解密
-  2. SHA-256瀹屾暣鎬ф牎楠?
+  2. SHA-256完整性校验
   3. 篡改棢测和安全响应
   4. 数据库表结构管理
   
@@ -47,21 +47,21 @@ type
     EnableLogging: Boolean;       // 是否启用日志
     LogFileName: string;          // 鏃ュ織鏂囦欢鍚?
     EncryptionType: TEncryptionType; // 加密算法类型
-    // KDF 涓?HMAC 璁剧疆
-    Salt: string;                 // KDF鐩?
+    // KDF 涓?HMAC 设置
+    Salt: string;                 // KDF目
     KdfIterations: Integer;       // KDF迭代次数
     EnableHMAC: Boolean;          // 是否启用HMAC完整性签?
   end;
 
  
 
-  // 闃茬鏀瑰寘涓荤被
+  // 防篡改包主类
   TAntiTamperPackage = class
   private
     class var FConfig: TAntiTamperConfig;
     class var FInitialized: Boolean;
     
-    // 鍐呴儴鏂规硶
+    // 内部方法
     class function SimpleXOREncrypt(const Data: TBytes; const Key: string): TBytes;
     class function SimpleXORDecrypt(const Data: TBytes; const Key: string): TBytes;
     class procedure WriteLog(const AMessage: string);
@@ -70,7 +70,7 @@ type
     class function ComputeHMACSHA256(const Data: TBytes): string; // HMAC签名
     
   public
-    // 鍒濆鍖栭厤缃?
+    // 初始化配置
     class procedure Initialize(const AConfig: TAntiTamperConfig);
     
     // 数据库表结构管理
@@ -79,7 +79,7 @@ type
     class procedure ClearTable(AConnection: TFDConnection);
     class procedure ReseedMinimal(AConnection: TFDConnection);
     
-    // 鍝堝笇璁＄畻
+    // 哈希计算
     class function CalculateMD5(const Data: TBytes): string; deprecated 'Use CalculateSHA256 instead';
     class function CalculateSHA256(const Data: TBytes): string;
     
@@ -87,7 +87,7 @@ type
     class function EncryptImageData(const ImageData: TBytes): TBytes;
     class function DecryptImageData(const EncryptedData: TBytes): TBytes;
     
-    // 瀹屾暣鎬ф牎楠?
+    // 完整性校验
     class function VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
     
     // 安全图像操作
@@ -99,7 +99,7 @@ type
     // 安全响应
     class procedure HandleSecurityViolation(const ImageKey: string; const Reason: string);
     
-    // 宸ュ叿鏂规硶
+    // 工具方法
     class function GetDefaultConfig: TAntiTamperConfig;
   end;
 
@@ -124,7 +124,7 @@ class procedure TAntiTamperPackage.Initialize(const AConfig: TAntiTamperConfig);
 begin
   FConfig := AConfig;
   FInitialized := True;
-    WriteLog('闃茬鏀瑰寘鍒濆鍖栧畬鎴�');
+    WriteLog('防篡改包初始化完成');
 end;
 
 class procedure TAntiTamperPackage.WriteLog(const AMessage: string);
@@ -246,7 +246,7 @@ class function TAntiTamperPackage.ComputeHMACSHA256(const Data: TBytes): string;
 var
   DataDigest, KeyHex: string;
 begin
-  // 鍏堣绠?Data 鐨?SHA-256 鎽樿锛屽啀璁＄畻鍏?HMAC
+  // 先计算Data 的SHA-256 鎽樿锛屽啀璁＄畻鍏?HMAC
   DataDigest := THash.DigestAsString(Data);
   KeyHex := GetEffectiveKeyString;
   Result := THashSHA2.GetHMAC(DataDigest, KeyHex);
@@ -255,7 +255,7 @@ end;
 class function TAntiTamperPackage.EncryptImageData(const ImageData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise EAntiTamperException.Create('闃茬鏀瑰寘鏈垵濮嬪寲');
+    raise EAntiTamperException.Create('防篡改包未初始化');
   
   // 根据配置选择加密算法
   case FConfig.EncryptionType of
@@ -276,7 +276,7 @@ end;
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise EAntiTamperException.Create('闃茬鏀瑰寘鏈垵濮嬪寲');
+    raise EAntiTamperException.Create('防篡改包未初始化');
   
   // 根据配置选择解密算法
   case FConfig.EncryptionType of
@@ -341,7 +341,7 @@ begin
           '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
           ')';
         Query.ExecSQL;
-        WriteLog('闃茬鏀规暟鎹〃鍒涘缓鎴愬姛');
+        WriteLog('防篡改数据表创建成功');
       end
       else
       begin
@@ -555,7 +555,7 @@ begin
           
           WriteLog(Format('加密数据长度: %d bytes - %s', [Length(EncryptedData), AImageKey]));
           
-          // 瑙ｅ瘑鏁版嵁
+          // 解密数据
           DecryptedData := DecryptImageData(EncryptedData);
           WriteLog(Format('解密数据长度: %d bytes - %s', [Length(DecryptedData), AImageKey]));
           

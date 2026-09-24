@@ -244,7 +244,7 @@ begin
   FTestForm.Left := 0;
   FTestForm.Top := 0;
   
-  // 鎭㈠
+  // 恢复
   FFormState.RestoreFormState(FTestForm);
   
   Assert.AreEqual(OrigLeft, FTestForm.Left, '左边位置应该恢复');
@@ -266,7 +266,7 @@ begin
   FTestForm.Width := 200;
   FTestForm.Height := 100;
   
-  // 鎭㈠
+  // 恢复
   FFormState.RestoreFormState(FTestForm);
   
   Assert.AreEqual(OrigWidth, FTestForm.Width, '宽度应该恢复');
@@ -436,7 +436,7 @@ begin
     FTestForm.Left := 0;
     Form2.Left := 0;
     
-    // 鎭㈠
+    // 恢复
     FFormState.RestoreFormState(FTestForm);
     FFormState.RestoreFormState(Form2);
     

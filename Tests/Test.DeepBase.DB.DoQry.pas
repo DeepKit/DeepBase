@@ -208,7 +208,7 @@ begin
   FConnection.Params.Database := FTestDBPath;
   FConnection.Open;
   
-  // 鍒濆鍖?DoQry
+  // 初始化DoQry
   UniDbInit(ExtractFilePath(ParamStr(0)));
 
   // DATA2-028: opt-in 直连 SQL 开关。本夹具大量用例以 inline SQL(DML) 作为 ProcName 传入,
@@ -336,7 +336,7 @@ var
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
-  // 鍏堟彃鍏ユ暟鎹?
+  // 先插入数据
   UniDbExec(
     'INSERT INTO test_users (name, age) VALUES (:name, :age)',
     '{"name": "Bob", "age": 25}',
@@ -819,7 +819,7 @@ var
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
-  // 璁剧疆 TTL 涓?1 绉?
+  // 设置 TTL 涓?1 移
   UniDbSetCacheTTL(1);
   UniDbClearQueryCache;
   
@@ -1014,7 +1014,7 @@ var
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
-  // 鎻掑叆鍚?NULL 瀛楁鐨勬暟鎹?
+  // 鎻掑叆鍚?NULL 字段的数据
   UniDbExec(
     'INSERT INTO test_multitype (name, price, quantity) VALUES (:name, :price, :quantity)',
     '{"name": "NullTest", "price": null, "quantity": 50}',

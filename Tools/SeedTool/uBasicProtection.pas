@@ -80,7 +80,7 @@ type
     class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
     class function EncryptBinaryData(const AData: TBytes; const APassword: string = DEFAULT_SEED_PASSWORD): TBytes;
     class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string = DEFAULT_SEED_PASSWORD): TBytes;
-    // 瀹屾暣鎬ф牎楠?
+    // 完整性校验
     class function CalculateHMAC(const AData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
     class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string = DEFAULT_SEED_PASSWORD): Boolean;
     class function CalculateFileHash(const AFileName: string): string;
@@ -530,7 +530,7 @@ begin
     raise EProtectionException.Create('Failed to get hash value');
 end;
 
-// 璁＄畻HMAC瀛楃涓?
+// 计算HMAC瀛楃涓?
 class function TBasicProtection.CalculateHMAC(const AData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
 var
   DataBytes, KeyBytes, HMACBytes: TBytes;

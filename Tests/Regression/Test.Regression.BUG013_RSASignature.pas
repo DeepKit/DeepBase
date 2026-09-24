@@ -114,10 +114,10 @@ procedure TBug013_RSASignatureTest.Test_RSASign_HasCorrectLength;
 begin
   LogTestStart('Test_RSASign_HasCorrectLength');
   
-  // RSA-2048 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?56 瀛楄妭
+  // RSA-2048 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?56 字节
   // - Base64 编码后：?344 字符
   
-  // RSA-4096 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?12 瀛楄妭
+  // RSA-4096 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?12 字节
   // - Base64 编码后：?684 字符
   
   // 由于没有实际的私钥，这里只验证概?  Assert.Pass('RSA 签名长度验证通过（需要实际私钥进行完整测试）');

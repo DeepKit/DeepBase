@@ -142,7 +142,7 @@ end;
 
 procedure TTestAppInstanceProperties.Test_OnCommandLineReceived_SetGet;
 begin
-  // TCommandLineReceivedEvent is "of object" 鈥?cannot assign anonymous procedure.
+  // TCommandLineReceivedEvent is "of object" —cannot assign anonymous procedure.
   // Verify it starts as nil and can be checked.
   Assert.IsFalse(Assigned(TAppInstance.OnCommandLineReceived));
 end;

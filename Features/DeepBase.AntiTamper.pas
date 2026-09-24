@@ -29,8 +29,8 @@ uses
     EnableLogging: Boolean;       // 是否启用日志
     LogFileName: string;          // 鏃ュ織鏂囦欢鍚?
     EncryptionType: TEncryptionType; // 加密算法类型
-    // KDF 涓?HMAC 璁剧疆
-    Salt: string;                 // KDF鐩?
+    // KDF 涓?HMAC 设置
+    Salt: string;                 // KDF目
     KdfIterations: Integer;       // KDF迭代次数
     EnableHMAC: Boolean;          // 是否启用HMAC完整性签?
   end;
@@ -51,7 +51,7 @@ uses
     // BUG-036 FIX: Constant-time string comparison to prevent timing attacks
     class function ConstantTimeCompare(const A, B: string): Boolean; static;
   public
-    // 鍒濆鍖栭厤缃?
+    // 初始化配置
     class procedure Initialize(const AConfig: TAntiTamperConfig); static;
 
     // 数据库表结构管理
@@ -70,7 +70,7 @@ uses
     class function EncryptImageData(const ImageData: TBytes): TBytes; static;
     class function DecryptImageData(const EncryptedData: TBytes): TBytes; static;
 
-    // 瀹屾暣鎬ф牎楠?
+    // 完整性校验
     class function VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean; static;
 
     // 安全图像操作
@@ -193,7 +193,7 @@ class function TAntiTamperPackage.DeriveKeyBytes: TBytes;
 var
   Iterations: Integer;
 begin
-  Iterations := Max(FConfig.KdfIterations, 10000); // 鏈€灏?0000娆¤凯浠?
+  Iterations := Max(FConfig.KdfIterations, 10000); // 鏈€灏?0000次迭代
   Result := TPasswordUtils.PBKDF2(FConfig.EncryptionKey,
     TEncoding.UTF8.GetBytes(FConfig.Salt), Iterations, 32, haSHA256);
 end;

@@ -13,7 +13,7 @@ unit Test.DeepBase.Protection;
 
 interface
 
-{$IFDEF MSWINDOWS} // DeepBase.Protection 鍩轰簬 Windows CryptoAPI锛屼粎鍦?Windows 涓婃祴璇?
+{$IFDEF MSWINDOWS} // DeepBase.Protection 基于 Windows CryptoAPI，仅在Windows 上测试
 
 uses
   DUnitX.TestFramework,

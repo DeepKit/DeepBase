@@ -139,7 +139,7 @@ procedure TBasicProtectionTests.Test_EncryptDecrypt_Unicode;
 var
   Original, Encrypted, Decrypted: string;
 begin
-  Original := '涓枃娴嬭瘯 鏃ユ湰瑾?頃滉淡鞏?馃帀';
+  Original := '中文测试 日本語頃滉淡鞏?馃帀';
   Encrypted := TBasicProtection.EncryptSensitiveData(Original);
   Decrypted := TBasicProtection.DecryptSensitiveData(Encrypted);
 

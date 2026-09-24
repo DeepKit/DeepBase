@@ -644,7 +644,7 @@ var
   I, Diff: Integer;
 const
   // BUG-109 FIX: 将时间戳容差?00秒降低到120秒以减少重放攻击风险
-  // 鍘熸潵鏄?鍒嗛挓锛岀幇鍦ㄦ敼涓?鍒嗛挓锛屽湪淇濊瘉姝ｅ父璇锋眰閫氳繃鐨勫悓鏃跺噺灏戞敾鍑荤獥鍙?
+  // 原来是分钟，现在改为鍒嗛挓锛屽湪淇濊瘉姝ｅ父璇锋眰閫氳繃鐨勫悓鏃跺噺灏戞敾鍑荤獥鍙?
   TOLERANCE_SECONDS = 120; // 2 minutes tolerance (reduced from 5 minutes)
 begin
   Result := False;

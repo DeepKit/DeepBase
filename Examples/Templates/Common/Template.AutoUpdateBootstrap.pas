@@ -1,8 +1,8 @@
 ﻿{ ============================================================================
   Template.AutoUpdateBootstrap
 
-  璇存槑:
-    涓烘ā鏉垮伐绋嬫彁渚涚粺涓€鐨勮嚜鍔ㄦ洿鏂板垵濮嬪寲鍏ュ彛銆?    榛樿鍚敤 DeepBase 2026-05 鐨勭瓥鐣ュ寲闈欓粯鏇存柊缂栨帓锛?      - onExit/whenIdle staged 涓嬭浇
+  说明:
+    涓烘ā鏉垮伐绋嬫彁渚涚粺涓€鐨勮嚜鍔ㄦ洿鏂板垵濮嬪寲鍏ュ彛銆?    默认启用 DeepBase 2026-05 鐨勭瓥鐣ュ寲闈欓粯鏇存柊缂栨帓锛?      - onExit/whenIdle staged 下载
       - 后台轮询安装窗口
       - 閫€鍑鸿Е鍙戝畨瑁呯獥鍙?  ============================================================================ }
 
@@ -49,7 +49,7 @@ begin
   GAutoUpdater.AutoTriggerExitInstall := True;
   GAutoUpdater.SilentInstallMainExePath := '';
 
-  // 绾﹀畾锛氫笅娓稿彲鍦?Settings 涓厤缃?App.UpdateUrl / App.Version銆?  if DeepBase.Manager.DeepBase.IsInitialized then
+  // 绾﹀畾锛氫笅娓稿彲鍦?Settings 中配置App.UpdateUrl / App.Version銆?  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     GAutoUpdater.UpdateUrl := DeepBase.Manager.DeepBase.Config.GetConfig('App.UpdateUrl', '');
     GAutoUpdater.CurrentVersion := DeepBase.Manager.DeepBase.Config.GetConfig('App.Version', '0.0.0');

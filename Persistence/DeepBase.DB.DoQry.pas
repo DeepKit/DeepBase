@@ -3,7 +3,7 @@
   
   版本: 1.0
   所属包: DeepBasePersistence
-  璇存槑: 灏?DoQry 搴撻泦鎴愬埌 DeepBase 妗嗘灦锛岀粺涓€鏃ュ織鍜岄敊璇鐞?
+  说明: 灏?DoQry 库集成到 DeepBase 妗嗘灦锛岀粺涓€鏃ュ織鍜岄敊璇鐞?
   线程安全: 所有公共方法均线程安全
   ============================================================================ }
 
@@ -87,7 +87,7 @@ type
   end;
 
 /// <summary>
-/// 鍒濆鍖?DoQry锛堢敱 DeepBase.Manager 璋冪敤锛?
+/// 初始化DoQry（由 DeepBase.Manager 璋冪敤锛?
 /// </summary>
 procedure UniDbInit(const RootPath: string);
 
@@ -172,7 +172,7 @@ procedure UniDbSetCacheTTL(Seconds: Integer);
 procedure UniDbGetCacheStats(out Hits, Misses, EntryCount: Int64);
 
 /// <summary>
-/// 鍚敤/绂佺敤棰勭紪璇戣鍙ュ鐢紙榛樿鍚敤锛?
+/// 启用/绂佺敤棰勭紪璇戣鍙ュ鐢紙榛樿鍚敤锛?
 /// </summary>
 procedure UniDbSetPreparedStatementPooling(Enabled: Boolean);
 
@@ -217,7 +217,7 @@ type
     procedure Shutdown;
   end;
 
-  /// <summary>DoQry service implementation 鈥?delegates to global functions</summary>
+  /// <summary>DoQry service implementation —delegates to global functions</summary>
   TDoQryService = class(TInterfacedObject, IDoQryService)
   public
     function Select(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
@@ -787,12 +787,12 @@ end;
 { 内部辅助函数 }
 
 /// <summary>
-/// 澶嶅埗 TFDQuery 鏁版嵁鍒?TFDMemTable
+/// 复制 TFDQuery 鏁版嵁鍒?TFDMemTable
 /// </summary>
 procedure CopyQueryToMemTable(Src: TFDQuery; Dest: TFDMemTable);
 begin
   Dest.Close;
-  // TFDMemTable 鍙互鐩存帴浠?TFDQuery 澶嶅埗鏁版嵁
+  // TFDMemTable 鍙互鐩存帴浠?TFDQuery 复制数据
   Dest.CopyDataSet(Src, [coStructure, coRestart, coAppend]);
 end;
 
@@ -1054,7 +1054,7 @@ begin
 end;
 
 /// <summary>
-/// 浠?Queries 琛ㄥ姞杞?SQL锛堝甫缂撳瓨 + TTL锛?
+/// 件Queries 表加载SQL（带缓存 + TTL锛?
 /// </summary>
 function LoadQuerySQL(const ProcName: string; const Ctx: TUniQueryContext): string;
 var
@@ -1434,7 +1434,7 @@ begin
   end;
 end;
 
-{ 鏌ヨ鎵ц - 绠€鍖栧疄鐜?}
+{ 查询执行 - 绠€鍖栧疄鐜?}
 
 function UniDbSelect(const ProcName: string; const ParamsJson: string;
   var Data: TFDMemTable; const Ctx: TUniQueryContext): Integer;
@@ -1447,7 +1447,7 @@ var
 begin
   StartTime := Now;
 
-  // 浠?Queries 琛ㄥ姞杞?SQL 鎴栫洿鎺ヤ娇鐢?
+  // 件Queries 表加载SQL 或直接使用
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
 

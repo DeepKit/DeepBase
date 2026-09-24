@@ -11,7 +11,7 @@
   修复日期: 2025-12-16
   文件: Core/DeepBase.Resilience.pas
   浼樺厛绾? P1 (High)
-  鍒嗙被: Concurrency
+  分类: Concurrency
   ============================================================================ }
 
 unit Test.Regression.BUG054_SemaphoreLeak;

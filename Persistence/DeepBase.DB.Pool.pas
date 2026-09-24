@@ -32,7 +32,7 @@
       // 使用 Connection
       Connection.ExecSQL('INSERT INTO Log(Msg) VALUES(:Msg)', ['test']);
     finally
-      Release; // 鎴栬嚜鍔ㄩ噴鏀?
+      Release; // 或自动释放
     end;
 
     // 或使用作用域连接
@@ -113,7 +113,7 @@ type
     pePoolExhausted
   );
 
-  /// <summary>杩炴帴姹犱簨浠?/summary>
+  /// <summary>连接池事件</summary>
   TPoolEvent = procedure(Sender: TObject; EventType: TPoolEventType;
     const Message: string) of object;
 
@@ -185,7 +185,7 @@ type
     property AcquireCount: Int64 read FAcquireCount;
   end;
 
-  /// <summary>杩炴帴姹犻厤缃?/summary>
+  /// <summary>连接池配置</summary>
   TPoolConfig = record
     MinSize: Integer;
     MaxSize: Integer;
@@ -690,7 +690,7 @@ class function TPoolConfig.Default: TPoolConfig;
 begin
   Result.MinSize := 2;
   Result.MaxSize := 10;
-  Result.AcquireTimeoutMs := 30000;  // 30绉?
+  Result.AcquireTimeoutMs := 30000;  // 30移
   Result.IdleTimeoutSec := 300;      // 5分钟
   Result.MaxLifetimeSec := 3600;     // 1小时
   Result.ValidationIntervalSec := 60; // 1分钟

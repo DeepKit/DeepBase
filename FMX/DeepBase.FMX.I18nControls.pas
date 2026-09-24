@@ -1,5 +1,5 @@
 ﻿{ ============================================================================
-  DeepBase.FMX.I18nControls - FMX 鍥介檯鍖栨帶浠?
+  DeepBase.FMX.I18nControls - FMX 国际化控件
 
   版本: 1.1
   说明: 自动翻译?FMX 控件
@@ -47,7 +47,7 @@ type
     destructor Destroy; override;
     
     /// <summary>
-    /// 鍒锋柊缈昏瘧
+    /// 刷新翻译
     /// </summary>
     procedure RefreshTranslation;
     
@@ -200,7 +200,7 @@ begin
     if FOriginalText = '' then
       FOriginalText := Text;
       
-    // 璁㈤槄璇█鍙樻洿浜嬩欢
+    // 订阅语言变更事件
     SubscribeToLanguageChange;
     UpdateTranslation;
   end;

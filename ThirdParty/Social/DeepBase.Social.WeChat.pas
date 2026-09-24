@@ -4,10 +4,10 @@
   DeepBase WeChat (微信) Social Integration
 
   Supports:
-    - 寰俊寮€鏀惧钩鍙扮櫥褰?(缃戠珯搴旂敤)
+    - 寰俊寮€鏀惧钩鍙扮櫥褰?(网站应用)
     - 微信公众号登?(网页授权)
     - 获取用户信息
-    - 鍒嗕韩鍒板井淇?
+    - 分享到微信
   Official Docs: https://developers.weixin.qq.com/doc/oplatform/
 *******************************************************************************}
 
@@ -21,7 +21,7 @@ uses
 type
   /// <summary>WeChat login type</summary>
   TWeChatLoginType = (
-    wltOpen,      // 寮€鏀惧钩鍙?(缃戠珯/APP)
+    wltOpen,      // 寮€鏀惧钩鍙?(网站/APP)
     wltMP         // 公众号网页授?
   );
 
@@ -72,7 +72,7 @@ const
   WECHAT_OPEN_AUTH_URL = 'https://open.weixin.qq.com/connect/qrconnect';
   WECHAT_OPEN_API_URL = 'https://api.weixin.qq.com/sns';
 
-  // WeChat MP (鍏紬鍙?
+  // WeChat MP (公众号
   WECHAT_MP_AUTH_URL = 'https://open.weixin.qq.com/connect/oauth2/authorize';
   WECHAT_MP_API_URL = 'https://api.weixin.qq.com/sns';
 

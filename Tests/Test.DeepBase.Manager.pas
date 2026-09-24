@@ -165,7 +165,7 @@ procedure TTestDeepBaseManager.Test_InitializeEx_ReturnsErrorMsg;
 var
   InitResult: Boolean;
 begin
-  // 浣跨敤鍐呭瓨鏁版嵁搴撴祴璇?InitializeWithDB (InitializeEx 闇€瑕?root.txt)
+  // 使用内存数据库测试InitializeWithDB (InitializeEx 闇€瑕?root.txt)
   FManager.Finalize;
   InitResult := FManager.InitializeWithDB(':memory:');
   
@@ -189,7 +189,7 @@ procedure TTestDeepBaseManager.Test_HealthCheck_BeforeInit_ShouldFail;
 var
   Health: THealthCheckResult;
 begin
-  // 涓嶈皟鐢?Initialize
+  // 不调用Initialize
   Health := FManager.HealthCheck;
   
   Assert.IsFalse(Health.IsHealthy, 'HealthCheck should be unhealthy before initialization');

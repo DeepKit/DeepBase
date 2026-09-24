@@ -12,7 +12,7 @@
   修复日期: 2025-01-27
   文件: Core/DeepBase.PluginManager.pas
   浼樺厛绾? P0 (Critical)
-  鍒嗙被: Security
+  分类: Security
   ============================================================================ }
 
 unit Test.Regression.BUG063_PluginConfigBypass;

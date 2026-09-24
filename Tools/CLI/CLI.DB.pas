@@ -2,7 +2,7 @@
   CLI.DB - 数据库管理命?
   
   版本: 1.0
-  璇存槑: 瀹炵幇 db init/upgrade/backup/check 鍛戒护
+  说明: 实现 db init/upgrade/backup/check 命令
   ============================================================================ }
 
 unit CLI.DB;

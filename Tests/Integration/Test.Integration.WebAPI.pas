@@ -102,7 +102,7 @@ var
 begin
   inherited;
 
-  // 鍚姩鐙珛鐨?WebAPI 鏈嶅姟鍣?(鐩戝惉 127.0.0.1:18080)
+  // 鍚姩鐙珛鐨?WebAPI 鏈嶅姟鍣?(监听 127.0.0.1:18080)
   FServer := TApiServer.Create;
   FServer.Config.Host := '127.0.0.1';
   FServer.Config.Port := 18080;
@@ -356,7 +356,7 @@ begin
     LJson := GetJsonObject(LResp);
     try
       Assert.AreEqual('user123', LJson.GetValue<string>('userId'));
-      // username 榛樿涓?subject 鎴?username 澹版槑, 杩欓噷鍙獙璇佸瓨鍦ㄥ嵆鍙?
+      // username 榛樿涓?subject 成username 声明, 杩欓噷鍙獙璇佸瓨鍦ㄥ嵆鍙?
       Assert.IsTrue(LJson.GetValue<string>('username') <> '', 'username should not be empty');
     finally
       LJson.Free;
@@ -467,7 +467,7 @@ begin
       end
     );
 
-    // 鍙戦€佸叿鏈?event = chat.message 鐨?JSON 鏂囨湰娑堟伅
+    // 鍙戦€佸叿鏈?event = chat.message 的JSON 文本消息
     LMsg := TWebSocketMessage.Create;
     try
       LMsg.Opcode := TWebSocketOpcode.wocText;
@@ -503,7 +503,7 @@ begin
       end
     );
 
-    // 闈?JSON 鏂囨湰娑堟伅
+    // 闈?JSON 文本消息
     LMsg := TWebSocketMessage.Create;
     try
       LMsg.Opcode := TWebSocketOpcode.wocText;
@@ -513,7 +513,7 @@ begin
       LMsg.Free;
     end;
 
-    // JSON 浣嗘病鏈?event 瀛楁
+    // JSON 但没有event 字段
     LMsg := TWebSocketMessage.Create;
     try
       LMsg.Opcode := TWebSocketOpcode.wocText;

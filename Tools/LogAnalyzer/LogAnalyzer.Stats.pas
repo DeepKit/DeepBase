@@ -6,7 +6,7 @@
     - 按级别统计日志数?
     - 按来源统计日志数?
     - 时间范围分析
-    - 瓒嬪娍鍒嗘瀽
+    - 趋势分析
   ============================================================================ }
 
 unit LogAnalyzer.Stats;
@@ -75,7 +75,7 @@ type
     function GetStatsBySource: TArray<TSourceStats>;
 
     /// <summary>
-    /// 鎸夊皬鏃跺垎缁勭粺璁?(鐢ㄤ簬瓒嬪娍鍥?
+    /// 按小时分组统计(鐢ㄤ簬瓒嬪娍鍥?
     /// </summary>
     function GetHourlyStats: TArray<TTimeSlotStats>;
 
@@ -119,7 +119,7 @@ begin
 
     for I := 0 to High(ALogs) do
     begin
-      // 鎸夌骇鍒鏁?
+      // 按级别计数
       Inc(Result.CountByLevel[ALogs[I].Level]);
 
       // 唯一来源
@@ -227,7 +227,7 @@ begin
   try
     for I := 0 to High(FLogs) do
     begin
-      // 鎴柇鍒板皬鏃?
+      // 截断到小时
       SlotTime := RecodeMinute(RecodeSecond(RecodeMilliSecond(FLogs[I].Timestamp, 0), 0), 0);
 
       if Dict.TryGetValue(SlotTime, Stats) then
