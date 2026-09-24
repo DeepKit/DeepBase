@@ -1,0 +1,59 @@
+D7 段6（交付回执落地后）· 本单携带件自身过三道编码/行尾门的原始输出
+================================================================================
+工单：WO-20260924-AUDIT-甲-D7 判据 ⑦（H15：代码 + 证据入库、暂存区前后皆空）
+《非睿智轻量门禁》G 项：build/test 的原始输出必须存档为证据文件，禁止仅自报 PASS 文本。
+
+执行环境：隔离工作树（不是共享树）
+  git worktree add --detach .tmp/d7_c_final 5d0c3cb
+  HEAD 实测 = 5d0c3cb  docs(audit-甲-D7): 派单总表 D7 行改为已交付待验收 + 登记段5 前提失效
+  该 commit 含本笔两件：CodeReview/20260924-AUDIT-甲-D7-交付回执.md（c3628b0）
+                        docs/ui/work-orders/00-主控派单总表.md（5d0c3cb）
+  下面三段命令均在 .tmp/d7_c_final 根目录执行，输出未删改（三门各 1 行，无违规明细 ⇒ 通过行即全部输出）。
+
+【为什么必须在隔离树跑，而不是共享树】
+  共享工作树当前携带乙 D8 的**未提交**改动：
+    git diff --stat -- 09_工程脚本/evidence-encoding-gate/ ⇒ 3 件 297+/34−
+      check_evidence_encoding.js +169、evidence_encoding_baseline.json +27、test_negative_sample.js +135
+  实测差异可复现：同一份门禁代码在两处行为不同 ——
+    · 隔离树（= HEAD 已入库版）输出：`… 全部为合法 UTF-8`（E3 面尚未入库）
+    · 共享树（= 含乙未提交版）输出：`E3 双重编码命中 185 行 / 20 件（存量登记 20 件封顶…）`
+  ⇒ 按「共享树结论无效」纪律，本件只背书隔离树那一版；乙 D8 入库后 E3 面须由乙自己出证据，甲不复述。
+
+【1】证据编码门（CodeReview/ 全量，本回执在其中）
+  $ node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js"
+  证据编码门禁通过：扫描 534 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  EVIDENCE_EXIT=0
+
+【2】编码门（.pas + 扩展面）
+  $ node "09_工程脚本/encoding-gate/check_pas_encoding.js"
+  编码门禁通过：978 个 .pas + 664 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 3）
+  ENC_EXIT=0
+
+【3】行尾门
+  $ node "09_工程脚本/eol-gate/check_eol.js"
+  行尾门禁通过：检查了 1489 个文件（.pas CRLF / .md LF），跳过目录 3
+  EOL_EXIT=0
+
+【4】本笔携带件确在扫描面内（计数递增对账，防「扫了但没扫到我」）
+  证据面：甲 D6 收尾同径复跑为 497 件（D6-收尾-07），本次 534 件 ⇒ +37，本回执为其一新增加入面件。
+  行尾面：甲 D6 收尾为 1478 件，本次 1489 ⇒ +11（含本回执 .md 与派单总表 .md）。
+  逐件直证（三门按扩展名收面，.md 落证据门与行尾门）：
+  $ PYTHONIOENCODING=utf-8 python -c "…对两件逐字节核 BOM/CR/U+FFFD…"
+    CodeReview/20260924-AUDIT-甲-D7-交付回执.md  BOM=False CR=0 U+FFFD=0 bytes=22495
+    docs/ui/work-orders/00-主控派单总表.md        BOM=False CR=0 U+FFFD=0 bytes=15704
+  ⇒ 三门 PASS 不是「文件没被扫到」的结果：两件自身无 BOM、无 CR、无 U+FFFD，且确在两个 .md 面的计数增量内。
+  注：上面回执的 22495 是**@5d0c3cb 判定现场**的字节数（本件度量它的那一刻）。回执随后因引用本件而增长，最终字节数见 §6——两数不同是本件与回执同笔入库的必然结果，不是 measurement 冲突。
+
+【5】本件自身（第 25 件证据）不在上面那三次扫描面内 —— 它是在扫描之后才写出来的。
+  其 BOM / CR / U+FFFD 由 §6 单独核，不靠自报 PASS。
+
+【6】本笔携带件字节级自检（在 §4 之后、提交之前实测）
+  $ PYTHONIOENCODING=utf-8 python -c "逐件核 BOM / CR 计数 / U+FFFD 计数 / 总字节"
+    CodeReview/20260924-AUDIT-甲-D7-交付回执.md                                   BOM=False CR=0 U+FFFD=0 bytes=23519
+    docs/ui/work-orders/00-主控派单总表.md                                        BOM=False CR=0 U+FFFD=0 bytes=15704
+    CodeReview/20260924-AUDIT-甲-D7-证据/D7-段6-01-…隔离树过三门@5d0c3cb.txt      BOM=False CR=0 U+FFFD=0
+  派单总表两数相同（15704 = 15704）⇒ 该件在 `5d0c3cb` 之后未再改动，§4 的读数对它依然成立。
+  回执由 22495 → 23519（+1024 B）⇒ 差值即本笔对 §五 末条与 §六 的订正，不是他单夹带（`git diff --stat HEAD` 对该件报 +6/−2 行，改动面仅这两节）。
+  本件自身**不写 bytes**：写入这行数字即改变自身，自指的字节数无法在同一件内成立；BOM / CR / U+FFFD 三项则对「追加 ASCII 数字」不敏感，故可自证。接收方要复算本件全量自检，现跑：
+    $ node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js"   # 本件在 534 → 535 件面内
+  ⇒ 登记口径：本链「证据件背书自己」的极限到此为止——能自证的自证（三项编码属性），不能自证的交出复算入口而不是伪造一个数。
