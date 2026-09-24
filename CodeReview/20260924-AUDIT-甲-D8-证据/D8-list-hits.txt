@@ -24,19 +24,19 @@ Tests/Regression/RegressionTestRegistry.pas:234: [DIFF] 丙-B@L234->L235 编译�
 Tests/Regression/RegressionTestRegistry.pas:240: [DIFF] 丙-B@L240->L241 编译红=未提供（下承级联 3 处至 L368）
       现场: Description: 'DoQry BindJsonParams 不 Trim 字符串参数';
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:39: [LCS] 丙-B@L39->L43 丙-C(→「[Description('验证 WaitForm 创建和销毁不会泄漏内�?)]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉 WaitForm 鍒涘缓鍜岄攢姣佷笉浼氭硠婕忓唴瀛?)]
+      现场: [Description('楠岃瘉 WaitForm 鍒涘缓鍜岄攢姣佷笉浼氭硠婕忓唴瀛?)] → �ֳ�: [Description('验证 WaitForm 创建和销毁不会泄漏内�?)]
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:43: [LCS] 丙-B@L43->L47 丙-C(→「[Description('验证多次创建锢��?WaitForm 内存稳定')]」;违规归encoding-gate G6) 编译红=未提供
       现场: [Description('楠岃瘉澶氭鍒涘缓閿€姣?WaitForm 鍐呭瓨绋冲畾')]
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:47: [LCS] 丙-B@L47->L60 丙-C(→「[Description('验证源代码使�?FreeAndNil')]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L65）
       现场: [Description('楠岃瘉婧愪唬鐮佷娇鐢?FreeAndNil')]
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:65: [LCS] 丙-B@L65->L70 丙-C(→「Result := '动画对象内存泄漏';」;违规归encoding-gate G6) 编译红=未提供（下承级联 4 处至 L91）
-      现场: Result := '鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡';
+      现场: Result := '鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡'; → �ֳ�: Result := '动画对象内存泄漏';
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:91: [LCS] 丙-B@L91->L93 丙-C(→「Assert.Pass('内存泄漏测试霢��?VCL 环境，��过代码审查确认修」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L101）
       现场: Assert.Pass('鍐呭瓨娉勬紡娴嬭瘯闇€瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:101: [LCS] 丙-B@L101->L103 丙-C(→「Assert.Pass('重复创建锢�毁测试需�?VCL 环境，��过代码审查确」;违规归encoding-gate G6) 编译红=未提供（下承级联 4 处至 L120）
       现场: Assert.Pass('閲嶅鍒涘缓閿€姣佹祴璇曢渶瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
 Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas:129: [LCS] 丙-B@L129->L131 丙-C(→「'析构函数应该使用 FreeAndNil 释放定时器对�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L138）
-      现场: '鏋愭瀯鍑芥暟搴旇浣跨敤 FreeAndNil 閲婃斁瀹氭椂鍣ㄥ璞?);
+      现场: '鏋愭瀯鍑芥暟搴旇浣跨敤 FreeAndNil 閲婃斁瀹氭椂鍣ㄥ璞?); → �ֳ�: '析构函数应该使用 FreeAndNil 释放定时器对�?);
 Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas:55: [DIFF] 丙-B@L55->L68 丙-A(U+FFFD×1;违规归encoding-gate G1) 编译红=未提供（下承级联 1 处至 L73）
       现场: [Description('验证 WhenReady 回调异常不影响其他回�?)]
 Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas:73: [DIFF] 丙-B@L73->L78 编译红=未提供（下承级联 5 处至 L134）
@@ -56,9 +56,9 @@ Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas:279: [DIFF] 丙-B@
 Tests/Regression/Test.Regression.BUG009_LoggingRace.pas:43: [LCS] 丙-B@L43->L47 丙-C(→「[Description('验证双重棢�查锁定模式存�?)]」;违规归encoding-gate G6) 编译红=未提供
       现场: [Description('楠岃瘉鍙岄噸妫€鏌ラ攣瀹氭ā寮忓瓨鍦?)]
 Tests/Regression/Test.Regression.BUG009_LoggingRace.pas:47: [LCS] 丙-B@L47->L52 丙-C(→「[Description('验证并发日志写入不会导致数据损坏')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉骞跺彂鏃ュ織鍐欏叆涓嶄細瀵艰嚧鏁版嵁鎹熷潖')]
+      现场: [Description('楠岃瘉骞跺彂鏃ュ織鍐欏叆涓嶄細瀵艰嚧鏁版嵁鎹熷潖')] → �ֳ�: [Description('验证并发日志写入不会导致数据损坏')]
 Tests/Regression/Test.Regression.BUG009_LoggingRace.pas:52: [LCS] 丙-B@L52->L66 丙-C(→「[Description('验证 TThreadList 用于线程安全队列访问'」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L71）
-      现场: [Description('楠岃瘉 TThreadList 鐢ㄤ簬绾跨▼瀹夊叏闃熷垪璁块棶')]
+      现场: [Description('楠岃瘉 TThreadList 鐢ㄤ簬绾跨▼瀹夊叏闃熷垪璁块棶')] → �ֳ�: [Description('验证 TThreadList 用于线程安全队列访问')]
 Tests/Regression/Test.Regression.BUG009_LoggingRace.pas:103: [LCS] 丙-B@L103->L112 丙-C(→「Assert.Pass('源文件不可访问，跳过静��分析测�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L114）
       现场: Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
 Tests/Regression/Test.Regression.BUG009_LoggingRace.pas:188: [LCS] 丙-B@L188->L197 丙-C(→「Assert.Pass('源文件不可访问，跳过静��分析测�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L200）
@@ -70,13 +70,13 @@ Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas:64: [DIFF] 丙-B@L64
 Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas:108: [LCS] 丙-B@L108->L110 丙-C(→「'代码应该包含锁保护机�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L159）
       现场: '浠ｇ爜搴旇鍖呭惈閿佷繚鎶ゆ満鍒?);
 Tests/Regression/Test.Regression.BUG013_RSASignature.pas:52: [LCS] 丙-B@L52->L67 丙-C(→「[Description('验证缺少私钥时抛出明确错�?)]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L72）
-      现场: [Description('楠岃瘉缂哄皯绉侀挜鏃舵姏鍑烘槑纭敊璇?)]
+      现场: [Description('楠岃瘉缂哄皯绉侀挜鏃舵姏鍑烘槑纭敊璇?)] → �ֳ�: [Description('验证缺少私钥时抛出明确错�?)]
 Tests/Regression/Test.Regression.BUG013_RSASignature.pas:104: [LCS] 丙-B@L104->L108 丙-C(→「'SHA256+Base64 应该产生 44 字符的结�?);」;违规归encoding-gate G6) 编译红=未提供
       现场: 'SHA256+Base64 搴旇浜х敓 44 瀛楃鐨勭粨鏋?);
 Tests/Regression/Test.Regression.BUG013_RSASignature.pas:108: [DIFF] 丙-B@L108->L110 丙-A(U+FFFD×1;违规归encoding-gate G1) 编译红=未提供（下承级联 2 处至 L123）
       现场: Assert.Pass('验证通过：RSA 签名长度应该远大于简�?SHA256+Base64');
 Tests/Regression/Test.Regression.BUG013_RSASignature.pas:123: [LCS] 丙-B@L123->L125 丙-C(→「// 由于没有实际的私钥，这里只验证概�?  Assert.Pass('RSA 」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L134）
-      现场: // 鐢变簬娌℃湁瀹為檯鐨勭閽ワ紝杩欓噷鍙獙璇佹蹇?  Assert.Pass('RSA 绛惧悕闀垮害楠岃瘉閫氳繃锛堥渶瑕佸疄闄呯閽ヨ繘琛屽畬鏁存祴璇曪級');
+      现场: // 鐢变簬娌℃湁瀹為檯鐨勭閽ワ紝杩欓噷鍙獙璇佹蹇?  Assert.Pass('RSA 绛惧悕闀垮害楠岃瘉閫氳繃锛堥渶瑕佸疄闄呯閽ヨ繘琛屽畬鏁存祴璇曪級'); → �ֳ�: // 由于没有实际的私钥，这里只验证概�? Assert.Pass('RSA 签名长度验证通过（需要实际私钥进行完整测试）');
 Tests/Regression/Test.Regression.BUG013_RSASignature.pas:134: [DIFF] 丙-B@L134->L136 编译红=未提供（下承级联 2 处至 L145）
       现场: Assert.Pass('RSA-SHA256 签名确定性验证通过（需要实际私钥进行完整测试）');
 Tests/Regression/Test.Regression.BUG013_RSASignature.pas:145: [DIFF] 丙-B@L145->L147 编译红=未提供（下承级联 2 处至 L160）
@@ -90,21 +90,21 @@ Tests/Regression/Test.Regression.BUG013_RSASignature.pas:174: [DIFF] 丙-B@L174-
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:42: [DIFF] 丙-B@L42->L46 编译红=未提供
       现场: [Description('楠岃瘉 TWeChatPayConfig 鍖呭惈 WeChatPublicKey 灞炴€?)]
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:46: [LCS] 丙-B@L46->L50 丙-C(→「[Description('验证签名验证在缺少公钥时返回 False')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉绛惧悕楠岃瘉鍦ㄧ己灏戝叕閽ユ椂杩斿洖 False')]
+      现场: [Description('楠岃瘉绛惧悕楠岃瘉鍦ㄧ己灏戝叕閽ユ椂杩斿洖 False')] → �ֳ�: [Description('验证签名验证在缺少公钥时返回 False')]
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:50: [LCS] 丙-B@L50->L54 丙-C(→「[Description('验证 RSASign 方法存在且可调用')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉 RSASign 鏂规硶瀛樺湪涓斿彲璋冪敤')]
+      现场: [Description('楠岃瘉 RSASign 鏂规硶瀛樺湪涓斿彲璋冪敤')] → �ֳ�: [Description('验证 RSASign 方法存在且可调用')]
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:54: [LCS] 丙-B@L54->L58 丙-C(→「[Description('验证签名内容格式正确')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉绛惧悕鍐呭鏍煎紡姝ｇ‘')]
+      现场: [Description('楠岃瘉绛惧悕鍐呭鏍煎紡姝ｇ‘')] → �ֳ�: [Description('验证签名内容格式正确')]
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:58: [LCS] 丙-B@L58->L85 丙-C(→「[Description('验证 Authorization 头部格式正确')]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L90）
-      现场: [Description('楠岃瘉 Authorization 澶撮儴鏍煎紡姝ｇ‘')]
+      现场: [Description('楠岃瘉 Authorization 澶撮儴鏍煎紡姝ｇ‘')] → �ֳ�: [Description('验证 Authorization 头部格式正确')]
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:90: [LCS] 丙-B@L90->L95 丙-C(→「Result := '微信支付签名验证缺失';」;违规归encoding-gate G6) 编译红=未提供（下承级联 6 处至 L119）
-      现场: Result := '寰俊鏀粯绛惧悕楠岃瘉缂哄け';
+      现场: Result := '寰俊鏀粯绛惧悕楠岃瘉缂哄け'; → �ֳ�: Result := '微信支付签名验证缺失';
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:124: [LCS] 丙-B@L124->L129 丙-C(→「'WeChatPublicKey 初始值应该为�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 6 处至 L158）
       现场: 'WeChatPublicKey 鍒濆鍊煎簲璇ヤ负绌?);
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:158: [LCS] 丙-B@L158->L169 丙-C(→「'在没有配置公钥的情况下，签名验证应该返回 False');」;违规归encoding-gate G6) 编译红=未提供（下承级联 7 处至 L200）
-      现场: '鍦ㄦ病鏈夐厤缃叕閽ョ殑鎯呭喌涓嬶紝绛惧悕楠岃瘉搴旇杩斿洖 False');
+      现场: '鍦ㄦ病鏈夐厤缃叕閽ョ殑鎯呭喌涓嬶紝绛惧悕楠岃瘉搴旇杩斿洖 False'); → �ֳ�: '在没有配置公钥的情况下，签名验证应该返回 False');
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:204: [LCS] 丙-B@L204->L212 丙-C(→「'失败消息应该指示私钥未配�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L225）
-      现场: '澶辫触娑堟伅搴旇鎸囩ず绉侀挜鏈厤缃?);
+      现场: '澶辫触娑堟伅搴旇鎸囩ず绉侀挜鏈厤缃?); → �ֳ�: '失败消息应该指示私钥未配�?);
 Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas:240: [LCS] 丙-B@L240->L242 丙-C(→「Assert.Pass('Authorization 头部格式验证通过（��过代」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L249）
       现场: Assert.Pass('Authorization 澶撮儴鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);
 Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas:53: [LCS] 丙-B@L53->L65 丙-C(→「[Description('验证密钥配置后功能正�?)]」;违规归encoding-gate G6) 编译红=未提供（下承级联 6 处至 L81）
@@ -114,23 +114,23 @@ Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas:115: [LCS] 丙-B@L115-
 Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas:125: [DIFF] 丙-B@L125->L128 编译红=未提供（下承级联 4 处至 L146）
       现场: Format('源代码不应包含硬编码密钥模式: %s', [Pattern]));
 Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas:221: [LCS] 丙-B@L221->L226 丙-C(→「'使用用户配置的密钥应该能正确加密和解�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L233）
-      现场: '浣跨敤鐢ㄦ埛閰嶇疆鐨勫瘑閽ュ簲璇ヨ兘姝ｇ‘鍔犲瘑鍜岃В瀵?);
+      现场: '浣跨敤鐢ㄦ埛閰嶇疆鐨勫瘑閽ュ簲璇ヨ兘姝ｇ‘鍔犲瘑鍜岃В瀵?); → �ֳ�: '使用用户配置的密钥应该能正确加密和解�?);
 Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas:41: [LCS] 丙-B@L41->L45 丙-C(→「[Description('验证信号量释放标志存�?)]」;违规归encoding-gate G6) 编译红=未提供
       现场: [Description('楠岃瘉淇″彿閲忛噴鏀炬爣蹇楀瓨鍦?)]
 Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas:45: [LCS] 丙-B@L45->L49 丙-C(→「[Description('验证异常情况下信号量正确释放')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉寮傚父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')]
+      现场: [Description('楠岃瘉寮傚父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')] → �ֳ�: [Description('验证异常情况下信号量正确释放')]
 Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas:49: [LCS] 丙-B@L49->L62 丙-C(→「[Description('验证正常情况下信号量正确释放')]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L67）
-      现场: [Description('楠岃瘉姝ｅ父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')]
+      现场: [Description('楠岃瘉姝ｅ父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')] → �ֳ�: [Description('验证正常情况下信号量正确释放')]
 Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas:67: [LCS] 丙-B@L67->L72 丙-C(→「Result := '弹��模式信号量泄漏';」;违规归encoding-gate G6) 编译红=未提供（下承级联 6 处至 L99）
       现场: Result := '寮规€фā寮忎俊鍙烽噺娉勬紡';
 Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas:139: [LCS] 丙-B@L139->L145 丙-C(→「'异常后信号量应该被正确释�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L164）
-      现场: '寮傚父鍚庝俊鍙烽噺搴旇琚纭噴鏀?);
+      现场: '寮傚父鍚庝俊鍙烽噺搴旇琚纭噴鏀?); → �ֳ�: '异常后信号量应该被正确释�?);
 Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas:164: [LCS] 丙-B@L164->L170 丙-C(→「'正常释放后信号量应该可以再次获取');」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L177）
-      现场: '姝ｅ父閲婃斁鍚庝俊鍙烽噺搴旇鍙互鍐嶆鑾峰彇');
+      现场: '姝ｅ父閲婃斁鍚庝俊鍙烽噺搴旇鍙互鍐嶆鑾峰彇'); → �ֳ�: '正常释放后信号量应该可以再次获取');
 Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas:40: [LCS] 丙-B@L40->L44 丙-C(→「[Description('验证类型白名单验证机制存�?)]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉绫诲瀷鐧藉悕鍗曢獙璇佹満鍒跺瓨鍦?)]
+      现场: [Description('楠岃瘉绫诲瀷鐧藉悕鍗曢獙璇佹満鍒跺瓨鍦?)] → �ֳ�: [Description('验证类型白名单验证机制存�?)]
 Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas:44: [LCS] 丙-B@L44->L48 丙-C(→「[Description('验证未授权类型被拒绝')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鏈巿鏉冪被鍨嬭鎷掔粷')]
+      现场: [Description('楠岃瘉鏈巿鏉冪被鍨嬭鎷掔粷')] → �ֳ�: [Description('验证未授权类型被拒绝')]
 Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas:98: [LCS] 丙-B@L98->L107 丙-C(→「Assert.Pass('源文件不可访问，跳过静��分析测�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 5 处至 L112）
       现场: Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
 Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas:43: [LCS] 丙-B@L43->L56 丙-C(→「[Description('验证深度嵌套被拒�?)]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L61）
@@ -138,71 +138,71 @@ Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas:43: [LCS] 丙-B@L
 Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas:93: [LCS] 丙-B@L93->L102 丙-C(→「Assert.Pass('源文件不可访问，跳过静��分析测�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L105）
       现场: Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
 Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas:105: [LCS] 丙-B@L105->L108 丙-C(→「'代码应该包含深度限制配置');」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L110）
-      现场: '浠ｇ爜搴旇鍖呭惈娣卞害闄愬埗閰嶇疆');
+      现场: '浠ｇ爜搴旇鍖呭惈娣卞害闄愬埗閰嶇疆'); → �ֳ�: '代码应该包含深度限制配置');
 Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas:110: [LCS] 丙-B@L110->L112 丙-C(→「'默认深度不应该是 32（过高）');」;违规归encoding-gate G6) 编译红=未提供（下承级联 2 处至 L120）
-      现场: '榛樿娣卞害涓嶅簲璇ユ槸 32锛堣繃楂橈級');
+      现场: '榛樿娣卞害涓嶅簲璇ユ槸 32锛堣繃楂橈級'); → �ֳ�: '默认深度不应该是 32（过高）');
 Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas:120: [LCS] 丙-B@L120->L122 丙-C(→「Assert.Pass('深度嵌套拒绝测试通过代码审查确认');」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L129）
-      现场: Assert.Pass('娣卞害宓屽鎷掔粷娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');
+      现场: Assert.Pass('娣卞害宓屽鎷掔粷娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭'); → �ֳ�: Assert.Pass('深度嵌套拒绝测试通过代码审查确认');
 Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas:54: [LCS] 丙-B@L54->L58 丙-C(→「[Description('验证路径遍历攻击被阻�?- 使用 ../ 尝试逃��」;违规归encoding-gate G6) 编译红=未提供
       现场: [Description('楠岃瘉璺緞閬嶅巻鏀诲嚮琚樆姝?- 浣跨敤 ../ 灏濊瘯閫冮€?)]
 Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas:62: [LCS] 丙-B@L62->L66 丙-C(→「[Description('验证合法插件路径被允�?)]」;违规归encoding-gate G6) 编译红=未提供
       现场: [Description('楠岃瘉鍚堟硶鎻掍欢璺緞琚厑璁?)]
 Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas:70: [LCS] 丙-B@L70->L83 丙-C(→「[Description('验证插件配置访问控制 - 只能修改 Plugin. 」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L88）
-      现场: [Description('楠岃瘉鎻掍欢閰嶇疆璁块棶鎺у埗 - 鍙兘淇敼 Plugin. 鍓嶇紑鐨勯厤缃?)]
+      现场: [Description('楠岃瘉鎻掍欢閰嶇疆璁块棶鎺у埗 - 鍙兘淇敼 Plugin. 鍓嶇紑鐨勯厤缃?)] → �ֳ�: [Description('验证插件配置访问控制 - 只能修改 Plugin. 前缀的配�?)]
 Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas:182: [LCS] 丙-B@L182->L187 丙-C(→「Assert.IsFalse(LoadResult, '插件目录外的绝对路径应该」;违规归encoding-gate G6) 编译红=未提供（下承级联 5 处至 L217）
-      现场: Assert.IsFalse(LoadResult, '鎻掍欢鐩綍澶栫殑缁濆璺緞搴旇琚樆姝?);
+      现场: Assert.IsFalse(LoadResult, '鎻掍欢鐩綍澶栫殑缁濆璺緞搴旇琚樆姝?); → �ֳ�: Assert.IsFalse(LoadResult, '插件目录外的绝对路径应该被阻�?);
 Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas:244: [DIFF] 丙-B@L244->L249 编译红=未提供（下承级联 3 处至 L283）
       现场: Assert.IsFalse(LoadResult, '闈?BPL 鏂囦欢搴旇琚嫆缁?);
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:49: [LCS] 丙-B@L49->L53 丙-C(→「[Description('验证插件无法修改系统级配�?)]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼绯荤粺绾ч厤缃?)]
+      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼绯荤粺绾ч厤缃?)] → �ֳ�: [Description('验证插件无法修改系统级配�?)]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:53: [LCS] 丙-B@L53->L57 丙-C(→「[Description('验证插件无法修改安全相关配置 - password'」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - password')]
+      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - password')] → �ֳ�: [Description('验证插件无法修改安全相关配置 - password')]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:57: [LCS] 丙-B@L57->L61 丙-C(→「[Description('验证插件无法修改安全相关配置 - secret')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - secret')]
+      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - secret')] → �ֳ�: [Description('验证插件无法修改安全相关配置 - secret')]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:61: [LCS] 丙-B@L61->L65 丙-C(→「[Description('验证插件无法修改安全相关配置 - token')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - token')]
+      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - token')] → �ֳ�: [Description('验证插件无法修改安全相关配置 - token')]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:65: [LCS] 丙-B@L65->L69 丙-C(→「[Description('验证插件无法修改安全相关配置 - key')]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - key')]
+      现场: [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - key')] → �ֳ�: [Description('验证插件无法修改安全相关配置 - key')]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:69: [LCS] 丙-B@L69->L73 丙-C(→「[Description('验证插件可以修改自己的配�?(Plugin.前缀)'」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉鎻掍欢鍙互淇敼鑷繁鐨勯厤缃?(Plugin.鍓嶇紑)')]
+      现场: [Description('楠岃瘉鎻掍欢鍙互淇敼鑷繁鐨勯厤缃?(Plugin.鍓嶇紑)')] → �ֳ�: [Description('验证插件可以修改自己的配�?(Plugin.前缀)')]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:73: [LCS] 丙-B@L73->L86 丙-C(→「[Description('验证配置前缀棢�查区分大小写')]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L91）
-      现场: [Description('楠岃瘉閰嶇疆鍓嶇紑妫€鏌ュ尯鍒嗗ぇ灏忓啓')]
+      现场: [Description('楠岃瘉閰嶇疆鍓嶇紑妫€鏌ュ尯鍒嗗ぇ灏忓啓')] → �ֳ�: [Description('验证配置前缀棢�查区分大小写')]
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:91: [LCS] 丙-B@L91->L96 丙-C(→「Result := '插件配置权限绕过';」;违规归encoding-gate G6) 编译红=未提供（下承级联 6 处至 L150）
-      现场: Result := '鎻掍欢閰嶇疆鏉冮檺缁曡繃';
+      现场: Result := '鎻掍欢閰嶇疆鏉冮檺缁曡繃'; → �ֳ�: Result := '插件配置权限绕过';
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:150: [LCS] 丙-B@L150->L151 丙-C(→「Assert.IsTrue(ExceptionRaised, '插件修改系统配置」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L152）
-      现场: Assert.IsTrue(ExceptionRaised, '鎻掍欢淇敼绯荤粺閰嶇疆搴旇鎶涘嚭寮傚父');
+      现场: Assert.IsTrue(ExceptionRaised, '鎻掍欢淇敼绯荤粺閰嶇疆搴旇鎶涘嚭寮傚父'); → �ֳ�: Assert.IsTrue(ExceptionRaised, '插件修改系统配置应该抛出异常');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:152: [LCS] 丙-B@L152->L157 丙-C(→「'应该抛出 EArgumentException 表示参数无效');」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L180）
-      现场: '搴旇鎶涘嚭 EArgumentException 琛ㄧず鍙傛暟鏃犳晥');
+      现场: '搴旇鎶涘嚭 EArgumentException 琛ㄧず鍙傛暟鏃犳晥'); → �ֳ�: '应该抛出 EArgumentException 表示参数无效');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:180: [LCS] 丙-B@L180->L185 丙-C(→「'插件修改包含 password 的配置应该抛�?EInvalidOpExcep」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L207）
-      现场: '鎻掍欢淇敼鍖呭惈 password 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
+      现场: '鎻掍欢淇敼鍖呭惈 password 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException'); → �ֳ�: '插件修改包含 password 的配置应该抛�?EInvalidOpException');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:207: [LCS] 丙-B@L207->L212 丙-C(→「'插件修改包含 secret 的配置应该抛�?EInvalidOpExcepti」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L234）
-      现场: '鎻掍欢淇敼鍖呭惈 secret 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
+      现场: '鎻掍欢淇敼鍖呭惈 secret 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException'); → �ֳ�: '插件修改包含 secret 的配置应该抛�?EInvalidOpException');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:234: [LCS] 丙-B@L234->L239 丙-C(→「'插件修改包含 token 的配置应该抛�?EInvalidOpExceptio」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L261）
-      现场: '鎻掍欢淇敼鍖呭惈 token 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
+      现场: '鎻掍欢淇敼鍖呭惈 token 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException'); → �ֳ�: '插件修改包含 token 的配置应该抛�?EInvalidOpException');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:261: [LCS] 丙-B@L261->L266 丙-C(→「'插件修改包含 key 的配置应该抛�?EInvalidOpException'」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L292）
-      现场: '鎻掍欢淇敼鍖呭惈 key 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
+      现场: '鎻掍欢淇敼鍖呭惈 key 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException'); → �ֳ�: '插件修改包含 key 的配置应该抛�?EInvalidOpException');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:292: [LCS] 丙-B@L292->L293 丙-C(→「Assert.IsTrue(ConfigSet, '合法的插件配置应该被设置')」;违规归encoding-gate G6) 编译红=未提供
-      现场: Assert.IsTrue(ConfigSet, '鍚堟硶鐨勬彃浠堕厤缃簲璇ヨ璁剧疆');
+      现场: Assert.IsTrue(ConfigSet, '鍚堟硶鐨勬彃浠堕厤缃簲璇ヨ璁剧疆'); → �ֳ�: Assert.IsTrue(ConfigSet, '合法的插件配置应该被设置');
 Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas:320: [LCS] 丙-B@L320->L325 丙-C(→「'小写 plugin. 前缀应该被拒绝（要求 Plugin.�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L332）
-      现场: '灏忓啓 plugin. 鍓嶇紑搴旇琚嫆缁濓紙瑕佹眰 Plugin.锛?);
+      现场: '灏忓啓 plugin. 鍓嶇紑搴旇琚嫆缁濓紙瑕佹眰 Plugin.锛?); → �ֳ�: '小写 plugin. 前缀应该被拒绝（要求 Plugin.�?);
 Tests/Regression/Test.Regression.BUG066_PathTraversal.pas:47: [LCS] 丙-B@L47->L51 丙-C(→「[Description('验证 ../ 路径遍历被阻�?)]」;违规归encoding-gate G6) 编译红=未提供
       现场: [Description('楠岃瘉 ../ 璺緞閬嶅巻琚樆姝?)]
 Tests/Regression/Test.Regression.BUG066_PathTraversal.pas:55: [LCS] 丙-B@L55->L65 丙-C(→「[Description('验证路径规范化函数存�?)]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L70）
       现场: [Description('楠岃瘉璺緞瑙勮寖鍖栧嚱鏁板瓨鍦?)]
 Tests/Regression/Test.Regression.BUG066_PathTraversal.pas:70: [LCS] 丙-B@L70->L75 丙-C(→「Result := '路径遍历攻击漏洞';」;违规归encoding-gate G6) 编译红=未提供（下承级联 5 处至 L115）
-      现场: Result := '璺緞閬嶅巻鏀诲嚮婕忔礊';
+      现场: Result := '璺緞閬嶅巻鏀诲嚮婕忔礊'; → �ֳ�: Result := '路径遍历攻击漏洞';
 Tests/Regression/Test.Regression.BUG066_PathTraversal.pas:115: [LCS] 丙-B@L115->L117 丙-C(→「'路径遍历攻击应该被检测到');」;违规归encoding-gate G6) 编译红=未提供（下承级联 3 处至 L130）
-      现场: '璺緞閬嶅巻鏀诲嚮搴旇琚娴嬪埌');
+      现场: '璺緞閬嶅巻鏀诲嚮搴旇琚娴嬪埌'); → �ֳ�: '路径遍历攻击应该被检测到');
 Tests/Regression/Test.Regression.BUG066_PathTraversal.pas:149: [LCS] 丙-B@L149->L158 丙-C(→「Assert.Pass('源文件不可访问，跳过静��分析测�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 4 处至 L162）
       现场: Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
 Tests/Regression/Test.Regression.BUG066_PathTraversal.pas:162: [LCS] 丙-B@L162->L164 丙-C(→「'代码应该包含路径规范化或验证函数');」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L171）
-      现场: '浠ｇ爜搴旇鍖呭惈璺緞瑙勮寖鍖栨垨楠岃瘉鍑芥暟');
+      现场: '浠ｇ爜搴旇鍖呭惈璺緞瑙勮寖鍖栨垨楠岃瘉鍑芥暟'); → �ֳ�: '代码应该包含路径规范化或验证函数');
 Tests/Regression/Test.Regression.BUG070_LogInjection.pas:47: [LCS] 丙-B@L47->L60 丙-C(→「[Description('验证控制字符被过�?)]」;违规归encoding-gate G6) 编译红=未提供（下承级联 1 处至 L65）
       现场: [Description('楠岃瘉鎺у埗瀛楃琚繃婊?)]
 Tests/Regression/Test.Regression.BUG070_LogInjection.pas:65: [LCS] 丙-B@L65->L70 丙-C(→「Result := '日志注入攻击风险';」;违规归encoding-gate G6) 编译红=未提供（下承级联 6 处至 L97）
-      现场: Result := '鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓';
+      现场: Result := '鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓'; → �ֳ�: Result := '日志注入攻击风险';
 Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas:39: [LCS] 丙-B@L39->L43 丙-C(→「[Description('验证事件类型白名单验证存�?)]」;违规归encoding-gate G6) 编译红=未提供
-      现场: [Description('楠岃瘉浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佸瓨鍦?)]
+      现场: [Description('楠岃瘉浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佸瓨鍦?)] → �ֳ�: [Description('验证事件类型白名单验证存�?)]
 Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas:93: [LCS] 丙-B@L93->L102 丙-C(→「Assert.Pass('源文件不可访问，跳过静��分析测�?);」;违规归encoding-gate G6) 编译红=未提供（下承级联 4 处至 L106）
       现场: Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
 Tools/Studio/Forms/Studio.VersionDetailForm.pas:348: [DIFF] 丙-B@L348->L351 编译红=未提供（下承级联 27 处至 L721）
