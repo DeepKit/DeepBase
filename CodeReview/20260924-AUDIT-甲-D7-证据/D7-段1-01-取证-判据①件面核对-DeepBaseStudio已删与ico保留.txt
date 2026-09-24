@@ -1,0 +1,65 @@
+D7-段1-01 · 判据① 件面核对 · R1 死入口删除
+==========================================================================
+基准 commit : 615e1c2  fix(audit-甲-D7): 段1 R1 删除死入口 DeepBaseStudio 工程（双入口分叉消解）
+落地 commit : af367fc（当前 HEAD，段1 之后未回退）
+判据        : 「Studio .dpr/.dproj 已删且 .ico 仍在且 T1 行已删」
+
+---------------- 1) 615e1c2 改动清单（194 行纯删除，零新增） ----------------
+fix(audit-甲-D7): 段1 R1 删除死入口 DeepBaseStudio 工程（双入口分叉消解）
+ 09_工程脚本/build-gate/contracts/T1-观测面.txt |   4 -
+ Tools/Studio/DeepBaseStudio.dpr                |  33 ------
+ Tools/Studio/DeepBaseStudio.dproj              | 157 -------------------------
+ 3 files changed, 194 deletions(-)
+
+注：DeepBaseStudio.dproj 是甲 D5 为镜像补建的工程文件，随本单一并删除，
+    不在库里留下「补了工程文件又删掉」的中间态。
+
+---------------- 2) 全库跟踪件中 DeepBaseStudio 零命中 ----------------
+$ git -c core.quotePath=false ls-files | grep -i "DeepBaseStudio"
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段2-04-论证-DeepBaseStudio死入口处置交主控裁定.md
+（唯一命中是取证文档本身；.dpr/.dproj 均已从版本库消失）
+
+---------------- 3) Tools/Studio/DeepStudio.ico 仍在册且在盘 ----------------
+$ git -c core.quotePath=false ls-files Tools/Studio
+Tools/Studio/CONTROLS_QUICK_REFERENCE.txt
+Tools/Studio/DeepStudio.ico          ← 保留（两个工程共用，工单明令必须保留）
+Tools/Studio/EVENT_BINDING_REPORT.md
+Tools/Studio/EVENT_VERIFICATION_CHECKLIST.md
+Tools/Studio/Forms/Studio.LLMConfigForm.pas
+... (Forms/ Frames/ 共 30 件未受影响)
+Tools/Studio/IMPLEMENTATION_SUMMARY.md
+Tools/Studio/QUICK_TEST_GUIDE.md
+Tools/Studio/Studio.HelpPanel.pas
+Tools/Studio/Studio.Resources.pas
+Tools/Studio/Studio.dpr              ← 活入口，唯一保留的 Studio 工程
+Tools/Studio/Studio.dproj
+Tools/Studio/Studio.i18nInit.pas
+
+$ ls -la Tools/Studio/DeepStudio.ico
+-rw-r--r-- 1 fuyi.it 197121 589 May 29 15:45 Tools/Studio/DeepStudio.ico
+
+---------------- 4) T1-观测面.txt 对应行已删 ----------------
+改前（615e1c2^）:
+68:Tools/Studio/DeepBaseStudio.dpr
+69:# DeepBaseStudio：保持红，未移面。该入口引用的窗体类名在仓库任何 revision 都不存在（生来即坏），
+70:# 改到绿的唯一路径是把活入口 Studio.dpr 之外再造一套生命周期 = 架构分叉。结论是「应移出库」，
+72:Tools/Studio/Studio.dpr
+
+改后（615e1c2 及当前 HEAD）:
+68:Tools/Studio/Studio.dpr
+
+diff:
+-Tools/Studio/DeepBaseStudio.dpr
+-# DeepBaseStudio：保持红，未移面。该入口引用的窗体类名在仓库任何 revision 都不存在（生来即坏），
+-# 改到绿的唯一路径是把活入口 Studio.dpr 之外再造一套生命周期 = 架构分叉。结论是「应移出库」，
+-# 删文件属不可逆处置且本单未获授权 ⇒ 按工单指令停下交主控裁定，论证见 D6-段2-04。
+
+---------------- 5) 不采纳「更名活入口」的留痕 ----------------
+工单裁定：不采纳更名方案——更名不解决双入口，只是换个名字继续分叉。
+本段以「删死件」消解双入口，活入口 Studio.dpr 名称与工程文件均保持不变。
+
+---------------- 6) 侧面印证（判定面与 .dpr 计数同步下降） ----------------
+见 D7-段0-01（改前）与 D7-段2-09（段1+段2 落地后 @af367fc）：
+  改前  判定面=91 已跟踪=91   DPR总数=66
+  段1后 判定面=90 已跟踪=90   （DeepBaseStudio.dpr 消失，.dpr 数 66->65）
+  段2后 判定面=90 已跟踪=90   DPR总数=65 成功=59 失败=6

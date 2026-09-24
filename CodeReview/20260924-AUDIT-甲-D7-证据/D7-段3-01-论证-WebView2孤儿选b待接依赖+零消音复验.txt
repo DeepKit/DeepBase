@@ -1,0 +1,77 @@
+D7-段3-01 · 判据③ 取证 · WebView2 孤儿三选一裁定（选 (b) 待接依赖）与零消音
+==========================================================================
+对象        : Features/DeepBase.Browser.Engine.WebView2.pas（build-ownership 第 3 条 O1）
+工单口径    : (a) 删死件（主控倾向） / (b) 登记「待接依赖」+ 文件头写明依赖未接入（若核出是有意保留
+              的骨架，选此并给证据） / (c) 真接 WebView4Delphi（本单不做）；禁止录进基线消音。
+本段裁定    : 选 (b)。核出结论 = 该单元是「刻意保留的特性关闭态骨架」，不是遗忘的死件。
+
+---------------- 一、事实链（全部实测） ----------------
+1) 实体整段被开关包住，{$ELSE} 分支是空桩：
+   :16   {$IFDEF USE_WEBVIEW2}
+   :1141 {$ELSE}  → 分支内只有空的 implementation 段
+   :1149 initialization RegisterWebView2Backend;（在 {$IFDEF} 侧）
+2) 全仓工程配置面从未定义该开关：
+   $ grep -rn "USE_WEBVIEW2" --include=*.dproj --include=*.dpk --include=*.inc --include=*.cfg --include=*.rsp .
+   (工程配置面零命中)
+   $ grep -rln "USE_WEBVIEW2" --include=*.pas   （排除 .claude/worktrees 副本）
+   ./Features/DeepBase.Browser.Engine.WebView2.pas   ← 仅命中守卫自身
+3) 依赖的外部单元未随仓提供：
+   $ git -c core.quotePath=false ls-files | grep -ci "uWV"
+   0        （uWVBrowser/uWVTypes/uWVInterfaces 等被 {$IFDEF} 包住的实现 uses 的十件同级外部单元零命中）
+4) 无任何编译面消费该单元：
+   - TWebView2BrowserSession 仅在单元内部出现，无其他引用点；
+   - Features/DeepBase.Browser.AutomationAdapter.pas:21-25 的 uses 不含本单元；
+   - 全量编译门（D7-段2-09）90 件判定面中无一件把它拉进编译，故它既不属 T0/T1，也不因删除而改变编译结果。
+
+---------------- 二、为什么不选 (a) 删死件 ----------------
+- 该单元承载 1148 行真实 WebView2 实现（含 BUG-BA-014 per-call CDP 路由、BUG-BA-021 导航等待事件、
+  BUG-012 DevTools 回调、FEAT-R3-002/E-002 异步任务生命周期守卫等已投入的缺陷修复），删除 = 销毁这些
+  与调用方契约绑定的实现，且与 docs/52.extend.BrowserAutomation接入指南.md 声明的引擎路线和仓内
+  ThirdParty/ 既有惯例（外部依赖走 ThirdParty，缺口显式声明）冲突。
+- git 史证明它是被持续维护的形态而非弃件：7177771 fix(browser): move USE_WEBVIEW2 guard into interface
+  so unit compiles when feature disabled —— 守卫位置本身就是为了让「依赖未接入时仓库仍可编译」而设计。
+- 工单 (a) 的前置判断是「死件」；实测前提为假（见事实链 1/2/4：它以空桩形态参与编译面语义，不是坏代码）。
+
+---------------- 三、为什么不选 (c) 真接 ----------------
+工单明令本单不做；且引入 WebView4Delphi 属第三方依赖扩面与治理决定，需另单走依赖引入流程。
+
+---------------- 四、(b) 的落地形态（两处，均为纯声明，不改判定语义） ----------------
+1) 文件头注释块内新增 Status 段（Features/DeepBase.Browser.Engine.WebView2.pas，+6 行）：
+   写明「待接依赖」、依赖件未随仓提供、全仓无开关、整段被编译掉、O1 持续报红是预期状态、
+   禁止录基线消音、接入路径与缺口取证指针。
+2) 登记在 09_工程脚本/build-gate/contracts/T2-待定面.txt 的「三项裁定的处置记录」块内（+6 行，# 注释行）：
+   该面已持有同一缺口的历史裁定（甲-D6 段3 PageDriverSmoke），登记在此 = 复用唯一登记处，
+   不新建第二套注册表（SSOT）。纯 # 注释行不会被 --manifest 当工程路径解析，故不改变任何面。
+
+---------------- 五、零消音复验（实测于本段落盘后） ----------------
+$ node 09_工程脚本/build-ownership/check_build_ownership.js
+构建归属门禁失败：生产单元 574，构建文件 126，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+→ 与 D7-段0-03 改前基线逐位相同：生产单元数 574、违规数 4、该 O1 仍在报红。
+  门禁没有被本段改绿，O1 不会被登记动作遮蔽（登记处 T2 面不参与 build-ownership 判定）。
+
+$ git -c core.quotePath=false diff --stat a3e3f38 HEAD -- 09_工程脚本/build-ownership/
+ .../build-ownership/check_build_ownership.js       |  67 +++++++--
+ .../build-ownership/test_negative_sample.js        | 159 +++++++++++++++++----
+→ 基线文件 build_ownership_baseline.json 零改动（不在 diff 内）。
+  上列两个 .js 是乙-D7 收口（73ada7f build-ownership fail-open 修复）的改动，不属本单，本单未触碰门禁本体；
+  工单「不得动 build-ownership 门禁本体（归乙 D7）」已遵守。
+$ git status --porcelain -- 09_工程脚本/build-ownership/
+(空 = 工作树亦无未提交改动)
+
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js
+编码门禁通过：980 个 .pas + 679 个扩展面文件（...）
+EXIT=0
+→ .pas 计数 980 与改前基线相同（本段未增删 .pas）。扩展面 678->679 来自本单之外他人在途新增件；
+  本段两处改动都是改已存在文件，零新增件，已用 git diff --diff-filter=A 核对。
+
+---------------- 六、文件形态守恒（Edit 后复验） ----------------
+Features/DeepBase.Browser.Engine.WebView2.pas : BOM=true, CRLF=0, bareLF=1154, U+FFFD=0, 锟斤拷=0
+  → 与该件在 eol_baseline.json:165 的「BOM + 纯 LF 豁免在册」形态一致，未被工具改写行尾；
+    全文件净 +6 行，纯注释块内新增，代码字节零变动。
+09_工程脚本/build-gate/contracts/T2-待定面.txt : BOM=false, CRLF=0, bareLF=32, U+FFFD=0, 锟斤拷=0
+  → 与该文件 .gitattributes（text eol=lf）一致，净 +6 行注释。

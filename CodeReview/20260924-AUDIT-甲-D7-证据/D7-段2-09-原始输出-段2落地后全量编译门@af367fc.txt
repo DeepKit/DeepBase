@@ -1,0 +1,123 @@
+D7-段2-09 · 判据⑤⑥ 原始输出 · 段2 落地后全量编译门（隔离工作树，非共享树）
+==========================================================================
+基准 commit : af367fc  fix(audit-甲-D7): 段2 doQry 代码面丙类损坏清零 + DoQryDemo 转绿
+判定环境    : git worktree add --detach .tmp/d7_c_seg2 af367fc  （ detached 隔离树，共享树结论无效 ）
+命令        : node 09_工程脚本/build-gate/check_build.js --all --root .tmp/d7_c_seg2
+
+结论对照    :
+  判据⑤ 红项 8 -> 6（DPR总数=65 成功=59 失败=6）。下降的两项恰为
+          Tools/Studio/DeepBaseStudio.dpr（段1 删除双入口，判定面 91->90，.dpr 数 66->65）
+          doQry/examples/DoQryDemo/DoQryDemo.dpr（段2 修复，本次 [dpr 64/65] BUILD_EXIT=0）
+          剩余 6 项均在工单「不在 scope」清单内，维持 T1 留红：
+          DeepFlow / MVVMDemo / CRUDApp / Calib.Record / hbtheme_gallery / DeepPublisher
+  判据⑥ T0 仍全绿：DPK总数=25 成功=25 失败=0；Tests/DeepBaseTests.dpr BUILD_EXIT=0
+  GATE_EXIT=1 为预期（剩余 6 项在红名单），门禁未遮蔽任何失败。
+
+---------------- 原始输出（未删改） ----------------
+[dpr 1/65] DeepBaseRun/DeepBaseRun.dpr CONFIG=DeepBaseRun.dproj BUILD_EXIT=0
+[dpr 2/65] DeepFlow/Source/DeepFlow.dpr CONFIG=default BUILD_EXIT=1
+  DeepFlow/Source/DeepFlow.dpr 编译失败：DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+[dpr 3/65] Examples/AIErrorHandlerDemo/AIErrorHandlerDemo.dpr CONFIG=AIErrorHandlerDemo.dproj BUILD_EXIT=0
+[dpr 4/65] Examples/AutoFixDemo/AutoFixDemo.dpr CONFIG=AutoFixDemo.dproj BUILD_EXIT=0
+[dpr 5/65] Examples/DataBindingDemo/DataBindingDemo.dpr CONFIG=default BUILD_EXIT=0
+[dpr 6/65] Examples/FMXDemo/FMXPlatformDemo.dpr CONFIG=default BUILD_EXIT=0
+[dpr 7/65] Examples/FullDemo/FullDemo.dpr CONFIG=FullDemo.dproj BUILD_EXIT=0
+[dpr 8/65] Examples/HbColdStartProbe/HbColdStartProbe.dpr CONFIG=default BUILD_EXIT=0
+[dpr 9/65] Examples/HbSnapshotDemo/HbSnapshotDemo.dpr CONFIG=HbSnapshotDemo.dproj BUILD_EXIT=0
+[dpr 10/65] Examples/MVVMDemo/MVVMDemo.dpr CONFIG=default BUILD_EXIT=1
+  Examples/MVVMDemo/MVVMDemo.dpr 编译失败：LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+[dpr 11/65] Examples/MicroserviceClientDemo/MicroserviceClientDemo.dpr CONFIG=default BUILD_EXIT=0
+[dpr 12/65] Examples/MultiLanguageDemo/MultiLanguageDemo.dpr CONFIG=default BUILD_EXIT=0
+[dpr 13/65] Examples/Phase0Demo/Phase0Demo.dpr CONFIG=Phase0Demo.dproj BUILD_EXIT=0
+[dpr 14/65] Examples/Phase1Demo/Phase1Demo.dpr CONFIG=default BUILD_EXIT=0
+[dpr 15/65] Examples/Templates/CRUDApp/CRUDApp.dpr CONFIG=default BUILD_EXIT=1
+  Examples/Templates/CRUDApp/CRUDApp.dpr 编译失败：Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+[dpr 16/65] Examples/Templates/DataAnalyzer/DataAnalyzer.dpr CONFIG=default BUILD_EXIT=0
+[dpr 17/65] Examples/Templates/DocManager/DocManager.dpr CONFIG=default BUILD_EXIT=0
+[dpr 18/65] Examples/VCLDeepShellDemo/VCLDeepShellDemo.dpr CONFIG=VCLDeepShellDemo.dproj BUILD_EXIT=0
+[dpr 19/65] Tests/Acceptance/DeepBaseAcceptanceTest.dpr CONFIG=default BUILD_EXIT=0
+[dpr 20/65] Tests/Architecture/DeepBaseArchitectureTests.dpr CONFIG=default BUILD_EXIT=0
+[dpr 21/65] Tests/AutoFix/Fixtures/AutoFixHarness.dpr CONFIG=AutoFixHarness.dproj BUILD_EXIT=0
+[dpr 22/65] Tests/DebugTest.dpr CONFIG=default BUILD_EXIT=0
+[dpr 23/65] Tests/DebugTest2.dpr CONFIG=default BUILD_EXIT=0
+[dpr 24/65] Tests/DebugTest3.dpr CONFIG=default BUILD_EXIT=0
+[dpr 25/65] Tests/DebugTest4.dpr CONFIG=default BUILD_EXIT=0
+[dpr 26/65] Tests/DebugTest5.dpr CONFIG=default BUILD_EXIT=0
+[dpr 27/65] Tests/DebugTest6.dpr CONFIG=default BUILD_EXIT=0
+[dpr 28/65] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0
+[dpr 29/65] Tests/FMX/TestFMXPlatformStandalone.dpr CONFIG=default BUILD_EXIT=0
+[dpr 30/65] Tests/GUI/DeepBaseGUITests.dpr CONFIG=default BUILD_EXIT=0
+[dpr 31/65] Tests/Governance/ConfigRegistrarPBT.dpr CONFIG=default BUILD_EXIT=0
+[dpr 32/65] Tests/InferenceTests.dpr CONFIG=default BUILD_EXIT=0
+[dpr 33/65] Tests/Integration/DeepBaseIntegrationTests.dpr CONFIG=default BUILD_EXIT=0
+[dpr 34/65] Tests/MinimalDUnitX.dpr CONFIG=default BUILD_EXIT=0
+[dpr 35/65] Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr CONFIG=default BUILD_EXIT=0
+[dpr 36/65] Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr CONFIG=default BUILD_EXIT=0
+[dpr 37/65] Tests/Plugins/Fixture/TestPlugin77.dpr CONFIG=default BUILD_EXIT=0
+[dpr 38/65] Tests/Plugins/Fixture/TestPluginABI10.dpr CONFIG=default BUILD_EXIT=0
+[dpr 39/65] Tests/Plugins/PluginLifecycleHarness.dpr CONFIG=default BUILD_EXIT=0
+[dpr 40/65] Tests/SimpleTest.dpr CONFIG=default BUILD_EXIT=0
+[dpr 41/65] Tests/Speech/SpeechSpike.dpr CONFIG=default BUILD_EXIT=0
+[dpr 42/65] Tests/Speech/TestSpeechHeadless.dpr CONFIG=default BUILD_EXIT=0
+[dpr 43/65] Tests/Stress/DeepBaseStressTests.dpr CONFIG=default BUILD_EXIT=0
+[dpr 44/65] Tests/TestBplR7P4.dpr CONFIG=default BUILD_EXIT=0
+[dpr 45/65] Tests/TestCryptoR7P1.dpr CONFIG=default BUILD_EXIT=0
+[dpr 46/65] Tests/TestDeepBaseRSA.dpr CONFIG=default BUILD_EXIT=0
+[dpr 47/65] Tests/TestGateVerdictAndA8.dpr CONFIG=default BUILD_EXIT=0
+[dpr 48/65] Tests/TestLLMClient.dpr CONFIG=default BUILD_EXIT=0
+[dpr 49/65] Tests/TestLLMProxyClient.dpr CONFIG=default BUILD_EXIT=0
+[dpr 50/65] Tests/TestNetR7P2.dpr CONFIG=default BUILD_EXIT=0
+[dpr 51/65] Tests/TestNewModules.dpr CONFIG=default BUILD_EXIT=0
+[dpr 52/65] Tests/TestUpdateChainM1.dpr CONFIG=default BUILD_EXIT=0
+[dpr 53/65] Tools/CLI/DeepBase.dpr CONFIG=default BUILD_EXIT=0
+[dpr 54/65] Tools/Calibration/Calib.Record.dpr CONFIG=default BUILD_EXIT=1
+  Tools/Calibration/Calib.Record.dpr 编译失败：Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+[dpr 55/65] Tools/Calibration/Calib.Sweep.dpr CONFIG=default BUILD_EXIT=0
+[dpr 56/65] Tools/FMXGallery/hbtheme_fmx_gallery.dpr CONFIG=default BUILD_EXIT=0
+[dpr 57/65] Tools/Gallery/hbtheme_gallery.dpr CONFIG=default BUILD_EXIT=1
+  Tools/Gallery/hbtheme_gallery.dpr 编译失败：Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+[dpr 58/65] Tools/LogAnalyzer/LogAnalyzer.dpr CONFIG=default BUILD_EXIT=0
+[dpr 59/65] Tools/SeedTool/SeedTool.dpr CONFIG=SeedTool.dproj BUILD_EXIT=0
+[dpr 60/65] Tools/Studio/Studio.dpr CONFIG=Studio.dproj BUILD_EXIT=0
+[dpr 61/65] Tools/Tray/DeepBaseTray.dpr CONFIG=default BUILD_EXIT=0
+[dpr 62/65] Tools/UniPublisher/DeepPublisher.dpr CONFIG=DeepPublisher.dproj BUILD_EXIT=1
+  Tools/UniPublisher/DeepPublisher.dpr 编译失败：Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+[dpr 63/65] Tools/UpdaterHelper/UpdaterHelper.dpr CONFIG=default BUILD_EXIT=0
+[dpr 64/65] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=0
+[dpr 65/65] doQry/prjDoQry.dpr CONFIG=prjDoQry.dproj BUILD_EXIT=0
+[dpk 1/25] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0
+[dpk 2/25] DeepBaseServices.dpk CONFIG=DeepBaseServices.dproj BUILD_EXIT=0
+[dpk 3/25] DeepAxis.dpk CONFIG=DeepAxis.dproj BUILD_EXIT=0
+[dpk 4/25] DeepBaseBrowser.dpk CONFIG=DeepBaseBrowser.dproj BUILD_EXIT=0
+[dpk 5/25] DeepBaseCommerce.dpk CONFIG=DeepBaseCommerce.dproj BUILD_EXIT=0
+[dpk 6/25] DeepBasePlatform.dpk CONFIG=DeepBasePlatform.dproj BUILD_EXIT=0
+[dpk 7/25] DeepBaseDataPlatform.dpk CONFIG=DeepBaseDataPlatform.dproj BUILD_EXIT=0
+[dpk 8/25] DeepBaseLLM.dpk CONFIG=DeepBaseLLM.dproj BUILD_EXIT=0
+[dpk 9/25] DeepBaseIntentClarification.dpk CONFIG=DeepBaseIntentClarification.dproj BUILD_EXIT=0
+[dpk 10/25] DeepBaseInference.dpk CONFIG=DeepBaseInference.dproj BUILD_EXIT=0
+[dpk 11/25] DeepBaseSpeechCore.dpk CONFIG=DeepBaseSpeechCore.dproj BUILD_EXIT=0
+[dpk 12/25] DeepBaseFeatures.dpk CONFIG=DeepBaseFeatures.dproj BUILD_EXIT=0
+[dpk 13/25] DeepBaseFMX.dpk CONFIG=DeepBaseFMX.dproj BUILD_EXIT=0
+[dpk 14/25] DeepBasePersistence.dpk CONFIG=DeepBasePersistence.dproj BUILD_EXIT=0
+[dpk 15/25] DeepBaseGovernance.dpk CONFIG=DeepBaseGovernance.dproj BUILD_EXIT=0
+[dpk 16/25] DeepBaseSpeechASR.dpk CONFIG=DeepBaseSpeechASR.dproj BUILD_EXIT=0
+[dpk 17/25] DeepBaseSpeechTTS.dpk CONFIG=DeepBaseSpeechTTS.dproj BUILD_EXIT=0
+[dpk 18/25] DeepBaseSpeechVoice.dpk CONFIG=DeepBaseSpeechVoice.dproj BUILD_EXIT=0
+[dpk 19/25] DeepBaseSpeechWake.dpk CONFIG=DeepBaseSpeechWake.dproj BUILD_EXIT=0
+[dpk 20/25] DeepBaseVCL.dpk CONFIG=DeepBaseVCL.dproj BUILD_EXIT=0
+[dpk 21/25] Examples/PluginExample/SamplePluginPkg.dpk CONFIG=default BUILD_EXIT=0
+[dpk 22/25] Tests/Regression/R7P4Probe.dpk CONFIG=default BUILD_EXIT=0
+[dpk 23/25] dclDeepBaseCore.dpk CONFIG=dclDeepBaseCore.dproj BUILD_EXIT=0
+[dpk 24/25] dclDeepBaseFMX.dpk CONFIG=dclDeepBaseFMX.dproj BUILD_EXIT=0
+[dpk 25/25] dclDeepBaseVCL.dpk CONFIG=dclDeepBaseVCL.dproj BUILD_EXIT=0
+编译门禁统计：DPR总数=65 成功=59 失败=6 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=25 成功=25 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=90 已跟踪=90 清单来源=all .res生成=22 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：6 个工程编译不过
+  DeepFlow/Source/DeepFlow.dpr EXIT=1  DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+  Examples/MVVMDemo/MVVMDemo.dpr EXIT=1  LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+  Examples/Templates/CRUDApp/CRUDApp.dpr EXIT=1  Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+  Tools/Calibration/Calib.Record.dpr EXIT=1  Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+  Tools/Gallery/hbtheme_gallery.dpr EXIT=1  Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+  Tools/UniPublisher/DeepPublisher.dpr EXIT=1  Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+GATE_EXIT=1

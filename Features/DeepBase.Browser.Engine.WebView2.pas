@@ -7,6 +7,12 @@
                 and implements IBrowserSession + IBrowserSessionAsync.
                 Requires WebView4Delphi package and Microsoft Edge WebView2
                 Runtime to be installed.
+  Status      : 待接依赖。依赖件（uWVBrowser/uWVTypes/uWVInterfaces 等十件同级外部单元）
+                未随仓提供，且全仓无任何工程定义 USE_WEBVIEW2，因此本单元实体整段被编译掉、
+                不参与任何编译面，在构建归属门禁中按 O1 孤儿持续报红——这是预期状态，
+                不得改为录入门禁基线来消音。接入路径 = 把 WebView4Delphi 落到
+                ThirdParty/Browser/ 下并在消费工程打开该开关。
+                缺口取证：CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-02。
   ============================================================================ }
 
 unit DeepBase.Browser.Engine.WebView2;

@@ -24,3 +24,9 @@
 # - Examples/Templates/DocManager/DocManager.dpr —— 补齐（甲-D6 段3）。原判据 F2613 缺 DeepBase.ORM.Attributes：
 #     该层从未落地；模板改用仓内已有形态（映射走 DeepBase.ORM.Mapping，新建 Entity.Base.pas 承接三件实体的
 #     虚方法锚点），不再引用不存在的层，补齐后 BUILD_EXIT=0，归面回 T1 观测面。
+# - Features/DeepBase.Browser.Engine.WebView2.pas —— 待接依赖，保留在册外（甲-D7 段3 裁定，选 (b)）。
+#     单元整段被 {$IFDEF USE_WEBVIEW2} 包住而全仓无工程定义该开关，{$ELSE} 分支是空桩，故不参与任何编译面；
+#     被包住的实现 uses 十件未随仓提供的外部同级单元（取证见上一条），属依赖未接入而非死件：注释声明的
+#     WebView4Delphi 路线与 docs/52.extend.BrowserAutomation接入指南.md 一致，且 7177771 仍在维护该开关形态。
+#     build-ownership 门禁按 O1 孤儿持续报红是预期状态，禁止录进 build_ownership_baseline.json 消音。
+#     接入路径 = 引入 WebView4Delphi 到 ThirdParty/Browser/ 并在消费工程定义 USE_WEBVIEW2（另单）。
