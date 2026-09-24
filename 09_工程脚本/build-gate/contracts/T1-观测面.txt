@@ -65,10 +65,6 @@ Tools/FMXGallery/hbtheme_fmx_gallery.dpr
 Tools/Gallery/hbtheme_gallery.dpr
 Tools/LogAnalyzer/LogAnalyzer.dpr
 Tools/SeedTool/SeedTool.dpr
-Tools/Studio/DeepBaseStudio.dpr
-# DeepBaseStudio：保持红，未移面。该入口引用的窗体类名在仓库任何 revision 都不存在（生来即坏），
-# 改到绿的唯一路径是把活入口 Studio.dpr 之外再造一套生命周期 = 架构分叉。结论是「应移出库」，
-# 删文件属不可逆处置且本单未获授权 ⇒ 按工单指令停下交主控裁定，论证见 D6-段2-04。
 Tools/Studio/Studio.dpr
 Tools/Tray/DeepBaseTray.dpr
 Tools/UniPublisher/DeepPublisher.dpr
