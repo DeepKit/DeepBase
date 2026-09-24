@@ -1,0 +1,147 @@
+
+########## 交付件指纹
+
+$ 'sha256sum' '09_工程脚本/build-ownership/check_build_ownership.js'
+5090e89ab4a71ab88d9c8b87f90e78a095d281e481df80e815c625487d1f8af8 *09_工程脚本/build-ownership/check_build_ownership.js
+EXIT=0
+
+修前对照件 = git show 615e1c2:09_工程脚本/build-ownership/check_build_ownership.js 的字节内容
+$ 'sha256sum' '.tmp/d7repro/build-ownership/check_build_ownership.js'
+22e42441a84bc6c81bd55d83be48d445b39e6779c639a7af13f45c734e472741 *.tmp/d7repro/build-ownership/check_build_ownership.js
+EXIT=0
+
+
+########## @@@@@@@@@@ BEFORE（修前 = $BEFORE_REF 版）@@@@@@@@@@
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/no-such-dir   ← N1 --root 指向不存在的目录
+构建归属门禁通过：生产单元 0，构建文件 0，孤儿（已登记基线）0
+EXIT=0
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/empty   ← N2 --root 空目录
+构建归属门禁通过：生产单元 0，构建文件 0，孤儿（已登记基线）0
+EXIT=0
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/prodonly   ← N3 --root 只有生产面（构建文件计数 0）
+构建归属门禁失败，违规 1 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/OrphanX.pas (unit OrphanX)
+EXIT=1
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/buildonly   ← N4 --root 只有引用面（生产单元计数 0）
+构建归属门禁通过：生产单元 0，构建文件 1，孤儿（已登记基线）0
+EXIT=0
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/cnt_nobuild   ← N5 八目录齐备但零构建文件
+构建归属门禁失败，违规 1 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/OrphanX.pas (unit OrphanX)
+EXIT=1
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/cnt_noprod   ← N6 八目录齐 + 有构建文件但零生产单元
+构建归属门禁通过：生产单元 0，构建文件 1，孤儿（已登记基线）0
+EXIT=0
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/afile   ← N7 --root 指向普通文件
+构建归属门禁通过：生产单元 0，构建文件 0，孤儿（已登记基线）0
+EXIT=0
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root .tmp/d7repro/shadow   ← N8 生产目录被同名文件遮蔽
+构建归属门禁通过：生产单元 0，构建文件 1，孤儿（已登记基线）0
+EXIT=0
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --ROOT .tmp/d7repro/prodonly --baseline <file>   ← N9 --ROOT 大小写变体（旧实现静默忽略⇒回落默认根）
+构建归属门禁失败，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --rot .tmp/d7repro/prodonly --baseline <file>   ← N10 --rot 未知参数
+构建归属门禁失败，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js .tmp/d7repro/prodonly   ← N11 裸位置参数
+构建归属门禁失败，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+$ node .tmp/d7repro/build-ownership/check_build_ownership.js --root --baseline <file>   ← N12 --root 缺值
+构建归属门禁通过：生产单元 0，构建文件 0，孤儿（已登记基线）0
+EXIT=0
+
+
+########## @@@@@@@@@@ AFTER（修后 = 本单交付版）@@@@@@@@@@
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/no-such-dir   ← N1 --root 指向不存在的目录
+构建归属门禁失败：无法读取目录 D:\_Progs\02Business\DeepBase\.tmp\d7repro\no-such-dir (ENOENT)。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/empty   ← N2 --root 空目录
+构建归属门禁失败：无法读取目录 D:\_Progs\02Business\DeepBase\.tmp\d7repro\empty\Core (ENOENT)。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/prodonly   ← N3 --root 只有生产面（构建文件计数 0）
+构建归属门禁失败：无法读取目录 D:\_Progs\02Business\DeepBase\.tmp\d7repro\prodonly\Features (ENOENT)。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/buildonly   ← N4 --root 只有引用面（生产单元计数 0）
+构建归属门禁失败：无法读取目录 D:\_Progs\02Business\DeepBase\.tmp\d7repro\buildonly\Core (ENOENT)。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/cnt_nobuild   ← N5 八目录齐备但零构建文件
+构建归属门禁失败：扫描 0 个构建文件（root=D:\_Progs\02Business\DeepBase\.tmp\d7repro\cnt_nobuild），引用面为空。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/cnt_noprod   ← N6 八目录齐 + 有构建文件但零生产单元
+构建归属门禁失败：扫描 0 个生产单元（root=D:\_Progs\02Business\DeepBase\.tmp\d7repro\cnt_noprod，PROD_DIRS=Core/Features/Persistence/VCL/FMX/Governance/Tools/DeepFlow）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/afile   ← N7 --root 指向普通文件
+构建归属门禁失败：无法读取目录 D:\_Progs\02Business\DeepBase\.tmp\d7repro\afile (ENOTDIR)。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root .tmp/d7repro/shadow   ← N8 生产目录被同名文件遮蔽
+构建归属门禁失败：无法读取目录 D:\_Progs\02Business\DeepBase\.tmp\d7repro\shadow\Core (ENOTDIR)。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --ROOT .tmp/d7repro/prodonly --baseline <file>   ← N9 --ROOT 大小写变体（旧实现静默忽略⇒回落默认根）
+构建归属门禁失败：参数 --ROOT 大小写不符（应为小写 --root）；大小写变体一律拒绝，不接受为别名（已知参数: --root <dir> / --baseline <file> / --emit-baseline）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --rot .tmp/d7repro/prodonly --baseline <file>   ← N10 --rot 未知参数
+构建归属门禁失败：参数 --rot 为未知参数（已知参数: --root <dir> / --baseline <file> / --emit-baseline）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js .tmp/d7repro/prodonly   ← N11 裸位置参数
+构建归属门禁失败：参数 .tmp/d7repro/prodonly 不是合法参数（应为 --root / --baseline 形式的命名参数）（已知参数: --root <dir> / --baseline <file> / --emit-baseline）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+$ node 09_工程脚本/build-ownership/check_build_ownership.js --root --baseline <file>   ← N12 --root 缺值
+构建归属门禁失败：参数 --root 缺值（后无实参）（已知参数: --root <dir> / --baseline <file> / --emit-baseline）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+
+########## 12 例 × 修前/修后 EXIT 一览（0=报绿 1=违规 2=基线不可信 3=参数/扫描失败）
+
+用例                                               判据                 修前 修后
+N1 --root 指向不存在的目录                                   判据3                    0      3     
+N10 --rot 未知参数                                       §一-3 参数口径同族            1      3     
+N11 裸位置参数                                            §一-3 参数口径同族            1      3     
+N12 --root 缺值                                        §一-3 参数口径同族            0      3     
+N2 --root 空目录                                        判据4                    0      3     
+N3 --root 只有生产面（构建文件计数 0）                            §1.2-2                 1      3     
+N4 --root 只有引用面（生产单元计数 0）                            §1.2-3                 0      3     
+N5 八目录齐备但零构建文件                                       §1.2-2                 1      3     
+N6 八目录齐 + 有构建文件但零生产单元                                §1.2-3                 0      3     
+N7 --root 指向普通文件                                     §1.2-1                 0      3     
+N8 生产目录被同名文件遮蔽                                       §1.2-1                 0      3     
+N9 --ROOT 大小写变体（旧实现静默忽略⇒回落默认根）                       §一-3 参数口径同族            1      3     
+⇒ 修前列出现 6 个 EXIT=0（扫不到就报绿），修后 12 例全部 EXIT=3。
+⇒ N9/N10/N11 修前列是 EXIT=1：旧实现把参数吞掉后回落到写死的默认根，扫到了另一棵树——
+   它「看起来在报违规」恰恰是同一个洞的另一面（报的是别树的红，不是本树的红）。

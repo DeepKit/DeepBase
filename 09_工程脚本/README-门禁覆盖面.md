@@ -12,9 +12,9 @@
 |---|---|---|---|---|---|---|
 | 编码门禁 | `encoding-gate/check_pas_encoding.js` | 仓库根（`gate-args.js` 的 `--root`，默认为脚本上两级） | 源码面 `.pas`（全量 G1–G6）；扩展面 `.dpr/.dpk/.dfm/.fmx/.md/.sql`（仅 G2/G4，`check_pas_encoding.js:50`） | 共享 `gateSkipSet()` 12 项（`:47`，见 §一-1；门禁输出的「跳过目录 N」是**实际命中**的目录名数，不是集合大小） | 977 个 `.pas` + 653 个扩展面文件 | `.inc/.rss/.res/.json/.ps1/.py/.yml/.pas` 之外的任意扩展、无扩展文件；`TestResults/`、`bin/`、`dcu/` 等被 SKIP 的目录内的任何文件；被 SKIP 目录名之外的同名嵌套目录不受影响 |
 | 行尾门禁 | `eol-gate/check_eol.js` | 仓库根（`--root`，`check_eol.js:28`） | `.pas`、`.md`（`:52`） | 共享 12 项（`:34`） | 1477 个文件 | 除 `.pas/.md` 外的一切文件（含 `.dpr/.dpk/.dfm/.sql/.json`）；`TestResults/` 内的 `.pas/.md` 不查 |
-| 证据编码门禁 | `evidence-encoding-gate/check_evidence_encoding.js` | 仓库根的 `CodeReview/` 单层子树（`:29`） | **反向排除**：`CodeReview/**` 里除 `BINARY_EXT`（47 个二进制容器扩展名，`:34`）之外**一律纳入**——清单外的扩展名（`.cmd/.ps1/.bat/.csv/.md/.js/.py/.patch/…`）默认进门禁，新增证据类型不必改门禁（WO-20260923-AUDIT-乙-D5 §一-1） | 同一共享 12 项（`:30`，两种口径都生效：tracked 走 `inSkipDir`（`:43`），工作树走目录名判断（`:76`））；此外不在 `CodeReview/` 下的一律不扫 | 408 个文件（git 已跟踪口径；改前扩展名白名单口径为 211） | `CodeReview/` 之外的证据目录（`docs/`、`08_元管理/` 等）；`BINARY_EXT` 清单内的二进制容器（图片/压缩包/编译产物本身就是合法非 UTF-8 字节流）；未入库的本地产物（默认只看 tracked，`--all-worktree` 才切工作树） |
+| 证据编码门禁 | `evidence-encoding-gate/check_evidence_encoding.js` | 仓库根的 `CodeReview/` 单层子树（`:29`） | **反向排除**：`CodeReview/**` 里除 `BINARY_EXT`（47 个二进制容器扩展名，`:34`）之外**一律纳入**——清单外的扩展名（`.cmd/.ps1/.bat/.csv/.md/.js/.py/.patch/…`）默认进门禁，新增证据类型不必改门禁（WO-20260923-AUDIT-乙-D5 §一-1） | 同一共享 12 项（`:30`，两种口径都生效：tracked 走 `inSkipDir`（`:43`），工作树走目录名判断（`:76`））；此外不在 `CodeReview/` 下的一律不扫 | **不抄活值**：`--list-files` 现算（tracked 口径），覆盖面 SSOT 在门禁里；改前扩展名白名单口径只有 211 件（D5 收口的净增即此差） | `CodeReview/` 之外的证据目录（`docs/`、`08_元管理/` 等）；`BINARY_EXT` 清单内的二进制容器（图片/压缩包/编译产物本身就是合法非 UTF-8 字节流）；未入库的本地产物（默认只看 tracked，`--all-worktree` 才切工作树） |
 | 托管拷贝门禁 | `managed-copy-gate/check_managed_copy.js` | 仓库根（`check_managed_copy.js:23`） | `.pas`（`:41`） | 共享 12 项（`:26`） | 977 个 `.pas` | 非 `.pas` 文件里的内存操作（`.dpr/.dpk` 程序体、`.inc`）；行尾/编码/构建归属完全不查 |
-| 构建归属门禁 | `build-ownership/check_build_ownership.js` | **硬编码 `D:/_Progs/02Business/DeepBase`**（`:20`，非 `__dirname` 相对） | 生产单元面：`PROD_DIRS` 8 目录内的 `.pas`（`:23`）；引用面：全库 `.dpk/.dproj/.dpr` | 共享 12 项（`:24`，**含 `TestResults`**，改前缺该目录名，见 §一-1） | 574 个生产单元 + 128 个构建文件 | 8 个 `PROD_DIRS` 之外目录里的单元（`Tests/`、`Examples/`、`ThirdParty/`、`Scripts/` 的孤儿单元不判）；`.dpr` 文件自身的编译可行性（属甲 D3 编译门）；`Core/` 之外新轨单元的位置 |
+| 构建归属门禁 | `build-ownership/check_build_ownership.js` | 仓库根（`gate-args.js` 的 `--root`，默认为脚本上两级 `:26`；改前是硬编码的本机绝对路径，见 §三） | 生产单元面：`PROD_DIRS` 8 目录内的 `.pas`（`:38`）；引用面：全库 `.dpk/.dproj/.dpr` | 共享 12 项（`:39`，**含 `TestResults`**，改前缺该目录名，见 §一-1） | 574 个生产单元 + 126 个构建文件（2026-09-24 实测；计数在输出头一行，红时同样可见） | 8 个 `PROD_DIRS` 之外目录里的单元（`Tests/`、`Examples/`、`ThirdParty/`、`Scripts/` 的孤儿单元不判）；`.dpr` 文件自身的编译可行性（属甲 D3 编译门）；`Core/` 之外新轨单元的位置 |
 
 ### 一-1 SKIP 目录名集：单一真相源与改前/改后对照
 
@@ -27,7 +27,7 @@
 | 行尾门禁 | 私有 12 项（`:31`） | `gateSkipSet()`（`:34`） | 无 |
 | 证据编码门禁 | 私有 7 项，仅工作树遍历生效（`:26`） | `gateSkipSet()`（`:30`），**已跟踪 / 工作树两种口径同时生效**（`:43` `inSkipDir` + `:76`） | 纳入 `.claude BuildOutput DCUOutput bin dcu`，且补齐 tracked 口径的排除 |
 | 托管拷贝门禁 | 私有 12 项（`:24`） | `gateSkipSet()`（`:26`） | 无 |
-| 构建归属门禁 | 私有 11 项，**缺 `TestResults`**（`:22`） | `gateSkipSet()`（`:24`） | **`TestResults/` 从此被跳过**（CI 产物里的 `.dpr` 不再冒充生产引用面） |
+| 构建归属门禁 | 私有 11 项，**缺 `TestResults`**（`:22`） | `gateSkipSet()`（`:39`） | **`TestResults/` 从此被跳过**（CI 产物里的 `.dpr` 不再冒充生产引用面） |
 | 甲 `build-gate/check_build.js` | 私有 13 项（含门禁专属 `Logs`） | 改前未改（不属乙 scope）→ **甲 D4 并网 `gateSkipSet('Logs')`** | 集合与共享 12 项 + `Logs` 逐位相同，枚举面零变化；该门不再持有内联副本，§四-5 的甲线残留登记清零 |
 
 复算命令（逐门 grep 即得改前/改后，原始输出见 `CodeReview/20260923-AUDIT-乙-D5-证据/SKIP集对照-改前改后.txt`）：
@@ -87,7 +87,7 @@ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-fi
 | 行尾门禁 | 是 | 是（`EXIT=2`） | 同上（`check_eol.js:43–44`、`:60–62`）；基线校验在 `:111` |
 | 证据编码门禁 | 是 | 是（`EXIT=2`） | 扫描 0 项即 `EXIT=3`（`:97–100`），基线不可信 ⇒ `EXIT=2`（`:84` → `gate-baseline.js`） |
 | 托管拷贝门禁 | **否** | 是（`EXIT=2`） | `walk()` 对不存在的根 `catch` 后返回空集（`check_managed_copy.js:36`），`--root <不存在>` ⇒ 扫 0 文件仍 `EXIT=0`；大写 `--ROOT` 被静默忽略并回落到默认根；基线校验在 `:86` |
-| 构建归属门禁 | **否** | 是（`EXIT=2`） | 同上（`check_build_ownership.js:29`）；且默认根为本机绝对路径，在 CI 检出目录下永远扫不到东西，而 fail-open 让它报绿；基线校验在 `:96`，**排在 `--emit-baseline` 之前**（emit 要读旧基线以保留 47 条人工处置，坏基线必须先拦住） |
+| 构建归属门禁 | 是（`EXIT=3`） | 是（`EXIT=2`） | 参数解析走 `gate-args.js`（`check_build_ownership.js:24`，改前是私有 `arg()`，`--ROOT` 会被静默忽略并回落默认根）；默认根为脚本上两级（`:26`，改前是硬编码本机绝对路径 ⇒ 在 CI 检出目录下扫空气却报绿）；`walk()` 读目录失败即 `EXIT=3` 并打印失败路径（`:52`）；构建文件面为 0 / 生产单元面为 0 各自独立判零（`:95`、`:96`）；基线校验在 `:131`，**排在 `--emit-baseline` 之前**（emit 要读旧基线以保留 47 条人工处置，坏基线必须先拦住）。负向样本：`build-ownership/test_negative_sample.js` T2 五型 + T3 修前对照（同一「默认根指错」夹具下旧形态假绿 EXIT=0、新形态 EXIT=3） |
 
 「基线状态」一列由 `09_工程脚本/gate-baseline.js` 一处实现（T1 可读 / T2 合法 JSON 对象 / T3 溯源字段非空 /
 T4 本门所需键齐全且类型正确），五道门只声明自己的键；负向样本在 `09_工程脚本/test_negative_sample.js` B 段
@@ -97,7 +97,7 @@ T4 本门所需键齐全且类型正确），五道门只声明自己的键；�
 > **本列守文件状态**（不管怎么被改的，改坏了就该红）。本校验故意**不看条目数量**（无「条数地板」），
 > 否则「债务归零后合法重录」会被误伤——那类判断只属于 B1 的写入侧。
 
-修法（未覆盖面，非 D4/D5 scope）：给托管拷贝/构建归属两道门禁补 `gate-args.js` 解析 + 空扫描守卫，与其余三道对齐。
+修法（未覆盖面）：托管拷贝门禁仍走私有参数取值 + `walk` 吞错（`check_managed_copy.js:36`），待补 `gate-args.js` 解析 + 空扫描守卫与其余四道对齐；构建归属门禁的同类缺陷已由 **乙 D7** 收口（同上表最后一行）。
 
 ## 四、当前明确不被任何门禁覆盖的清单
 

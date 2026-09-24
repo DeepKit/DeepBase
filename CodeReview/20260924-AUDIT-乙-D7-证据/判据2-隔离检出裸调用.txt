@@ -1,0 +1,33 @@
+
+########## 判据2 前置：新建隔离工作树（615e1c2 检出），并放入只存在于该树的孤儿单元
+
+worktree: .tmp/d7repro/wt @ 615e1c2
+
+########## 修前：该树自带的 615e1c2 版脚本，裸调用（不传 --root）
+
+$ 'node' '09_工程脚本/build-ownership/check_build_ownership.js'
+构建归属门禁失败，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+⇒ 输出里没有 Core/D7ProbeOrphan.pas：它扫的是脚本里写死的另一棵树，不是当前检出。
+
+########## 修后：把交付版脚本复制进同一隔离检出，裸调用（该树其余文件仍是 615e1c2 内容）
+
+$ 'node' '09_工程脚本/build-ownership/check_build_ownership.js'
+构建归属门禁失败：生产单元 575，构建文件 126，违规 5 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/D7ProbeOrphan.pas (unit D7ProbeOrphan)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+⇒ 出现 Core/D7ProbeOrphan.pas，且覆盖面计数与该树规模同量级：默认根跟着脚本走。
+
+########## 收尾：移除本段自建的工作树
+
+worktree remove .tmp/d7repro/wt OK

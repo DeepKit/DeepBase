@@ -1,0 +1,38 @@
+
+########## 交付前五道门复跑（原始 EXIT 一律保留，红项不在本单 scope 内）
+
+$ 'node' '09_工程脚本/encoding-gate/check_pas_encoding.js'
+编码门禁通过：980 个 .pas + 679 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+$ 'node' '09_工程脚本/eol-gate/check_eol.js'
+行尾门禁失败，违规 1 项:
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Examples/Templates/DocManager/Entity.Base.pas
+EXIT=1
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js'
+证据编码门禁通过：扫描 500 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+EXIT=0
+
+$ 'node' '09_工程脚本/managed-copy-gate/check_managed_copy.js'
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+EXIT=1
+
+$ 'node' '09_工程脚本/build-ownership/check_build_ownership.js'
+构建归属门禁失败：生产单元 574，构建文件 126，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+EXIT=1
+
+$ 'node' '09_工程脚本/build-gate/check_build.js'
+编译门禁失败：未指定编译范围。请给 --all（全量）、--dpr/--dpk <path>（点名）或 --manifest <file>（外部契约清单）。已按 fail-closed 拒绝放行。
+EXIT=3
+

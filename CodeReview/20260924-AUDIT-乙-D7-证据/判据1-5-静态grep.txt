@@ -1,0 +1,46 @@
+
+########## 判据1 交付版源码内不再出现任何绝对路径：grep -nE '[A-Za-z]:/' 09_工程脚本/build-ownership/*.js
+
+$ 'grep' '-nE' '[A-Za-z]:/' '09_工程脚本/build-ownership/check_build_ownership.js' '09_工程脚本/build-ownership/test_negative_sample.js'
+EXIT=1
+
+⇒ grep EXIT=1 即『零命中』，这就是判据 1 的通过形态（0=有命中=不通过）。
+
+########## 判据5 私有 arg() 已删除：grep -n 'function arg' 09_工程脚本/build-ownership/*.js
+
+$ 'grep' '-n' 'function arg' '09_工程脚本/build-ownership/check_build_ownership.js' '09_工程脚本/build-ownership/test_negative_sample.js'
+EXIT=1
+
+
+########## 判据5 反向确认：参数/SKIP/基线三处并入共享模块
+
+$ 'grep' '-n' 'require('../gate-' '09_工程脚本/build-ownership/check_build_ownership.js'
+15:const { parseGateArgs } = require('../gate-args');
+16:const { gateSkipSet } = require('../gate-skip');
+17:const { loadGateBaseline } = require('../gate-baseline');
+EXIT=0
+
+
+########## 同批修前对照（615e1c2 版同三条 grep ⇒ 证明上面两栏的差是本单造成的）
+
+修前件落点 .tmp/d7repro/build-ownership/check_build_ownership.js，同树另置 615e1c2 版 gate-skip.js / gate-baseline.js 供其 require
+$ 'sha256sum' '.tmp/d7repro/build-ownership/check_build_ownership.js' '09_工程脚本/build-ownership/check_build_ownership.js'
+22e42441a84bc6c81bd55d83be48d445b39e6779c639a7af13f45c734e472741 *.tmp/d7repro/build-ownership/check_build_ownership.js
+5090e89ab4a71ab88d9c8b87f90e78a095d281e481df80e815c625487d1f8af8 *09_工程脚本/build-ownership/check_build_ownership.js
+EXIT=0
+
+$ 'grep' '-nE' '[A-Za-z]:/' '.tmp/d7repro/build-ownership/check_build_ownership.js'
+20:const ROOT = path.resolve(arg('root', 'D:/_Progs/02Business/DeepBase'));
+EXIT=0
+
+$ 'grep' '-n' 'function arg' '.tmp/d7repro/build-ownership/check_build_ownership.js'
+16:function arg(name, dflt) {
+EXIT=0
+
+$ 'grep' '-n' 'require('' '.tmp/d7repro/build-ownership/check_build_ownership.js'
+11:const fs = require('fs');
+12:const path = require('path');
+13:const { gateSkipSet } = require('../gate-skip');
+14:const { loadGateBaseline } = require('../gate-baseline');
+EXIT=0
+

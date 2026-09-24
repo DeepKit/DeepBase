@@ -1,0 +1,27 @@
+
+########## 本门负向样本（OWNERSHIP-NEGATIVE-TEST）
+
+$ 'node' '09_工程脚本/build-ownership/test_negative_sample.js'
+T1 通过：孤儿/新轨入包/生产 uses 新轨各自命中 O1/O2/O4，已入构建单元不误报
+T2 通过：root 不存在 ⇒ EXIT=3 fail-closed（文案可定位）
+T2 通过：root 空目录 ⇒ EXIT=3 fail-closed（文案可定位）
+T2 通过：构建文件面为 0 ⇒ EXIT=3 fail-closed（文案可定位）
+T2 通过：生产单元面为 0 ⇒ EXIT=3 fail-closed（文案可定位）
+T2 通过：--ROOT 大小写变体 ⇒ EXIT=3 fail-closed（文案可定位）
+T3 通过：默认根指错的同一夹具下，旧形态扫空气仍报「门禁通过」（假绿实锤，新形态见 T2①）
+T4 通过：干净最小树放行（覆盖面守卫未误伤正常调用）
+OWNERSHIP-NEGATIVE-TEST: PASS
+EXIT=0
+
+
+########## 共享门禁自检（SHARED-GUARD-TEST：五道门 SKIP 单源 + 各门基线状态自检）
+
+$ 'node' '09_工程脚本/test_negative_sample.js'
+A2 通过：TestResults/StrayRunner.dpr 被跳过 ⇒ Core/FooOrphan.pas 如实报孤儿
+A2 修前对照通过：旧 11 项 SKIP 口径下 CI 产物把孤儿判成已引用（假绿实锤）
+B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSON/跨门顶替/文件缺失）全部 EXIT=2 拒绝放行
+B 溯源判据生效：无溯源同形基线 EXIT=2
+B 正向对照通过：可信基线正常放行（未过度兜底）
+SHARED-GUARD-TEST: PASS
+EXIT=0
+

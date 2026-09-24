@@ -1,0 +1,30 @@
+
+########## 判据7 双跑（同一棵工作树，--root 同为仓库根，唯一变量是脚本版本）
+
+BEFORE EXIT=1
+AFTER  EXIT=1
+
+########## 修前 stderr 全文
+
+构建归属门禁失败，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+
+
+########## 修后 stderr 全文
+
+构建归属门禁失败：生产单元 574，构建文件 126，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+
+
+########## 红项集合条数：修前 4 / 修后 4
+
+
+########## 逐行 diff（空 ⇒ 判据7 通过）
+
+DIFF EMPTY ⇒ 红项集合不变
