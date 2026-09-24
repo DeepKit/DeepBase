@@ -1,0 +1,7 @@
+# 甲-D8 隔离 worktree 判定（git worktree add --detach @ HEAD=2c44958，排除共享树在途噪声）  2026-09-24 11:52:40
+=== check_mojibake.js ===
+丙类损坏门禁通过：扫描 978 个 .pas，丙-B 命中 104 处（17 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+gate EXIT=0
+=== test_negative_sample.js ===
+NEGATIVE-TEST: PASS
+test EXIT=0

@@ -1,0 +1,75 @@
+{
+  "generated": "2026-09-24T03:39:33.020Z",
+  "generatedFrom": "全量扫描 978 个 tracked .pas（丙-B 结构性吞 ASCII 存量，只减不增）",
+  "_comment": "DeepBase 丙-B 存量清单（WO-20260924-AUDIT-甲-D8）。count=该文件跨行未闭合串事件数，门只拦超过 count 的新增。reason 说明存量为何存在、归属哪张还原单。新增条目须人工带 reason，不得由 --emit-baseline 自动生成。",
+  "pbStock": {
+    "Tests/Regression/RegressionTestRegistry.pas": {
+      "count": 59,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas": {
+      "count": 19,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas": {
+      "count": 18,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG009_LoggingRace.pas": {
+      "count": 11,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas": {
+      "count": 11,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG013_RSASignature.pas": {
+      "count": 22,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas": {
+      "count": 33,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas": {
+      "count": 15,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas": {
+      "count": 16,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas": {
+      "count": 8,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas": {
+      "count": 14,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas": {
+      "count": 14,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas": {
+      "count": 40,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG066_PathTraversal.pas": {
+      "count": 20,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG070_LogInjection.pas": {
+      "count": 9,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas": {
+      "count": 6,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    },
+    "Tools/Studio/Forms/Studio.VersionDetailForm.pas": {
+      "count": 28,
+      "reason": "丙-B/丙-C 存量：Regression/Studio mojibake 件（描述串被双重编码且闭合引号被吞），逐件还原归双域分片单 B2/B3/A3；本门只拦新增"
+    }
+  }
+}

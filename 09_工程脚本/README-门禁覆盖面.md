@@ -6,7 +6,7 @@
 建立工单：`docs/ui/work-orders/WO-20260923-AUDIT-乙-D4-门禁覆盖面与消噪收口.md`；
 三项收口：`WO-20260923-AUDIT-乙-D5-门禁覆盖面残留三项收口.md`（§一-1 SKIP 单一真相源、§一-3 证据门禁扫描面、§一-3 基线状态自检）。
 
-## 一、五道静态门禁的扫描面
+## 一、六道静态门禁的扫描面
 
 | 门禁 | 入口 | 扫描根（默认） | 纳入扩展名 | 排除目录 | 计数（2026-09-23 12:01 快照，随在途文件漂移，复算方法见 §二） | 已知不覆盖 |
 |---|---|---|---|---|---|---|
@@ -15,6 +15,7 @@
 | 证据编码门禁 | `evidence-encoding-gate/check_evidence_encoding.js` | 仓库根的 `CodeReview/` 单层子树（`:29`） | **反向排除**：`CodeReview/**` 里除 `BINARY_EXT`（47 个二进制容器扩展名，`:34`）之外**一律纳入**——清单外的扩展名（`.cmd/.ps1/.bat/.csv/.md/.js/.py/.patch/…`）默认进门禁，新增证据类型不必改门禁（WO-20260923-AUDIT-乙-D5 §一-1） | 同一共享 12 项（`:30`，两种口径都生效：tracked 走 `inSkipDir`（`:43`），工作树走目录名判断（`:76`））；此外不在 `CodeReview/` 下的一律不扫 | **不抄活值**：`--list-files` 现算（tracked 口径），覆盖面 SSOT 在门禁里；改前扩展名白名单口径只有 211 件（D5 收口的净增即此差） | `CodeReview/` 之外的证据目录（`docs/`、`08_元管理/` 等）；`BINARY_EXT` 清单内的二进制容器（图片/压缩包/编译产物本身就是合法非 UTF-8 字节流）；未入库的本地产物（默认只看 tracked，`--all-worktree` 才切工作树） |
 | 托管拷贝门禁 | `managed-copy-gate/check_managed_copy.js` | 仓库根（`check_managed_copy.js:23`） | `.pas`（`:41`） | 共享 12 项（`:26`） | 977 个 `.pas` | 非 `.pas` 文件里的内存操作（`.dpr/.dpk` 程序体、`.inc`）；行尾/编码/构建归属完全不查 |
 | 构建归属门禁 | `build-ownership/check_build_ownership.js` | 仓库根（`gate-args.js` 的 `--root`，默认为脚本上两级 `:26`；改前是硬编码的本机绝对路径，见 §三） | 生产单元面：`PROD_DIRS` 8 目录内的 `.pas`（`:38`）；引用面：全库 `.dpk/.dproj/.dpr` | 共享 12 项（`:39`，**含 `TestResults`**，改前缺该目录名，见 §一-1） | 574 个生产单元 + 126 个构建文件（2026-09-24 实测；计数在输出头一行，红时同样可见） | 8 个 `PROD_DIRS` 之外目录里的单元（`Tests/`、`Examples/`、`ThirdParty/`、`Scripts/` 的孤儿单元不判）；`.dpr` 文件自身的编译可行性（属甲 D3 编译门）；`Core/` 之外新轨单元的位置 |
+| 丙类损坏门禁 | `mojibake-gate/check_mojibake.js` | 仓库根的**已跟踪** `.pas`（`git ls-files -- '*.pas'`，CI checkout 即全量） | 只对**丙-B（结构性吞 ASCII：Delphi 单引号串跨行未闭合）**执法；丙-A（U+FFFD）/丙-C（双重编码）只作**定性 + 三档留痕分档**，其 tree-wide 违规仍归编码门禁 G1/G6（本门不造第二套计数，SSOT 见脚本头注释） | 共享 12 项（`gateSkipSet()`） | **不抄活值**：`--list-hits` 现算（末行「扫描 N 个 .pas / 丙-B 命中 M 处 / K 件」），覆盖面 SSOT 在门禁里 | 跨行串之外的编码损坏（丙-A/丙-C 违规判定归 encoding-gate）；`CodeReview/` 证据面丙-C（归 evidence-encoding-gate E3）；`.dpr/.dpk/.dfm` 不扫（丙-B 是 `.pas` 串词法问题）；逐件还原（不做）——本门只「看得见」 |
 
 ### 一-1 SKIP 目录名集：单一真相源与改前/改后对照
 
@@ -99,6 +100,7 @@ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-mo
 | 证据编码门禁 | 是 | 是（`EXIT=2`） | 扫描 0 项、`readdir` 失败、**本机 Node 无 GB18030 解码（E3 无法评估）** 各自 `EXIT=3` 并打印原因（fail-closed，绝不静默跳过 E3），基线不可信 ⇒ `EXIT=2`（`nulStock` + `mojibakeStock` 两键缺一即拦）；参数走 `gate-args.js`（改前是私有 `arg()` + 异族的 `--repo`，未知参数会被静默丢弃并回落到脚本自身所在树 ⇒ 甲 R8 §5.1 那类「带真实计数的假 PASS」入口，乙 D8 收口） |
 | 托管拷贝门禁 | **否** | 是（`EXIT=2`） | `walk()` 对不存在的根 `catch` 后返回空集（`check_managed_copy.js:36`），`--root <不存在>` ⇒ 扫 0 文件仍 `EXIT=0`；大写 `--ROOT` 被静默忽略并回落到默认根；基线校验在 `:86` |
 | 构建归属门禁 | 是（`EXIT=3`） | 是（`EXIT=2`） | 参数解析走 `gate-args.js`（`check_build_ownership.js:24`，改前是私有 `arg()`，`--ROOT` 会被静默忽略并回落默认根）；默认根为脚本上两级（`:26`，改前是硬编码本机绝对路径 ⇒ 在 CI 检出目录下扫空气却报绿）；`walk()` 读目录失败即 `EXIT=3` 并打印失败路径（`:52`）；构建文件面为 0 / 生产单元面为 0 各自独立判零（`:95`、`:96`）；基线校验在 `:131`，**排在 `--emit-baseline` 之前**（emit 要读旧基线以保留 47 条人工处置，坏基线必须先拦住）。负向样本：`build-ownership/test_negative_sample.js` T2 五型 + T3 修前对照（同一「默认根指错」夹具下旧形态假绿 EXIT=0、新形态 EXIT=3） |
+| 丙类损坏门禁 | 是 | 是（`EXIT=2`） | `git ls-files` 枚举失败 ⇒ `EXIT=2`；扫到 0 个 `.pas` / 单文件读取失败 / `--build-red-list` 读取失败 ⇒ `EXIT=3`（fail-closed，绝不因空扫报绿）；基线经 `loadGateBaseline`（`pbStock` 缺键 ⇒ `EXIT=2`），且每条必须为 `{count≥0, reason 非空}`——缺 reason 视为「静默加入」即 `EXIT=2`（判据 3 第一道防线）；参数走 `gate-args.js`，默认根为脚本上两级（无绝对路径）；`--emit-baseline` 只缩短已登记件，拒写未登记文件、拒条目数增长（只减不增）。负向样本：`mojibake-gate/test_negative_sample.js` 四类检测器各 ≥1 红 + 三档留痕可辨 + 修前假绿对照（摘掉丙-B 执法 ⇒ 跨行未闭合串隐身 EXIT=0）+ 存量只减不增 + fail-closed |
 
 「基线状态」一列由 `09_工程脚本/gate-baseline.js` 一处实现（T1 可读 / T2 合法 JSON 对象 / T3 溯源字段非空 /
 T4 本门所需键齐全且类型正确），五道门只声明自己的键；负向样本在 `09_工程脚本/test_negative_sample.js` B 段
@@ -119,3 +121,4 @@ T4 本门所需键齐全且类型正确），五道门只声明自己的键；�
 5. **`TestResults/` 目录**：~~四道门口径分裂~~ **已由乙 D5 §一-2 收口**——五道门共用 `gate-skip.js` 12 项，构建归属门补上 `TestResults`，CI 产物不再冒充生产引用面（实测：旧 11 项口径把孤儿判成「已引用」假绿 EXIT=0，新口径如实报 O1；见 §一-1 与 `CodeReview/20260923-AUDIT-乙-D5-证据/负向样本-六份真实输出.txt`）。~~**残留一项**：甲 `build-gate/check_build.js` 仍用私有 13 项（多一个该门专属的 `Logs`），未合并进共享集——不属乙 scope，登记给甲线（该门若改用 `gateSkipSet('Logs')` 即零成本合并，需甲自行验收其对 `Logs/` 的构建产物语义）。~~ **残留项已由甲 D4 收口**：该门枚举面改为 `gateSkipSet('Logs')`，与共享 12 项 + 本门专属 `Logs` 逐位相同（取证见 `CodeReview/20260923-AUDIT-甲-D4-证据/`），五道门至此同一真相源，`Logs/` 的构建产物语义按原口径保留（dcc64 日志目录不进枚举面）。
 6. **`Scripts/*.ps1`、`09_工程脚本/*.js` 自身**：~~基线被改无自动告警~~ **基线面已由乙 D5 §一-3 收口**——五道门的基线一律经 `gate-baseline.js` 做 T1–T4 状态校验（不可读/非 JSON 对象/缺溯源/缺本门键 ⇒ `EXIT=2`），SKIP 集则由 `test_negative_sample.js` A1 断言「不得再出现内联副本」。两条**明确不做**：① **不做门禁脚本自身的语法/编码检查**——`node` 加载即报错，门禁红在运行时而非静默放行，收益低而维护成本实在（要新增一道扫描 `.js` 的门或引入 lint 依赖），本单按「登记」处理；② **不拦「形状正确但覆盖面被窄根重录」的基线**——文件状态校验只看形状与溯源，条目是否缩水属 `--emit-baseline` 写入动作，归 B1（防清空/防缩水/备份），在此重复实现会造成两套判据打架。
 7. **DUnitX 短名过滤的裸 exe 用法**：`run_tests.ps1 -Run` 有「命中 0 ⇒ 红」守卫；直接调用 `.exe --run:` 仍会 EXIT=0（框架行为），WARP.md 已改为只推荐受守卫入口，但没有机器门禁能阻止裸调用。
+8. ~~**Delphi 单引号串跨行未闭合（丙-B 结构性吞 ASCII）**：编码门禁 G1–G6 判字节合法性、U+FFFD 与双重编码，判不出「闭合引号被吞导致整件引号奇偶翻转」这一**结构**形态——此面此前无任何门禁覆盖。~~ **已由甲 D8 收口**：`mojibake-gate/check_mojibake.js` 以 Pascal 词法状态机（剥 `//`、`{}`、`(* *)`、`''` 转义）扫跨行未闭合串，对丙-B 执法（存量以 `pb_baseline.json` 单列、只减不增），输出三档留痕（FULL/LCS/DIFF）并与编译门 `check_build.js` 红清单交叉标记（同一文件双命中）。丙-A/丙-C 的 tree-wide 违规仍归 encoding-gate，本门只定性、不造第二套计数（SSOT）。

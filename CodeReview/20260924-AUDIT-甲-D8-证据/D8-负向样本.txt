@@ -1,0 +1,53 @@
+# 甲-D8 负向样本测试 test_negative_sample.js（四类检测器各≥1红 + 三档留痕 + 修前假绿对照 + fail-closed + 只减不增 + 编译红交叉标记）  2026-09-24 11:52:13
+门禁输出（空基线，预期 EXIT=1 + 多类定性）:
+丙类损坏门禁失败：扫描 6 个 .pas，丙-B 命中 4 处（4 件），违规 4 项:
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: DoubleB.pas
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: LossyA.pas
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: Regression.pas
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: StockB.pas
+
+--list-hits 输出:
+DoubleB.pas:3: [LCS] 丙-B@L3->L4 丙-C(→「s := '日志导出文件清单」;违规归encoding-gate G6) 编译红=未提供
+      现场: s := '鏃ュ織瀵煎嚭鏂囦欢娓呭崟
+LossyA.pas:3: [DIFF] 丙-B@L3->L4 丙-A(U+FFFD×1;违规归encoding-gate G1) 编译红=未提供
+      现场: s := '前�后数据
+Regression.pas:3: [FULL] 丙-B@L3->L4 丙-C(→「s := '新引入的损坏描述」;违规归encoding-gate G6) 编译红=未提供
+      现场: s := '鏂板紩鍏ョ殑鎹熷潖鎻忚堪
+StockB.pas:3: [LCS] 丙-B@L3->L4 丙-C(→「s := '描述串被吞掉引号」;违规归encoding-gate G6) 编译红=未提供
+      现场: s := '鎻忚堪涓茶鍚炴帀寮曞彿
+# 扫描 6 个 .pas / 丙-B 命中 4 处 / 4 件
+
+编译红交叉标记输出（节选）:
+DoubleB.pas:3: [LCS] 丙-B@L3->L4 丙-C(→「s := '日志导出文件清单」;违规归encoding-gate G6) 编译红=是
+LossyA.pas:3: [DIFF] 丙-B@L3->L4 丙-A(U+FFFD×1;违规归encoding-gate G1) 编译红=否
+Regression.pas:3: [FULL] 丙-B@L3->L4 丙-C(→「s := '新引入的损坏描述」;违规归encoding-gate G6) 编译红=否
+StockB.pas:3: [LCS] 丙-B@L3->L4 丙-C(→「s := '描述串被吞掉引号」;违规归encoding-gate G6) 编译红=是
+存量件丙-B 上升后输出:
+丙类损坏门禁失败：扫描 6 个 .pas，丙-B 命中 5 处（4 件），违规 4 项:
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: DoubleB.pas
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: LossyA.pas
+  丙-B 结构性吞ASCII 1 处 > 存量 0（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: Regression.pas
+  丙-B 结构性吞ASCII 2 处 > 存量 1（清单外新文件即新增）。门只拦新增，存量只减不增；逐件还原归双域分片单，本单只做看得见: StockB.pas
+
+--emit-baseline（空基线）输出:
+丙类损坏门禁：--emit-baseline 拒绝新增以下未登记文件（新增条目必须人工写进清单并给出 reason 说明，禁止静默扩面）:
+  DoubleB.pas (1 处)
+  LossyA.pas (1 处)
+  Regression.pas (1 处)
+  StockB.pas (1 处)
+
+空 .pas 仓输出: EXIT=3 丙类损坏门禁失败：扫描 0 个 .pas（root=E:\Scratch\temp\moji-6Uoa1N\empty-repo）。已按 fail-closed 拒绝放行。
+修前对照（丙-B 执法摘掉）: EXIT=0
+丙类损坏门禁通过：扫描 6 个 .pas，丙-B 命中 4 处（4 件），全部在存量清单 0 件 / 0 处封顶内（只减不增）；编译红交叉标记=未提供
+丙-B 命中明细（[档位]=三档留痕强度 FULL>LCS>DIFF；丙-A/丙-C 仅定性，违规归 encoding-gate）:
+  DoubleB.pas:3: [LCS] 丙-B@L3->L4 丙-C(→「s := '日志导出文件清单」;违规归encoding-gate G6) 编译红=未提供
+      现场: s := '鏃ュ織瀵煎嚭鏂囦欢娓呭崟
+  LossyA.pas:3: [DIFF] 丙-B@L3->L4 丙-A(U+FFFD×1;违规归encoding-gate G1) 编译红=未提供
+      现场: s := '前�后数据
+  Regression.pas:3: [FULL] 丙-B@L3->L4 丙-C(→「s := '新引入的损坏描述」;违规归encoding-gate G6) 编译红=未提供
+      现场: s := '鏂板紩鍏ョ殑鎹熷潖鎻忚堪
+  StockB.pas:3: [LCS] 丙-B@L3->L4 丙-C(→「s := '描述串被吞掉引号」;违规归encoding-gate G6) 编译红=未提供
+      现场: s := '鎻忚堪涓茶鍚炴帀寮曞彿
+修前对照通过：丙-B 接入之前（EXIT=0「通过」），跨行未闭合串在旧门禁下隐身 ⇒ 甲-D8 §〇 能力缺口实锤
+NEGATIVE-TEST: PASS
+EXIT=0

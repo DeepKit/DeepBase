@@ -76,6 +76,12 @@ jobs:
       - name: Evidence encoding gate negative sample test
         run: node .\09_工程脚本\evidence-encoding-gate\test_negative_sample.js
 
+      - name: Mojibake gate (丙类编码损坏：结构性吞 ASCII 只拦新增，WO-20260924-AUDIT-甲-D8)
+        run: node .\09_工程脚本\mojibake-gate\check_mojibake.js
+
+      - name: Mojibake gate negative sample test
+        run: node .\09_工程脚本\mojibake-gate\test_negative_sample.js
+
   package-gate:
     name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]

@@ -1,0 +1,12 @@
+# 甲-D8 判据6：与编译门红清单交叉标记（--build-red-list 机制演示，非真实编译结论）  2026-09-24 11:52:35
+# 红清单内容:
+Build (demo cross-mark wiring only)
+  RegressionTestRegistry.pas(152) Fatal: F2063 Could not compile
+Done.
+--- 门禁输出（仅显示含编译红标记的行）---
+1:Tests/Regression/RegressionTestRegistry.pas:152: [LCS] 丙-B@L152->L153 丙-C(→「Description: '序列化深度限制过�?;」;违规归encoding-gate G6) 编译红=是（下承级联 4 处至 L158）
+3:Tests/Regression/RegressionTestRegistry.pas:158: [DIFF] 丙-B@L158->L159 编译红=是（下承级联 4 处至 L165）
+5:Tests/Regression/RegressionTestRegistry.pas:165: [DIFF] 丙-B@L165->L166 编译红=是（下承级联 4 处至 L171）
+7:Tests/Regression/RegressionTestRegistry.pas:171: [DIFF] 丙-B@L171->L172 编译红=是（下承级联 4 处至 L178）
+9:Tests/Regression/RegressionTestRegistry.pas:178: [DIFF] 丙-B@L178->L179 编译红=是（下承级联 4 处至 L184）
+11:Tests/Regression/RegressionTestRegistry.pas:184: [DIFF] 丙-B@L184->L185 编译红=是（下承级联 4 处至 L190）
