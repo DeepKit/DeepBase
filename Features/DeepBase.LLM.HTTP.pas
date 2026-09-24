@@ -53,7 +53,12 @@ type
       ATemperature: Double; AOnChunk: TProc<string>; AOnError: TProc<string>;
       out AResult: TChatResult): Boolean;
 
-    function FetchModels(const AEndpoint, AApiKey, AApiFormat: string): TArray<string>;
+    function FetchModels(const AEndpoint, AApiKey, AApiFormat: string): TArray<string>; overload;
+    /// <summary>Fetch the provider's model list. On failure returns an empty
+    /// array and a human-readable reason in AErrorMsg — callers must not
+    /// present an empty list as "provider has no models".</summary>
+    function FetchModels(const AEndpoint, AApiKey, AApiFormat: string;
+      out AErrorMsg: string): TArray<string>; overload;
 
     property HttpTransport: IDeepBaseHttpTransport read FTransport write SetHttpTransport;
   end;
@@ -755,8 +760,126 @@ begin
 end;
 
 function TLLMHttpClient.FetchModels(const AEndpoint, AApiKey, AApiFormat: string): TArray<string>;
+var
+  LErr: string;
+begin
+  Result := FetchModels(AEndpoint, AApiKey, AApiFormat, LErr);
+end;
+
+function TLLMHttpClient.FetchModels(const AEndpoint, AApiKey, AApiFormat: string;
+  out AErrorMsg: string): TArray<string>;
+
+  function TryParseModelIds(const ABody: string; out AIds: TArray<string>): Boolean;
+  var
+    Obj: TJSONObject;
+    Arr: TJSONArray;
+    Item: TJSONObject;
+    I: Integer;
+    LId: string;
+  begin
+    SetLength(AIds, 0);
+    Obj := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
+    if Obj = nil then
+      Exit(False);
+    try
+      // OpenAI / Anthropic: {"data":[{"id":...}]}; Ollama native: {"models":[{"name":...}]}
+      Arr := Obj.GetValue('data') as TJSONArray;
+      if Arr = nil then
+        Arr := Obj.GetValue('models') as TJSONArray;
+      if Arr = nil then
+        Exit(False);
+      for I := 0 to Arr.Count - 1 do
+      begin
+        Item := Arr.Items[I] as TJSONObject;
+        if Item = nil then
+          Continue;
+        LId := Item.GetValue<string>('id');
+        if LId = '' then
+          LId := Item.GetValue<string>('name');
+        if LId <> '' then
+        begin
+          SetLength(AIds, Length(AIds) + 1);
+          AIds[High(AIds)] := LId;
+        end;
+      end;
+      Result := True;
+    finally
+      Obj.Free;
+    end;
+  end;
+
+  function GetModelsOnce(const AUrl: string; out AIds: TArray<string>;
+    out AStatusErr: string): Boolean;
+  var
+    Request: TDeepBaseHttpTransportRequest;
+    Response: TDeepBaseHttpTransportResponse;
+  begin
+    Result := False;
+    AStatusErr := '';
+    Request := TDeepBaseHttpTransportRequest.Create(dbhmGet, AUrl);
+    Request.Headers := BuildHeaders(AApiKey, AApiFormat);
+    Request.TimeoutMs := FTimeoutMs;
+    Request.FollowRedirects := True;
+    try
+      Response := FTransport.Send(Request);
+    except
+      on E: Exception do
+      begin
+        AStatusErr := E.Message;
+        Exit;
+      end;
+    end;
+    if Response.StatusCode = 200 then
+    begin
+      if not TryParseModelIds(Response.Body, AIds) then
+      begin
+        AStatusErr := 'unrecognized models response format';
+        Exit(False);
+      end;
+      Result := True;
+    end
+    else
+      AStatusErr := Format('HTTP %d: %s',
+        [Response.StatusCode, Copy(Response.Body, 1, 200)]);
+  end;
+
+var
+  LUrl: string;
+  LStatusErr: string;
 begin
   SetLength(Result, 0);
+  AErrorMsg := '';
+  try
+    if Trim(AEndpoint) = '' then
+    begin
+      AErrorMsg := 'endpoint is empty';
+      Exit;
+    end;
+
+    // OpenAI-compatible (also Anthropic GET /v1/models and Ollama's /v1 shim)
+    LUrl := AEndpoint + '/models';
+    if not GetModelsOnce(LUrl, Result, LStatusErr) then
+    begin
+      SetLength(Result, 0);
+      // Ollama native listing when the OpenAI-compatible route is unavailable
+      if SameText(AApiFormat, 'ollama') and
+        GetModelsOnce(AEndpoint + '/api/tags', Result, LStatusErr) then
+      begin
+        if Length(Result) = 0 then
+          AErrorMsg := LStatusErr;
+        Exit;
+      end;
+      AErrorMsg := LStatusErr;
+    end
+    else if Length(Result) = 0 then
+      AErrorMsg := 'models list is empty';
+  except
+    on E: Exception do
+    begin
+      SetLength(Result, 0);
+      AErrorMsg := E.Message;
+    end;
+  end;
 end;
 
 end.
