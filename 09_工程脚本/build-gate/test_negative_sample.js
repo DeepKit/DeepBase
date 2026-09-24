@@ -329,6 +329,27 @@ expectExit('命名空间负样本㉔声明未被判定面命中', runWithNamespa
   expectExit('命名空间负样本㉗命令行不接受命名空间参数', runGate(['--all', '--ns', 'Datasnap', '--root', root]), 3, ['为未知参数']);
 }
 
+// ㉘枚举面目录名集走共享真相源（WO-20260924-AUDIT-甲-D7 段5 口径）：`Logs` 是本门专属的 CI 产物目录，
+// 从调用点实参里删掉它 = 把 CI 产物当源码扫（静默缩面反向变成静默扩面+假红）。
+// 配对证据：Logs/ 下的未跟踪 .dpr 不进判定面（下面 0 件），同样形态放在其它目录名下一律红（上面 2 件）——
+// 后者证未跟踪检测是活的，前者的「不报」才只可能归因于 SKIP 集里的 Logs，而不是整条检查死了。
+{
+  const root = makeRepo('skipset', { 'OkProj.dpr': OK_DPR });
+  fs.mkdirSync(path.join(root, 'Logs'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'BuildOutput'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'Logs', 'Ghost.dpr'), OK_DPR, 'utf8');
+  fs.writeFileSync(path.join(root, 'BuildOutput', 'Ghost.dpr'), OK_DPR, 'utf8');
+  const skip = runGate(['--all', '--root', root]);
+  if (skip.code !== 0) bug(`目录名集负样本㉘：Logs/BuildOutput 下的未跟踪 .dpr 被判进判定面（CI 产物冒充源码）=> EXIT=${skip.code}\n${skip.out}`);
+  if (/Ghost\.dpr/.test(skip.out)) bug(`目录名集负样本㉘：输出提到 Ghost.dpr，共享口径未生效\n${skip.out}`);
+  const ctlRoot = makeRepo('skipset-ctl', { 'OkProj.dpr': OK_DPR });
+  fs.mkdirSync(path.join(ctlRoot, 'SomeSourceDir'), { recursive: true });
+  fs.writeFileSync(path.join(ctlRoot, 'SomeSourceDir', 'Ghost.dpr'), OK_DPR, 'utf8');
+  expectExit('目录名集正对照㉘-ctl：非跳过目录下的未跟踪 .dpr 必红', runGate(['--all', '--root', ctlRoot]), 2,
+    ['未跟踪但存在的 .dpr', 'Ghost.dpr']);
+  say(`✓ 目录名集负样本㉘共享口径下的 CI 产物不进判定面 => EXIT=${skip.code}（输出不含 Ghost.dpr）`);
+}
+
 for (const p of trashFiles) {
   try { fs.rmSync(p, { force: true }); } catch (e) { bug(`临时注入件清理失败 ${p}: ${e.code || e.message}`); }
 }

@@ -1,0 +1,108 @@
+D7 段5 · build-gate 私有 SKIP 接入 gate-skip.js —— 处置：零代码改动 + 更正登记 + 承重补测
+================================================================================
+工单原文（WO-20260924-AUDIT-甲-D7 段5）前提：
+  「主控复核乙 D5 时实测确认：check_build.js:19 仍是私有的 13 项 const SKIP，
+   而乙 D5 已把其余五道门统一到 09_工程脚本/gate-skip.js 的 gateSkipSet() ⇒ SKIP 口径分裂未闭合。
+   接入方式：const SKIP = gateSkipSet('Logs');（一行）；不得删掉 Logs；接入后扫描计数必须与改前逐位相同。」
+
+一、实测更正：该前提在当前 master 上已不成立，SKIP 口径分裂早在甲 D4 就闭合了
+--------------------------------------------------------------------------------
+`git log -S` 逐字追踪该文件里两个字面量的出现次数变化，只有两个提交命中：
+  fce392d  feat(audit-D3): 甲 D3 全库 .dpr 编译门入库       ← 引入私有 const SKIP（13 项）
+  2babf13  feat(audit-甲-D4): 编译门补 .dpk 包工程面 + 契约分层 ← 删掉私有副本、改 gateSkipSet('Logs')
+
+取证命令与原始输出：
+  $ git log --format='%h %ad %s' --date=short -S 'gateSkipSet' -- 09_工程脚本/build-gate/check_build.js
+      2babf13 2026-09-23 feat(audit-甲-D4): 编译门补 .dpk 包工程面 + T0/T1/T2 契约分层（外部清单驱动）
+  $ git log --format='%h %ad %s' --date=short -S 'const SKIP' -- 09_工程脚本/build-gate/check_build.js
+  2babf13 2026-09-23 feat(audit-甲-D4): 编译门补 .dpk 包工程面 + T0/T1/T2 契约分层（外部清单驱动）
+  fce392d 2026-09-23 feat(audit-D3): 甲 D3 全库 .dpr 编译门入库 + 回执与 12 件证据（GATE_EXIT=1 如实交付，不造跳过清单）
+  $ git merge-base --is-ancestor 2babf13 HEAD  →  0（2babf13 是 HEAD 祖先，即该接入已在线上）
+  $ grep -n 'gateSkipSet\|BUILD_ARTIFACT_DIRS' HEAD:check_build.js
+    18:const { gateSkipSet } = require('../gate-skip.js');
+    33:const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
+    319:        if (BUILD_ARTIFACT_DIRS.has(e.name)) continue;
+    560:    if (e.isDirectory()) { if (!BUILD_ARTIFACT_DIRS.has(e.name)) collect(abs, ext, acc); }
+
+⇒ 工单说的「:19 仍是私有 const SKIP」在 2babf13 之后就不存在了：现在第 18 行 require 共享模块、
+  第 33 行 const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs')，接线点在 walkProjects（目录遍历）与
+  collect（陈旧 .dcu 清理）两处，全库无第二份内联副本。
+  甲 D4 交付时已把这条登记进台账（README-门禁覆盖面.md §四-5 划线注记 + 表内甲行），
+  派单沿用乙 D5 时的旧快照 ⇒ 属派单侧信息滞后，不是本门残留缺陷。
+
+二、工单要求的两条硬约束逐条成立（不改代码也要留证，而不是以「已做过」口头带过）
+--------------------------------------------------------------------------------
+(1) 计数与改前逐位相同：等值性由可复算脚本给出，脚本从 git 取改前字面量、从工作树代码路径取改后集合，
+    自身不抄目录名清单（避免第二套真相源）。
+
+    $ node CodeReview/20260924-AUDIT-甲-D7-证据/d7_skip_equivalence.js fce392d
+    基准 ref（接入前）= fce392d
+    改前内联清单 13 项：.git, .claude, __history, BuildOutput, DCUOutput, bin, dcu, node_modules, .tmp, .superpowers, .workbuddy, TestResults, Logs
+    当前 gateSkipSet('Logs') 展开 13 项：.claude, .git, .superpowers, .tmp, .workbuddy, BuildOutput, DCUOutput, Logs, TestResults, __history, bin, dcu, node_modules
+    PASS  当前代码不再持有内联 SKIP 副本（'const SKIP = new Set(' 命中数=0）
+    PASS  改前 13 项集合 == 当前 gateSkipSet 集合（逐位等值，非仅计数相等）
+    PASS  集合大小不变
+    PASS  共享 12 项不含本门专属目录（专属项只能来自调用点实参）
+    PASS  本门专属项 = 改前清单减去共享口径 = [Logs]，与代码实参 [Logs] 一致
+    PASS  枚举面接线点数=2（目录遍历 + 未跟踪检测同一集合）
+    SKIP-EQUIVALENCE: PASS
+    EXIT=0
+
+(2) 不得删掉 Logs：删了就等于把 CI 产物目录当源码扫。这条口径过去只写在注释里，
+    没有任何用例能拦住「调用点上把 'Logs' 抹掉」这种改法。本段补一条常驻用例进本门负向样本套：
+    Logs/ 与 BuildOutput/ 下的未跟踪 .dpr 不进判定面（EXIT=0 且输出不提该文件），
+    同时用非跳过目录的同形态样本作对照（EXIT=2 必报未跟踪）——对照成立，前者「不报」才可归因于 SKIP 集。
+    用例位置：test_negative_sample.js 目录名集负样本㉘ / 正对照㉘-ctl。
+
+三、本段改了什么、没改什么
+--------------------------------------------------------------------------------
+  改：09_工程脚本/build-gate/test_negative_sample.js（+2 例，判定语义未动）
+      CodeReview/20260924-AUDIT-甲-D7-证据/d7_skip_equivalence.js（可复算等值性脚本，新增）
+  没改：check_build.js / gate-skip.js / contracts/ 任何一行 —— 工单要求的接入在甲 D4 已完成，
+      为「让本段看起来有改动」而重接一遍已存在的接线，属制造工作量并制造一次无谓的判定面风险。
+      判定面计数因此与段4 落地后完全相同：DPR总数=65 失败=6 / DPK总数=25 失败=0 / 判定面=90 已跟踪=90
+      （逐工程原始输出见 D7-段4-03 那份证据件，本段未重跑编译、只重跑了不涉编译的负向样本套）。
+
+四、负向样本全套原始输出（本段补测后复跑）
+--------------------------------------------------------------------------------
+  $ node 09_工程脚本/build-gate/test_negative_sample.js
+  ✓ 负样本①不存在根 => EXIT=2（含 --root 不是存在的目录）
+  ✓ 负样本②空扫描 => EXIT=2（含 待编译 .dpr 计数为 0）
+  ✓ 负样本③语法断裂 => EXIT=1（含 BadProj.dpr / BUILD_EXIT=1 / 失败=1 / 被跳过=0）
+  ✓ 正对照④合法工程 => EXIT=0（含 成功=1 / DPR总数=1）
+  ✓ 负样本⑤未跟踪 .dpr => EXIT=2（含 未跟踪但存在的 .dpr）
+  ✓ 负样本⑥索引与工作树不一致 => EXIT=2（含 git 索引里有、工作树里却没有）
+  ✓ 负样本⑦部分扫描（readdir 注入失败） => EXIT=2（含 readdir 失败 / 部分扫描不得报绿）
+  ✓ 负样本⑧未声明范围 => EXIT=3（含 未指定编译范围）
+  ✓ 负样本⑨--all 与 --dpr 互斥 => EXIT=3（含 --all 与 --dpr 互斥）
+  ✓ 负样本⑩--dpr 指向未跟踪文件 => EXIT=2（含 不是本仓已跟踪的 .dpr）
+  ✓ 负样本⑪--dpr 落在 root 之外 => EXIT=2（含 落在 --root 之外）
+  ✓ 参数负样本(未知参数) => EXIT=3（含 fail-closed）
+  ✓ 参数负样本(已知参数缺值) => EXIT=3（含 fail-closed）
+  ✓ 参数负样本(裸位置参数) => EXIT=3（含 fail-closed）
+  ✓ 参数负样本(大小写不符) => EXIT=3（含 fail-closed）
+  ✓ 参数负样本(值形似参数) => EXIT=3（含 fail-closed）
+  ✓ 包面正对照⓬合法包 => EXIT=0（含 DPK总数=1 / 成功=1 / 被跳过=0）
+  ✓ 包面负样本⓭故意改坏 .dpk => EXIT=1（含 BadPkg.dpk / BUILD_EXIT=1 / DPK总数=1 / 失败=1 / 被跳过=0 / Error: E2010）
+  ✓ 包面负样本⓮整面声明落空 => EXIT=2（含 整面 all-dpk 计数为 0）
+  ✓ 包面负样本⓯部分扫描（.dpk 目录 readdir 注入失败） => EXIT=2（含 readdir 失败 / 部分扫描不得报绿）
+  ✓ 包面负样本⓰未跟踪 .dpk => EXIT=2（含 未跟踪但存在的 .dpk）
+  ✓ 负样本⓱--manifest 文件不存在 => EXIT=2（含 --manifest 读不到）
+  ✓ 负样本⓲--manifest 清单为空 => EXIT=2（含 --manifest 清单为空）
+  ✓ 命名空间负样本⓳声明读不到（注入 ENOENT） => EXIT=2（含 命名空间声明读不到）
+  ✓ 命名空间负样本⓴没有 default 行 => EXIT=2（含 命名空间声明没有 default 行）
+  ✓ 命名空间负样本㉑多行 default => EXIT=2（含 命名空间声明有多行 default）
+  ✓ 命名空间负样本㉒行缺 = => EXIT=2（含 命名空间声明行缺 '='）
+  ✓ 命名空间负样本㉓等号后为空 => EXIT=2（含 命名空间声明等号后为空）
+  ✓ 命名空间负样本㉔声明未被判定面命中 => EXIT=2（含 命名空间声明未被本轮判定面命中 / ghost.dpr）
+  ✓ 命名空间负样本㉕默认集合未放宽 => EXIT=1（含 F2613 Unit 'DBClient' not found）
+  ✓ 命名空间正对照㉖工程级声明生效且缺省集未被顶掉 => EXIT=0（含 NsDemo.dpr / BUILD_EXIT=0）
+  ✓ 命名空间负样本㉗命令行不接受命名空间参数 => EXIT=3（含 为未知参数）
+  ✓ 目录名集正对照㉘-ctl：非跳过目录下的未跟踪 .dpr 必红 => EXIT=2（含 未跟踪但存在的 .dpr / Ghost.dpr）
+  ✓ 目录名集负样本㉘共享口径下的 CI 产物不进判定面 => EXIT=0（输出不含 Ghost.dpr）
+  NEGATIVE-TEST: PASS
+  NODE_EXIT=0
+
+    复算现场：等值性脚本读的是工作树代码，故须证工作树==HEAD —— 本段对 check_build.js 与 gate-skip.js
+    零改动（git diff HEAD -- 这两件 = 空）。同一脚本在隔离工作树 .tmp/d7_c_seg4（detached @8476c6c）里
+    复跑结果一致：SKIP-EQUIVALENCE: PASS，6 项全 PASS。
