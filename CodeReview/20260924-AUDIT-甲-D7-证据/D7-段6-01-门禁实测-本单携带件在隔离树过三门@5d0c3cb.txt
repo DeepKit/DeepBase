@@ -57,3 +57,10 @@ D7 段6（交付回执落地后）· 本单携带件自身过三道编码/行尾
   本件自身**不写 bytes**：写入这行数字即改变自身，自指的字节数无法在同一件内成立；BOM / CR / U+FFFD 三项则对「追加 ASCII 数字」不敏感，故可自证。接收方要复算本件全量自检，现跑：
     $ node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js"   # 本件在 534 → 535 件面内
   ⇒ 登记口径：本链「证据件背书自己」的极限到此为止——能自证的自证（三项编码属性），不能自证的交出复算入口而不是伪造一个数。
+
+【7】§6 那句「本件在 534 → 535 件面内」在 839c981（本件入库笔）实测兑现，不是预估
+  $ git worktree add --detach .tmp/d7_c_25 839c981 && cd .tmp/d7_c_25
+  $ PYTHONIOENCODING=utf-8 node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js"
+  证据编码门禁通过：扫描 535 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  EVIDENCE_EXIT=0
+  ⇒ 534 → 535 恰 +1，且本件在门内（含 §6 那行自指文字）过门 EXIT=0：本件的字节合法性由门禁背书，不由 §6 自报。
