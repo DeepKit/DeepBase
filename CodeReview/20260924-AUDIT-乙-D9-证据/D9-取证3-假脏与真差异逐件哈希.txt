@@ -1,0 +1,52 @@
+
+########## 取证3 当前 git status 已跟踪条目全集（分类：' M'=工作树 vs 索引 差异，'M '=索引 vs HEAD）
+
+$ 'git' '-c' 'core.quotepath=false' 'status' '--porcelain' '--untracked-files=no'
+ M .github/workflows/delphi-ci.yml
+ M Core/DeepBase.License.pas
+ M Core/DeepBase.SecureMemory.pas
+ M Core/DeepBase.Security.DPAPI.pas
+ M Core/DeepBase.Security.MachineIdentity.pas
+ M Core/DeepBase.Security.UBS2.Migration.pas
+ M Core/DeepBase.Security.UBS2.pas
+ M Core/DeepBase.Storage.Interfaces.pas
+ M Persistence/DeepBase.Persistence.Security.FireDAC.pas
+ M Tests/Test.DeepBase.SecureMemory.pas
+ M Tests/Test.DeepBase.Security.MachineIdentity.pas
+ M Tests/Test.DeepBase.Security.UBS2.pas
+ M ThirdParty/Social/DeepBase.Social.OAuth.pas
+ D docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+ D docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+ D docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
+ M docs/规范历史版本与对比库/README-版本对比台账.md
+EXIT=0
+
+
+########## 取证3b 逐件四路哈希：raw(不过筛) / filtered(--path 过 .gitattributes) / index blob / HEAD blob
+
+四值全等 ⇒ 内容与 HEAD 无任何差异，脏位纯属 stat 噪音（WO §段3 的「行尾假脏」）。
+.github/workflows/delphi-ci.yml                                真差异      diff行数=1  raw=a04f8158 filt=a04f8158 index=79a19379 head=79a19379
+Core/DeepBase.License.pas                                      假脏(4路全等) diff行数=0  raw=4f6c775e filt=4f6c775e index=4f6c775e head=4f6c775e
+Core/DeepBase.SecureMemory.pas                                 假脏(4路全等) diff行数=0  raw=2d1f659e filt=2d1f659e index=2d1f659e head=2d1f659e
+Core/DeepBase.Security.DPAPI.pas                               假脏(4路全等) diff行数=0  raw=02c9228c filt=02c9228c index=02c9228c head=02c9228c
+Core/DeepBase.Security.MachineIdentity.pas                     假脏(4路全等) diff行数=0  raw=bceecaad filt=bceecaad index=bceecaad head=bceecaad
+Core/DeepBase.Security.UBS2.Migration.pas                      假脏(4路全等) diff行数=0  raw=119f2fd7 filt=119f2fd7 index=119f2fd7 head=119f2fd7
+Core/DeepBase.Security.UBS2.pas                                假脏(4路全等) diff行数=0  raw=a0fadc29 filt=a0fadc29 index=a0fadc29 head=a0fadc29
+Core/DeepBase.Storage.Interfaces.pas                           假脏(4路全等) diff行数=0  raw=13c1591e filt=13c1591e index=13c1591e head=13c1591e
+Persistence/DeepBase.Persistence.Security.FireDAC.pas          假脏(4路全等) diff行数=0  raw=b69a0c4a filt=b69a0c4a index=b69a0c4a head=b69a0c4a
+Tests/Test.DeepBase.SecureMemory.pas                           假脏(4路全等) diff行数=0  raw=19481f39 filt=19481f39 index=19481f39 head=19481f39
+Tests/Test.DeepBase.Security.MachineIdentity.pas               假脏(4路全等) diff行数=0  raw=1cdddd32 filt=1cdddd32 index=1cdddd32 head=1cdddd32
+Tests/Test.DeepBase.Security.UBS2.pas                          假脏(4路全等) diff行数=0  raw=65fd08c9 filt=65fd08c9 index=65fd08c9 head=65fd08c9
+ThirdParty/Social/DeepBase.Social.OAuth.pas                    假脏(4路全等) diff行数=0  raw=5e5bf28d filt=5e5bf28d index=5e5bf28d head=5e5bf28d
+docs/规范历史版本与对比库/README-版本对比台账.md 真差异      diff行数=1  raw=d437a989 filt=d437a989 index=562b3a56 head=562b3a56
+
+########## 取证3c 真差异件（本单不得替他人落笔，逐件点名归属）
+
+.github/workflows/delphi-ci.yml                                diffstat=+6 -0
+docs/规范历史版本与对比库/README-版本对比台账.md diffstat=+12 -11
+
+########## 取证3d .gitignore 现状：.ai/ .superpowers/ Scripts/__pycache__/ 是否已被忽略（改前须 EXIT=1）
+
+$ 'git' 'check-ignore' '-v' '.ai' '.superpowers' 'Scripts/__pycache__' '.workbuddy'
+EXIT=1
+

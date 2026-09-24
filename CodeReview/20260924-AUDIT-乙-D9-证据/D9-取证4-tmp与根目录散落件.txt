@@ -1,0 +1,99 @@
+
+########## 取证4 .tmp 清点（条目数 / 目录数 / 总体积 / 其中 git worktree 数）
+
+条目 355 个（其中目录 67 个）
+$ 'du' '-sh' '.tmp'
+3.9G	.tmp
+EXIT=0
+
+注册为 git worktree 的 .tmp 目录 10 个
+
+########## 取证4b .tmp 顶层目录逐个体积（体积即保留价值的粗筛，非判据）
+
+$ 'du' '-sh' '.tmp/TestResults/' '.tmp/__pycache__/' '.tmp/a1_keep/' '.tmp/a2_bin/' '.tmp/a2_dcu/' '.tmp/a2_final/' '.tmp/a2_fullsuite/' '.tmp/a2_probe/' '.tmp/a2_testout/' '.tmp/a2_testout_recheck/' '.tmp/a2_verify/' '.tmp/b0/' '.tmp/b1-backup-preapply/' '.tmp/b1-before/' '.tmp/b3test/' '.tmp/b4dcu/' '.tmp/b4test/' '.tmp/b5/' '.tmp/build-gate/' '.tmp/cwdA/' '.tmp/cwdB/' '.tmp/d7/' '.tmp/d7repro/' '.tmp/dccaes/' '.tmp/dccgate/' '.tmp/dcu_a1t/' '.tmp/e6dcu/' '.tmp/e6head/' '.tmp/e6out/' '.tmp/e6syn/' '.tmp/e7dcu/' '.tmp/e7out/' '.tmp/e7syn/' '.tmp/exe/' '.tmp/fullsuite_dcudir/' '.tmp/fullsuite_exe/' '.tmp/head-blocker/' '.tmp/k6/' '.tmp/m2dcu-dcclinux64/' '.tmp/m2dcu-dccosxarm64/' '.tmp/m2dcu/' '.tmp/p1-verify/' '.tmp/p1dcu/' '.tmp/p1out/' '.tmp/p1probe/' '.tmp/probe_rt/' '.tmp/r2/' '.tmp/r4/' '.tmp/r5/' '.tmp/r6/' '.tmp/r7/' '.tmp/r7p1dcu/' '.tmp/r8dcu-dcclinux64/' '.tmp/r8dcu-dccosxarm64/' '.tmp/r8dcu-win64/' '.tmp/r8p2/' '.tmp/wechat-mac-rpa-md/' '.tmp/wmrpa/' '.tmp/wt_a1_8be7def/' '.tmp/wt_a1_head/' '.tmp/wt_a2_head/' '.tmp/wt_d6_before/' '.tmp/wt_d6_final/' '.tmp/wt_d6_head/' '.tmp/wt_d6_ship/' '.tmp/wt_d7/' '.tmp/wt_e72d9f2/'
+20K	.tmp/TestResults/
+4.0K	.tmp/__pycache__/
+52K	.tmp/a1_keep/
+5.2M	.tmp/a2_bin/
+1.5M	.tmp/a2_dcu/
+16K	.tmp/a2_final/
+123M	.tmp/a2_fullsuite/
+14M	.tmp/a2_probe/
+122M	.tmp/a2_testout/
+122M	.tmp/a2_testout_recheck/
+44K	.tmp/a2_verify/
+79K	.tmp/b0/
+2.4M	.tmp/b1-backup-preapply/
+36M	.tmp/b1-before/
+3.5M	.tmp/b3test/
+3.6M	.tmp/b4dcu/
+8.1M	.tmp/b4test/
+4.3M	.tmp/b5/
+56M	.tmp/build-gate/
+53M	.tmp/cwdA/
+53M	.tmp/cwdB/
+262K	.tmp/d7/
+42K	.tmp/d7repro/
+2.8M	.tmp/dccaes/
+11M	.tmp/dccgate/
+6.2M	.tmp/dcu_a1t/
+2.0M	.tmp/e6dcu/
+40K	.tmp/e6head/
+0	.tmp/e6out/
+0	.tmp/e6syn/
+115M	.tmp/e7dcu/
+62M	.tmp/e7out/
+0	.tmp/e7syn/
+11M	.tmp/exe/
+122M	.tmp/fullsuite_dcudir/
+49M	.tmp/fullsuite_exe/
+65M	.tmp/head-blocker/
+28K	.tmp/k6/
+1.7M	.tmp/m2dcu-dcclinux64/
+1.1M	.tmp/m2dcu-dccosxarm64/
+12M	.tmp/m2dcu/
+4.0K	.tmp/p1-verify/
+2.3M	.tmp/p1dcu/
+172M	.tmp/p1out/
+1.6M	.tmp/p1probe/
+5.0K	.tmp/probe_rt/
+93M	.tmp/r2/
+4.9M	.tmp/r4/
+276K	.tmp/r5/
+36M	.tmp/r6/
+1.0K	.tmp/r7/
+6.5M	.tmp/r7p1dcu/
+4.8M	.tmp/r8dcu-dcclinux64/
+3.2M	.tmp/r8dcu-dccosxarm64/
+3.5M	.tmp/r8dcu-win64/
+1.1M	.tmp/r8p2/
+1.0K	.tmp/wechat-mac-rpa-md/
+148K	.tmp/wmrpa/
+45M	.tmp/wt_a1_8be7def/
+381M	.tmp/wt_a1_head/
+38M	.tmp/wt_a2_head/
+588M	.tmp/wt_d6_before/
+611M	.tmp/wt_d6_final/
+765M	.tmp/wt_d6_head/
+40M	.tmp/wt_d6_ship/
+40M	.tmp/wt_d7/
+0	.tmp/wt_e72d9f2/
+EXIT=0
+
+
+########## 取证4c 根目录散落件（被 .gitignore 吞掉、从不入库的本地产物）
+
+$ 'ls' '-1' 'antitamper_debug.log' 'build.bat' 'compile_data005.bat' 'run_tests.bat'
+antitamper_debug.log
+build.bat
+compile_data005.bat
+run_tests.bat
+EXIT=0
+
+
+########## 取证4d 这些散落件是否被跟踪（跟踪=0 才可安全清掉；被跟踪则须先按门禁口径处置）
+
+antitamper_debug.log             tracked=NO ignored=YES
+build.bat                        tracked=NO ignored=NO
+compile_data005.bat              tracked=NO ignored=YES
+run_tests.bat                    tracked=NO ignored=NO

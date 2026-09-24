@@ -1,0 +1,60 @@
+########## 落地1 段1 分支处置：仅删「独有提交数=0」分支（WO 段1 授权口径）
+时间: 2026-09-24 12:22:57  删除前分支全清单:
+feat/a007-route-due-register 33a972e
+feat/auto-update-rsa-verify 986403e
+feat/cdp-devtools-listener 57012fd
+feat/db-autoupdate-ed25519-verify ceb4121
+feat/db-autoupdate-rsa-verify 0c275bd
+feat/db-plugin-consumer-abi11 f417039
+feat/deepbase-v120-speech d84fdd1
+feat/p6-stageb-ed25519-clean 663bc55
+feat/wyjx-colormatch-canary 0d1ba60
+fix/review5-r3-bug438-448-compile-health dfa6b13
+master 79670b9
+perception-p2 7161958
+upgrade/delphi-13 6c90246
+worktree-data-platform-v0.7 c6a5ab0
+
+-- 逐条重取 uniq（删除前最后一道自证：+ 号个数必须为 0）
+feat/a007-route-due-register                   master未含独有提交=0
+feat/auto-update-rsa-verify                    master未含独有提交=0
+feat/cdp-devtools-listener                     master未含独有提交=0
+feat/db-autoupdate-rsa-verify                  master未含独有提交=0
+feat/db-plugin-consumer-abi11                  master未含独有提交=0
+fix/review5-r3-bug438-448-compile-health       master未含独有提交=0
+upgrade/delphi-13                              master未含独有提交=0
+
+-- 执行 git branch -d（-d 而非 -D：git 自身还会再拒一次未合并分支）
+$ git branch -d feat/a007-route-due-register
+Deleted branch feat/a007-route-due-register (was 33a972e1).
+EXIT=0
+$ git branch -d feat/auto-update-rsa-verify
+Deleted branch feat/auto-update-rsa-verify (was 986403e4).
+EXIT=0
+$ git branch -d feat/cdp-devtools-listener
+Deleted branch feat/cdp-devtools-listener (was 57012fde).
+EXIT=0
+$ git branch -d feat/db-autoupdate-rsa-verify
+Deleted branch feat/db-autoupdate-rsa-verify (was 0c275bdc).
+EXIT=0
+$ git branch -d feat/db-plugin-consumer-abi11
+Deleted branch feat/db-plugin-consumer-abi11 (was f417039c).
+EXIT=0
+$ git branch -d fix/review5-r3-bug438-448-compile-health
+Deleted branch fix/review5-r3-bug438-448-compile-health (was dfa6b130).
+EXIT=0
+$ git branch -d upgrade/delphi-13
+Deleted branch upgrade/delphi-13 (was 6c902462).
+EXIT=0
+
+-- 删除后剩余本地分支
+feat/db-autoupdate-ed25519-verify ceb4121
+feat/deepbase-v120-speech d84fdd1
+feat/p6-stageb-ed25519-clean 663bc55
+feat/wyjx-colormatch-canary 0d1ba60
+master 79670b9
+perception-p2 7161958
+worktree-data-platform-v0.7 c6a5ab0
+
+-- upgrade/delphi-13 存在性复验（判据 2 前半）
+NOT PRESENT

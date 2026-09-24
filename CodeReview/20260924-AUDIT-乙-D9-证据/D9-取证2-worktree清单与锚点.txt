@@ -1,0 +1,101 @@
+
+########## 取证2 git worktree list 全文 + 逐条：仓内/仓外、锚点可达性、未提交态计数
+
+D:/_Progs/02Business/DeepBase                                          主仓 anchor=79670b9 未提交修改=4 未跟踪=75 携带分支=master
+D:/_ProgData/DeepBase-B0-wt                                            仓外 anchor=4d818af 未提交修改=0 未跟踪=0 携带分支=master
+D:/_ProgData/DeepBase-D5-wt                                            仓外 anchor=72fa744 未提交修改=5 未跟踪=2 携带分支=master
+D:/_Progs/02Business/DeepBase/.claude/worktrees/perception-p2          仓内 anchor=7161958 未提交修改=343 未跟踪=2 携带分支=feat/a007-route-due-register,feat/cdp-devtools-listener,feat/db-autoupdate-ed25519-verify,feat/db-autoupdate-rsa-verify,feat/db-plugin-consumer-abi11,feat/p6-stageb-ed25519-clean,+feat/wyjx-colormatch-canary,master,+perception-p2,remotes/origin/master
+D:/_Progs/02Business/DeepBase/.claude/worktrees/wyjx-colormatch-canary 仓内 anchor=0d1ba60 未提交修改=341 未跟踪=0 携带分支=+feat/wyjx-colormatch-canary
+D:/_Progs/02Business/DeepBase/.tmp/b1-before                           仓内 anchor=8eb1aa3 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/head-blocker                        仓内 anchor=d95b522 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_8be7def                       仓内 anchor=8be7def 未提交修改=3 未跟踪=1 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_head                          仓内 anchor=e268de0 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_a2_head                          仓内 anchor=7f5127c 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_before                        仓内 anchor=47dc031 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_final                         仓内 anchor=2dc149d 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_head                          仓内 anchor=37fd5fe 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_ship                          仓内 anchor=01ae752 未提交修改=0 未跟踪=0 携带分支=master
+D:/_Progs/02Business/DeepBase/.tmp/wt_d7                               仓内 anchor=a3e3f38 未提交修改=0 未跟踪=0 携带分支=master
+
+########## 取证2b 仓内 worktree 清单与数量（WO 判据 1 治理前基线；主仓不计）
+
+12
+D:/_Progs/02Business/DeepBase/.claude/worktrees/perception-p2
+D:/_Progs/02Business/DeepBase/.claude/worktrees/wyjx-colormatch-canary
+D:/_Progs/02Business/DeepBase/.tmp/b1-before
+D:/_Progs/02Business/DeepBase/.tmp/head-blocker
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_8be7def
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_head
+D:/_Progs/02Business/DeepBase/.tmp/wt_a2_head
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_before
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_final
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_head
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_ship
+D:/_Progs/02Business/DeepBase/.tmp/wt_d7
+
+########## 取证2c 脏 worktree 的未提交态逐件定性：剥掉 UTF-8 BOM 与 CR 后是否与该分支 HEAD 逐字节相等
+
+只有 BOM/行尾增删 ⇒ 未提交态是机械编码规范化（G3 面），不含独有语义；否则逐件点名。
+口径说明：这些 worktree 停在旧提交（.gitattributes 尚无 *.pas text eol=crlf），git 不做归一，
+所以必须自己剥 BOM + CR 再比；不剥就会把 343 件机械噪音读成 343 件独有工作（假阳性）。
+.claude/worktrees/perception-p2                BOM或行尾噪音=326 其他=17
+
+    非噪音：.claude/worktrees/data-platform-v0.7（工作树缺件/删除/非普通文件）
+    非噪音：Features/DeepBase.Desktop.Perception.Engine.pas
+    非噪音：Features/DeepBase.Desktop.Perception.Types.pas
+    非噪音：Features/DeepBase.IntentClarification.LLMResilience.pas
+    非噪音：Scripts/encoding-allowlist.txt（工作树缺件/删除/非普通文件）
+    非噪音：Scripts/run_tests.ps1
+    非噪音：Tests/DeepBaseTests.dpr
+    非噪音：Tests/Speech/_build_out.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/Test.DeepBase.Browser.Selectors.pas
+    非噪音：Tests/Test.DeepBase.IntentClarification.Integration.pas
+    非噪音：Tests/Test.DeepBase.IntentClarification.pas
+    非噪音：Tests/dataplatform_runlist.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/dp_run.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/runlist_bug332.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/runlist_bug333.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tools/Studio/CONTROLS_QUICK_REFERENCE.txt（工作树缺件/删除/非普通文件）
+    非噪音：spw-manifest.perception.json
+    未跟踪件：Tests/Test.DeepBase.Desktop.Perception.FrameCache.pas spw-evidence.json 
+.claude/worktrees/wyjx-colormatch-canary       BOM或行尾噪音=332 其他=9
+
+    非噪音：.claude/worktrees/data-platform-v0.7（工作树缺件/删除/非普通文件）
+    非噪音：Scripts/encoding-allowlist.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/Speech/_build_out.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/Test.DeepBase.Browser.Selectors.pas
+    非噪音：Tests/dataplatform_runlist.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/dp_run.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/runlist_bug332.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tests/runlist_bug333.txt（工作树缺件/删除/非普通文件）
+    非噪音：Tools/Studio/CONTROLS_QUICK_REFERENCE.txt（工作树缺件/删除/非普通文件）
+    未跟踪件：
+.tmp/wt_a1_8be7def                             BOM或行尾噪音=0 其他=3
+
+    非噪音：Core/DeepBase.Security.MasterKey.pas
+    非噪音：Tools/CLI/CLI.Main.pas
+    非噪音：Tools/CLI/DeepBase.dpr
+    未跟踪件：Tools/CLI/CLI.Security.pas 
+
+########## 取证2d 脏 worktree 逐件四路哈希（工作树字节 / master 同名件 / 该分支 HEAD）
+
+.claude/worktrees/perception-p2                Core/DeepBase.Authorization.pas                      wt=bcd89eac master=7bed7cf9 该分支HEAD=14f29387
+.claude/worktrees/wyjx-colormatch-canary       Core/DeepBase.Authorization.pas                      wt=bcd89eac master=7bed7cf9 该分支HEAD=14f29387
+.tmp/wt_a1_8be7def                             Core/DeepBase.Authorization.pas                      wt=7bed7cf9 master=7bed7cf9 该分支HEAD=7bed7cf9
+.tmp/wt_a1_8be7def                             Tools/CLI/CLI.Security.pas                           wt=a1798285 master=55e646ea 该分支HEAD=HEAD:Too
+.claude/worktrees/perception-p2                Tests/Test.DeepBase.Desktop.Perception.FrameCache.pas wt=a364111b master=9b5d6d1b 该分支HEAD=HEAD:Tes
+.claude/worktrees/wyjx-colormatch-canary       Tests/Test.DeepBase.Desktop.Perception.FrameCache.pas wt=a6681d51 master=9b5d6d1b 该分支HEAD=a6681d51
+.tmp/wt_a1_8be7def                             Tests/Test.DeepBase.Desktop.Perception.FrameCache.pas wt=9b5d6d1b master=9b5d6d1b 该分支HEAD=9b5d6d1b
+
+########## 取证2e .tmp 下 worktree 的 .git 指针（确认是 git worktree 而非普通副本）
+
+D:/_Progs/02Business/DeepBase/.tmp/b1-before               gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/b1-before 
+D:/_Progs/02Business/DeepBase/.tmp/head-blocker            gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/head-blocker 
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_8be7def           gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_a1_8be7def 
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_head              gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_a1_head 
+D:/_Progs/02Business/DeepBase/.tmp/wt_a2_head              gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_a2_head 
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_before            gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_d6_before 
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_final             gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_d6_final 
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_head              gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_d6_head 
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_ship              gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_d6_ship 
+D:/_Progs/02Business/DeepBase/.tmp/wt_d7                   gitdir: D:/_Progs/02Business/DeepBase/.git/worktrees/wt_d7 

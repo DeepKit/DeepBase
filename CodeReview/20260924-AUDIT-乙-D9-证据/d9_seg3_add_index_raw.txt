@@ -1,0 +1,6 @@
+# 复录：与 12:57 实际执行同命令、同效果（git add 对已一致条目为幂等 stat 刷新）
+$ git add -- Core/DeepBase.License.pas Core/DeepBase.SecureMemory.pas Core/DeepBase.Security.DPAPI.pas Core/DeepBase.Security.MachineIdentity.pas Core/DeepBase.Security.UBS2.Migration.pas Core/DeepBase.Security.UBS2.pas Core/DeepBase.Storage.Interfaces.pas Persistence/DeepBase.Persistence.Security.FireDAC.pas Tests/Test.DeepBase.SecureMemory.pas Tests/Test.DeepBase.Security.MachineIdentity.pas Tests/Test.DeepBase.Security.UBS2.pas ThirdParty/Social/DeepBase.Social.OAuth.pas
+EXIT=0
+$ git diff --cached --numstat  # 刷新未改动任何内容 blob
+11	0	README.md
+EXIT=0

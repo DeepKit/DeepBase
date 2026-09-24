@@ -1,0 +1,104 @@
+########## 落地2 段2 仓内 worktree 清出
+时间: 2026-09-24 12:29:59
+
+-- 前置1：逐条重核「锚点 SHA 仍可从提交历史到达」（WO 段2 硬边界，删前最后一道自证）
+D:/_Progs/02Business/DeepBase/.claude/worktrees/perception-p2 anchor=71619588911153db0d991986ec87b09729175861 到达它的分支=feat/db-autoupdate-ed25519-verify,feat/p6-stageb-ed25519-clean,feat/wyjx-colormatch-canary,master,perception-p2,remotes/origin/master,
+D:/_Progs/02Business/DeepBase/.claude/worktrees/wyjx-colormatch-canary anchor=0d1ba601e0a5132521d87c440dda91ae151c3cbb 到达它的分支=feat/wyjx-colormatch-canary,
+D:/_Progs/02Business/DeepBase/.tmp/b1-before               anchor=8eb1aa38a7cab6a9dfd1999b98f5365d51f2df85 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/head-blocker            anchor=d95b5221639f22a9cd4331c79bbb5cc7560794e2 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_8be7def           anchor=8be7def869d3caff176251f62bb35571ca906f3e 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_a1_head              anchor=e268de0e7e9f5ec618e8e00e32dbd8fba6881abf 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_a2_head              anchor=7f5127cb9a572566c25d29be6da708f14e16b7fb 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_before            anchor=47dc0315c5b03ecaa0a3cbbd7dfdafe9527bff3c 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_final             anchor=2dc149d842f7dcce6e36b1c9f28cdafaffee1f7f 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_head              anchor=37fd5fe6b2f40634eb01a786197f66ae0f0d2f49 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_d6_ship              anchor=01ae7528b3c367a429d4ffd40706401f2336d773 到达它的分支=master,
+D:/_Progs/02Business/DeepBase/.tmp/wt_d7                   anchor=a3e3f38740496655d0157d9b6aa8de77000f77c6 到达它的分支=master,
+
+-- 前置2：三个脏 worktree 的未提交态仓外归档（可逆性兜底，恢复命令见 meta.txt）
+ls: cannot access '/d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/*/': No such file or directory
+
+-- 执行 git worktree remove（干净件不加 --force；三个脏件加 --force，其内容已由上一步归档）
+$ git worktree remove .tmp/b1-before
+EXIT=0
+$ git worktree remove .tmp/head-blocker
+EXIT=0
+$ git worktree remove .tmp/wt_a1_head
+EXIT=0
+$ git worktree remove .tmp/wt_a2_head
+EXIT=0
+$ git worktree remove .tmp/wt_d6_before
+EXIT=0
+$ git worktree remove .tmp/wt_d6_final
+EXIT=0
+$ git worktree remove .tmp/wt_d6_head
+EXIT=0
+$ git worktree remove .tmp/wt_d6_ship
+EXIT=0
+$ git worktree remove .tmp/wt_d7
+EXIT=0
+$ git worktree remove --force .tmp/wt_a1_8be7def
+EXIT=0
+$ git worktree remove --force .claude/worktrees/perception-p2
+EXIT=0
+$ git worktree remove --force .claude/worktrees/wyjx-colormatch-canary
+EXIT=0
+
+-- 清出后 worktree 全清单（判据 1 复算）
+D:/_Progs/02Business/DeepBase                  79670b9 [master]
+D:/_ProgData/DeepBase-B0-wt                    4d818af (detached HEAD)
+D:/_ProgData/DeepBase-D5-wt                    72fa744 (detached HEAD)
+D:/_Progs/02Business/DeepBase/.tmp/wt_d9_seg4  79670b9 (detached HEAD)
+
+-- git worktree prune 后 .git/worktrees 残留元数据
+DeepBase-B0-wt/
+DeepBase-D5-wt/
+wt_d9_seg4/
+
+-- 判据1 复算：仓内 worktree 条数（应为 0；主仓自身不计）
+1
+
+########## 落地2b 归档完整性复验（remove 之后回看：被 --force 的三个脏树内容是否仍在仓外可取）
+9.6M	/d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/.claude_worktrees_perception-p2
+9.4M	/d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/.claude_worktrees_wyjx-colormatch-canary
+30K	/d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/.tmp_wt_a1_8be7def
+--- /d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/.claude_worktrees_perception-p2
+total 9753
+drwxr-xr-x 1 fuyi.it 197121       0 Sep 24 12:18 ./
+drwxr-xr-x 1 fuyi.it 197121       0 Sep 24 12:18 ../
+-rw-r--r-- 1 fuyi.it 197121   15567 Sep 24 12:18 meta.txt
+-rw-r--r-- 1 fuyi.it 197121 9968672 Sep 24 12:18 uncommitted.patch
+drwxr-xr-x 1 fuyi.it 197121       0 Sep 24 12:18 untracked-files/
+-rw-r--r-- 1 fuyi.it 197121      72 Sep 24 12:18 untracked-list.txt
+patch行数=323998  未跟踪件=2
+--- /d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/.claude_worktrees_wyjx-colormatch-canary
+total 9616
+drwxr-xr-x 1 fuyi.it 197121       0 Sep 24 12:18 ./
+drwxr-xr-x 1 fuyi.it 197121       0 Sep 24 12:18 ../
+-rw-r--r-- 1 fuyi.it 197121   15482 Sep 24 12:18 meta.txt
+-rw-r--r-- 1 fuyi.it 197121 9827859 Sep 24 12:18 uncommitted.patch
+drwxr-xr-x 1 fuyi.it 197121       0 Sep 24 12:18 untracked-files/
+-rw-r--r-- 1 fuyi.it 197121       0 Sep 24 12:18 untracked-list.txt
+patch行数=320630  未跟踪件=0
+--- /d/_ProgData/DeepBase-quarantine-20260924/D9-worktrees/.tmp_wt_a1_8be7def
+total 22
+drwxr-xr-x 1 fuyi.it 197121     0 Sep 24 12:18 ./
+drwxr-xr-x 1 fuyi.it 197121     0 Sep 24 12:18 ../
+-rw-r--r-- 1 fuyi.it 197121   426 Sep 24 12:18 meta.txt
+-rw-r--r-- 1 fuyi.it 197121 17492 Sep 24 12:18 uncommitted.patch
+drwxr-xr-x 1 fuyi.it 197121     0 Sep 24 12:18 untracked-files/
+-rw-r--r-- 1 fuyi.it 197121    27 Sep 24 12:18 untracked-list.txt
+patch行数=410  未跟踪件=1
+
+########## 落地2c worktree 解除占用后，perception-p2 分支（独有提交 0）现可 -d
+0
+Deleted branch perception-p2 (was 71619588).
+EXIT=0
+
+########## 落地2d 判据1 时点复算：仓内 worktree（主仓不计）
+D:/_Progs/02Business/DeepBase                  79670b9 [master]
+D:/_ProgData/DeepBase-B0-wt                    4d818af (detached HEAD)
+D:/_ProgData/DeepBase-D5-wt                    72fa744 (detached HEAD)
+D:/_Progs/02Business/DeepBase/.tmp/wt_d9_seg4  79670b9 (detached HEAD)
+-- 说明：.tmp/wt_d9_seg4 于 12:30 由他方（并发写者）新建，锚点 = 当前 master 79670b9，本单不代删他人现场；
+   本单治理前 12 条仓内 worktree 已全部清出，此条为治理过程中新增，落笔时点见判据复算证据。

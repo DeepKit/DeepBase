@@ -1,0 +1,72 @@
+
+########## 取证1 本地分支判定表（ahead=git rev-list --count master..<br>，behind 反向；cherry 的 '+' 才是 master 未含的独有提交）
+
+BRANCH                                     TIP       AHEAD  BEHIND 判定依据
+feat/a007-route-due-register               33a972e   0      341    删（独有提交 0，全部已在 master）
+feat/auto-update-rsa-verify                986403e   0      371    删（独有提交 0，全部已在 master）
+feat/cdp-devtools-listener                 57012fd   0      318    删（独有提交 0，全部已在 master）
+feat/db-autoupdate-ed25519-verify          ceb4121   3      313    删（独有提交 3 全部被 feat/p6-stageb-ed25519-clean 包含 ⇒ 零损失）
+    └─ feat/db-autoupdate-ed25519-verify 独有提交：
+       + e1edcdfd4685c1c96e3dd434bb9c33a7b356ee9a feat(autoupdate): add Ed25519 cryptographic signature verification to DeepBase AutoUpdate (SB-1)
+       + f37d3a741ee3972cc3b175010ffcc2217f16bd3a feat(autoupdate): add StageAndVerifyPackage for update staging and verification
+       + ceb41219c78e52fbbc6cdb9be168d25ba5a55c66 docs(evidence): SB-1 Ed25519 验证证据链 (SB-002 T5)
+feat/db-autoupdate-rsa-verify              0c275bd   0      310    删（独有提交 0，全部已在 master）
+feat/db-plugin-consumer-abi11              f417039   0      313    删（独有提交 0，全部已在 master）
+feat/deepbase-v120-speech                  d84fdd1   2      372    留（独有提交 2，无宿主分支 ⇒ 登记待主控裁定）
+    └─ feat/deepbase-v120-speech 独有提交：
+       + 0735a0859174c25fca4d8cecaf16f60173f12333 feat(speech): v1.2.0 DeepInput 语音迁移基线 - Edge SynthesizeToBytes + StepFun voices 修复 + Resolver SenseVoice 路由
+       + d84fdd12465254a09dbb9de8aa819906c1c2049e feat(speech): v1.2.0 DeepInput 语音迁移基线 - ASR.Baidu ISpeechRecognizerEx + Inference 编译修复 (AttachProviderDML/CUDA + ExtractModelInfo)
+feat/p6-stageb-ed25519-clean               663bc55   4      313    留（独有提交 4，无宿主分支 ⇒ 登记待主控裁定）
+    └─ feat/p6-stageb-ed25519-clean 独有提交：
+       + e1edcdfd4685c1c96e3dd434bb9c33a7b356ee9a feat(autoupdate): add Ed25519 cryptographic signature verification to DeepBase AutoUpdate (SB-1)
+       + f37d3a741ee3972cc3b175010ffcc2217f16bd3a feat(autoupdate): add StageAndVerifyPackage for update staging and verification
+       + ceb41219c78e52fbbc6cdb9be168d25ba5a55c66 docs(evidence): SB-1 Ed25519 验证证据链 (SB-002 T5)
+       + 663bc5509d052d772f45e3db68a42b4674a10df0 feat(sig): migrate AutoUpdate to production RSA-SHA256 (78a ADR r1 §2.7)
+feat/wyjx-colormatch-canary                0d1ba60   4      341    禁删（WO §段1 硬边界：载未并入 master 的 BUG-449 修复）
+    └─ feat/wyjx-colormatch-canary 独有提交：
+       + 8736790a680f0a64b004a2e60744ab7426c513ea feat(perception/p2-003): TPerceptionProfile 作闸门旋钮真相源, FrameDiffer 去 magic-number
+       + 6a00a6d445e747d8ecff9b7f9bbd9c4653917324 docs(tasks): 对齐 P2 收口 — P2-001/1b/003+ColorMatch 归档史, BUG-449 记 #29
+       + de8d98912206d958d1dcca63082df178aa7c4241 fix(perception): BUG-449 FrameDiffer FLast/LLastShot 双状态解耦 — L0 闸门首帧外显 seed
+       + 0d1ba601e0a5132521d87c440dda91ae151c3cbb docs(bugfix): BUG-449 #29 收尾同步 — 标已修复, 队首claim转 WYJX-P0
+fix/review5-r3-bug438-448-compile-health   dfa6b13   0      370    删（独有提交 0，全部已在 master）
+perception-p2                              7161958   0      354    删（独有提交 0，全部已在 master）
+upgrade/delphi-13                          6c90246   0      422    删（独有提交 0，全部已在 master）
+worktree-data-platform-v0.7                c6a5ab0   2      613    留（独有提交 2，无宿主分支 ⇒ 登记待主控裁定）
+    └─ worktree-data-platform-v0.7 独有提交：
+       + b11ace78d407c8eba51c164931e2ea2ec9135aa4 Initial commit: add README
+       + c6a5ab0b4dc41b2aa0bf7ce90451b9b780925f20 Add Chinese README (bilingual convention)
+
+########## 取证1b de8d989（BUG-449 修复）在 master 吗 / 被哪些分支携带
+
+$ 'git' 'merge-base' '--is-ancestor' 'de8d989' 'master'
+EXIT=1
+
+$ 'git' 'branch' '-a' '--contains' 'de8d989'
++ feat/wyjx-colormatch-canary
+EXIT=0
+
+
+########## 取证1c origin 上的分支（本地删分支是否影响远端）
+
+$ 'git' 'ls-remote' '--heads' 'origin'
+c6a5ab0b4dc41b2aa0bf7ce90451b9b780925f20	refs/heads/main
+57a043db7629922549b81f44a82492ad585c3330	refs/heads/master
+EXIT=0
+
+
+########## 取证1d 各分支最后活动时间
+
+feat/a007-route-due-register 2026-07-23 Merge feat/wyjx-colormatch-canary: 感知层 P2-001b 像素差分闸门 + 标定 harness
+feat/auto-update-rsa-verify 2026-07-13 feat(updater): RSA-SHA256 验签链路落地 + 测试真闭环
+feat/cdp-devtools-listener 2026-08-13 feat(plugins): S3 跨语言 JCS 一致性门禁脚本（Delphi TJsonCanonicalizer == Python jcs 双端哈希一致）
+feat/db-autoupdate-ed25519-verify 2026-08-17 docs(evidence): SB-1 Ed25519 验证证据链 (SB-002 T5)
+feat/db-autoupdate-rsa-verify 2026-08-18 feat(updater): add RSA-SHA256 StageAndVerifyPackage overloads + switch worker threads to anonymous
+feat/db-plugin-consumer-abi11 2026-08-15 feat(plugins): task#11 ABI 1.0 fixture + harness T13 五场景门禁
+feat/deepbase-v120-speech 2026-08-07 feat(speech): v1.2.0 DeepInput 语音迁移基线 - ASR.Baidu ISpeechRecognizerEx + Inference 编译修复 (AttachProviderDML/CUDA + ExtractModelInfo)
+feat/p6-stageb-ed25519-clean 2026-08-17 feat(sig): migrate AutoUpdate to production RSA-SHA256 (78a ADR r1 §2.7)
+feat/wyjx-colormatch-canary 2026-07-23 docs(bugfix): BUG-449 #29 收尾同步 — 标已修复, 队首claim转 WYJX-P0
+fix/review5-r3-bug438-448-compile-health 2026-07-15 fix: REVIEW5-R2/R3 审阅修复闭环 + 异常悬垂(BUG-438/439) + 编译健康(BUG-446~448) + LLM 模板提取
+master 2026-09-24 docs(audit-甲-D8): 派单总表 D8 行改为已交付待验收
+perception-p2 2026-07-22 docs(tasks): 记录抢救自 perception-p0 worktree 的 LLM resilience 待办
+upgrade/delphi-13 2026-05-23 fix(DeepBase): Core安全加固、Commerce审计修复、Payment改进、Persistence优化
+worktree-data-platform-v0.7 2026-05-31 Add Chinese README (bilingual convention)

@@ -1,0 +1,3 @@
+a489f49fca12 | 49452 | docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
+bac975e98b42 | 41565 | docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+18bd30bec847 | 50601 | docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md

@@ -117,3 +117,9 @@ root.txt
 # 审计证据日志必须入库（*.log 全局规则会吞掉 CodeReview 下的 .log 证据）
 !CodeReview/**/*.log
 
+
+# AI 工具与脚本运行缓存（本地工作现场，永不入库）
+.ai/
+.superpowers/
+__pycache__/
+**/__pycache__/

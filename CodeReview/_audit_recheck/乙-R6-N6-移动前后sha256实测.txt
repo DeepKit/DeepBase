@@ -1,0 +1,16 @@
+OK	D1①② L1 新名化	docs/DeepBase-AI-Human-Cognition-Philosophy-v1.md	docs/EHAI.01.L1-人机认知哲学.md	26458	26458	dad297651e2adb65	dad297651e2adb65
+OK	D1①② L2 新名化	docs/DeepBase-AI-Delivery-Principles-v1.md	docs/EHAI.02.L2-AI交付原则.md	38722	38722	441ed9963ce7fe29	441ed9963ce7fe29
+OK	D1③ 旧名转归档	docs/DeepBase-AI-Human-Intervention-Principles-v1.md	docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md	47674	47674	f7f9fcc37aaa36b8	f7f9fcc37aaa36b8
+OK	D1③ 旧名转归档	docs/DeepBase-General-AI-Interaction-Protocol-v1.md	docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol-v1.md	36330	36330	f0c056f433c08595	f0c056f433c08595
+OK	D1③ 旧名转归档	docs/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md	docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md	41565	41565	bac975e98b4237eb	bac975e98b4237eb
+OK	D1③ 旧名转归档	docs/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md	docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md	56656	56656	72e40b959eef4348	72e40b959eef4348
+OK	D1③ 旧名转归档	docs/DeepBase-Product-Realization-Boundary-v1.md	docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md	50601	50601	18bd30bec847b511	18bd30bec847b511
+OK	D1③ 旧名转归档	docs/DeepBase-Product-Realization-Boundary-v1-r2.md	docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md	50601	50601	18bd30bec847b511	18bd30bec847b511
+OK	D2 旧总纲转归档	docs/EHAI.00-总览与推导总纲.md	docs/规范历史版本与对比库/EHAI.00-总览与推导总纲.md	21348	21348	5cbc7daa664be18e	5cbc7daa664be18e
+OK	D3 跨仓镜像正文下沉	docs/EHAI-Language-Common-Layer-Overview.md	docs/规范历史版本与对比库/EHAI-Language-Common-Layer-Overview.md	17238	17238	07b165aed14636f7	07b165aed14636f7
+OK	D3 跨仓镜像正文下沉	docs/EHAI-Language-Neutral-Realization-Contract-v0.md	docs/规范历史版本与对比库/EHAI-Language-Neutral-Realization-Contract-v0.md	28205	28205	e7b2101d59cc8e45	e7b2101d59cc8e45
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-AI-Delivery-Principles-v1.md	docs/规范历史版本与对比库/DeepBase-AI-Delivery-Principles.快照-20260909.md	33260	33260	0f0c871f2ef10aa1	0f0c871f2ef10aa1
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-AI-Human-Cognition-Philosophy-v1.md	docs/规范历史版本与对比库/DeepBase-AI-Human-Cognition-Philosophy.快照-20260909.md	16807	16807	d36f1b7b11249939	d36f1b7b11249939
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-General-AI-Interaction-Protocol-v1.md	docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.快照-20260909.md	46605	46605	f2c22db068eb4d63	f2c22db068eb4d63
+OK	D5 独有过期版转归档	docs/backup_20260909_l1_l7/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md	docs/规范历史版本与对比库/DeepBase-Machine-Semantics-and-Intervention-Infrastructure.快照-20260909.md	53721	53721	4c94fa5efe9b4feb	4c94fa5efe9b4feb
+TOTAL=15 BAD=0

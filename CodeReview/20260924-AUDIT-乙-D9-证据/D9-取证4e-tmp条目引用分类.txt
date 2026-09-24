@@ -1,0 +1,221 @@
+
+########## 取证4e .tmp 顶层条目分类：被 HEAD 树内在册文件引用的 vs 无人引用的
+
+$ git grep -I -n -oE '\.tmp/[A-Za-z0-9_.+-]+' HEAD -- '*.md' '*.sh' '*.js' '*.ps1' '*.py' '*.json' '*.txt'   # 单次全树扫描，下游用 awk 聚合
+HEAD 树内引用过的 .tmp/<名> token 数: 113（下表数字=引用它的不同在册文件数；Top 20：）
+8	wt_a1_head
+7	b1-before
+6	head-blocker
+5	r4
+5	d6_a_base
+5	build-gate
+4	wt_p2
+4	wt_e72d9f2
+4	wt_a2_head
+4	r6
+4	d8repro
+4	d7repro
+4	a2_probe
+4	.claude
+3	wt_head_2930fa1
+3	wt_d6_final
+3	wt_d6_before
+3	wt_d3
+3	wt_bad01fa
+3	wt_a2_verify
+
+条目                         引用它的在册文件数 最后活动stat   注册worktree
+TestResults                    0                        2026-09-20 18:57   -
+__pycache__                    0                        2026-09-23 21:03   -
+a1_keep                        0                        2026-09-22 01:56   -
+a2_bin                         0                        2026-09-22 11:41   -
+a2_dcu                         0                        2026-09-22 11:41   -
+a2_final                       2                        2026-09-22 12:57   -
+a2_fullsuite                   0                        2026-09-22 12:07   -
+a2_probe                       4                        2026-09-22 12:43   -
+a2_testout                     2                        2026-09-22 10:40   -
+a2_testout_recheck             0                        2026-09-22 12:40   -
+a2_verify                      0                        2026-09-22 11:43   -
+b0                             0                        2026-09-23 09:45   -
+b1-backup-preapply             2                        2026-09-19 09:47   -
+b1-before                      7                        2026-09-19 09:56   WORKTREE
+b3test                         0                        2026-09-19 23:38   -
+b4dcu                          0                        2026-09-19 11:06   -
+b4test                         1                        2026-09-19 11:17   -
+b5                             2                        2026-09-19 17:49   -
+build-gate                     5                        2026-09-23 22:57   -
+cwdA                           0                        2026-09-21 19:21   -
+cwdB                           0                        2026-09-21 18:54   -
+d7                             2                        2026-09-24 10:44   -
+d7repro                        4                        2026-09-24 10:12   -
+dccaes                         0                        2026-09-19 10:40   -
+dccgate                        0                        2026-09-19 18:04   -
+dcu_a1t                        0                        2026-09-22 01:15   -
+e6dcu                          0                        2026-09-19 19:21   -
+e6head                         0                        2026-09-19 19:18   -
+e6out                          0                        2026-09-19 19:18   -
+e6syn                          0                        2026-09-19 19:18   -
+e7dcu                          0                        2026-09-19 21:59   -
+e7out                          0                        2026-09-19 22:12   -
+e7syn                          0                        2026-09-19 19:36   -
+exe                            3                        2026-09-21 16:02   -
+fullsuite_dcudir               0                        2026-09-21 16:14   -
+fullsuite_exe                  0                        2026-09-21 16:17   -
+head-blocker                   6                        2026-09-21 16:18   WORKTREE
+k6                             2                        2026-09-20 12:26   -
+m2dcu-dcclinux64               0                        2026-09-20 19:22   -
+m2dcu-dccosxarm64              0                        2026-09-20 19:22   -
+m2dcu                          0                        2026-09-20 19:03   -
+p1-verify                      1                        2026-09-21 23:07   -
+p1dcu                          0                        2026-09-21 18:19   -
+p1out                          0                        2026-09-21 19:46   -
+p1probe                        0                        2026-09-21 18:18   -
+probe_rt                       0                        2026-09-23 11:15   -
+r2                             3                        2026-09-19 23:53   -
+r4                             5                        2026-09-20 11:55   -
+r5                             2                        2026-09-20 13:52   -
+r6                             4                        2026-09-20 17:45   -
+r7                             0                        2026-09-21 00:13   -
+r7p1dcu                        0                        2026-09-21 16:02   -
+r8dcu-dcclinux64               0                        2026-09-21 15:54   -
+r8dcu-dccosxarm64              0                        2026-09-21 15:55   -
+r8dcu-win64                    0                        2026-09-21 16:00   -
+r8p2                           2                        2026-09-21 23:23   -
+wechat-mac-rpa-md              0                        2026-07-22 12:59   -
+wmrpa                          2                        2026-07-23 07:26   -
+wt_a1_8be7def                  0                        2026-09-22 00:03   WORKTREE
+wt_a1_head                     8                        2026-09-22 02:05   WORKTREE
+wt_a2_head                     4                        2026-09-22 11:52   WORKTREE
+wt_d6_before                   3                        2026-09-23 17:19   WORKTREE
+wt_d6_final                    3                        2026-09-23 18:26   WORKTREE
+wt_d6_head                     2                        2026-09-23 19:02   WORKTREE
+wt_d6_ship                     2                        2026-09-23 18:52   WORKTREE
+wt_d7                          0                        2026-09-24 09:27   WORKTREE
+wt_e72d9f2                     4                        2026-09-21 23:48   -
+
+-- 引用 .tmp 的在册文件（HEAD 树，去重后全量）
+.workbuddy/memory/2026-09-21.md
+09_工程脚本/build-gate/README-编译门禁.md
+09_工程脚本/managed-copy-gate/check_managed_copy.js
+CodeReview/20260919-AUDIT-乙-R2-00-冻结声明与脏项登记.md
+CodeReview/20260919-AUDIT-乙-请求审核报告.md
+CodeReview/20260919-AUDIT-甲-R4-交付回执.md
+CodeReview/20260919-全库审计-单元覆盖对账表.md
+CodeReview/20260919-全库审计-编码损坏-永久丢失登记.md
+CodeReview/20260919-全库审计-编码损坏基线.md
+CodeReview/20260920-AUDIT-主控-K6-执行结论.md
+CodeReview/20260920-AUDIT-乙-R4-交付回执.md
+CodeReview/20260920-AUDIT-乙-R5-交付回执.md
+CodeReview/20260920-AUDIT-甲-R5-开工前置对账与干预请求.md
+CodeReview/20260920-AUDIT-甲-R8-交付回执.md
+CodeReview/20260920-AUDIT-甲-证据/R8/21-gates-run-p3-postcommit.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/22-treestate-content-verification.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/23-gate-rerun-correction-segment.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/24-postcommit-gates-and-thirdparty-red.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/25-r8p2-isolated-compile-and-gates-e72d9f2.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/28-r8p2-execution-proof-and-delete-preconditions.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/29-r8p2-postdelete-isolated-verify-bad01fa.txt
+CodeReview/20260920-AUDIT-甲-证据/R8/30-r8p2-segment-closing-gates-fc4b793.txt
+CodeReview/20260921-AUDIT-主控-乙-R7-验收结论.md
+CodeReview/20260921-AUDIT-主控-甲-A1-验收结论.md
+CodeReview/20260921-AUDIT-主控-甲-R8-P3追加段-验收与停等点裁定.md
+CodeReview/20260921-AUDIT-乙-P1-交付回执.md
+CodeReview/20260921-AUDIT-甲-A1-交付回执.md
+CodeReview/20260921-AUDIT-甲-R8-P2-改动前申报与串行化请求.md
+CodeReview/20260921-AUDIT-甲-证据/A1/01-gates-run.txt
+CodeReview/20260921-AUDIT-甲-证据/A1/02-cli-build.txt
+CodeReview/20260921-AUDIT-甲-证据/A1/03-cli-scenario-15steps.txt
+CodeReview/20260921-AUDIT-甲-证据/A1/05-canonical-18cases.txt
+CodeReview/20260921-AUDIT-甲-证据/A1/07-fullsuite-e268de0.txt
+CodeReview/20260922-AUDIT-主控-甲-A2-验收结论.md
+CodeReview/20260922-AUDIT-乙-B0-交付回执.md
+CodeReview/20260922-AUDIT-甲-A2-交付回执.md
+CodeReview/20260922-AUDIT-甲-证据/A2/03-migration-gate-and-cli-status.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/04-tdd-red-behaviour-run.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/05-tdd-green-26cases.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/06-tdd-red-interface-compile.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/07-manual-ufffd-counts.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/09-manual-security-chapter.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/10-isolated-worktree-gates.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/11-isolated-worktree-tests.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/12-final-commit-smoke.txt
+CodeReview/20260922-AUDIT-甲-证据/A2/13-evidence-pack-encoding.txt
+CodeReview/20260923-AUDIT-主控-乙-D4-验收结论.md
+CodeReview/20260923-AUDIT-主控-甲-D4-D5-乙-D6-验收结论与三项裁定.md
+CodeReview/20260923-AUDIT-主控-甲-R8-P2-验收结论.md
+CodeReview/20260923-AUDIT-乙-D4-证据/DPR覆盖清单.txt
+CodeReview/20260923-AUDIT-乙-D4-证据/旧PS门禁最后一次自报.txt
+CodeReview/20260923-AUDIT-乙-D4-证据/门禁族fail-open探测.txt
+CodeReview/20260923-AUDIT-乙-D6-交付回执.md
+CodeReview/20260923-AUDIT-乙-D6-证据/2.1-2.2-七件重跑-修前树dry-run.txt
+CodeReview/20260923-AUDIT-乙-D6-证据/d6_verify_after.py
+CodeReview/20260923-AUDIT-乙-D6-证据/判据4-基线额度与真实状态差-实测.txt
+CodeReview/20260923-AUDIT-乙-D6-证据/判据6-交付笔后第三处复跑-五门@01ae752.txt
+CodeReview/20260923-AUDIT-乙-D6-证据/判据复核-最终commit@37fd5fe-全量编译门与五门.txt
+CodeReview/20260923-AUDIT-甲-D2-交付回执.md
+CodeReview/20260923-AUDIT-甲-D3-交付回执.md
+CodeReview/20260923-AUDIT-甲-D3-证据/工作树与文件核验.txt
+CodeReview/20260923-AUDIT-甲-D3-证据/运行元数据.txt
+CodeReview/20260923-AUDIT-甲-D4-交付回执.md
+CodeReview/20260923-AUDIT-甲-D4-证据/D4-10-运行元数据与耗时口径.txt
+CodeReview/20260923-AUDIT-甲-D5-交付回执.md
+CodeReview/20260923-AUDIT-甲-D5-证据/D5-04-取证-DCC64无传递可见性.txt
+CodeReview/20260923-AUDIT-甲-D5-证据/D5-08-取证-静态计数与Studio双入口.txt
+CodeReview/20260923-AUDIT-甲-D6-交付回执.md
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-收尾-03-校验-判据6红项差集归因与判据7复跑.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-收尾-04-门禁实测-五道静态门禁改前改后与本单引入的O1.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-收尾-05-原始输出-五道静态门禁改前改后.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-收尾-07-门禁实测-本笔携带件自身过门禁.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段1-01-取证-四件红项归因与按祖先补回机械核对.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段2-01-编译门实测-Studio双入口改前.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段2-02-编译门实测-改引用实验件（未入库）.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-01-编译门实测-段3三件改前改后.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-02-取证-PageDriverSmoke缺的是整个WebView4Delphi包.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-03-取证-DoQryDemo三层原因与61处损坏面.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-05-取证-prjDoQry绿-demo红同批对照与命名空间探针.txt
+CodeReview/20260923-AUDIT-甲-D6-证据/d6_seg3_doqry_probe.py
+CodeReview/20260924-AUDIT-主控-乙-D5-验收结论.md
+CodeReview/20260924-AUDIT-主控-甲-D6-验收结论与四项裁定.md
+CodeReview/20260924-AUDIT-乙-D7-证据/d7_criterion_rerun.sh
+CodeReview/20260924-AUDIT-乙-D7-证据/判据1-5-静态grep.txt
+CodeReview/20260924-AUDIT-乙-D7-证据/判据2-隔离检出裸调用.txt
+CodeReview/20260924-AUDIT-乙-D7-证据/判据3-4-fail-closed修前修后对照.txt
+CodeReview/20260924-AUDIT-乙-D8-证据/D8-判据3-4-fail-closed四条实测.txt
+CodeReview/20260924-AUDIT-乙-D8-证据/D8-存量清单-list-mojibake全文.txt
+CodeReview/20260924-AUDIT-乙-D8-证据/D8-阈值标定-良性语料零误报.txt
+CodeReview/20260924-AUDIT-乙-D8-证据/d8_criterion_rerun.sh
+CodeReview/20260924-AUDIT-甲-D7-交付回执.md
+CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-02-原始输出-窄口径改前改后A_B对比.txt
+CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-09-原始输出-段2落地后全量编译门@af367fc.txt
+CodeReview/20260924-AUDIT-甲-D7-证据/D7-段4-03-原始输出-隔离工作树复跑等值性与全量门与负向样本@8476c6c.txt
+CodeReview/20260924-AUDIT-甲-D7-证据/D7-段5-01-论证与更正-SKIP口径已在甲D4闭合本段零代码改动.txt
+CodeReview/20260924-AUDIT-甲-D7-证据/D7-段6-01-门禁实测-本单携带件在隔离树过三门@5d0c3cb.txt
+CodeReview/20260924-AUDIT-甲-D7-证据/d7_repair2.py
+CodeReview/20260924-AUDIT-甲-D7-证据/d7_tier_reconcile.py
+CodeReview/_audit_recheck/b1_gen_baseline.js
+CodeReview/_audit_recheck/b1_repair.js
+CodeReview/_audit_recheck/b1_repair2.js
+CodeReview/_audit_recheck/b2_gen_reconcile.js
+CodeReview/_audit_recheck/b2_probe_uncovered.js
+CodeReview/_audit_recheck/k6_build_cleanset.py
+CodeReview/_audit_recheck/乙-R2E8-实况核对与K6协调.txt
+CodeReview/_audit_recheck/乙-R4-L6-dproj编译实测.txt
+CodeReview/_audit_recheck/乙-R4-L7-examples说明.txt
+CodeReview/_audit_recheck/乙-R4-L8-多重CR门禁-output.txt
+CodeReview/_audit_recheck/乙-R4-L9-证据重落.txt
+CodeReview/_audit_recheck/乙-R4-schema-text-诊断.txt
+CodeReview/_audit_recheck/乙-R4-utf16-scan.txt
+CodeReview/_audit_recheck/乙-R6-N7-run-tests.txt
+CodeReview/_audit_recheck/乙-R6-encoding-gate-run.txt
+CodeReview/_audit_recheck/乙-R6-eol-gate-run.txt
+CodeReview/_audit_recheck/乙-提交甄别/classify.js
+CodeReview/_audit_recheck/乙-提交甄别/mkaddlist.js
+docs/92.history.任务清单-task-list.md
+docs/94.reference.RPA借鉴笔记-wechat-mac-rpa.md
+docs/ui/work-orders/00-主控派单总表.md
+docs/ui/work-orders/WO-20260920-AUDIT-主控-K6-全库行尾收敛.md
+docs/ui/work-orders/WO-20260920-AUDIT-乙-R5-N2-归档卫生分类清单.md
+docs/ui/work-orders/WO-20260921-AUDIT-乙-P1-cwd裂缝与存量失败收口.md
+docs/ui/work-orders/WO-20260922-AUDIT-主控-工作树卫生与临时件收口.md
+docs/ui/work-orders/WO-20260922-AUDIT-乙-P2-双重编码乱码分类清单.md
+docs/规范历史版本与对比库/README-版本对比台账.md

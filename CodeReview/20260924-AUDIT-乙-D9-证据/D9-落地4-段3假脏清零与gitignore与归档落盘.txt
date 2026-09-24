@@ -1,0 +1,50 @@
+# D9 段3 落地 · 假脏清零 / .gitignore / 归档落盘 / 台账断链修复
+
+执行窗口 2026-09-24 12:48–13:05 · 基准 HEAD 演进 `79670b9` → `3127203` → `1f1a9c8`（并发写入方甲在同仓连续提交，本回执所有数字均标基准）
+本文件只做结论与索引，原始输出逐件落在同目录，不复述以免形成第二套信息。
+
+## 3.1 假脏清零（WO §段3 / DB-001 残余）
+
+判据口径与主控 DB-001 一致：`git hash-object --path <f> <f>`（应用 clean filter 后的入库字节）== `git rev-parse HEAD:<f>`。
+机器定义与执行脚本：`d9_seg3_sweep.sh`（清单取自 `git status --porcelain` 的已跟踪条目——若取自 `git diff` 会得到"假脏=0"的假 PASS，因为 diff 本身会应用 clean filter，假脏件根本不进 diff 列表）。
+
+| 步骤 | 原始输出 | 结果 |
+|---|---|---|
+| 刷新前逐件判定 | `d9_seg3_sweep_raw.txt` | 假脏 12 件、真差异 8 件、删除 3 件；12 件全部标 `flt==HEAD Y / numstat none`，且 `raw==HEAD N`（差异纯在行尾表示） |
+| 索引刷新动作 | `d9_seg3_add_index_raw.txt` | `git add -- <12 件精确路径>` EXIT=0；刷新后 `git diff --cached --numstat` 仍只有 README.md，即零内容变化 |
+| 刷新后逐件判定 | `d9_seg3_sweep_raw_post.txt` | 假脏件数 = 0；已跟踪脏条目由 23 降至 11 |
+
+12 件清单（全部为他人所有、内容与 HEAD 入库后逐字节一致的 .pas）：
+`Core/DeepBase.License.pas` `Core/DeepBase.SecureMemory.pas` `Core/DeepBase.Security.DPAPI.pas` `Core/DeepBase.Security.MachineIdentity.pas` `Core/DeepBase.Security.UBS2.Migration.pas` `Core/DeepBase.Security.UBS2.pas` `Core/DeepBase.Storage.Interfaces.pas` `Persistence/DeepBase.Persistence.Security.FireDAC.pas` `Tests/Test.DeepBase.SecureMemory.pas` `Tests/Test.DeepBase.Security.MachineIdentity.pas` `Tests/Test.DeepBase.Security.UBS2.pas` `ThirdParty/Social/DeepBase.Social.OAuth.pas`
+
+## 3.2 .gitignore（`.ai/` `.superpowers/` `__pycache__/`）
+
+追加块 `6+/0-` 与追加前后 `git check-ignore -v` 实测：见 `d9_seg3_hygiene_raw.txt`「gitignore 追加块」「追加后 check-ignore -v」两节。
+三条均命中新规则行（`.gitignore:122/123/125`），判据 3b EXIT=0 见 `D9-判据1-5-复算原始输出.txt`。
+
+## 3.3 B4/R7 归档三件删除 + 台账落盘
+
+删除依据 = 主控 R7 授权归档（口径 B4/R7），三件 HEAD blob 见 `d9_seg3_hygiene_raw.txt`「归档三件的 HEAD blob」节；`git status` 中为 ` D`，落笔后由判据 3 复算确认清零。
+台账 `README-版本对比台账.md` 的 `13+/12-` diff（三行改标 R7 已删 + 两处指针重指向跟踪区）见同文件「台账指针修复 diff」节。
+
+## 3.4 在册文档引用 gitignored / 已失效 `.tmp` 路径（本单发现的结构缺陷）
+
+缺陷本体：验收证据落在 `.tmp/`（被 `.gitignore` 排除），换机器即不存在，回执指针成为断链。
+本单在责任面内修 3 处（把证据搬进跟踪区 `CodeReview/_audit_recheck/` 后重指向，非改口）：
+
+| 断链指针 | 现指向 | 字节一致自证 |
+|---|---|---|
+| 台账 `.tmp/r6/n6-move.txt` | `CodeReview/_audit_recheck/乙-R6-N6-移动前后sha256实测.txt` | sha256 前后缀同串，见 `d9_seg3_hygiene_raw.txt`「证据搬进跟踪区」节 |
+| 台账 `.tmp/r7/…` | `CodeReview/_audit_recheck/乙-R7-删除前sha256实测.txt` | 同上 |
+| R7 回执第 53 行 `.tmp/probe/R7OverwriteProbe.exe`（目录已不存在） | 改为不指向本地工件的表述，原始 PASS 输出仍内联在回执中 | `d9_seg3_hygiene_raw.txt`「R7 回执断链行现状」节 |
+
+未覆盖面（登记，不在本单责任面）：`git grep -l '\.tmp/' HEAD -- '*.md'` = **47 件**在册 md 文档仍引用 `.tmp/**` 路径（按快照目录粒度的引用/新鲜度分类见 `D9-取证4e-tmp条目引用分类.txt`）；建议另开工单按同类"搬进跟踪区再改指针"口径收口。
+
+## 3.5 附带发现：仓内 worktree 的物理残留已升格为跟踪树里的幻影子模块
+
+见 `d9_seg2b-gitlink幻影件原始输出.txt`。`.claude/worktrees/data-platform-v0.7` 是 mode `160000` 的 gitlink 条目、无 `.gitmodules`，且已随 `origin/master` 发布——消费者 clone 后得到一个永远 checkout 不出内容的空目录。
+处置：`git rm --cached`（只移出索引，不动历史、不删分支）+ `rmdir` 空目录（0 字节，`mkdir` 即可复原）。处置后全库 `160000` 条目计数 = 0。
+
+## 3.6 判据 3 归属边界（照实申报，不冒充 PASS）
+
+`D9-判据1-5-复算原始输出.txt` 判据 3 时点已跟踪脏条目非空，逐件归属见 `d9_seg3_sweep_raw_post.txt` 的"归属"列：本单 6 件（`.gitignore`、`README.md`、台账、3 件删除）待本笔落笔清零；其余为他人 in-flight（`Features/DeepBase.LLM.HTTP.pas`）。落笔后残留即他人面，不由本单代签。

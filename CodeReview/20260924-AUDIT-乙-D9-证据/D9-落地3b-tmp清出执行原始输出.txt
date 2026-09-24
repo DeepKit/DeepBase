@@ -1,0 +1,119 @@
+# D9 段2 .tmp 清出（2026-09-24 12:42:32 · MODE=move · 判据=零引用且非worktree且内容最后活动 < 2026-09-23）
+# 引用 token 总数=114  候选=34  保留=24
+# 列: 名称 / 判决 / KB / 内容最后活动
+## 保留
+__pycache__	RECENT	4	2026-09-23 21:03
+a2_final	CITED	16	2026-09-22 12:57
+a2_probe	CITED	13453	2026-09-22 12:43
+a2_testout	CITED	124608	2026-09-22 11:53
+b0	RECENT	79	2026-09-23 09:45
+b1-backup-preapply	CITED	2412	2026-09-05 09:45
+b4test	CITED	8260	2026-09-19 11:17
+b5	CITED	4395	2026-09-19 17:49
+build-gate	CITED	56546	2026-09-24 10:34
+d7	CITED	262	2026-09-24 10:45
+d7repro	CITED	42	2026-09-24 10:12
+exe	CITED	10516	2026-09-21 16:02
+k6	CITED	28	2026-09-20 12:26
+p1-verify	CITED	4	2026-09-22 00:06
+p1out	CITED	175369	2026-09-21 19:47
+probe_rt	RECENT	5	2026-09-23 11:15
+r2	CITED	94391	2026-09-19 23:53
+r4	CITED	4935	2026-09-20 12:12
+r5	CITED	276	2026-09-20 13:52
+r6	CITED	36158	2026-09-20 17:45
+r8p2	CITED	1066	2026-09-21 23:23
+wmrpa	CITED	148	2026-07-23 07:26
+wt_d9_seg4	RECENT	776111	2026-09-24 12:42
+wt_e72d9f2	CITED	0	1970-01-01 08:00
+## 清出候选
+TestResults	STALE	20	2026-09-21 16:02
+a1_keep	STALE	52	2026-09-22 01:56
+a2_bin	STALE	5236	2026-09-22 11:41
+a2_dcu	STALE	1448	2026-09-22 12:43
+a2_fullsuite	STALE	125560	2026-09-22 12:36
+a2_testout_recheck	STALE	124608	2026-09-22 12:40
+a2_verify	STALE	44	2026-09-22 11:43
+b3test	STALE	3540	2026-09-19 23:38
+b4dcu	STALE	3628	2026-09-19 11:06
+cwdA	STALE	53997	2026-09-21 19:43
+cwdB	STALE	54220	2026-09-21 19:21
+dccaes	STALE	2841	2026-09-19 10:40
+dccgate	STALE	11252	2026-09-19 23:45
+dcu_a1t	STALE	6312	2026-09-22 01:46
+e6dcu	STALE	1992	2026-09-19 19:23
+e6head	STALE	40	2026-09-19 19:18
+e6out	STALE	0	1970-01-01 08:00
+e6syn	STALE	0	1970-01-01 08:00
+e7dcu	STALE	117456	2026-09-19 22:14
+e7out	STALE	63440	2026-09-19 22:15
+e7syn	STALE	0	1970-01-01 08:00
+fullsuite_dcudir	STALE	124324	2026-09-21 16:14
+fullsuite_exe	STALE	49968	2026-09-21 16:43
+m2dcu	STALE	11356	2026-09-21 16:01
+m2dcu-dcclinux64	STALE	1668	2026-09-20 19:22
+m2dcu-dccosxarm64	STALE	1104	2026-09-20 19:22
+p1dcu	STALE	2288	2026-09-21 18:19
+p1probe	STALE	1629	2026-09-21 18:18
+r7	STALE	1	2026-09-21 00:13
+r7p1dcu	STALE	6636	2026-09-21 16:02
+r8dcu-dcclinux64	STALE	4853	2026-09-21 16:03
+r8dcu-dccosxarm64	STALE	3185	2026-09-21 16:03
+r8dcu-win64	STALE	3528	2026-09-21 16:00
+wechat-mac-rpa-md	STALE	1	2026-07-22 12:59
+MOVED TestResults
+MOVED a1_keep
+MOVED a2_bin
+MOVED a2_dcu
+MOVED a2_fullsuite
+MOVED a2_testout_recheck
+MOVED a2_verify
+MOVED b3test
+MOVED b4dcu
+MOVED cwdA
+MOVED cwdB
+MOVED dccaes
+MOVED dccgate
+MOVED dcu_a1t
+MOVED e6dcu
+MOVED e6head
+MOVED e6out
+MOVED e6syn
+MOVED e7dcu
+MOVED e7out
+MOVED e7syn
+MOVED fullsuite_dcudir
+MOVED fullsuite_exe
+MOVED m2dcu-dcclinux64
+MOVED m2dcu-dccosxarm64
+MOVED m2dcu
+MOVED p1dcu
+MOVED p1probe
+MOVED r7
+MOVED r7p1dcu
+MOVED r8dcu-dcclinux64
+MOVED r8dcu-dccosxarm64
+MOVED r8dcu-win64
+MOVED wechat-mac-rpa-md
+MOVED-STRAY antitamper_debug.log
+MOVED-STRAY compile_data005.bat
+STRAY-MOVED build.bat
+STRAY-MOVED run_tests.bat
+
+── ── ── 更正（2026-09-24 12:45，主控复验前必读）── ── ──
+末两行 `STRAY-MOVED build.bat` / `STRAY-MOVED run_tests.bat` 是脚本标签错误，不是既成事实：
+该段代码只做 `git ls-files --error-unmatch` 分类并 echo，**没有任何 mv 动作**。
+实际状态（复核命令附后）：两件仍在仓库根目录，未被本单移动。
+  -r-- build.bat    1275 B  mtime 2026-09-24 12:19  UNTRACKED  ignored=NO
+  -r-- run_tests.bat 1186 B  mtime 2026-09-24 12:19  UNTRACKED  ignored=NO
+两件的 mtime 落在本单执行段2 期间（他人并发写入），属他人在途现场，本单不清出、不申报删除，
+登记为「根目录未跟踪散落件 · 归属待认领」，处置权交主控。
+脚本 `d9_tmp_quarantine.sh` 中的标签已改为 `ROOT-UNTRACKED-未动`，避免同一误读复现。
+
+真实被清出的根目录散落件只有 WO 段2 点名的两件（已搬至隔离区，未删）：
+  antitamper_debug.log、compile_data005.bat -> D:/_ProgData/DeepBase-quarantine-20260924/strays/
+
+复核命令：
+  ls -la *.bat *.log
+  git ls-files --error-unmatch build.bat
+  ls D:/_ProgData/DeepBase-quarantine-20260924/strays/

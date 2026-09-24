@@ -1,0 +1,32 @@
+执行时刻 = 2026-09-24T12:56:01+08:00
+基准 HEAD = 79670b96ce66fc41e557c77408b55eecc38ea932
+落笔前 staged（git diff --cached --name-only）= README.md 
+
+判定     status flt==HEAD flt==idx  numstat    归属   文件
+真差异   M   N         N         9+/0-      他方   .github/workflows/delphi-ci.yml
+真差异   M   N         N         6+/0-      本单   .gitignore
+真差异   M   N         N         25+/3-     他方   09_工程脚本/build-gate/README-编译门禁.md
+真差异   M   N         N         126+/11-   他方   09_工程脚本/build-gate/check_build.js
+真差异   M   N         N         26+/1-     他方   CHANGELOG.md
+假脏      M   Y         Y         none       他方   Core/DeepBase.License.pas
+假脏      M   Y         Y         none       他方   Core/DeepBase.SecureMemory.pas
+假脏      M   Y         Y         none       他方   Core/DeepBase.Security.DPAPI.pas
+假脏      M   Y         Y         none       他方   Core/DeepBase.Security.MachineIdentity.pas
+假脏      M   Y         Y         none       他方   Core/DeepBase.Security.UBS2.Migration.pas
+假脏      M   Y         Y         none       他方   Core/DeepBase.Security.UBS2.pas
+假脏      M   Y         Y         none       他方   Core/DeepBase.Storage.Interfaces.pas
+真差异   M   N         N         124+/1-    他方   Features/DeepBase.LLM.HTTP.pas
+假脏      M   Y         Y         none       他方   Persistence/DeepBase.Persistence.Security.FireDAC.pas
+真差异  MM   N         N         29+/0-     本单   README.md
+假脏      M   Y         Y         none       他方   Tests/Test.DeepBase.SecureMemory.pas
+假脏      M   Y         Y         none       他方   Tests/Test.DeepBase.Security.MachineIdentity.pas
+假脏      M   Y         Y         none       他方   Tests/Test.DeepBase.Security.UBS2.pas
+假脏      M   Y         Y         none       他方   ThirdParty/Social/DeepBase.Social.OAuth.pas
+删除      D   -         -         -          本单   docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+删除      D   -         -         -          本单   docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+删除      D   -         -         -          本单   docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
+真差异   M   N         N         13+/12-    本单   docs/规范历史版本与对比库/README-版本对比台账.md
+
+假脏件数 = 12
+已跟踪脏条目总数（判据3分母）= 23
+其中属本单申报清单 = 6

@@ -1,0 +1,44 @@
+# D9 段2b 原始输出 · 2026-09-24T13:02:26+08:00 · HEAD=1f1a9c8
+# 发现：仓内 worktree 的物理残留不止目录——一个 mode 160000 gitlink 被提交进了跟踪树，且无 .gitmodules
+
+## 1 索引条目（160000 = gitlink/子模块位）
+$ git ls-files -s .claude/worktrees/data-platform-v0.7
+160000 c6a5ab0b4dc41b2aa0bf7ce90451b9b780925f20 0	.claude/worktrees/data-platform-v0.7
+
+## 2 无 .gitmodules（消费者无法解析该 gitlink）
+$ ls -la .gitmodules
+ls: cannot access '.gitmodules': No such file or directory
+EXIT=2
+
+## 3 .claude/ 本身已被 .gitignore 覆盖（跟踪条目优先级高于 ignore，故残留）
+$ git check-ignore -v .claude/workorder.md
+.gitignore:115:.claude/	.claude/workorder.md
+
+## 4 该 gitlink 已随 master 发布到远端（消费者 clone 即得空壳目录）
+$ git ls-tree HEAD .claude/ ; git ls-tree origin/master .claude/
+040000 tree b996fe2a8c80632743af943fb3b8f46a7a2b739e	.claude/worktrees
+040000 tree b996fe2a8c80632743af943fb3b8f46a7a2b739e	.claude/worktrees
+
+## 5 指向的提交仍在分支历史中（删除条目零损失，可按 SHA 取回）
+$ git log -1 --format="%h %ad %s" --date=short c6a5ab0b ; git branch -a --contains c6a5ab0b
+c6a5ab0 2026-05-31 Add Chinese README (bilingual convention)
+  worktree-data-platform-v0.7
+  remotes/origin/main
+
+## 6 引入它的提交
+0c899b59 2026-06-15 chore: align backlog after QA convergence
+
+## 7 目录体（0 = 空壳，无内容损失）
+0	.claude/worktrees/data-platform-v0.7
+0
+
+## 8 处置：只移出索引 + 删空目录（不改历史，不删分支）
+$ git rm --cached .claude/worktrees/data-platform-v0.7
+rm '.claude/worktrees/data-platform-v0.7'
+EXIT=0
+$ rmdir .claude/worktrees/data-platform-v0.7 .claude/worktrees
+EXIT=0
+
+## 9 处置后复核：跟踪树中不再有 160000 条目
+$ git ls-files -s | awk "\$1==160000"  # 全库扫描
+COUNT=0

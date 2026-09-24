@@ -85,7 +85,7 @@
 
 | 版本属性 | 文件名称 | 状态 | 说明 |
 | :--- | :--- | :--- | :--- |
-| **正式封版稿** | `EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md` | **FROZEN v1.0** (正式) | 确立双维正交模型 (Language Level x Detail Depth)、三项即时理解动作 (举例/类比/讲故事)、即时生效三准则 (Immediate/Context-preserving/Reversible) 与重述/重裁定严格分离 (Re-expression ≠ Task-level Re-reasoning) |
+| **正式封版稿** | `../EHAI.05.D1-表述适配.md`（R7 前存本层 `EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md`，2026-09-21 R7 按主控授权删除归档副本） | **FROZEN v1.0** (正式) | 确立双维正交模型 (Language Level x Detail Depth)、三项即时理解动作 (举例/类比/讲故事)、即时生效三准则 (Immediate/Context-preserving/Reversible) 与重述/重裁定严格分离 (Re-expression ≠ Task-level Re-reasoning) |
 
 ### 核心规范要点：
 1. **理论归属**：隶属 L5《极简人类交互适配》，坚守唯一核心约束与最低有效三条件；
@@ -107,9 +107,9 @@
 ## 七、乙R6-N6 归档层实测台账（2026-09-20）
 
 > 本节数字由只读哈希脚本实测生成（逐件字节数 / mtime / sha256 前 12 位 + 跨 `docs/` 同字节自动判定），非手工誊写。
-> 内容零改写自证：`.tmp/r6/n6-move.txt` 记录 15 件位移逐件移动前后 sha256 比对，结果 `TOTAL=15 BAD=0`。
+> 内容零改写自证：`CodeReview/_audit_recheck/乙-R6-N6-移动前后sha256实测.txt` 记录 15 件位移逐件移动前后 sha256 比对，结果 `TOTAL=15 BAD=0`。
 
-### 7.1 本层存件清单（实测 32 件）
+### 7.1 本层存件清单（实测 32 件；R7 删 3 件后在册 29 件，删除线行为 R7 已删件留痕）
 | 文件（本层） | 字节 | mtime(UTC) | sha256 | 同字节存件（跨 docs/ 自动判定） |
 | :--- | ---: | :--- | :--- | :--- |
 | `DeepBase-AI-Delivery-Principles.原稿-20260908.md` ·原稿 | 33249 | 2026-09-09 | `4ab183b1c9a9`… | 重复于: docs/规范历史版本与对比库/EHAI.02.L2-AI交付原则.原稿-20260908.md |
@@ -123,11 +123,11 @@
 | `DeepBase-General-AI-Interaction-Protocol.原稿-20260908.md` ·原稿 | 46570 | 2026-09-09 | `d67b20cfa26e`… | 重复于: docs/规范历史版本与对比库/EHAI.04.L4-通用交互协议.原稿-20260908-FreezeCandidate.md |
 | `DeepBase-General-AI-Interaction-Protocol.封版-20260910-Frozen_v1.0.md` ·封版 | 32041 | 2026-09-10 | `06009c2618a4`… | 重复于: docs/规范历史版本与对比库/EHAI.04.L4-通用交互协议.封版-20260910-Frozen_v1.0.md |
 | `DeepBase-General-AI-Interaction-Protocol.快照-20260909.md` ·快照 | 46605 | 2026-09-09 | `f2c22db068eb`… | 唯一存件 |
-| `DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md` ·旧名母本 | 41565 | 2026-09-10 | `bac975e98b42`… | 重复于: docs/EHAI.05.L5-极简人类交互适配.md , docs/规范历史版本与对比库/EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md |
+| ~~`DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md`~~ ·旧名母本 | 41565 | 2026-09-10 | `bac975e98b42`… | **R7 已删**（主控授权，同字节保留件 `docs/EHAI.05.L5-极简人类交互适配.md` + 本层 `EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md`） |
 | `DeepBase-HB-Human-Behavior-Adaptation-Infrastructure.原稿-20260908.md` ·原稿 | 63167 | 2026-09-09 | `c5c9eb2a72a3`… | 重复于: docs/backup_20260909_l1_l7/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md |
 | `DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md` ·旧名母本 | 56656 | 2026-09-11 | `72e40b959eef`… | 唯一存件 |
 | `DeepBase-Machine-Semantics-and-Intervention-Infrastructure.快照-20260909.md` ·快照 | 53721 | 2026-09-09 | `4c94fa5efe9b`… | 唯一存件 |
-| `DeepBase-Product-Realization-Boundary-v1-r2.md` ·旧名母本 | 50601 | 2026-09-09 | `18bd30bec847`… | 重复于: docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md , docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md , docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md |
+| ~~`DeepBase-Product-Realization-Boundary-v1-r2.md`~~ ·旧名母本 | 50601 | 2026-09-09 | `18bd30bec847`… | **R7 已删**（主控授权，同字节保留件本层 `DeepBase-Product-Realization-Boundary-v1.md`，台账 §7.2 以 `-v1` 为正典名） |
 | `DeepBase-Product-Realization-Boundary-v1.md` ·旧名母本 | 50601 | 2026-09-09 | `18bd30bec847`… | 重复于: docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md , docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md , docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md |
 | `EHAI-Language-Common-Layer-Overview.md` ·旧名母本 | 17238 | 2026-09-13 | `07b165aed146`… | 唯一存件 |
 | `EHAI-Language-Neutral-Realization-Contract-v0.md` ·旧名母本 | 28205 | 2026-09-13 | `e7b2101d59cc`… | 唯一存件 |
@@ -139,9 +139,9 @@
 | `EHAI.03.L3-人类介入原则.原稿-20260909-FreezeCandidate.md` ·原稿 | 47654 | 2026-09-12 | `6ce7af4a9057`… | 唯一存件 |
 | `EHAI.04.L4-通用交互协议.原稿-20260908-FreezeCandidate.md` ·原稿 | 46570 | 2026-09-09 | `d67b20cfa26e`… | 重复于: docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.原稿-20260908.md |
 | `EHAI.04.L4-通用交互协议.封版-20260910-Frozen_v1.0.md` ·封版 | 32041 | 2026-09-10 | `06009c2618a4`… | 重复于: docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol.封版-20260910-Frozen_v1.0.md |
-| `EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md` ·封版 | 49452 | 2026-09-11 | `a489f49fca12`… | 重复于: docs/EHAI.05.D1-表述适配.md |
+| ~~`EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md`~~ ·封版 | 49452 | 2026-09-11 | `a489f49fca12`… | **R7 已删**（主控授权，同字节保留件 `docs/EHAI.05.D1-表述适配.md`，即现行规范指针目标） |
 | `EHAI.05.L5-人机行为适配.原稿-20260908-FreezeCandidate.md` ·原稿 | 63028 | 2026-09-09 | `4e394f5f62fc`… | 唯一存件 |
-| `EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md` ·封版 | 41565 | 2026-09-10 | `bac975e98b42`… | 重复于: docs/EHAI.05.L5-极简人类交互适配.md , docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md |
+| `EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md` ·封版 | 41565 | 2026-09-10 | `bac975e98b42`… | 同字节保留件：docs/EHAI.05.L5-极简人类交互适配.md（R7 已删归档层副本 `DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md`） |
 | `EHAI.06.L6-机器语义与介入.原稿-20260909-Frozen_v1.0.md` ·原稿 | 53646 | 2026-09-09 | `397438dcc2b6`… | 唯一存件 |
 | `README-版本对比台账.md` ·台账 | 8856 | 2026-09-11 | `a6cae72df3dc`… | 唯一存件 |
 ### 7.2 同字节存件、删除预算与预算外登记
@@ -151,9 +151,10 @@
   `CodeReview/_audit_recheck/乙-R6-N6-删除清单待复核.txt`；**未经主控复核不得删，本轮零删除**。
 - `docs/backup_20260909_l1_l7/` 原 8 件中 4 件已于本轮以 `.快照-20260909.md` 名移入本层（改名避免与本层既有旧名母本重名，
   移动前后 sha256 一致）；目录剩余 4 件即 D5 删除候选，待复核。
-- 预算外同字节候选（仅登记，本轮不删）：
-  1. `docs/EHAI.05.D1-表述适配.md` 49452B `a489f49fca12` ≡ 本层 `EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md`；
-  2. `DeepBase-Product-Realization-Boundary-v1.md` ≡ `-v1-r2.md`（本层与 `docs/backup_20260909_l1_l7/` 各两份，均 50601B `18bd30bec847`）；
-  3. L5 三件同字节 41565B `bac975e98b42`：本层 `DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md`（本轮移入的旧名母本）≡
-     `docs/EHAI.05.L5-极简人类交互适配.md` ≡ 本层 `EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md`。
+- 预算外同字节候选：**R7（WO-20260920-AUDIT-乙-R7，主控授权）已全部收口，删 3 件、零内容损失**。
+  每组删前 sha256 与保留件一致（实测 `CodeReview/_audit_recheck/乙-R7-删除前sha256实测.txt`）：
+  1. ~~本层 `EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md`~~ 49452B `a489f49fca12` → 保留 live 层 `docs/EHAI.05.D1-表述适配.md`（现行规范指针目标）；
+  2. ~~本层 `DeepBase-Product-Realization-Boundary-v1-r2.md`~~ 50601B `18bd30bec847` → 保留本层 `DeepBase-Product-Realization-Boundary-v1.md`（本条以 `-v1` 为正典名）；
+  3. ~~本层 `DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md`~~ 41565B `bac975e98b42` → 保留 live 层 `docs/EHAI.05.L5-极简人类交互适配.md` 与本层 `EHAI.05.L5-极简人类交互适配.封版-20260911-Frozen_v1.0.md`。
+  `docs/backup_20260909_l1_l7/` 对应副本在 R7 启动前已不存在，台账 §7.1 行内引用同步降级为历史记录。
 - 现行规范指针见 `docs/EHAI.00-总纲与规范索引.md` 与 `docs/ui/00-Index.md` 的 L1～L8 分层块；本层只承载历史版本与对比。
