@@ -108,8 +108,10 @@ grep -inE 'skip|exempt|whitelist|baseline' 09_工程脚本/build-gate/check_buil
 ## 五、环境真相源与四个环境坑
 
 - **真相源是每个工程自己的 `.dproj`**（`DCC_UnitSearchPath` / `DCC_Namespace`，全部配置取并集，
-  避免「门禁恰好挑了个没配路径的配置」造成假红）。无 `.dproj` 的工程退回仓内既有构建脚本的缺省面。
-  缺省值若写在门禁里就会成为第二套真相源。
+  避免「门禁恰好挑了个没配路径的配置」造成假红）。无 `.dproj` 的工程退回 `contracts/命名空间声明.txt`
+  声明的缺省命名空间集（`default=` 行），单工程要补就在同一文件里加一行 `<工程相对路径>=<命名空间>`。
+  缺省值写在门禁代码里会同时造成两个问题：成为第二套真相源，以及「清单少一项」伪装成源码的 F2613 假红。
+  合并语义与 fail-closed 口径见 `check_build.js` 的 `readNamespaceContract` / `projectEnv`，此处不复述。
 - **包产物重定向**：`.dpk` 的 `-LN`（.dcp）/ `-LE`（.bpl）/ `-O`（搜索面）全部落到
   `.tmp/build-gate/{dcp,bpl}`，且**每次运行先清空**。留着旧 `.dcp` 的话，dcc64 会拿陈旧接口文件
   编下一个包，把真断裂编成假绿——这是包面最容易踩的坑，重定向 + 每轮抹平是判定成立的前提。

@@ -1,0 +1,13 @@
+# 编译门禁契约清单 · 命名空间声明（WO-20260924-AUDIT-甲-D7 段4）
+# 为什么外置：这份清单原先内嵌在 check_build.js 的 DEFAULT_NS 常量里。内嵌时「门禁少配一个命名空间」
+#   会以 F2613「单元找不到」的形式落在源码上——对无 .dproj 的工程尤其致命（它没有任何地方能声明自己的
+#   命名空间需求），实测 DoQryDemo 的 uses DBClient 就这样被误判成代码缺陷。外置后修缺口 = 在这里加一行
+#   声明，而不是改门禁代码，判定语义不变。
+# 默认集合不放宽：default 行的 15 项与外置前 check_build.js:39 的 DEFAULT_NS 逐位相同，
+#   且与 Scripts/compile_packages_win64.ps1 的 $NS 同构。缺 Datasnap / Vcl.Samples 是有意的：
+#   补它们会把判定面一次性放宽给全部无配置工程。缺哪个命名空间，就在下面为需要它的工程单独补一行。
+# 语法：# 起注释，空行忽略；default=<分号分隔> 有且仅有一行，给无 .dproj 工程的缺省 -NS；
+#       <工程相对路径>=<分号分隔> 给单个工程补命名空间，与它实际生效的集合取并集（只补不减，
+#       防止「声明」反向变成缩面手段）。路径必须是本仓已跟踪的 .dpr/.dpk，拼错或写了已删的工程会直接判红。
+# 生效范围：只对进入判定面的工程起作用；一行都没被判定面命中 = 声明失效，同样判红。
+default=System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win

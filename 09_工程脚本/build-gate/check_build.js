@@ -35,8 +35,9 @@ const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
 const SOURCE_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tests', 'Tools', 'Examples', 'DeepFlow', 'DeepBaseRun', 'doQry', 'ThirdParty'];
 // 无 .dproj 工程的缺省单元面：与 Scripts/run_tests.ps1 的 $UnitPaths 同构（相对 root 解析，故隔离工作树同样可用）。
 const UNIT_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'ThirdParty/Payment', 'ThirdParty/Social', 'Tools/CLI', 'Tools/WebService', 'Tests', 'Tests/Regression', 'Tests/Integration'];
-// 无 .dproj 工程的缺省命名空间：与 Scripts/compile_packages_win64.ps1 的 $NS 同构。
-const DEFAULT_NS = 'System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win';
+// 无 .dproj 工程的缺省命名空间：外置到 contracts/ 声明文件（WO-20260924-AUDIT-甲-D7 段4），
+// 与契约清单同族同位置。留在代码里时「门禁缺一个命名空间」会伪装成源码的 F2613 假红。
+const NS_CONTRACT = path.join(HERE, 'contracts', '命名空间声明.txt');
 const DUNITX_SOURCE = process.env.DEEPBASE_DUNITX_SOURCE || 'D:\\ProgramData\\delphi\\DUnitX\\Source';
 const FALLBACK_BDS = 'D:\\Program Files (x86)\\Embarcadero\\Studio\\37.0';
 
@@ -108,6 +109,13 @@ function main() {
       console.error(`  ${rel} 编译失败：${res.firstError || '(无错误行，EXIT=' + res.exit + ')'}`);
       for (const w of ctx.warnings) console.error('  ' + w);
     });
+  }
+
+  // 声明未被判定面命中 = 路径拼错或工程已删。静默失效的声明比没有声明更糟（它给人「已经处理过」的错觉）。
+  for (const proj of env.nsExtra.keys()) {
+    if (!env.nsExtraUsed.has(proj)) {
+      failScan(`命名空间声明未被本轮判定面命中（路径拼错、工程已删或不在范围内）：${proj}`);
+    }
   }
 
   const staleRemoved = cleanSourceDcus(root, env.snapshotBefore);
@@ -343,7 +351,39 @@ function resolveToolchain() {
   return { dcc64, bds, brcc32 };
 }
 
+// 命名空间声明文件：default 行给无 .dproj 工程的缺省 -NS，其余每行给单个工程补命名空间。
+// fail-closed 与 readManifest 同调：读不到、无 default 行、空值、多行 default 一律 EXIT=2，
+// 「声明文件写坏了」绝不能退化成「安静地少给几个命名空间然后报红/报绿都不对」。
+function readNamespaceContract(abs) {
+  let txt;
+  try {
+    txt = fs.readFileSync(abs, 'utf8');
+  } catch (e) {
+    failScan(`命名空间声明读不到：${abs}（${e.code || e.message}）`);
+  }
+  let base = null;
+  const byProject = new Map();
+  for (const raw of txt.split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, '').trim();
+    if (!line) continue;
+    const sep = line.indexOf('=');
+    if (sep < 0) failScan(`命名空间声明行缺 '='：${abs} → ${line}`);
+    const key = line.slice(0, sep).trim().toLowerCase();
+    const value = line.slice(sep + 1).split(';').map(s => s.trim()).filter(Boolean).join(';');
+    if (!value) failScan(`命名空间声明等号后为空：${abs} → ${line}`);
+    if (key === 'default') {
+      if (base !== null) failScan(`命名空间声明有多行 default：${abs}`);
+      base = value;
+      continue;
+    }
+    byProject.set(line.slice(0, sep).trim().split(path.sep).join('/').toLowerCase(), value);
+  }
+  if (base === null) failScan(`命名空间声明没有 default 行：${abs}`);
+  return { base, byProject };
+}
+
 function buildDefaultEnv(root, bds, outRoot) {
+  const ns = readNamespaceContract(NS_CONTRACT);
   const dirs = UNIT_DIRS.map(d => path.resolve(root, d));
   // 与 compile_packages_win64.ps1 的 $LibPaths 同构：RTL/VCL 的 .dcu 在这里，缺了它们会把好工程误判成 F2613。
   dirs.push(path.join(bds, 'lib', 'Win64', 'release'), path.join(bds, 'lib', 'Win64', 'debug'), DUNITX_SOURCE);
@@ -353,7 +393,9 @@ function buildDefaultEnv(root, bds, outRoot) {
     root,
     bds,
     searchPaths: dirs.join(';'),
-    ns: DEFAULT_NS,
+    ns: ns.base,
+    nsExtra: ns.byProject,
+    nsExtraUsed: new Set(),
     scanFailures: 0,
     snapshotBefore: snapshotSourceDcus(root),
   };
@@ -367,8 +409,16 @@ function projectEnv(root, rel, env, face) {
   const dproj = path.join(projDir, fileBase + '.dproj');
   const warnings = [];
   const base = { cwd: projDir, warnings, projDir, fileBase };
+  const extra = env.nsExtra.get(rel.toLowerCase());
+  if (extra) env.nsExtraUsed.add(rel.toLowerCase());
+  // 声明只补不减：允许工程补命名空间，不允许它反过来裁减缺省集——否则「声明」就成了缩面手段。
+  // 无声明时原样返回，保证 -NS 串与外置前逐位相同。
+  const mergeNs = (own) => {
+    if (!extra) return own;
+    return [...new Set(own.split(';').concat(extra.split(';')))].join(';');
+  };
   if (!fs.existsSync(dproj)) {
-    return { ...base, name: pkgName(root, rel), configTag: 'default', searchPaths: env.searchPaths, ns: env.ns };
+    return { ...base, name: pkgName(root, rel), configTag: 'default', searchPaths: env.searchPaths, ns: mergeNs(env.ns) };
   }
   const xml = fs.readFileSync(dproj, 'utf8');
   const dirs = new Set();
@@ -396,7 +446,7 @@ function projectEnv(root, rel, env, face) {
     name: pkgName(root, rel),
     configTag: fileBase + '.dproj',
     searchPaths: [...dirs, env.searchPaths].join(';'),
-    ns: namespaces.size ? [...namespaces].join(';') : env.ns,
+    ns: mergeNs(namespaces.size ? [...namespaces].join(';') : env.ns),
   };
 }
 

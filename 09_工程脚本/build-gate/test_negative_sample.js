@@ -1,4 +1,5 @@
-// 编译门禁负向样本（WO-20260923-AUDIT-甲-D3 §2.4；WO-20260923-AUDIT-甲-D4 §3.2/§3.3 补包面与清单面）
+// 编译门禁负向样本（WO-20260923-AUDIT-甲-D3 §2.4；WO-20260923-AUDIT-甲-D4 §3.2/§3.3 补包面与清单面；
+// WO-20260924-AUDIT-甲-D7 段4 补命名空间声明面）
 //
 // 这道门的价值全在「红得可信」上：S-3 的根因不是没人编译，而是没有任何机械判定，
 // 所以负向样本必须证明三件事——
@@ -26,6 +27,9 @@ const BAD_DPR = 'program BadProj;\nbegin\n  this is not valid pascal\nend.\n';
 const OK_DPK = 'package OkPkg;\n{$R *.res}\nrequires\n  rtl;\nend.\n';
 const BAD_DPK = 'package BadPkg;\n{$R *.res}\nrequires\n  rtl;\ncontains\n  BadUnit in \'BadUnit.pas\';\nend.\n';
 const BAD_UNIT = 'unit BadUnit;\ninterface\nvar X: Integer;\nimplementation\ninitialization\n  X := \'not-a-number\';\nend.\n';
+// 命名空间样本（WO-20260924-AUDIT-甲-D7 段4）：DBClient 只有加进 -NS 才解析得了，StrUtils 靠缺省集里的 System。
+// 两件放一起，一次编译同时验「工程级声明真进了 -NS」与「声明没把缺省集顶掉」（并集而非替换）。
+const NS_DEMO_DPR = 'program NsDemo;\n{$APPTYPE CONSOLE}\nuses DBClient, StrUtils;\nbegin\nend.\n';
 
 let failed = false;
 const trash = [];
@@ -242,6 +246,87 @@ expectExit('负样本⓱--manifest 文件不存在', runGate(['--manifest', path
   const root = makeRepo('mfempty', { 'OkPkg.dpk': OK_DPK });
   const mf = writeManifest(root, 'blank.txt', '# 只有注释和空行\n\n');
   expectExit('负样本⓲--manifest 清单为空', runGate(['--manifest', mf, '--root', root]), 2, ['--manifest 清单为空']);
+}
+
+// ---- 以下为 WO-20260924-AUDIT-甲-D7 段4 新增：命名空间声明面（外置清单的 fail-closed 五条 + 默认不放宽 + 只补不减）----
+// 声明文件钉在门禁自己的 contracts/ 下：既不吃 --root，也不留参数/环境变量覆盖的口子——可传参就等于允许把
+// 「放宽后的清单」临时传进门禁，那是门禁 bypass。代价是本面只能用注入式故障替换子进程读到的那份内容
+// （与 ⑦/⓯ 同一惯例），判定与退出码仍由门禁进程自己的代码路径产出。
+const NS_CONTRACT = path.join(HERE, 'contracts', '命名空间声明.txt');
+// 缺省集从真实声明文件里取，测试不抄第二份清单：抄了就等于造出第二个真相源，「默认未放宽」的断言当场失效。
+const NS_DEFAULT_LINE = fs.readFileSync(NS_CONTRACT, 'utf8').split(/\r?\n/).find((l) => l.startsWith('default='));
+if (!NS_DEFAULT_LINE) bug(`命名空间声明没有 default 行，本面全部用例失去基准：${NS_CONTRACT}`);
+
+let nsSeq = 0;
+function runWithNamespace(contractText, args, throwOnRead) {
+  const stamp = Date.now() + '-' + (++nsSeq);
+  const repl = path.join(os.tmpdir(), 'buildgate-ns-contract-' + stamp + '.txt');
+  const injector = path.join(os.tmpdir(), 'buildgate-inject-ns-' + stamp + '.js');
+  trashFiles.push(repl, injector);
+  fs.writeFileSync(repl, contractText, 'utf8');
+  fs.writeFileSync(injector, [
+    'const fs = require("fs");',
+    'const real = fs.readFileSync;',
+    'fs.readFileSync = function (p, ...a) {',
+    '  if (String(p) !== process.env.BG_NS_TARGET) return real.call(fs, p, ...a);',
+    '  if (process.env.BG_NS_THROW === "1") throw Object.assign(new Error("injected"), { code: "ENOENT" });',
+    '  return real.call(fs, process.env.BG_NS_REPL, ...a);',
+    '};',
+    'process.argv = [process.execPath, process.env.BG_GATE, ...JSON.parse(process.env.BG_ARGV)];',
+    'require(process.env.BG_GATE);',
+  ].join('\n'), 'utf8');
+  const r = spawnSync(process.execPath, [injector], {
+    encoding: 'utf8',
+    env: Object.assign({}, process.env, {
+      BG_GATE: GATE,
+      BG_NS_TARGET: NS_CONTRACT,
+      BG_NS_REPL: repl,
+      BG_NS_THROW: throwOnRead ? '1' : '0',
+      BG_ARGV: JSON.stringify(args),
+    }),
+  });
+  return { code: r.status, out: (r.stdout || '') + (r.stderr || '') };
+}
+
+// ⓳声明读不到：门禁自己的契约文件缺失时不许回退成「少给几个命名空间」，也不许静默按空清单跑
+expectExit('命名空间负样本⓳声明读不到（注入 ENOENT）', runWithNamespace(NS_DEFAULT_LINE + '\n', ['--all', '--root', makeRepo('ns-missing', { 'OkProj.dpr': OK_DPR })], true), 2,
+  ['命名空间声明读不到']);
+
+// ⓴没有 default 行 / ㉑多行 default / ㉒行缺 '=' / ㉓等号后为空：四种写坏的声明一律红，且各自给归因
+expectExit('命名空间负样本⓴没有 default 行', runWithNamespace('# 只有注释，没有 default 行\n', ['--all', '--root', makeRepo('ns-nodefault', { 'OkProj.dpr': OK_DPR })]), 2,
+  ['命名空间声明没有 default 行']);
+expectExit('命名空间负样本㉑多行 default', runWithNamespace(`${NS_DEFAULT_LINE}\n${NS_DEFAULT_LINE}\n`, ['--all', '--root', makeRepo('ns-two-default', { 'OkProj.dpr': OK_DPR })]), 2,
+  ['命名空间声明有多行 default']);
+expectExit('命名空间负样本㉒行缺 =', runWithNamespace(`${NS_DEFAULT_LINE}\nVcl.Samples\n`, ['--all', '--root', makeRepo('ns-noeq', { 'OkProj.dpr': OK_DPR })]), 2,
+  ["命名空间声明行缺 '='"]);
+expectExit('命名空间负样本㉓等号后为空', runWithNamespace(`${NS_DEFAULT_LINE}\nNsDemo.dpr=\n`, ['--all', '--root', makeRepo('ns-emptyval', { 'OkProj.dpr': OK_DPR })]), 2,
+  ['命名空间声明等号后为空']);
+
+// ㉔声明未被判定面命中：路径拼错或工程已删。静默失效的声明比没有声明更糟（它给人「已经处理过」的错觉），红。
+expectExit('命名空间负样本㉔声明未被判定面命中', runWithNamespace(`${NS_DEFAULT_LINE}\nGhost.dpr=Datasnap\n`, ['--all', '--root', makeRepo('ns-unused', { 'OkProj.dpr': OK_DPR })]), 2,
+  ['命名空间声明未被本轮判定面命中', 'ghost.dpr']);
+
+// ㉕功能负对照：只给 default（= 外置前的那份缺省集）时，DBClient 仍编不过。
+// 这条证的是「外置没有顺手放宽默认集合」——缺了它，判定面变绿就无法区分「换了来源」与「偷偷扩了面」。
+{
+  const root = makeRepo('ns-tight', { 'NsDemo.dpr': NS_DEMO_DPR });
+  const res = runWithNamespace(NS_DEFAULT_LINE + '\n', ['--dpr', 'NsDemo.dpr', '--root', root]);
+  expectExit('命名空间负样本㉕默认集合未放宽', res, 1, ["F2613 Unit 'DBClient' not found"]);
+  if (/StrUtils/.test(res.out)) bug('命名空间负样本㉕：StrUtils 也报找不到 —— 缺省集被裁减了，声明成了缩面手段');
+}
+
+// ㉖功能正对照：给 NsDemo.dpr 补一行 Datasnap 声明后编过，且 StrUtils（靠缺省集里的 System 解析）依旧解析得到。
+// 一条用例同时证两件事：声明真进了 -NS；合并是并集而非替换。
+{
+  const root = makeRepo('ns-wide', { 'NsDemo.dpr': NS_DEMO_DPR });
+  expectExit('命名空间正对照㉖工程级声明生效且缺省集未被顶掉', runWithNamespace(`${NS_DEFAULT_LINE}\nNsDemo.dpr=Datasnap\n`, ['--dpr', 'NsDemo.dpr', '--root', root]), 0,
+    ['NsDemo.dpr', 'BUILD_EXIT=0']);
+}
+
+// ㉗没有「传命名空间」的入口：清单只能改文件、走 review，不能在一次运行里临时塞进去
+{
+  const root = makeRepo('ns-noknob', { 'OkProj.dpr': OK_DPR });
+  expectExit('命名空间负样本㉗命令行不接受命名空间参数', runGate(['--all', '--ns', 'Datasnap', '--root', root]), 3, ['为未知参数']);
 }
 
 for (const p of trashFiles) {
