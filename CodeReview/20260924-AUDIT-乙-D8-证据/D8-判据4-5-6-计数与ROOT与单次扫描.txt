@@ -1,0 +1,45 @@
+
+########## 判据4 覆盖面计数两口径必须同值：--list-files 行数 vs 门禁汇总里的「扫描 N 个」
+
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-files | wc -l
+535
+门禁汇总行口径：扫描 535 个
+⇒ 同值：判据4 通过（--list-files 与判据共用同一次枚举）
+
+########## 判据4 空扫描 ⇒ EXIT≠0 的实测见 D8-判据3-4-fail-closed四条实测.txt N1
+
+
+########## 判据5 默认 ROOT 由脚本自身位置反推（源码里不得出现绝对路径字面量）
+
+$ 'grep' '-n' 'root:' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js'
+31:  root: path.join(__dirname, '../..'),
+EXIT=0
+
+$ 'grep' '-nE' '[A-Za-z]:[/\\]|"/(Users|home|srv)' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js'
+EXIT=1
+
+⇒ 上一条 grep EXIT=1（零命中）即判据 5 通过。
+
+########## 判据5 参数/共享模块复用：本门 require 的三个同族模块
+
+$ 'grep' '-n' 'require('../gate-' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js'
+23:const { gateSkipSet } = require('../gate-skip');
+24:const { loadGateBaseline } = require('../gate-baseline');
+25:const { parseGateArgs } = require('../gate-args');
+EXIT=0
+
+
+########## 判据6 files 只枚举一次，--list-files 与 E1/E2/E3 判据读同一数组（行号即证据）
+
+$ 'grep' '-n' 'files = ALL_WORKTREE\|list-files\|for (const rel of files)\|files.length' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js'
+18:// 用法: node check_evidence_encoding.js [--root <dir>] [--baseline <file>] [--all-worktree] [--list-files] [--list-mojibake]
+33:  extra: ['all-worktree', 'list-files', 'list-mojibake'],
+201:  files = ALL_WORKTREE ? walkFiles(path.join(REPO, SUBDIR), []) : trackedFiles();
+208:if (files.length === 0) {
+216:if (OPTS.flags.has('list-files')) { files.forEach(f => console.log(f)); process.exit(0); }
+222:for (const rel of files) {
+257:  console.log(`# 扫描 ${files.length} 件 / 命中 ${hits.length} 行 / ${perFile.size} 件`);
+267:  console.error(`证据编码门禁失败：扫描 ${files.length} 个 ${SUBDIR} 证据文件，E3 命中 ${hits.length} 行，违规 ${violations.length} 项:`);
+271:console.log(`证据编码门禁通过：扫描 ${files.length} 个 ${SUBDIR} 证据文件，NUL 违规 0（存量基线豁免 ${Object.keys(nulStock).length} 项 / 本次命中 ${exempted} 项），全部为合法 UTF-8；E3 命中 ${hits.length} 行，均在存量清单 ${Object.keys(mojibakeStock).length} 件的封顶内`);
+EXIT=0
+

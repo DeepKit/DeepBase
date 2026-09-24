@@ -1,0 +1,59 @@
+
+########## N1 扫到 0 个证据文件（默认口径 = git 已跟踪；根内没有已跟踪的 CodeReview 件）⇒ 须 EXIT=3
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--root' '.tmp/d8repro/empty'
+证据编码门禁失败：扫描 0 个 CodeReview 证据文件（repo=D:\_Progs\02Business\DeepBase\.tmp\d8repro\empty, all-worktree=false）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+
+########## N1b 同上但走工作树枚举（--all-worktree）⇒ 须 EXIT=3
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--root' '.tmp/d8repro/empty' '--all-worktree'
+证据编码门禁无法读取目录: D:\_Progs\02Business\DeepBase\.tmp\d8repro\empty\CodeReview (ENOENT: no such file or directory, scandir 'D:\_Progs\02Business\DeepBase\.tmp\d8repro\empty\CodeReview')
+EXIT=3
+
+
+########## N2 --all-worktree 且根下没有 CodeReview 子树（readdir 失败）⇒ 须 EXIT=3 且打印失败路径
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--root' '.tmp/d8repro/nocodeview' '--all-worktree'
+证据编码门禁无法读取目录: D:\_Progs\02Business\DeepBase\.tmp\d8repro\nocodeview\CodeReview (ENOENT: no such file or directory, scandir 'D:\_Progs\02Business\DeepBase\.tmp\d8repro\nocodeview\CodeReview')
+EXIT=3
+
+
+########## N2b 根指向普通文件（根下 CodeReview 子树必然读不出来）⇒ 须 EXIT=3 且打印失败路径
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--root' '.tmp/d8repro/afile' '--all-worktree'
+证据编码门禁无法读取目录: D:\_Progs\02Business\DeepBase\.tmp\d8repro\afile\CodeReview (ENOENT: no such file or directory, scandir 'D:\_Progs\02Business\DeepBase\.tmp\d8repro\afile\CodeReview')
+EXIT=3
+
+
+########## N3 --ROOT 大小写变体（旧私有 arg() 会静默回落默认根）⇒ 须 EXIT=3
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--ROOT' '.tmp/d8repro/empty'
+证据编码门禁失败：参数 --ROOT 大小写不符（应为小写 --root）；大小写变体一律拒绝，不接受为别名（已知参数: --root <dir> / --baseline <file> / --all-worktree / --list-files / --list-mojibake）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+
+########## N4 --root 缺值 ⇒ 须 EXIT=3
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--root'
+证据编码门禁失败：参数 --root 缺值（后无实参）（已知参数: --root <dir> / --baseline <file> / --all-worktree / --list-files / --list-mojibake）。已按 fail-closed 拒绝放行。
+EXIT=3
+
+
+########## N5 基线缺 mojibakeStock 键（存量清单不可信）⇒ 须 EXIT=2
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--root' '.' '--baseline' '.tmp/d8repro/no_mojibake_baseline.json'
+证据编码门禁失败：基线不可信（D:\_Progs\02Business\DeepBase\.tmp\d8repro\no_mojibake_baseline.json）——已按 fail-closed 拒绝放行:
+  T4 必需键缺失: mojibakeStock（该门禁的豁免集，键不在即视为基线被替换/清空）
+EXIT=2
+
+
+########## N6 交付件指纹（本判据全部结论所依据的字节）
+
+$ 'sha256sum' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '09_工程脚本/evidence-encoding-gate/evidence_encoding_baseline.json' '09_工程脚本/evidence-encoding-gate/test_negative_sample.js'
+f185b4314a7a04fc66ee09b78ec929ef605890280704c9c870107da686f50bda *09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+530d20c0b3ce20190e786ac815330d81e6564f18d25c3e72c571fe4210637d27 *09_工程脚本/evidence-encoding-gate/evidence_encoding_baseline.json
+369898a6b7058f568feff07c0441546228b588eaaf8a27708d61423303c29ebb *09_工程脚本/evidence-encoding-gate/test_negative_sample.js
+EXIT=0
+

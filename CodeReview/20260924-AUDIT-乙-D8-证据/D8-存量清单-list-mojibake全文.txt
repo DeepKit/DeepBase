@@ -1,0 +1,34 @@
+
+########## §1.2 --list-mojibake 全文（= evidence_encoding_baseline.json 的 mojibakeStock 唯一来源）
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js' '--list-mojibake'
+44	CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt
+38	CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt
+21	CodeReview/_audit_recheck/乙-B5-取证/out1.txt
+20	CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt
+12	CodeReview/_audit_recheck/乙-B5-取证/out3.txt
+10	CodeReview/_audit_recheck/乙-B5-取证/out2.txt
+6	CodeReview/_audit_recheck/乙-B5-取证/out6.txt
+5	CodeReview/_audit_recheck/乙-B3-negative-test.txt
+5	CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt
+5	CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt
+4	CodeReview/_audit_recheck/乙-R3-gate-output.txt
+3	CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt
+2	CodeReview/_audit_recheck/乙-B1-negative-test.txt
+2	CodeReview/_audit_recheck/乙-B1-scan-fffd-after.txt
+2	CodeReview/_audit_recheck/乙-B1-scan-fffd-before.txt
+2	CodeReview/_audit_recheck/乙-R2-E2-scan-fffd-after-fix.txt
+1	CodeReview/_audit_recheck/乙-B2-scan-coverage2-rerun.txt
+1	CodeReview/20260921-AUDIT-甲-证据/A1/06-bypass-grep.txt
+1	CodeReview/20260923-AUDIT-乙-D6-证据/2.1-2.2-七件重跑-修前树dry-run.txt
+1	CodeReview/20260923-AUDIT-乙-D6-证据/2.2-落笔写入-apply运行输出.txt
+# 扫描 535 件 / 命中 185 行 / 20 件
+EXIT=0
+
+
+########## 与基线登记逐行对账（左=门禁现算 右=基线登记；差集为空 ⇒ 登记无虚增）
+
+$ 'diff' '.tmp/d8repro/live.tsv' '.tmp/d8repro/stock.tsv'
+EXIT=0
+
+⇒ diff 空即基线与门禁现算逐行相等；条目只能因还原内容而减少，因新增证据而增加必须写来源。

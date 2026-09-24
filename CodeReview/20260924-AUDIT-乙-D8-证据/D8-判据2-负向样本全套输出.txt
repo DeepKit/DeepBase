@@ -1,0 +1,96 @@
+
+########## 本门负向样本（EVIDENCE-NEGATIVE-TEST：§1.4 四条 + §1.3 三条 + 只减不增 + --list-mojibake）
+
+$ 'node' '09_工程脚本/evidence-encoding-gate/test_negative_sample.js'
+门禁输出（预期包含 E1 两类 + E2 一类 + E3 一类违规）:
+证据编码门禁失败：扫描 12 个 CodeReview 证据文件，E3 命中 5 行，违规 9 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E3 双重编码乱码 3 行 > 存量基线 0（清单外新文件即为新增），本单只报不修，还原归双域分片单 B2/B3/A3: CodeReview/double-encoded.txt
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E3 双重编码乱码 2 行 > 存量基线 0（清单外新文件即为新增），本单只报不修，还原归双域分片单 B2/B3/A3: CodeReview/mojibake-stock.txt
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=20, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+E3 双重编码命中 5 行 / 2 件（存量登记 0 件封顶，逐条 路径:行号: 原文 → 还原后；括号内「替换符 坏/总」= 还原串里的 U+FFFD 数 / 还原出的非 ASCII 字符总数，占比即 坏÷总）:
+  CodeReview/double-encoded.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/double-encoded.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+  CodeReview/double-encoded.txt:3: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/mojibake-stock.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/mojibake-stock.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+
+空集扫描输出: EXIT=3 证据编码门禁失败：扫描 0 个 CodeReview 证据文件（repo=E:\Scratch\temp\evenc-442qCR\empty-root, all-worktree=true）。已按 fail-closed 拒绝放行。
+修前对照通过：旧白名单口径对 build-commands.cmd / scan-list.md / summary.json / raw-console-output 全部视而不见（假绿实锤）
+修前对照通过：E3 接入之前（EXIT=1），3 行双重编码乱码在 E1/E2 下全部隐身 ⇒ D8 §〇 恒绿实锤
+--list-mojibake 输出:
+3	CodeReview/double-encoded.txt
+2	CodeReview/mojibake-stock.txt
+# 扫描 12 件 / 命中 5 行 / 2 件
+存量基线（ps-redirect.log=20 / mojibake-stock.txt=2）命中输出:
+证据编码门禁失败：扫描 12 个 CodeReview 证据文件，E3 命中 5 行，违规 7 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E3 双重编码乱码 3 行 > 存量基线 0（清单外新文件即为新增），本单只报不修，还原归双域分片单 B2/B3/A3: CodeReview/double-encoded.txt
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+E3 双重编码命中 5 行 / 2 件（存量登记 1 件封顶，逐条 路径:行号: 原文 → 还原后；括号内「替换符 坏/总」= 还原串里的 U+FFFD 数 / 还原出的非 ASCII 字符总数，占比即 坏÷总）:
+  CodeReview/double-encoded.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/double-encoded.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+  CodeReview/double-encoded.txt:3: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/mojibake-stock.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/mojibake-stock.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+
+存量件 NUL 上升后输出:
+证据编码门禁失败：扫描 12 个 CodeReview 证据文件，E3 命中 5 行，违规 8 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E3 双重编码乱码 3 行 > 存量基线 0（清单外新文件即为新增），本单只报不修，还原归双域分片单 B2/B3/A3: CodeReview/double-encoded.txt
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=21, 首偏移=3, 存量基线=20)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+E3 双重编码命中 5 行 / 2 件（存量登记 1 件封顶，逐条 路径:行号: 原文 → 还原后；括号内「替换符 坏/总」= 还原串里的 U+FFFD 数 / 还原出的非 ASCII 字符总数，占比即 坏÷总）:
+  CodeReview/double-encoded.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/double-encoded.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+  CodeReview/double-encoded.txt:3: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/mojibake-stock.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/mojibake-stock.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+
+存量件 E3 命中上升后输出:
+证据编码门禁失败：扫描 12 个 CodeReview 证据文件，E3 命中 6 行，违规 8 项:
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/build-commands.cmd
+  E3 双重编码乱码 3 行 > 存量基线 0（清单外新文件即为新增），本单只报不修，还原归双域分片单 B2/B3/A3: CodeReview/double-encoded.txt
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E3 双重编码乱码 3 行 > 存量基线 2（清单外新文件即为新增），本单只报不修，还原归双域分片单 B2/B3/A3: CodeReview/mojibake-stock.txt
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=18, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/raw-console-output
+  E1 证据含 NUL 字节(NUL=4, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/scan-list.md
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/summary.json
+E3 双重编码命中 6 行 / 2 件（存量登记 1 件封顶，逐条 路径:行号: 原文 → 还原后；括号内「替换符 坏/总」= 还原串里的 U+FFFD 数 / 还原出的非 ASCII 字符总数，占比即 坏÷总）:
+  CodeReview/double-encoded.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/double-encoded.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+  CodeReview/double-encoded.txt:3: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/mojibake-stock.txt:1: 缂栫爜闂ㄧ閫氳繃锛?972 涓?.pas 鏂囦欢鍏ㄩ儴鍚堟硶 → 编码门禁通过�?972 �?.pas 文件全部合法（替换符 2/14）
+  CodeReview/mojibake-stock.txt:2: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻? 134 涓? CodeReview 璇佹嵁鏂囦欢 → 证据编码门禁通过：扫�? 134 �? CodeReview 证据文件（替换符 2/16）
+  CodeReview/mojibake-stock.txt:3: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+
+清理后复跑: 证据编码门禁通过：扫描 3 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 1 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 0 行，均在存量清单 1 件的封顶内
+NEGATIVE-TEST: PASS
+EXIT=0
+
+
+########## 门禁族共享自检（SHARED-GUARD-TEST：五道门 SKIP 单源 + 各门基线状态自检）
+
+$ 'node' '09_工程脚本/test_negative_sample.js'
+A2 通过：TestResults/StrayRunner.dpr 被跳过 ⇒ Core/FooOrphan.pas 如实报孤儿
+A2 修前对照通过：旧 11 项 SKIP 口径下 CI 产物把孤儿判成已引用（假绿实锤）
+B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSON/跨门顶替/文件缺失）全部 EXIT=2 拒绝放行
+B 溯源判据生效：无溯源同形基线 EXIT=2
+B 正向对照通过：可信基线正常放行（未过度兜底）
+SHARED-GUARD-TEST: PASS
+EXIT=0
+

@@ -1,0 +1,27 @@
+
+########## 构造良性语料临时树：git 已跟踪的 docs/** 与 08_元管理/** 全部 .md 平铺进 .tmp/d8repro/corpus/CodeReview/
+
+跳过（已跟踪、工作树缺失）：docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+跳过（已跟踪、工作树缺失）：docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+跳过（已跟踪、工作树缺失）：docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
+清单 262 件 → 实际入树 259 件 / 合计 74941 行（含大量中英混排、代码块、表格、链接）
+
+
+########## 标定 = 用门禁自身的 --list-mojibake 数（命中即误报）。交付版（clean≥4 / 占比≤20% / 表意占比≥50%）：
+
+# 扫描 259 件 / 命中 0 行 / 0 件
+变体 MAX_BROKEN_RATIO         = 0.15   ⇒ # 扫描 259 件 / 命中 0 行 / 0 件
+变体 MAX_BROKEN_RATIO         = 0.30   ⇒ # 扫描 259 件 / 命中 1 行 / 1 件
+变体 MAX_BROKEN_RATIO         = 0.50   ⇒ # 扫描 259 件 / 命中 22 行 / 5 件
+变体 MIN_RESTORED_UNITS       = 2      ⇒ # 扫描 259 件 / 命中 0 行 / 0 件
+变体 MIN_RESTORED_CJK_RATIO   = 0.8    ⇒ # 扫描 259 件 / 命中 0 行 / 0 件
+
+
+########## 判据 1 样本在交付版下的定位与占比（R7 三行，临时树里那份与仓库件同字节）
+
+3	CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt
+# 扫描 1 件 / 命中 3 行 / 1 件
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:1: 缂栫爜闂ㄧ閫氳繃锛?72 涓?.pas锛堝熀绾挎畫鐣橴+FFFD鏂囦欢 18锛孊OM渚嬪 45锛屽绔婥R鍩虹嚎鏂囦欢 0锛? → 编码门禁通过�?72 �?.pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0�?（替换符 3/26）
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:3: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻?134 涓?CodeReview 璇佹嵁鏂囦欢锛孨UL 杩濊 0锛堝瓨閲忓熀绾胯眮鍏?0 椤?/ 鏈鍛戒腑 0 椤癸級锛屽叏閮ㄤ负鍚堟硶 UTF-8 → 证据编码门禁通过：扫�?134 �?CodeReview 证据文件，NUL 违规 0（存量基线豁�?0 �?/ 本次命中 0 项），全部为合法 UTF-8（替换符 4/39）
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:5: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+⇒ 括号内「替换符 坏/总」由门禁自己给出：3/26、4/39、1/15 ⇒ 11.5%/10.3%/6.7%，全部落在 20% 阈内。
