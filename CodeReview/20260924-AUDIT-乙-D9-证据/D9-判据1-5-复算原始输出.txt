@@ -5,7 +5,9 @@
 主仓（不计）：D:/_Progs/02Business/DeepBase
 仓外（允许）：D:/_ProgData/DeepBase-B0-wt
 仓外（允许）：D:/_ProgData/DeepBase-D5-wt
-⇒ 仓内 worktree 计数 = 0（须为 0）
+仓内（违规）：D:/_Progs/02Business/DeepBase/.tmp/wt_d7
+仓内（违规）：D:/_Progs/02Business/DeepBase/.tmp/wt_d9
+⇒ 仓内 worktree 计数 = 2（须为 0）
 
 ########## 判据1b .tmp 是否仍存留（WO §段2：快照目录不得留在仓库内部）
 
@@ -40,41 +42,7 @@ worktree-data-platform-v0.7 2026-05-31
 ########## 判据3 已跟踪文件的 git status 必须为空（非空则逐条点名归属）
 
 $ 'git' '-c' 'core.quotepath=false' 'status' '--porcelain' '--untracked-files=no'
-D  .claude/worktrees/data-platform-v0.7
-M  .gitignore
-A  CodeReview/20260924-AUDIT-乙-D9-交付回执.md
-AM CodeReview/20260924-AUDIT-乙-D9-证据/D9-判据1-5-复算原始输出.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证1-分支逐一判定.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证2-worktree清单与锚点.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证3-假脏与真差异逐件哈希.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证4-tmp与根目录散落件.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证4e-tmp条目引用分类.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地1-分支删除原始输出.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地2-worktree清出原始输出.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地3-tmp迁出候选清单.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地3b-tmp清出执行原始输出.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地3b-隔离区映射清单.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地4-段3假脏清零与gitignore与归档落盘.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_governance.sh
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg2b-gitlink幻影件原始输出.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_add_index_raw.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_hygiene_raw.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_sweep.sh
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_sweep_raw.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_sweep_raw_post.txt
-A  CodeReview/20260924-AUDIT-乙-D9-证据/d9_tmp_quarantine.sh
-A  CodeReview/_audit_recheck/乙-R6-N6-移动前后sha256实测.txt
-A  CodeReview/_audit_recheck/乙-R7-删除前sha256实测.txt
-A  CodeReview/_audit_recheck/乙-R7-重复对删除清单.txt
- M Features/DeepBase.LLM.HTTP.pas
-M  README.md
-M  docs/ui/work-orders/00-主控派单总表.md
-A  docs/ui/work-orders/WO-20260920-AUDIT-乙-R6-归档卫生与门禁口径收口-开发交付回执.md
-A  docs/ui/work-orders/WO-20260920-AUDIT-乙-R7-备份路径守卫与预算外重复对收口-开发交付回执.md
-D  docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
-D  docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
-D  docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
-M  docs/规范历史版本与对比库/README-版本对比台账.md
+ M CodeReview/20260924-AUDIT-乙-D9-证据/D9-判据1-5-复算原始输出.txt
 EXIT=0
 
 
@@ -101,40 +69,6 @@ EXIT=1
 ########## 判据5 落笔前暂存区（须与回执 §申报清单 逐件相等，由主控比对）
 
 $ 'git' '-c' 'core.quotepath=false' 'diff' '--cached' '--name-only'
-.claude/worktrees/data-platform-v0.7
-.gitignore
-CodeReview/20260924-AUDIT-乙-D9-交付回执.md
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-判据1-5-复算原始输出.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证1-分支逐一判定.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证2-worktree清单与锚点.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证3-假脏与真差异逐件哈希.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证4-tmp与根目录散落件.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-取证4e-tmp条目引用分类.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地1-分支删除原始输出.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地2-worktree清出原始输出.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地3-tmp迁出候选清单.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地3b-tmp清出执行原始输出.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地3b-隔离区映射清单.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/D9-落地4-段3假脏清零与gitignore与归档落盘.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_governance.sh
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg2b-gitlink幻影件原始输出.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_add_index_raw.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_hygiene_raw.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_sweep.sh
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_sweep_raw.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_seg3_sweep_raw_post.txt
-CodeReview/20260924-AUDIT-乙-D9-证据/d9_tmp_quarantine.sh
-CodeReview/_audit_recheck/乙-R6-N6-移动前后sha256实测.txt
-CodeReview/_audit_recheck/乙-R7-删除前sha256实测.txt
-CodeReview/_audit_recheck/乙-R7-重复对删除清单.txt
-README.md
-docs/ui/work-orders/00-主控派单总表.md
-docs/ui/work-orders/WO-20260920-AUDIT-乙-R6-归档卫生与门禁口径收口-开发交付回执.md
-docs/ui/work-orders/WO-20260920-AUDIT-乙-R7-备份路径守卫与预算外重复对收口-开发交付回执.md
-docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
-docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
-docs/规范历史版本与对比库/EHAI.05.D1-表述适配.封版-20260911-Frozen_v1.0.md
-docs/规范历史版本与对比库/README-版本对比台账.md
 EXIT=0
 
 
