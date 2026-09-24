@@ -1,0 +1,292 @@
+diff --git "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/build-ownership/check_build_ownership.js" "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/build-ownership/check_build_ownership.js"
+index 2e1208e..9ff0951 100644
+--- "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/build-ownership/check_build_ownership.js"
++++ "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/build-ownership/check_build_ownership.js"
+@@ -7,9 +7,11 @@
+ //  O3 C1 同名类消解校验：Core\DeepBase.Plugins.Manager.pas 不得再声明 TDeepBasePluginManager ⇒ 出现即 FAIL。
+ //  O4 生产单元（新轨 6 单元自身除外）的源码引用 DeepBase.Plugins.{6单元} ⇒ BLOCK（uses 级封锁）。
+ // 用法: node check_build_ownership.js [--root <dir>] [--baseline <file>] [--emit-baseline]
+-// 退出码：0 通过；1 违规。
++// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）。
+ const fs = require('fs');
+ const path = require('path');
++const { gateSkipSet } = require('../gate-skip');
++const { loadGateBaseline } = require('../gate-baseline');
+ 
+ function arg(name, dflt) {
+   const i = process.argv.indexOf('--' + name);
+@@ -19,7 +21,7 @@ const ROOT = path.resolve(arg('root', 'D:/_Progs/02Business/DeepBase'));
+ const BASELINE_P = arg('baseline', path.join(__dirname, 'build_ownership_baseline.json'));
+ const EMIT = process.argv.includes('--emit-baseline');
+ const PROD_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tools', 'DeepFlow'];
+-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy']);
++const SKIP = gateSkipSet();
+ const NEWTRACK = ['DeepBase.Plugins.CAbi', 'DeepBase.Plugins.CAbiLoader', 'DeepBase.Plugins.Contracts', 'DeepBase.Plugins.Manager', 'DeepBase.Plugins.SafeGuard', 'DeepBase.Plugins.Verifier'];
+ 
+ function walk(dir, exts, out) {
+@@ -89,8 +91,12 @@ for (const u of prodUnits) {
+ }
+ 
+ // O1：孤儿须入基线
+-let baseline = { orphans: {} };
+-if (fs.existsSync(BASELINE_P)) baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
++// 本门的 --emit-baseline 要读旧基线以保留人工 disposition，故基线校验放在 EMIT 之前：
++// 不允许在坏基线上重刷（否则 47 条人工标注会退回『待标注』）。守写入动作仍是 B1。
++const baseline = loadGateBaseline({
++  file: BASELINE_P, label: '构建归属',
++  keys: { orphans: 'object' },
++});
+ if (EMIT) {
+   const emit = { generatedFrom: 'check_build_ownership.js', orphans: {} };
+   for (const o of orphans) emit.orphans[o.path] = baseline.orphans[o.path] && baseline.orphans[o.path].disposition
+diff --git "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/encoding-gate/check_pas_encoding.js" "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/encoding-gate/check_pas_encoding.js"
+index 11c9aaf..1f34dae 100644
+--- "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/encoding-gate/check_pas_encoding.js"
++++ "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/encoding-gate/check_pas_encoding.js"
+@@ -20,10 +20,13 @@
+ //   · G3：文档 BOM 口径与 .pas 相反（源码要 BOM，文档不要求）；
+ //   · G5：行尾由 eol-gate 唯一立法，此处重复判定即双真源。
+ // 用法: node check_pas_encoding.js [--root <dir>] [--baseline <file>]
+-// 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
++// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）；
++//        3 扫描自身失败（root 不可读/扫到 0 个 .pas/单文件读取失败/参数解析失败）——fail-closed，绝不放行。
+ const fs = require('fs');
+ const path = require('path');
+ const { parseGateArgs } = require('../gate-args');
++const { gateSkipSet } = require('../gate-skip');
++const { loadGateBaseline } = require('../gate-baseline');
+ 
+ // 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
+ // 此前本文件与 eol 门禁各写一份内联校验，且裂成「校验侧归一放行 / 取值侧大小写敏感取空」
+@@ -41,7 +44,7 @@ const { parseGateArgs } = require('../gate-args');
+   var ROOT = opts.root;
+   var BASELINE_P = opts.baseline;
+ }
+-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
++const SKIP = gateSkipSet();
+ // 扩展硬违规面：只跑 G2/G4（见文件头「扫描面」）。目录名与 eol-gate / managed-copy-gate 完全一致，
+ // 三道门禁的扫描面差异必须只剩「扩展名」这一个维度，否则「门禁覆盖了什么」永远说不清。
+ const EXT_HARD = new Set(['.dpr', '.dpk', '.dfm', '.fmx', '.md', '.sql']);
+@@ -69,7 +72,13 @@ function walk(dir, out) {
+ }
+ function validUtf8(buf) { try { new TextDecoder('utf-8', { fatal: true }).decode(buf); return true; } catch (e) { return false; } }
+ 
+-const baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
++const baseline = loadGateBaseline({
++  file: BASELINE_P, label: '编码',
++  keys: {
++    fffd: 'object', loneCr: 'object', mojibake: 'object',
++    bomExceptions: 'array', mojibakeExceptions: 'array', hardUtf8Exceptions: 'array',
++  },
++});
+ const allowed = baseline.fffd || {};
+ const loneCrAllowed = baseline.loneCr || {};
+ const bomExcepts = new Set(baseline.bomExceptions || []);
+diff --git "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/eol-gate/check_eol.js" "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/eol-gate/check_eol.js"
+index 6bea141..86538e8 100644
+--- "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/eol-gate/check_eol.js"
++++ "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/eol-gate/check_eol.js"
+@@ -5,10 +5,13 @@
+ //  L3 混用规则：*.pas 禁止在同一文件内混用单CR行尾（CRLF）与纯 LF；含多重CR的文件归 L4，不进 L3。
+ //  L4 多重CR规则：*.pas 禁止出现 \r\r\n 及以上的多重 CR 行尾（Delphi 按每个 CR 计行号，行号全部错位）。历史存量由 baseline 豁免，禁止新增违规。
+ // 用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline]
+-// 退出码：0 通过；1 违规；3 扫描自身失败（root 不可读/扫到 0 个文件/参数解析失败）——fail-closed，绝不放行。
++// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）；
++//        3 扫描自身失败（root 不可读/扫到 0 个文件/参数解析失败）——fail-closed，绝不放行。
+ const fs = require('fs');
+ const path = require('path');
+ const { parseGateArgs } = require('../gate-args');
++const { gateSkipSet } = require('../gate-skip');
++const { loadGateBaseline } = require('../gate-baseline');
+ 
+ // 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
+ // 本门禁此前零参数校验（--ROOT / --rot 被静默忽略，回落默认根后照常报 EXIT=0），
+@@ -28,7 +31,7 @@ const { parseGateArgs } = require('../gate-args');
+   var BASELINE_P = opts.baseline;
+   var EMIT = opts.flags.has('emit-baseline');
+ }
+-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
++const SKIP = gateSkipSet();
+ // 记录被 SKIP 规则吃掉的顶层目录，让「扫描面缩了什么」可见（WO-20260921-AUDIT-乙-P1 §〇 第 3 条）。
+ const skippedDirs = new Set();
+ 
+@@ -58,15 +61,9 @@ if (files.length === 0) {
+   console.error(`行尾门禁失败：扫描 0 个文件（root=${ROOT}）。根因通常是 --root 指错目录；已按 fail-closed 拒绝放行。`);
+   process.exit(3);
+ }
+-let baseline = { pas_lf_exceptions: [], pas_mixed_exceptions: [], md_crlf_exceptions: [] };
+-if (fs.existsSync(BASELINE_P)) {
+-  try { baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8')); } catch (e) {}
+-}
+-
+-const pasLfAllowed = new Set(baseline.pas_lf_exceptions || []);
+-const pasMixedAllowed = new Set(baseline.pas_mixed_exceptions || []);
+-const mdCrlfAllowed = new Set(baseline.md_crlf_exceptions || []);
+-const pasMultiCrAllowed = new Set(baseline.pas_multicr_exceptions || []);
++// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复基线的动作，
++// 不能因为基线已坏就把自己锁在门外（守写入侧是 B1，守读取侧是 gate-baseline.js）。
++// 四态豁免集必须齐备——缺键即说明这份 JSON 不是本门禁的基线（被顶替/被清空），EXIT=2。
+ 
+ // 四态行尾计数：以每个 LF 前置连续 CR 个数 k 分类——k=0 纯LF，k=1 CRLF，k>=2 多重CR
+ function countTerms(buf) {
+@@ -111,6 +108,15 @@ if (EMIT) {
+   process.exit(0);
+ }
+ 
++const baseline = loadGateBaseline({
++  file: BASELINE_P, label: '行尾',
++  keys: { pas_lf_exceptions: 'array', pas_mixed_exceptions: 'array', md_crlf_exceptions: 'array', pas_multicr_exceptions: 'array' },
++});
++const pasLfAllowed = new Set(baseline.pas_lf_exceptions);
++const pasMixedAllowed = new Set(baseline.pas_mixed_exceptions);
++const mdCrlfAllowed = new Set(baseline.md_crlf_exceptions);
++const pasMultiCrAllowed = new Set(baseline.pas_multicr_exceptions);
++
+ const violations = [];
+ for (const f of files) {
+   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+diff --git "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/evidence-encoding-gate/check_evidence_encoding.js" "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/evidence-encoding-gate/check_evidence_encoding.js"
+index 6faa982..63ea527 100644
+--- "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/evidence-encoding-gate/check_evidence_encoding.js"
++++ "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/evidence-encoding-gate/check_evidence_encoding.js"
+@@ -8,11 +8,16 @@
+ //  E2 硬规则（不可豁免）：E1 通过后必须是合法 UTF-8（拦截 GBK/ANSI 原始字节入库）。
+ // 扫描口径：默认只扫 git 已跟踪的证据文件（CI checkout 内即全量；本地 gitignored 的临时
+ //     log 不参与，避免把未入库的本地产物当成仓库违规）；--all-worktree 改走工作树枚举。
+-// 用法: node check_evidence_encoding.js [--repo <dir>] [--baseline <file>] [--all-worktree]
+-// 退出码：0 通过；1 违规；2 自身执行失败（基线不可读/枚举失败）；3 扫描自身失败（扫到 0 个证据文件）——fail-closed，绝不放行。
++//     两种口径共用同一排除规则：路径任一成分命中共享 SKIP 目录集（gate-skip.js）即排除，
++//     扩展名命中二进制清单（BINARY_EXT）即排除，其余一律纳入 —— 证据门禁的职责是「CodeReview/
++//     下已入库的证据文件不得是 UTF-16LE/GBK 落盘」，与扩展名无关，所以白名单反向做成排除集。
++// 用法: node check_evidence_encoding.js [--repo <dir>] [--baseline <file>] [--all-worktree] [--list-files]
++// 退出码：0 通过；1 违规；2 自身执行失败（基线不可信/枚举失败）；3 扫描自身失败（扫到 0 个证据文件）——fail-closed，绝不放行。
+ const fs = require('fs');
+ const path = require('path');
+ const { execFileSync } = require('child_process');
++const { gateSkipSet } = require('../gate-skip');
++const { loadGateBaseline } = require('../gate-baseline');
+ 
+ function arg(name, dflt) {
+   const i = process.argv.indexOf('--' + name);
+@@ -22,8 +27,22 @@ const REPO = path.resolve(arg('repo', path.join(__dirname, '../..')));
+ const BASELINE_P = arg('baseline', path.join(__dirname, 'evidence_encoding_baseline.json'));
+ const ALL_WORKTREE = process.argv.includes('--all-worktree');
+ const SUBDIR = 'CodeReview';
+-const EXT = /\.(txt|log|csv|xml)$/i;
+-const SKIP_DIRS = new Set(['.git', '__history', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
++const SKIP_DIRS = gateSkipSet();
++// E1（NUL 计数）与 E2（严格 UTF-8 解码）只对文本证据有意义；二进制容器（图片/压缩包/编译
++// 产物/office 文档）本身就是合法的非 UTF-8 字节流，纳入即必然误报，故按扩展名排除。
++// 清单外的扩展名默认纳入：新增证据类型不必改本门禁（WO-20260923-AUDIT-乙-D5 §一-1）。
++const BINARY_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.tif', '.tiff',
++  '.pdf', '.zip', '.gz', '.7z', '.rar', '.tar', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
++  '.exe', '.dll', '.bpl', '.dcu', '.obj', '.lib', '.o', '.a', '.so', '.res', '.map', '.bin', '.dat',
++  '.mp3', '.mp4', '.wav', '.avi', '.mov', '.gifv', '.ttf', '.otf', '.woff', '.woff2', '.pkl', '.db', '.sqlite']);
++
++function isBinaryName(name) {
++  return BINARY_EXT.has(path.extname(name).toLowerCase());
++}
++// 已跟踪口径下 git 返回的是仓库相对路径，需按目录成分判断是否落在 SKIP 目录内。
++function inSkipDir(rel) {
++  return rel.split('/').slice(0, -1).some(seg => SKIP_DIRS.has(seg));
++}
+ 
+ function countNul(buf) {
+   let n = 0;
+@@ -39,10 +58,10 @@ function validUtf8(buf) {
+ }
+ 
+ function trackedFiles() {
+-  const out = execFileSync('git', ['-C', REPO, '-c', 'core.quotepath=false', 'ls-files', '-z', '--',
+-    SUBDIR + '/**/*.txt', SUBDIR + '/**/*.log', SUBDIR + '/**/*.csv', SUBDIR + '/**/*.xml'],
++  const out = execFileSync('git', ['-C', REPO, '-c', 'core.quotepath=false', 'ls-files', '-z', '--', SUBDIR],
+     { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 });
+-  return out.toString('utf8').split('\0').filter(Boolean);
++  return out.toString('utf8').split('\0').filter(Boolean)
++    .filter(rel => !inSkipDir(rel) && !isBinaryName(path.posix.basename(rel)));
+ }
+ 
+ function walkFiles(dir, acc) {
+@@ -57,21 +76,15 @@ function walkFiles(dir, acc) {
+     if (SKIP_DIRS.has(e.name)) continue;
+     const p = path.join(dir, e.name);
+     if (e.isDirectory()) walkFiles(p, acc);
+-    else if (e.isFile() && EXT.test(e.name)) acc.push(path.relative(REPO, p).replace(/\\/g, '/'));
++    else if (e.isFile() && !isBinaryName(e.name)) acc.push(path.relative(REPO, p).replace(/\\/g, '/'));
+   }
+   return acc;
+ }
+ 
+-let baseline = { nulStock: {} };
+-try {
+-  baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8'));
+-} catch (e) {
+-  if (fs.existsSync(BASELINE_P)) {
+-    console.error(`证据编码门禁基线文件不可读或非法 JSON: ${BASELINE_P} (${e.message})`);
+-    process.exit(2);
+-  }
+-}
+-const nulStock = baseline.nulStock || {};
++const { nulStock } = loadGateBaseline({
++  file: BASELINE_P, label: '证据编码',
++  keys: { nulStock: 'object' },
++});
+ 
+ let files;
+ try {
+@@ -87,6 +100,10 @@ if (files.length === 0) {
+   process.exit(3);
+ }
+ 
++// 取证用：打印本次实际纳入的文件清单后退出。「哪些证据件进了门禁」必须能从门禁自身复算，
++// 而不是靠 README 复述一份会漂移的清单（WO-20260923-AUDIT-乙-D5 §一-1）。
++if (process.argv.includes('--list-files')) { files.forEach(f => console.log(f)); process.exit(0); }
++
+ const violations = [];
+ let exempted = 0;
+ for (const rel of files) {
+diff --git "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/managed-copy-gate/check_managed_copy.js" "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/managed-copy-gate/check_managed_copy.js"
+index f73b76f..5a59bbf 100644
+--- "a/09_\345\267\245\347\250\213\350\204\232\346\234\254/managed-copy-gate/check_managed_copy.js"
++++ "b/09_\345\267\245\347\250\213\350\204\232\346\234\254/managed-copy-gate/check_managed_copy.js"
+@@ -10,9 +10,11 @@
+ // 扫描根与排除集（H10 口径）：仓库根，SKIP 目录集与行尾门禁一致
+ //     （.git/.tmp/.claude/BuildOutput/DCUOutput/bin/dcu/TestResults 等）。
+ // 用法: node check_managed_copy.js [--root <dir>] [--baseline <file>] [--emit-baseline]
+-// 退出码：0 通过；1 违规。
++// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）。
+ const fs = require('fs');
+ const path = require('path');
++const { gateSkipSet } = require('../gate-skip');
++const { loadGateBaseline } = require('../gate-baseline');
+ 
+ function arg(name, dflt) {
+   const i = process.argv.indexOf('--' + name);
+@@ -21,7 +23,7 @@ function arg(name, dflt) {
+ const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')));
+ const BASELINE_P = arg('baseline', path.join(__dirname, 'managed_copy_baseline.json'));
+ const EMIT = process.argv.includes('--emit-baseline');
+-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp', '.superpowers', '.workbuddy', 'TestResults']);
++const SKIP = gateSkipSet();
+ 
+ // 非限定 Move( 与 System.Move(；排除 TFile.Move 等文件方法（前随 '.'）
+ const MEM_MOVE = /(?<![\w.$])(?:System\.)?Move\s*\(/g;
+@@ -79,11 +81,13 @@ if (EMIT) {
+   process.exit(0);
+ }
+ 
+-let baseline = { files: {} };
+-if (fs.existsSync(BASELINE_P)) {
+-  try { baseline = JSON.parse(fs.readFileSync(BASELINE_P, 'utf8')); } catch (e) {}
+-}
+-const baseFiles = baseline.files || {};
++// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复基线的动作，
++// 不能因为基线已坏就把自己锁在门外（守写入侧是 B1，守读取侧是 gate-baseline.js）。
++const baseline = loadGateBaseline({
++  file: BASELINE_P, label: '托管拷贝',
++  keys: { files: 'object' },
++});
++const baseFiles = baseline.files;
+ const violations = findings.map(v => 'M1 Move/托管类型裸拷贝: ' + v.rel + ':' + v.line);
+ 
+ for (const rel of Object.keys(counts).sort()) {
