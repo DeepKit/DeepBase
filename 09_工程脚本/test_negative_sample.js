@@ -48,10 +48,17 @@ if (GATE_SKIP_DIRS.filter(x => x === 'TestResults').length !== 1) fail('A1 gate-
 // ── A2 行为：TestResults/ 下的 .dpr 不得被构建归属门当作有效引用面 ──────────────
 {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'skiptest-'));
-  fs.mkdirSync(path.join(tmp, 'Core'), { recursive: true });
+  // 八个生产目录必须齐备：构建归属门自 D7 起 fail-closed（PROD_DIRS 缺子树 / 构建文件面为 0 ⇒ EXIT=3），
+  // 本用例要测的是「引用面口径」，不能让夹具本身先撞上覆盖面守卫——那等于用一个洞盖另一个洞。
+  for (const d of ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tools', 'DeepFlow']) {
+    fs.mkdirSync(path.join(tmp, d), { recursive: true });
+  }
   fs.mkdirSync(path.join(tmp, 'TestResults'), { recursive: true });
-  // 生产单元 FooOrphan：没有任何生产构建文件引用它 ⇒ 应为孤儿
+  // 生产单元 FooOrphan：没有任何【生产】构建文件引用它 ⇒ 应为孤儿
   fs.writeFileSync(path.join(tmp, 'Core', 'FooOrphan.pas'), Buffer.from('unit FooOrphan;\ninterface\nimplementation\nend.\n', 'utf8'));
+  // 合法引用面：BarOk 入 prod.dpk ⇒ 非孤儿（同时保证构建文件面非 0，覆盖面守卫不误伤本用例）
+  fs.writeFileSync(path.join(tmp, 'Core', 'BarOk.pas'), Buffer.from('unit BarOk;\ninterface\nimplementation\nend.\n', 'utf8'));
+  fs.writeFileSync(path.join(tmp, 'prod.dpk'), Buffer.from('package prod;\ncontains\n  BarOk;\n.\n', 'utf8'));
   // CI 产物目录里混进一份 .dpr（真实场景：测试跑完把临时工程文件留在 TestResults/），它引用了该单元
   fs.writeFileSync(path.join(tmp, 'TestResults', 'StrayRunner.dpr'), Buffer.from('program StrayRunner;\nuses FooOrphan;\nbegin\nend.\n', 'utf8'));
   const emptyOrphanBaseline = path.join(tmp, 'baseline_empty.json');
@@ -90,7 +97,11 @@ fs.mkdirSync(path.join(clean, 'src'), { recursive: true });
 fs.writeFileSync(path.join(clean, 'src', 'Ok.pas'), Buffer.from('unit Ok;\r\ninterface\r\nimplementation\r\nend.\r\n', 'utf8'));
 fs.mkdirSync(path.join(clean, 'CodeReview'), { recursive: true });
 fs.writeFileSync(path.join(clean, 'CodeReview', 'ok.txt'), Buffer.from('合法 UTF-8 证据\n', 'utf8'));
-fs.mkdirSync(path.join(clean, 'Core'), { recursive: true });
+// 构建归属门自 D7 起对覆盖面 fail-closed（PROD_DIRS 缺子树 / 构建文件面 0 ⇒ EXIT=3），
+// 故 B 的夹具必须是一棵「结构完整」的树，否则测到的是扫描失败而不是基线自检（EXIT=3 顶掉 EXIT=2）。
+for (const d of ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tools', 'DeepFlow']) {
+  fs.mkdirSync(path.join(clean, d), { recursive: true });
+}
 fs.writeFileSync(path.join(clean, 'Core', 'Ok.pas'), Buffer.from('unit Ok;\r\ninterface\r\nimplementation\r\nend.\r\n', 'utf8'));
 fs.writeFileSync(path.join(clean, 'prod.dpk'), Buffer.from('package prod;\ncontains Ok;\n.\n', 'utf8'));
 
