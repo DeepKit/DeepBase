@@ -1,0 +1,23 @@
+    // 仅当 tblQueries 有当前记录时才继续
+      // 执行 BuildSQL 拼出最终 SQL，结果显示在 MeoSQL 编辑框
+  // 读取搜索框中的文本
+  // 搜索框为空时取消过滤并隐藏结果网格
+    tblQueries.Filtered := False; // 关闭过滤
+    tblQueries.Filter := ''; // 清空过滤条件
+  // 按 proc_name 构造模糊匹配过滤串
+  tblQueries.Filtered := True; // 启用过滤
+  // 刷新表下拉框
+    cboBoxTables.ItemIndex := 0; // 默认选中第一个表
+    ShowFields; // 填充 ListBoxFields
+    ListBoxFields.Items.Clear; // 无表可选时清空字段列表
+  // 写库之前为参数行补上所属 proc_name
+  // 填充数据库下拉框
+    cboBoxDatabase.ItemIndex := 0; // 默认选中第一个数据库
+    UpdateTablesAndFields; // 联动刷新表与字段列表
+    aQry.SQL.Text := 'SELECT datname FROM pg_database WHERE datistemplate = false;'; // 排除模板库
+      Result.Add(aQry.FieldByName('datname').AsString); // 逐个收集数据库名
+      ShowMessage('获取数据库列表时出错: ' + E.Message);
+      Result.Add(aQry.FieldByName('table_name').AsString); // 逐个收集表名
+      ShowMessage('获取表列表时出错: ' + E.Message);
+      Result.Add(aQry.FieldByName('column_name').AsString); // 逐个收集列名
+      ShowMessage('获取列信息时出错: ' + E.Message);

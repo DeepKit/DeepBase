@@ -18,7 +18,7 @@ uses
   FireDAC.Phys.SQLiteDef,
   FireDAC.Comp.Client,
   Data.DB,
-  DBClient,
+  Datasnap.DBClient,
   MidasLib,
   uDoQry in '..\..\src\uDoQry.pas',
   uDoQryTypes in '..\..\src\uDoQryTypes.pas',
@@ -55,10 +55,10 @@ begin
       Q.Connection := Conn;
       Q.ExecSQL('CREATE TABLE texts (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, created_at TEXT)');
       Q.ExecSQL('CREATE TABLE queries (proc_name TEXT PRIMARY KEY, sql_template TEXT, param_schema_json TEXT, timeout_sec INTEGER, default_limit INTEGER, allow_full_scan INTEGER, id_field TEXT)');
-      Q.ExecSQL('INSERT INTO queries (proc_name, sql_template, id_field, timeout_sec, default_limit, allow_full_scan) VALUES (
-        ''texts.insert'', ''INSERT INTO texts (title, created_at) VALUES (:title, :created_at)'', ''id'', 30, 1000, 0)');
-      Q.ExecSQL('INSERT INTO queries (proc_name, sql_template, timeout_sec, default_limit, allow_full_scan) VALUES (
-        ''texts.list'', ''SELECT id, title, created_at FROM texts ORDER BY id'', 30, 1000, 0)');
+      Q.ExecSQL('INSERT INTO queries (proc_name, sql_template, id_field, timeout_sec, default_limit, allow_full_scan) VALUES (' +
+        '''texts.insert'', ''INSERT INTO texts (title, created_at) VALUES (:title, :created_at)'', ''id'', 30, 1000, 0)');
+      Q.ExecSQL('INSERT INTO queries (proc_name, sql_template, timeout_sec, default_limit, allow_full_scan) VALUES (' +
+        '''texts.list'', ''SELECT id, title, created_at FROM texts ORDER BY id'', 30, 1000, 0)');
     finally
       Q.Free;
     end;

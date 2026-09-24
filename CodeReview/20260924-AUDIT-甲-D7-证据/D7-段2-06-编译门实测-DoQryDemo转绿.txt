@@ -1,0 +1,5 @@
+[dpr 1/1] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=0
+编译门禁统计：DPR总数=1 成功=1 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=90 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁通过：1 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）

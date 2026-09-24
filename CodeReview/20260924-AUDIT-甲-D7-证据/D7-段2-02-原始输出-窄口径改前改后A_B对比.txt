@@ -1,0 +1,9 @@
+== BEFORE (.tmp/d7_a_base @a3e3f38) ==
+.tmp/d7_a_base/doQry/doQryMain.pas	A行=10 A处=10	B行=0 B处=0	C行=0	总行=335
+.tmp/d7_a_base/doQry/uDoQryLegacy.pas	A行=42 A处=46	B行=4 B处=7	C行=0	总行=1303
+.tmp/d7_a_base/doQry/src/uDoQry.pas	A行=2 A处=2	B行=0 B处=0	C行=0	总行=100
+.tmp/d7_a_base/doQry/src/uDoQryDialect.pas	A行=1 A处=1	B行=0 B处=0	C行=0	总行=75
+.tmp/d7_a_base/doQry/src/uDoQryExecutor.pas	A行=2 A处=2	B行=0 B处=0	C行=0	总行=457
+---- 合计 A行=57 A处=61 B行=4 B处=7 C行=0 C处=0
+== AFTER (working tree) ==
+---- 合计 A行=0 A处=0 B行=0 B处=0 C行=0 C处=0

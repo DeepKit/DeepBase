@@ -1,0 +1,7 @@
+[dpr 1/1] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=1
+  doQry/examples/DoQryDemo/DoQryDemo.dpr 编译失败：D:\_Progs\02Business\DeepBase\.tmp\wt_d7_iso\doQry\src\uDoQry.pas(7) Fatal: F2613 Unit 'DBClient' not found.
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=90 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁失败：1 个工程编译不过
+  doQry/examples/DoQryDemo/DoQryDemo.dpr EXIT=1  D:\_Progs\02Business\DeepBase\.tmp\wt_d7_iso\doQry\src\uDoQry.pas(7) Fatal: F2613 Unit 'DBClient' not found.

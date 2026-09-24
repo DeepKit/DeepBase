@@ -4,10 +4,11 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Variants,
-  FireDAC.Comp.Client, DBClient,
+  FireDAC.Comp.Client, Datasnap.DBClient,
   uDoQryTypes;
 
-// 鍒濆鍖栦笌涓婁笅鏂?procedure DoQryInit(const ProjectRoot: string);
+// 初始化与上下文
+procedure DoQryInit(const ProjectRoot: string);
 function DoQryMakeContext(Conn: TFDConnection; DBType: TDBType; TimeoutSec: Integer; const CorrelationId: string): TDoQryContext;
 function DoQryNewCorrelationId: string;
 
@@ -15,7 +16,8 @@ function DoQryNewCorrelationId: string;
 function DoQryBeginTx(const Ctx: TDoQryContext): IDoQryTx;
 procedure DoQryRunInTx(const Ctx: TDoQryContext; const Proc: TProc);
 
-// 鎵ц鍣?function DoQryExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
+// 执行器
+function DoQryExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
 function DoQryExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
 function DoQryExecInsertReturningId(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
 function DoQryExecScalar(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Variant;
