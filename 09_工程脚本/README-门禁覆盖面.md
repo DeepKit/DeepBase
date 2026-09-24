@@ -73,8 +73,19 @@ node -e "console.log(require('./09_工程脚本/gate-skip').GATE_SKIP_DIRS.join(
 证据门禁的「本次到底扫了哪些件」不再由本表复述（复述必然漂），改由门禁自身打印：
 
 ```
-node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-files | wc -l   # 408
+node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-files | wc -l   # 件数即活值，本表不登记
+node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-mojibake          # E3 存量清单：命中行数<TAB>路径 + 「扫描 N 件 / 命中 M 行 / K 件」汇总
 ```
+
+`--list-mojibake` 是 E3（双重编码乱码，WO-20260924-AUDIT-乙-D8 §1.2）存量清单
+`evidence_encoding_baseline.json` 里 `mojibakeStock` 的唯一来源：登记/递减时逐行对照该输出，
+不靠人抄。它是**可核可递减的存量登记**而不是豁免开关——命中明细每次运行都全量打印，
+门只拦「清单外新文件」与「超封顶」，所以存量件永远看得见，只能因内容被还原而下降。
+`mojibakeStock` 与 E1 的 `nulStock` 在基线里分列两个键（工单要求「单列清单、禁止录进豁免基线当默认」），
+递减、删除、加条目各走各的口径，互不遮蔽。
+判据本体（阈值取值、为什么替换符按标准解码器的 U+FFFD 个数计、为什么加表意文字占比）在
+`check_evidence_encoding.js` 的 E3 段注释里，标定实测在
+`CodeReview/20260924-AUDIT-乙-D8-证据/D8-阈值标定-良性语料零误报.txt`，本表不复述。
 
 结论：**跨机器/跨时点比对数字前必须先对齐工作树，并对齐门禁口径版本**，否则「门禁数字变了」会被误读成「基线被改了」或「在途件多了」。
 证据：`CodeReview/20260923-AUDIT-乙-D4-证据/eol计数复现-恒等式闭合.txt`。
@@ -85,7 +96,7 @@ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-fi
 |---|---|---|---|
 | 编码门禁 | 是 | 是（`EXIT=2`） | `--root` 缺失/空目录 ⇒ `EXIT=3`（`:168`、`:58–60`）；负向样本覆盖 5 组坏参数；基线经 `loadGateBaseline`（`:75`）校验 T1–T4 |
 | 行尾门禁 | 是 | 是（`EXIT=2`） | 同上（`check_eol.js:43–44`、`:60–62`）；基线校验在 `:111` |
-| 证据编码门禁 | 是 | 是（`EXIT=2`） | 扫描 0 项即 `EXIT=3`（`:97–100`），基线不可信 ⇒ `EXIT=2`（`:84` → `gate-baseline.js`） |
+| 证据编码门禁 | 是 | 是（`EXIT=2`） | 扫描 0 项、`readdir` 失败、**本机 Node 无 GB18030 解码（E3 无法评估）** 各自 `EXIT=3` 并打印原因（fail-closed，绝不静默跳过 E3），基线不可信 ⇒ `EXIT=2`（`nulStock` + `mojibakeStock` 两键缺一即拦）；参数走 `gate-args.js`（改前是私有 `arg()` + 异族的 `--repo`，未知参数会被静默丢弃并回落到脚本自身所在树 ⇒ 甲 R8 §5.1 那类「带真实计数的假 PASS」入口，乙 D8 收口） |
 | 托管拷贝门禁 | **否** | 是（`EXIT=2`） | `walk()` 对不存在的根 `catch` 后返回空集（`check_managed_copy.js:36`），`--root <不存在>` ⇒ 扫 0 文件仍 `EXIT=0`；大写 `--ROOT` 被静默忽略并回落到默认根；基线校验在 `:86` |
 | 构建归属门禁 | 是（`EXIT=3`） | 是（`EXIT=2`） | 参数解析走 `gate-args.js`（`check_build_ownership.js:24`，改前是私有 `arg()`，`--ROOT` 会被静默忽略并回落默认根）；默认根为脚本上两级（`:26`，改前是硬编码本机绝对路径 ⇒ 在 CI 检出目录下扫空气却报绿）；`walk()` 读目录失败即 `EXIT=3` 并打印失败路径（`:52`）；构建文件面为 0 / 生产单元面为 0 各自独立判零（`:95`、`:96`）；基线校验在 `:131`，**排在 `--emit-baseline` 之前**（emit 要读旧基线以保留 47 条人工处置，坏基线必须先拦住）。负向样本：`build-ownership/test_negative_sample.js` T2 五型 + T3 修前对照（同一「默认根指错」夹具下旧形态假绿 EXIT=0、新形态 EXIT=3） |
 

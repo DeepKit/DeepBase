@@ -1,4 +1,27 @@
 {
-  "_comment": "DeepBase 证据 NUL 字节存量基线 (WO-20260920-AUDIT-乙-R5 N3)。只允许下调或删除条目，禁止新增文件或提高计数。命中条目的文件按二进制处理（E2 一并跳过），其内容本不可读，整改唯一路径是由该文件独占人按 H18 以 UTF-8 重落后删除条目。",
-  "nulStock": {}
+  "_comment": "证据编码门禁基线（WO-20260920-AUDIT-乙-R5 N3 建；WO-20260923-AUDIT-乙-D5 §一-3 接入状态自检）。nulStock：E1 的 NUL 计数存量封顶，只允许下调或删除条目，禁止新增文件或提高计数。mojibakeStock：E3 双重编码乱码的存量清单（WO-20260924-AUDIT-乙-D8 §1.2）——它是【可核可递减的存量登记】，不是豁免开关：门只拦清单外/超封顶的新增命中，命中明细每次运行都全量打印，所以存量件永远看得见。计数来自门禁自身的 --list-mojibake（覆盖面 SSOT 在门禁里），条目数与计数只能因【还原内容】而下降；因【新增证据件】而上升必须显式写明来源与理由，且不得借登记把命中抹掉。",
+  "generated": "2026-09-24 由 WO-20260924-AUDIT-乙-D8 扫描生成（HEAD ed25bdc，判据含表意文字占比、替换符按标准解码器口径）：node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --list-mojibake",
+  "nulStock": {},
+  "mojibakeStock": {
+    "CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt": 44,
+    "CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt": 38,
+    "CodeReview/_audit_recheck/乙-B5-取证/out1.txt": 21,
+    "CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt": 20,
+    "CodeReview/_audit_recheck/乙-B5-取证/out3.txt": 12,
+    "CodeReview/_audit_recheck/乙-B5-取证/out2.txt": 10,
+    "CodeReview/_audit_recheck/乙-B5-取证/out6.txt": 6,
+    "CodeReview/_audit_recheck/乙-B3-negative-test.txt": 5,
+    "CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt": 5,
+    "CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt": 5,
+    "CodeReview/_audit_recheck/乙-R3-gate-output.txt": 4,
+    "CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt": 3,
+    "CodeReview/_audit_recheck/乙-B1-negative-test.txt": 2,
+    "CodeReview/_audit_recheck/乙-B1-scan-fffd-after.txt": 2,
+    "CodeReview/_audit_recheck/乙-B1-scan-fffd-before.txt": 2,
+    "CodeReview/_audit_recheck/乙-R2-E2-scan-fffd-after-fix.txt": 2,
+    "CodeReview/_audit_recheck/乙-B2-scan-coverage2-rerun.txt": 1,
+    "CodeReview/20260921-AUDIT-甲-证据/A1/06-bypass-grep.txt": 1,
+    "CodeReview/20260923-AUDIT-乙-D6-证据/2.1-2.2-七件重跑-修前树dry-run.txt": 1,
+    "CodeReview/20260923-AUDIT-乙-D6-证据/2.2-落笔写入-apply运行输出.txt": 1
+  }
 }

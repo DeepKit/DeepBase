@@ -118,13 +118,13 @@ for (const [k, v] of Object.entries(BAD)) {
 }
 const MISSING = path.join(clean, 'no_such_baseline.json');
 
-// 每道门的调用方式（证据门用 --repo + --all-worktree，其余用 --root）
+// 每道门的调用方式（五门统一 --root；证据门额外用 --all-worktree，因干净树无 git 跟踪索引）
 const INVOCATIONS = {
   encoding: (b) => [GATES.encoding, '--root', path.join(clean, 'src'), '--baseline', b],
   eol: (b) => [GATES.eol, '--root', path.join(clean, 'src'), '--baseline', b],
   managedCopy: (b) => [GATES.managedCopy, '--root', path.join(clean, 'src'), '--baseline', b],
   buildOwnership: (b) => [GATES.buildOwnership, '--root', clean, '--baseline', b],
-  evidence: (b) => [GATES.evidence, '--repo', clean, '--all-worktree', '--baseline', b],
+  evidence: (b) => [GATES.evidence, '--root', clean, '--all-worktree', '--baseline', b],
 };
 for (const [name, mk] of Object.entries(INVOCATIONS)) {
   for (const [caseName, file] of [...Object.entries(BAD_P), ['missing', MISSING]]) {
