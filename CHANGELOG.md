@@ -4,8 +4,13 @@ All notable changes to DeepBase are documented in this file.
 
 ## [Unreleased]
 
-> 本节覆盖 `v1.0.0` (2025-12-08) 至当前 HEAD 的累积变更，供消费者在下一个发布版本（计划 `v1.1.0`）到来前对齐。
+（本节在 `v1.1.0` 之后的改动累积于此。）
+
+## [1.1.0] - 2026-09-24
+
+> 本节覆盖 `v1.0.0` (2025-12-08) 至 `v1.1.0` 的累积变更（540 个提交）。
 > 以消费者视角组织：先看 **BREAKING CHANGES**，再看分类明细。内部工具链/审计门禁类改动不影响被引用的公开单元，归入 Changed 且不标 BREAKING。
+> 发布件：`git tag v1.1.0` @ HEAD；30+ 消费者请将依赖从 `master` HEAD 改为 pin `v1.1.0`。
 
 ### ⚠ BREAKING CHANGES（消费者必读）
 
