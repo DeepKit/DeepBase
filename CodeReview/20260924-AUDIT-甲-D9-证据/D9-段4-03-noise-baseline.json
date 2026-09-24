@@ -1,6 +1,7 @@
 {
   "generated": "2026-09-24T04:44:21.719Z",
-  "generatedFrom": "git HEAD 79670b96ce66fc41e557c77408b55eecc38ea932 判定面=90 来源=manifest:T0-生产契约面.txt",
+  "generatedFrom": "git HEAD 79670b96ce66fc41e557c77408b55eecc38ea932 清单来源=manifest:T0-生产契约面.txt 已跟踪=90",
+  "_provenance_note": "初版 emit 把该串标为『判定面=90』，90 实为【已跟踪】数（真正判定面=26，见 emit 日志 D9-段4-01）。已修正 check_build.js 使 generatedFrom 标为『已跟踪』，噪声/surface 数值不变、比对逻辑不受影响。",
   "surface": "manifest:T0-生产契约面.txt",
   "_comment": "DeepBase 编译噪声基线（WO-20260924-AUDIT-甲-D9 段4 / DB-006）。noise=各 Hint/Warning 码在【surface 记录的判定面】上的出现次数，门禁只拦增长不拦存量；比对要求当前判定面与 surface 一致（跨面计数不可比）。",
   "noise": {
