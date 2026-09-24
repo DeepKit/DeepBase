@@ -1,0 +1,5388 @@
+[
+ {
+  "file": ".\\Core\\DeepBase.Protection.pas",
+  "n": 2,
+  "rows": [
+   {
+    "line": 185,
+    "raw": "// 浠ヤ笅瀹炵幇鐩存帴鏉ヨ嚜鍘?uBasicProtection.pas锛屼繚鎸佽涔変笉鍙?",
+    "fix": "// 以下实现直接来自?uBasicProtection.pas，保持语义不?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 190,
+    "raw": "  // 杩欎釜鏂规硶宸茶寮冪敤锛屽缓璁娇鐢ㄦ洿瀹夊叏鐨勫瘑閽ョ鐞嗘柟妗?",
+    "fix": "  // 这个方法已被弃用，建议使用更安全的密钥管理方?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Core\\DeepBase.Resilience.CircuitBreaker.pas",
+  "n": 3,
+  "rows": [
+   {
+    "line": 134,
+    "raw": "  // BUG-111 FIX: 纭繚閿佸凡鍒濆鍖栧悗鍐嶄娇鐢?",
+    "fix": "  // BUG-111 FIX: 确保锁已初始化后再使?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 302,
+    "raw": "        // 鍙厑璁告湁闄愭暟閲忕殑鎺㈡祴璇锋眰閫氳繃锛岄槻姝㈤珮骞跺彂鍦烘櫙涓嬬姸鎬佹贩涔?",
+    "fix": "        // 只允许有限数量的探测请求通过，防止高并发场景下状态混?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 372,
+    "raw": "        // BUG-119 FIX: 鍑忓皯娲昏穬璇锋眰璁℃暟骞剁珛鍗虫墦寮€鏂矾鍣?",
+    "fix": "        // BUG-119 FIX: 减少活跃请求计数并立即打弢断路?",
+    "missing": 2,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Examples\\FullDemo\\FullDemo.MainForm.pas",
+  "n": 10,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  FullDemo.MainForm - 缁煎悎婕旂ず涓荤獥浣?",
+    "fix": "  FullDemo.MainForm - 综合演示主窗?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 172,
+    "raw": "  // 璁板綍鍚姩鏃ュ織",
+    "fix": "  // 记录启动日志",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 183,
+    "raw": "    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤姝ｅ湪鍏抽棴', 'App');",
+    "fix": "    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用正在关闭', 'App');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 202,
+    "raw": "  // 椤甸潰鎺т欢",
+    "fix": "  // 页面控件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 207,
+    "raw": "  // 鍒涘缓鍚勫姛鑳介〉",
+    "fix": "  // 创建各功能页",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 259,
+    "raw": "  FLblConfigDemo.Caption := '閰嶇疆绠＄悊婕旂ず - 淇敼涓嬫柟鎺т欢锛屽€间細鑷姩淇濆瓨鍒版暟鎹簱';",
+    "fix": "  FLblConfigDemo.Caption := '配置管理演示 - 修改下方控件，会自动保存到数据库';",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 436,
+    "raw": "  LblDemo.Caption := '鏈€杩戜娇鐢ㄩ」婕旂ず';",
+    "fix": "  LblDemo.Caption := '朢近使用项演示';",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 505,
+    "raw": "  FLblThemeDemo.Caption := '涓婚鍒囨崲婕旂ず';",
+    "fix": "  FLblThemeDemo.Caption := '主题切换演示';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 599,
+    "raw": "  FTabTestCenter.Caption := '娴嬭瘯涓績';",
+    "fix": "  FTabTestCenter.Caption := '测试中心';",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Examples\\Templates\\Common\\Template.AutoUpdateBootstrap.pas",
+  "n": 2,
+  "rows": [
+   {
+    "line": 6,
+    "raw": "      - 鍚庡彴杞瀹夎绐楀彛",
+    "fix": "      - 后台轮询安装窗口",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 58,
+    "raw": "  // 杩愯鏃跺垱寤虹殑缁勪欢涓嶄細瑙﹀彂 Loaded锛涙墜鍔ㄥ紓姝ヨЕ鍙戜竴娆℃鏌ャ€?  TThread.ForceQueue(nil,",
+    "fix": "  // 运行时创建的组件不会触发 Loaded；手动异步触发一次检查?  TThread.ForceQueue(nil,",
+    "missing": 2,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Features\\DeepBase.AntiTamper.pas",
+  "n": 4,
+  "rows": [
+   {
+    "line": 35,
+    "raw": "    EnableHMAC: Boolean;          // 鏄惁鍚敤HMAC瀹屾暣鎬х鍚?",
+    "fix": "    EnableHMAC: Boolean;          // 是否启用HMAC完整性签?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 281,
+    "raw": "  WriteLog(Format(string('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));",
+    "fix": "  WriteLog(Format(string('使用AES-256加密，数据长? %d bytes'), [Length(Result)]));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 318,
+    "raw": "  WriteLog(Format(string('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));",
+    "fix": "  WriteLog(Format(string('使用AES-256解密，数据长? %d bytes'), [Length(Result)]));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 331,
+    "raw": "    WriteLog(Format(string('SHA-256鏍￠獙澶辫触: 闀垮害涓嶅尮閰?鏈熸湜=%d, 瀹為檯=%d'), [Length(ExpectedHash), Length(A",
+    "fix": "    WriteLog(Format(string('SHA-256校验失败: 长度不匹?期望=%d, 实际=%d'), [Length(ExpectedHash), Length(ActualHa",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.AboutFrame.pas",
+  "n": 3,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  DeepBase FMX AboutFrame - FireMonkey 鐗堝叧浜?鎵撹祻椤甸潰缁勪欢",
+    "fix": "  DeepBase FMX AboutFrame - FireMonkey 版关?打赏页面组件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  - 浠?SQLite 鏁版嵁搴撳畨鍏ㄥ姞杞藉浘鐗?(HMAC 绛惧悕楠岃瘉)",
+    "fix": "  - ?SQLite 数据库安全加载图?(HMAC 签名验证)",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 32,
+    "raw": "  /// FMX 鐗?AboutFrame - 鍏充簬/鎵撹祻椤甸潰缁勪欢",
+    "fix": "  /// FMX ?AboutFrame - 关于/打赏页面组件",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.AutoUpdater.pas",
+  "n": 22,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.FMX.AutoUpdater - FMX 鑷姩鏇存柊缁勪欢",
+    "fix": "  DeepBase.FMX.AutoUpdater - FMX 自动更新组件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  璇存槑: 璺ㄥ钩鍙伴潪鍙缁勪欢锛屽皝瑁呰嚜鍔ㄦ洿鏂版牳蹇冩ā鍧楀拰 UI 浜や簰",
+    "fix": "  说明: 跨平台非可视组件，封装自动更新核心模块和 UI 交互",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 8,
+    "raw": "    - Windows: 鐩存帴涓嬭浇瀹夎鍖?",
+    "fix": "    - Windows: 直接下载安装?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 73,
+    "raw": "    /// <summary>闈欓粯妫€鏌ユ洿鏂帮紙涓嶆樉绀哄璇濇锛?/summary>",
+    "fix": "    /// <summary>静默棢查更新（不显示对话框?/summary>",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 76,
+    "raw": "    /// <summary>涓嬭浇骞跺畨瑁呮洿鏂?/summary>",
+    "fix": "    /// <summary>下载并安装更?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 82,
+    "raw": "    /// <summary>鍙栨秷褰撳墠鎿嶄綔</summary>",
+    "fix": "    /// <summary>取消当前操作</summary>",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 85,
+    "raw": "    /// <summary>鎵撳紑搴旂敤鍟嗗簵椤甸潰锛堢Щ鍔ㄧ锛?/summary>",
+    "fix": "    /// <summary>打开应用商店页面（移动端?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 88,
+    "raw": "    /// <summary>鑾峰彇褰撳墠鏇存柊淇℃伅</summary>",
+    "fix": "    /// <summary>获取当前更新信息</summary>",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 94,
+    "raw": "    /// <summary>鏄惁姝ｅ湪涓嬭浇</summary>",
+    "fix": "    /// <summary>是否正在下载</summary>",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 116,
+    "raw": "    /// <summary>鍙戠幇鏇存柊鏃惰嚜鍔ㄦ樉绀哄璇濇</summary>",
+    "fix": "    /// <summary>发现更新时自动显示对话框</summary>",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 125,
+    "raw": "    /// <summary>RSA 鍏挜锛堢敤浜庣鍚嶉獙璇侊級</summary>",
+    "fix": "    /// <summary>RSA 公钥（用于签名验证）</summary>",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 128,
+    "raw": "    /// <summary>鍙戠幇鏇存柊鏃惰Е鍙?/summary>",
+    "fix": "    /// <summary>发现更新时触?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 131,
+    "raw": "    /// <summary>涓嬭浇杩涘害</summary>",
+    "fix": "    /// <summary>下载进度</summary>",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 137,
+    "raw": "    /// <summary>娌℃湁鏇存柊鏃惰Е鍙?/summary>",
+    "fix": "    /// <summary>没有更新时触?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 140,
+    "raw": "    /// <summary>妫€鏌ュ嚭閿欐椂瑙﹀彂</summary>",
+    "fix": "    /// <summary>棢查出错时触发</summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 193,
+    "raw": "    // 鍒濆鍖栨洿鏂扮鐞嗗櫒",
+    "fix": "    // 初始化更新管理器",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 294,
+    "raw": "        // 瑙﹀彂浜嬩欢锛屽厑璁哥敤鎴峰鐞?",
+    "fix": "        // 触发事件，允许用户处?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 311,
+    "raw": "  // 鏄剧ず鏇存柊瀵硅瘽妗?",
+    "fix": "  // 显示更新对话?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 321,
+    "raw": "          ; // 鐢ㄦ埛閫夋嫨绋嶅悗",
+    "fix": "          ; // 用户选择稍后",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 323,
+    "raw": "          ; // 鐢ㄦ埛閫夋嫨璺宠繃姝ょ増鏈?",
+    "fix": "          ; // 用户选择跳过此版?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 343,
+    "raw": "  // 绉诲姩绔烦杞簲鐢ㄥ晢搴?",
+    "fix": "  // 移动端跳转应用商?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.ConfigControls.pas",
+  "n": 13,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.FMX.ConfigControls - FMX 閰嶇疆缁戝畾鎺т欢",
+    "fix": "  DeepBase.FMX.ConfigControls - FMX 配置绑定控件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  璇存槑: 涓?Settings 琛ㄨ嚜鍔ㄧ粦瀹氱殑 FMX 鎺т欢",
+    "fix": "  说明: ?Settings 表自动绑定的 FMX 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 6,
+    "raw": "  鎺т欢:",
+    "fix": "  控件:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "    - TFMXConfigEdit: 缁戝畾瀛楃涓查厤缃?",
+    "fix": "    - TFMXConfigEdit: 绑定字符串配?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "    - TFMXConfigCheckBox: 缁戝畾甯冨皵閰嶇疆",
+    "fix": "    - TFMXConfigCheckBox: 绑定布尔配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 28,
+    "raw": "  /// 鑷姩缁戝畾閰嶇疆鐨?FMX Edit 鎺т欢",
+    "fix": "  /// 自动绑定配置?FMX Edit 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 52,
+    "raw": "    /// 淇濆瓨鍊煎埌閰嶇疆",
+    "fix": "    /// 保存值到配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 58,
+    "raw": "    /// 閰嶇疆閿悕",
+    "fix": "    /// 配置键名",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 68,
+    "raw": "    /// 鑷姩鍔犺浇",
+    "fix": "    /// 自动加载",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 73,
+    "raw": "    /// 鑷姩淇濆瓨",
+    "fix": "    /// 自动保存",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 79,
+    "raw": "  /// 鑷姩缁戝畾閰嶇疆鐨?FMX CheckBox 鎺т欢",
+    "fix": "  /// 自动绑定配置?FMX CheckBox 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 108,
+    "raw": "  /// 鑷姩缁戝畾閰嶇疆鐨?FMX SpinBox 鎺т欢",
+    "fix": "  /// 自动绑定配置?FMX SpinBox 控件",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.ConfigEdit.pas",
+  "n": 13,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.FMX.ConfigEdit - FMX 閰嶇疆缂栬緫鎺т欢",
+    "fix": "  DeepBase.FMX.ConfigEdit - FMX 配置编辑控件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  璇存槑: 鑷姩缁戝畾鍒?DeepBase 閰嶇疆鐨?FMX 缂栬緫鎺т欢",
+    "fix": "  说明: 自动绑定?DeepBase 配置?FMX 编辑控件",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 6,
+    "raw": "  鎺т欢:",
+    "fix": "  控件:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "    - TFMXConfigEdit: 瀛楃涓查厤缃紪杈?",
+    "fix": "    - TFMXConfigEdit: 字符串配置编?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 30,
+    "raw": "  /// 鑷姩淇濆瓨妯″紡",
+    "fix": "  /// 自动保存模式",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 33,
+    "raw": "    asmNone,        // 涓嶈嚜鍔ㄤ繚瀛橈紝闇€鎵嬪姩璋冪敤 SaveValue",
+    "fix": "    asmNone,        // 不自动保存，霢手动调用 SaveValue",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 34,
+    "raw": "    asmOnExit,      // 澶卞幓鐒︾偣鏃惰嚜鍔ㄤ繚瀛?",
+    "fix": "    asmOnExit,      // 失去焦点时自动保?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 35,
+    "raw": "    asmOnChange     // 鍊煎彉鍖栨椂绔嬪嵆淇濆瓨",
+    "fix": "    asmOnChange     // 值变化时立即保存",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 61,
+    "raw": "    /// 淇濆瓨褰撳墠鍊煎埌閰嶇疆",
+    "fix": "    /// 保存当前值到配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 66,
+    "raw": "    /// 閲嶆柊鍔犺浇閰嶇疆鍊?",
+    "fix": "    /// 重新加载配置?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 82,
+    "raw": "    /// 閰嶇疆閿悕",
+    "fix": "    /// 配置键名",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 92,
+    "raw": "    /// 鑷姩淇濆瓨妯″紡",
+    "fix": "    /// 自动保存模式",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.Controls.pas",
+  "n": 3,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.FMX.Controls - FMX 鎺т欢娉ㄥ唽鍗曞厓",
+    "fix": "  DeepBase.FMX.Controls - FMX 控件注册单元",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.1",
+    "fix": "  版本: 1.1",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "  鏂板:",
+    "fix": "  新增:",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.FormStateHelper.pas",
+  "n": 8,
+  "rows": [
+   {
+    "line": 48,
+    "raw": "    FFormName: string;  // 鍙嚜瀹氫箟锛岄粯璁や娇鐢?Form.Name",
+    "fix": "    FFormName: string;  // 可自定义，默认使?Form.Name",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 52,
+    "raw": "    // 淇濆瓨鍘熷浜嬩欢澶勭悊鍣紙閾惧紡璋冪敤锛?",
+    "fix": "    // 保存原始事件处理器（链式调用?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 99,
+    "raw": "    /// 绐椾綋鍏抽棴鏃惰嚜鍔ㄤ繚瀛樼姸鎬?",
+    "fix": "    /// 窗体关闭时自动保存状?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 104,
+    "raw": "    /// 绐椾綋鏄剧ず鏃惰嚜鍔ㄦ仮澶嶇姸鎬?",
+    "fix": "    /// 窗体显示时自动恢复状?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 109,
+    "raw": "    /// 鑷畾涔夌獥浣撳悕锛堢暀绌哄垯浣跨敤 Form.Name锛?",
+    "fix": "    /// 自定义窗体名（留空则使用 Form.Name?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 136,
+    "raw": "  // 灏濊瘯鑾峰彇鐖剁獥浣?",
+    "fix": "  // 尝试获取父窗?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 226,
+    "raw": "  // 鍏堟仮澶嶇姸鎬侊紙濡傛灉灏氭湭鎭㈠锛?",
+    "fix": "  // 先恢复状态（如果尚未恢复?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 273,
+    "raw": "    // 绐椾綋瀹屽叏鍦ㄥ伐浣滃尯澶栵紝绉诲埌宸ヤ綔鍖轰腑蹇?",
+    "fix": "    // 窗体完全在工作区外，移到工作区中?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.I18nControls.pas",
+  "n": 11,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.1",
+    "fix": "  版本: 1.1",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  璇存槑: 鑷姩缈昏瘧鐨?FMX 鎺т欢",
+    "fix": "  说明: 自动翻译?FMX 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 6,
+    "raw": "  鎺т欢:",
+    "fix": "  控件:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 27,
+    "raw": "  /// 鑷姩缈昏瘧鐨?FMX Label 鎺т欢",
+    "fix": "  /// 自动翻译?FMX Label 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 28,
+    "raw": "  /// 鑷姩璁㈤槄璇█鍙樻洿閫氱煡锛屾敮鎸佸涓疄渚嬪悓鏃朵娇鐢?",
+    "fix": "  /// 自动订阅语言变更通知，支持多个实例同时使?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 56,
+    "raw": "    /// 缈昏瘧閿紙濡傛灉涓虹┖锛屽垯浣跨敤 Text 浣滀负閿級",
+    "fix": "    /// 翻译键（如果为空，则使用 Text 作为键）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 62,
+    "raw": "  /// 鑷姩缈昏瘧鐨?FMX Button 鎺т欢",
+    "fix": "  /// 自动翻译?FMX Button 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 63,
+    "raw": "  /// 鑷姩璁㈤槄璇█鍙樻洿閫氱煡锛屾敮鎸佸涓疄渚嬪悓鏃朵娇鐢?",
+    "fix": "  /// 自动订阅语言变更通知，支持多个实例同时使?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 91,
+    "raw": "  /// 鑷姩缈昏瘧鐨?FMX CheckBox 鎺т欢",
+    "fix": "  /// 自动翻译?FMX CheckBox 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 119,
+    "raw": "  /// 鑷姩缈昏瘧鐨?FMX GroupBox 鎺т欢",
+    "fix": "  /// 自动翻译?FMX GroupBox 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 199,
+    "raw": "    // 淇濆瓨鍘熷鏂囨湰",
+    "fix": "    // 保存原始文本",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.MRUControls.pas",
+  "n": 11,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.FMX.MRUControls - FMX MRU 鎺т欢",
+    "fix": "  DeepBase.FMX.MRUControls - FMX MRU 控件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  璇存槑: 鑷姩缁戝畾 MRU 鍒楄〃鐨?FMX 鎺т欢",
+    "fix": "  说明: 自动绑定 MRU 列表?FMX 控件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 6,
+    "raw": "  鎺т欢:",
+    "fix": "  控件:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "    - TFMXMRUComboBox: MRU 涓嬫媺鍒楄〃",
+    "fix": "    - TFMXMRUComboBox: MRU 下拉列表",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 25,
+    "raw": "  /// MRU 涓嬫媺鍒楄〃鎺т欢",
+    "fix": "  /// MRU 下拉列表控件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 44,
+    "raw": "    /// 鍒锋柊 MRU 鍒楄〃",
+    "fix": "    /// 刷新 MRU 列表",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 49,
+    "raw": "    /// 娣诲姞褰撳墠閫変腑椤瑰埌 MRU",
+    "fix": "    /// 添加当前选中项到 MRU",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 60,
+    "raw": "    /// MRU 绫诲埆",
+    "fix": "    /// MRU 类别",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 70,
+    "raw": "    /// 鑷姩鍒锋柊",
+    "fix": "    /// 自动刷新",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 75,
+    "raw": "    /// MRU 閫変腑浜嬩欢",
+    "fix": "    /// MRU 选中事件",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\FMX\\DeepBase.FMX.UpdateDialog.pas",
+  "n": 3,
+  "rows": [
+   {
+    "line": 131,
+    "raw": "  // 绉诲姩绔樉绀?鍓嶅線鍟嗗簵\"鑰屼笉鏄?涓嬭浇\"",
+    "fix": "  // 移动端显?前往商店\"而不?下载\"",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 220,
+    "raw": "    // 绉诲姩绔烦杞簲鐢ㄥ晢搴?    if Assigned(FCallback) then",
+    "fix": "    // 移动端跳转应用商?    if Assigned(FCallback) then",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 226,
+    "raw": "    // 妗岄潰绔笅杞芥洿鏂?    if not FIsDownloading then",
+    "fix": "    // 桌面端下载更?    if not FIsDownloading then",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Persistence\\DeepBase.DB.DoQry.pas",
+  "n": 23,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.DB.DoQry - DoQry 鏁版嵁搴撹闂泦鎴愭ā鍧?",
+    "fix": "  DeepBase.DB.DoQry - DoQry 数据库访问集成模?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 37,
+    "raw": "  DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 鏌ヨ瀹氫箟鏈壘鍒?",
+    "fix": "  DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 查询定义未找?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 95,
+    "raw": "/// 鍒涘缓鏌ヨ涓婁笅鏂?",
+    "fix": "/// 创建查询上下?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 111,
+    "raw": "/// 鍦ㄤ簨鍔′腑鎵ц锛堣嚜鍔ㄦ彁浜?鍥炴粴锛?",
+    "fix": "/// 在事务中执行（自动提?回滚?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 122,
+    "raw": "/// 鎵ц闈炴煡璇紙INSERT/UPDATE/DELETE锛?",
+    "fix": "/// 执行非查询（INSERT/UPDATE/DELETE?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 128,
+    "raw": "/// 鎵ц INSERT 骞惰繑鍥炶嚜澧?ID",
+    "fix": "/// 执行 INSERT 并返回自?ID",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 140,
+    "raw": "/// 鏋勫缓 SQL 棰勮锛堣皟璇曠敤锛?",
+    "fix": "/// 构建 SQL 预览（调试用?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 160,
+    "raw": "/// 绮剧‘澶辨晥鏌愪釜 ProcName 鐨勭紦瀛?",
+    "fix": "/// 精确失效某个 ProcName 的缓?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 165,
+    "raw": "/// 璁剧疆缂撳瓨 TTL锛堢锛夛紝榛樿 300锛? 鍒嗛挓锛?",
+    "fix": "/// 设置缓存 TTL（秒），默认 300? 分钟?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 190,
+    "raw": "/// 璁剧疆棰勭紪璇戣鍙ユ睜瀹归噺涓婇檺锛堥粯璁?500锛?",
+    "fix": "/// 设置预编译语句池容量上限（默?500?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 355,
+    "raw": "  // 娓呯悊鏌ヨ缂撳瓨锛涢攣瀵硅薄鐢?initialization/finalization 绠＄悊銆?",
+    "fix": "  // 清理查询缓存；锁对象?initialization/finalization 管理?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 372,
+    "raw": "  // 娓呯悊棰勭紪璇戣鍙ユ睜锛涢攣瀵硅薄鐢?initialization/finalization 绠＄悊銆?",
+    "fix": "  // 清理预编译语句池；锁对象?initialization/finalization 管理?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 460,
+    "raw": "/// 鏍规嵁寮傚父瀵硅薄鎺ㄦ柇閿欒鐮侊紙浼樺厛浣跨敤 FireDAC 鍘熺敓閿欒绫诲瀷锛?",
+    "fix": "/// 根据异常对象推断错误码（优先使用 FireDAC 原生错误类型?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 600,
+    "raw": "/// 浠庢睜涓幏鍙栨垨鍒涘缓棰勭紪璇戞煡璇?",
+    "fix": "/// 从池中获取或创建预编译查?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 687,
+    "raw": "/// 閲婃斁鏌ヨ锛堝鏋滃惎鐢ㄦ睜鍖栵紝鍒欎繚鐣欙紱鍚﹀垯閲婃斁锛?",
+    "fix": "/// 释放查询（如果启用池化，则保留；否则释放?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 719,
+    "raw": "    // 瀹夊叏鍏滃簳锛氳嫢鏈拷韪埌姹犳潯鐩紝鎸夐潪姹犲寲閲婃斁锛岄伩鍏嶆硠婕?",
+    "fix": "    // 安全兜底：若未追踪到池条目，按非池化释放，避免泄?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 728,
+    "raw": "/// 璁板綍鏌ヨ鏃ュ織锛堢粨鏋勫寲 JSON 鏍煎紡锛?",
+    "fix": "/// 记录查询日志（结构化 JSON 格式?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 752,
+    "raw": "  // 鏋勫缓缁撴瀯鍖?JSON 鏃ュ織",
+    "fix": "  // 构建结构?JSON 日志",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 763,
+    "raw": "    // SQL 鍜屽弬鏁颁粎鍦?DEBUG 绾у埆璁板綍锛堥伩鍏嶆晱鎰熸暟鎹硠婕忥級",
+    "fix": "    // SQL 和参数仅?DEBUG 级别记录（避免敏感数据泄漏）",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 800,
+    "raw": "/// 缁戝畾 JSON 鍙傛暟鍒版煡璇紙鑷姩璇嗗埆 GUID锛?",
+    "fix": "/// 绑定 JSON 参数到查询（自动识别 GUID?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 944,
+    "raw": "/// 鍒ゆ柇鏄惁涓虹洿鎺?SQL锛堜互鍏抽敭瀛楀紑澶达級",
+    "fix": "/// 判断是否为直?SQL（以关键字开头）",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1234,
+    "raw": "/// 绮剧‘澶辨晥鏌愪釜 ProcName 鐨勭紦瀛?",
+    "fix": "/// 精确失效某个 ProcName 的缓?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1257,
+    "raw": "/// 璁剧疆缂撳瓨 TTL锛堢锛?",
+    "fix": "/// 设置缓存 TTL（秒?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Persistence\\DeepBase.DB.Pool.pas",
+  "n": 12,
+  "rows": [
+   {
+    "line": 10,
+    "raw": "  - 淇濈暀鏃?DatabaseType/ConnectionString 鍏煎鍏ュ彛",
+    "fix": "  - 保留?DatabaseType/ConnectionString 兼容入口",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 104,
+    "raw": "  /// <summary>杩炴帴姹犱簨浠剁被鍨?/summary>",
+    "fix": "  /// <summary>连接池事件类?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 120,
+    "raw": "  /// <summary>杩炴帴姹犵粺璁′俊鎭?/summary>",
+    "fix": "  /// <summary>连接池统计信?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 142,
+    "raw": "  /// <summary>姹犲寲杩炴帴鍖呰鍣?/summary>",
+    "fix": "  /// <summary>池化连接包装?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 170,
+    "raw": "    /// <summary>楠岃瘉杩炴帴鏈夋晥鎬?/summary>",
+    "fix": "    /// <summary>验证连接有效?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 269,
+    "raw": "    /// <summary>鑾峰彇杩炴帴锛堝甫瓒呮椂锛?/summary>",
+    "fix": "    /// <summary>获取连接（带超时?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 272,
+    "raw": "    /// <summary>鎵ц鎿嶄綔锛堣嚜鍔ㄨ幏鍙栧拰閲婃斁杩炴帴锛?/summary>",
+    "fix": "    /// <summary>执行操作（自动获取和释放连接?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 275,
+    "raw": "    /// <summary>鎵ц鏌ヨ锛堣嚜鍔ㄨ幏鍙栧拰閲婃斁杩炴帴锛?/summary>",
+    "fix": "    /// <summary>执行查询（自动获取和释放连接?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 373,
+    "raw": "/// <summary>鑾峰彇榛樿杩炴帴姹?/summary>",
+    "fix": "/// <summary>获取默认连接?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 376,
+    "raw": "/// <summary>璁剧疆榛樿杩炴帴姹?/summary>",
+    "fix": "/// <summary>设置默认连接?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1464,
+    "raw": "        // 鏃犳晥杩炴帴锛屾爣璁扮Щ闄?",
+    "fix": "        // 无效连接，标记移?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1536,
+    "raw": "      // 鏃犲彲鐢ㄨ繛鎺ワ紝灏濊瘯鍒涘缓鏂拌繛鎺?",
+    "fix": "      // 无可用连接，尝试创建新连?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.Crypto.OpenSSL.pas",
+  "n": 4,
+  "rows": [
+   {
+    "line": 18,
+    "raw": "  /// - 杩欎簺娴嬭瘯鍦ㄦ病鏈?libcrypto 鏃朵笉浼氬け璐ワ紝鍙獙璇佷笉浼氭姏鍑烘剰澶栧紓甯革紱",
+    "fix": "  /// - 这些测试在没?libcrypto 时不会失败，只验证不会抛出意外异常；",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 58,
+    "raw": "        // 鍦ㄥ綋鍓嶇幆澧冩棤娉曞姞杞?OpenSSL 鏃讹紝鍚庣画娴嬭瘯鐩存帴杩斿洖锛岄伩鍏嶅け璐?",
+    "fix": "        // 在当前环境无法加?OpenSSL 时，后续测试直接返回，避免失?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 76,
+    "raw": "      ; // 鍦ㄧ己灏?libcrypto 鐨勭幆澧冧笅鍏佽鍑虹幇璇ュ紓甯?",
+    "fix": "      ; // 在缺?libcrypto 的环境下允许出现该异?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 87,
+    "raw": "    Exit; // 鐜鏈姞杞?OpenSSL锛岃烦杩囧叿浣撹涓洪獙璇?",
+    "fix": "    Exit; // 环境未加?OpenSSL，跳过具体行为验?",
+    "missing": 2,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.DB.DoQry.pas",
+  "n": 8,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  璇存槑: 娴嬭瘯 DeepBase.DB.DoQry 妯″潡鐨勬牳蹇冨姛鑳?",
+    "fix": "  说明: 测试 DeepBase.DB.DoQry 模块的核心功?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 203,
+    "raw": "  // 浣跨敤鍐呭瓨鏁版嵁搴?",
+    "fix": "  // 使用内存数据?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 826,
+    "raw": "  // 绗竴娆¤皟鐢紝搴旇鏈懡涓?",
+    "fix": "  // 第一次调用，应该未命?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 831,
+    "raw": "  // 绗簩娆¤皟鐢紙鐩存帴 SQL 涓嶇紦瀛橈紝鎵€浠ヤ粛鐒舵槸 miss锛屼絾杩欓噷楠岃瘉 TTL 閫昏緫锛?",
+    "fix": "  // 第二次调用（直接 SQL 不缓存，扢以仍然是 miss，但这里验证 TTL 逻辑?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 871,
+    "raw": "  // 鐩存帴 SQL 涓嶇粡杩囩紦瀛樻煡鎵撅紝miss 搴旇涓?0",
+    "fix": "  // 直接 SQL 不经过缓存查找，miss 应该?0",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1147,
+    "raw": "      // 纭繚 ErrorCode 瀛楁瀛樺湪涓斾笉涓?0",
+    "fix": "      // 确保 ErrorCode 字段存在且不?0",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1200,
+    "raw": "    // 鎵ц 10 娆＄浉鍚屾煡璇?",
+    "fix": "    // 执行 10 次相同查?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 1230,
+    "raw": "    // 鍒涘缓鍑犱釜姹犳潯鐩?",
+    "fix": "    // 创建几个池条?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.FormState.pas",
+  "n": 17,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  DeepBase FormState 妯″潡鍗曞厓娴嬭瘯",
+    "fix": "  DeepBase FormState 模块单元测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  娴嬭瘯鍐呭:",
+    "fix": "  测试内容:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 9,
+    "raw": "  - WindowState 澶勭悊",
+    "fix": "  - WindowState 处理",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "  - Extra JSON 瀛楁",
+    "fix": "  - Extra JSON 字段",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 158,
+    "raw": "  // 鍒涘缓娴嬭瘯绐椾綋",
+    "fix": "  // 创建测试窗体",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 243,
+    "raw": "  // 鏀瑰彉浣嶇疆",
+    "fix": "  // 改变位置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 250,
+    "raw": "  Assert.AreEqual(OrigLeft, FTestForm.Left, '宸﹁竟浣嶇疆搴旇鎭㈠');",
+    "fix": "  Assert.AreEqual(OrigLeft, FTestForm.Left, '左边位置应该恢复');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 251,
+    "raw": "  Assert.AreEqual(OrigTop, FTestForm.Top, '椤堕儴浣嶇疆搴旇鎭㈠');",
+    "fix": "  Assert.AreEqual(OrigTop, FTestForm.Top, '顶部位置应该恢复');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 265,
+    "raw": "  // 鏀瑰彉澶у皬",
+    "fix": "  // 改变大小",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 272,
+    "raw": "  Assert.AreEqual(OrigWidth, FTestForm.Width, '瀹藉害搴旇鎭㈠');",
+    "fix": "  Assert.AreEqual(OrigWidth, FTestForm.Width, '宽度应该恢复');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 273,
+    "raw": "  Assert.AreEqual(OrigHeight, FTestForm.Height, '楂樺害搴旇鎭㈠');",
+    "fix": "  Assert.AreEqual(OrigHeight, FTestForm.Height, '高度应该恢复');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 302,
+    "raw": "  // 淇濆瓨涓€涓秴鍑哄睆骞曡寖鍥寸殑浣嶇疆",
+    "fix": "  // 保存丢个超出屏幕范围的位置",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 307,
+    "raw": "  // 鎭㈠鏃跺簲璇ヨ嚜鍔ㄨ皟鏁村埌鏈夋晥鑼冨洿",
+    "fix": "  // 恢复时应该自动调整到有效范围",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 310,
+    "raw": "  // 绐椾綋搴旇鍦ㄥ彲瑙佽寖鍥村唴",
+    "fix": "  // 窗体应该在可见范围内",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 311,
+    "raw": "  Assert.IsTrue(FTestForm.Left >= -FTestForm.Width, '宸﹁竟浣嶇疆搴旇鍦ㄥ悎鐞嗚寖鍥村唴');",
+    "fix": "  Assert.IsTrue(FTestForm.Left >= -FTestForm.Width, '左边位置应该在合理范围内');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 312,
+    "raw": "  Assert.IsTrue(FTestForm.Top >= -FTestForm.Height, '椤堕儴浣嶇疆搴旇鍦ㄥ悎鐞嗚寖鍥村唴');",
+    "fix": "  Assert.IsTrue(FTestForm.Top >= -FTestForm.Height, '顶部位置应该在合理范围内');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 396,
+    "raw": "  Assert.IsFalse(FFormState.FormStateExists(FTestForm.Name), '鍒犻櫎鍚庝笉搴旇瀛樺湪');",
+    "fix": "  Assert.IsFalse(FFormState.FormStateExists(FTestForm.Name), '删除后不应该存在');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.i18n.pas",
+  "n": 25,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  DeepBase i18n 妯″潡鍗曞厓娴嬭瘯",
+    "fix": "  DeepBase i18n 模块单元测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  娴嬭瘯鍐呭:",
+    "fix": "  测试内容:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "  - T() 鍑芥暟",
+    "fix": "  - T() 函数",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 8,
+    "raw": "  - TFmt() 鍑芥暟",
+    "fix": "  - TFmt() 函数",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 9,
+    "raw": "  - TN() 澶嶆暟褰㈠紡",
+    "fix": "  - TN() 复数形式",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  - 缂撳瓨鏈哄埗",
+    "fix": "  - 缓存机制",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 111,
+    "raw": "  FLanguages[1].NativeName := '涓枃';",
+    "fix": "  FLanguages[1].NativeName := '中文';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 207,
+    "raw": "  // IMPORTANT: DeepBase 浣跨敤鍗曚緥 Manager锛屾祴璇曚箣闂翠細鍏变韩 I18n 瀹炰緥銆?",
+    "fix": "  // IMPORTANT: DeepBase 使用单例 Manager，测试之间会共享 I18n 实例?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 239,
+    "raw": "  Translation := '浣犲ソ';",
+    "fix": "  Translation := '你好';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 247,
+    "raw": "  Assert.AreEqual(Translation, Res, '鏈夌炕璇戞椂搴旇杩斿洖缈昏瘧鏂囨湰');",
+    "fix": "  Assert.AreEqual(Translation, Res, '有翻译时应该返回翻译文本');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 278,
+    "raw": "  // 璇ョ敤渚嬮獙璇佽嫳鏂囧鏁拌鍒欙紱纭繚褰撳墠璇█涓?en-US銆?",
+    "fix": "  // 该用例验证英文复数规则；确保当前语言?en-US?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 316,
+    "raw": "  Assert.IsTrue(Length(Languages) >= 1, '鑷冲皯搴旇鏈変竴涓彲鐢ㄨ瑷€');",
+    "fix": "  Assert.IsTrue(Length(Languages) >= 1, '至少应该有一个可用语訢');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 324,
+    "raw": "  TranslatedText := '娴嬭瘯缈昏瘧';",
+    "fix": "  TranslatedText := '测试翻译';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 333,
+    "raw": "    'AddTranslation 搴旇姝ｇ‘娣诲姞缈昏瘧');",
+    "fix": "    'AddTranslation 应该正确添加翻译');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 339,
+    "raw": "  // 浣跨敤 SubscribeLanguageChange 浠ｆ浛鐩存帴璁剧疆 OnLanguageChanged",
+    "fix": "  // 使用 SubscribeLanguageChange 代替直接设置 OnLanguageChanged",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 340,
+    "raw": "  // 鍥犱负 OnLanguageChanged 鏄?TNotifyEvent 绫诲瀷锛屼笉鏀寔鍖垮悕鏂规硶",
+    "fix": "  // 因为 OnLanguageChanged ?TNotifyEvent 类型，不支持匿名方法",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 361,
+    "raw": "  // 棣栨璋冪敤锛堝彲鑳介渶瑕佹煡璇㈡暟鎹簱锛?",
+    "fix": "  // 首次调用（可能需要查询数据库?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 364,
+    "raw": "  // 娴嬮噺缂撳瓨鍛戒腑鎬ц兘",
+    "fix": "  // 测量缓存命中性能",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 372,
+    "raw": "  // 10000 娆℃煡璇㈠簲璇ュ湪 500ms 鍐呭畬鎴愶紙骞冲潎姣忔 < 0.05ms锛?",
+    "fix": "  // 10000 次查询应该在 500ms 内完成（平均每次 < 0.05ms?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 388,
+    "raw": "  // 鍥犳杩欓噷鐢?fr-FR 浣滀负绗簩璇█锛屼互楠岃瘉鍒囨崲璇█鍚庣紦瀛樹笉浼氳鍛戒腑銆?",
+    "fix": "  // 因此这里?fr-FR 作为第二语言，以验证切换语言后缓存不会误命中?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 390,
+    "raw": "  // 娣诲姞涓ょ璇█鐨勭炕璇?(SourceText, LangCode, TranslatedText)",
+    "fix": "  // 添加两种语言的翻?(SourceText, LangCode, TranslatedText)",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 394,
+    "raw": "  // 娴嬭瘯涓枃",
+    "fix": "  // 测试中文",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 397,
+    "raw": "  Assert.AreEqual(Translation1, Res, '涓枃缈昏瘧搴旇姝ｇ‘');",
+    "fix": "  Assert.AreEqual(Translation1, Res, '中文翻译应该正确');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 414,
+    "raw": "    LocalI18n.AddTranslation('Inject.Hello', 'zh-CN', '娉ㄥ叆浣犲ソ');",
+    "fix": "    LocalI18n.AddTranslation('Inject.Hello', 'zh-CN', '注入你好');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 416,
+    "raw": "    Assert.AreEqual('娉ㄥ叆浣犲ソ', LocalI18n.Translate('Inject.Hello'),",
+    "fix": "    Assert.AreEqual('注入你好', LocalI18n.Translate('Inject.Hello'),",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.License.pas",
+  "n": 4,
+  "rows": [
+   {
+    "line": 161,
+    "raw": "  Assert.AreEqual(Id1, Id2, '澶氭璋冪敤搴旇杩斿洖鐩稿悓鐨勮澶?ID');",
+    "fix": "  Assert.AreEqual(Id1, Id2, '多次调用应该返回相同的设?ID');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 213,
+    "raw": "  Assert.AreEqual(Ord(lsValid), Ord(Info.Status), '鐢熸垚鐨?Key 搴旇鍙互楠岃瘉閫氳繃');",
+    "fix": "  Assert.AreEqual(Ord(lsValid), Ord(Info.Status), '生成?Key 应该可以验证通过');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 224,
+    "raw": "  Assert.AreEqual(Ord(ltNone), Ord(Info.LicenseType), '榛樿绫诲瀷搴旇鏄?None');",
+    "fix": "  Assert.AreEqual(Ord(ltNone), Ord(Info.LicenseType), '默认类型应该?None');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 353,
+    "raw": "    '鍋滅敤鍚庤鍙瘉绫诲瀷搴旇鏄?None');",
+    "fix": "    '停用后许可证类型应该?None');",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.LLM.PromptTemplate.pas",
+  "n": 1,
+  "rows": [
+   {
+    "line": 93,
+    "raw": "  // 浣跨敤鍐呭瓨鏁版嵁搴?",
+    "fix": "  // 使用内存数据?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.Manager.pas",
+  "n": 3,
+  "rows": [
+   {
+    "line": 99,
+    "raw": "  // 纭繚鍏ㄥ眬鍗曚緥琚噸缃?  if FManager.IsInitialized then",
+    "fix": "  // 确保全局单例被重?  if FManager.IsInitialized then",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 158,
+    "raw": "  // 鍦ㄦ湭鍒濆鍖栫殑鎯呭喌涓嬭皟鐢?Finalize 涓嶅簲璇ュ穿婧?",
+    "fix": "  // 在未初始化的情况下调?Finalize 不应该崩?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 161,
+    "raw": "  Assert.Pass('鏈垵濮嬪寲鏃惰皟鐢?Finalize 娌℃湁鎶涘嚭寮傚父');",
+    "fix": "  Assert.Pass('未初始化时调?Finalize 没有抛出异常');",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.MRU.pas",
+  "n": 16,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  DeepBase MRU 妯″潡鍗曞厓娴嬭瘯",
+    "fix": "  DeepBase MRU 模块单元测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  娴嬭瘯鍐呭:",
+    "fix": "  测试内容:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 9,
+    "raw": "  - 鎺掑簭楠岃瘉",
+    "fix": "  - 排序验证",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "  - 閲嶅娣诲姞澶勭悊",
+    "fix": "  - 重复添加处理",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 88,
+    "raw": "  // 娓呯悊娴嬭瘯鏁版嵁",
+    "fix": "  // 清理测试数据",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 103,
+    "raw": "  Assert.AreEqual('key1', string(Items[0]), 'Key 搴旇姝ｇ‘');",
+    "fix": "  Assert.AreEqual('key1', string(Items[0]), 'Key 应该正确');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 157,
+    "raw": "  Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 搴旇姝ｇ‘');",
+    "fix": "  Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 应该正确');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 158,
+    "raw": "  Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 搴旇姝ｇ‘');",
+    "fix": "  Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 应该正确');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 187,
+    "raw": "  // 鏈€鏂扮殑搴旇鎺掑湪鍓嶉潰",
+    "fix": "  // 朢新的应该排在前面",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 221,
+    "raw": "  Assert.AreEqual(Integer(1), Integer(Length(Items2)), '鍏朵粬鍒嗙被涓嶅簲璇ュ彈褰卞搷');",
+    "fix": "  Assert.AreEqual(Integer(1), Integer(Length(Items2)), '其他分类不应该受影响');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 223,
+    "raw": "  // 娓呯悊",
+    "fix": "  // 清理",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 239,
+    "raw": "  Assert.AreEqual('key2', string(Items[0]), '鍓╀綑鐨勫簲璇ユ槸 key2');",
+    "fix": "  Assert.AreEqual('key2', string(Items[0]), '剩余的应该是 key2');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 252,
+    "raw": "    // 娣诲姞瀛樺湪鐨勬枃浠跺拰涓嶅瓨鍦ㄧ殑鏂囦欢",
+    "fix": "    // 添加存在的文件和不存在的文件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 278,
+    "raw": "  // 鍐嶆娣诲姞鍚屼竴涓?key",
+    "fix": "  // 再次添加同一?key",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 282,
+    "raw": "  Assert.IsTrue(Items[0].AccessCount > InitialCount, 'AccessCount 搴旇澧炲姞');",
+    "fix": "  Assert.IsTrue(Items[0].AccessCount > InitialCount, 'AccessCount 应该增加');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 304,
+    "raw": "  // 娓呯悊",
+    "fix": "  // 清理",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.Protection.pas",
+  "n": 1,
+  "rows": [
+   {
+    "line": 148,
+    "raw": "  // 浣跨敤闅忔満 IV锛屾甯告儏鍐典笅涓ゆ瀵嗘枃搴斾笉鍚岋紙纰版挒姒傜巼鏋佷綆锛?",
+    "fix": "  // 使用随机 IV，正常情况下两次密文应不同（碰撞概率极低?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.DeepBase.Theme.pas",
+  "n": 11,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  DeepBase Theme 妯″潡鍗曞厓娴嬭瘯",
+    "fix": "  DeepBase Theme 模块单元测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  娴嬭瘯鍐呭:",
+    "fix": "  测试内容:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "  - OnThemeChanged 浜嬩欢",
+    "fix": "  - OnThemeChanged 事件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 139,
+    "raw": "  Assert.IsTrue(Found, string('搴旇鏈?Windows 榛樿涓婚'));",
+    "fix": "  Assert.IsTrue(Found, string('应该?Windows 默认主题'));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 178,
+    "raw": "    '搴旂敤鏃犳晥涓婚涓嶅簲璇ユ姏鍑哄紓甯革紙搴旇闈欓粯澶辫触鎴栦娇鐢ㄩ粯璁わ級'",
+    "fix": "    '应用无效主题不应该抛出异常（应该静默失败或使用默认）'",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 186,
+    "raw": "  // 鍙祴璇曡皟鐢ㄤ笉浼氬嚭閿?",
+    "fix": "  // 只测试调用不会出?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 208,
+    "raw": "    Assert.IsNotEmpty(Info.Name, '涓婚淇℃伅鐨勫悕绉颁笉搴旇涓虹┖');",
+    "fix": "    Assert.IsNotEmpty(Info.Name, '主题信息的名称不应该为空');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 216,
+    "raw": "  // OnThemeChanged 鏄?TNotifyEvent 绫诲瀷锛屼笉鏀寔鍖垮悕鏂规硶",
+    "fix": "  // OnThemeChanged ?TNotifyEvent 类型，不支持匿名方法",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 217,
+    "raw": "  // 娴嬭瘯绠€鍖? 鍙獙璇佸垏鎹富棰樹笉鎶ラ敊",
+    "fix": "  // 测试箢? 只验证切换主题不报错",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 222,
+    "raw": "  // 鍒囨崲鍒颁笉鍚岀殑涓婚",
+    "fix": "  // 切换到不同的主题",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 228,
+    "raw": "  Assert.Pass('涓婚鍒囨崲鎴愬姛');",
+    "fix": "  Assert.Pass('主题切换成功');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.LogAnalyzer.pas",
+  "n": 14,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.LogAnalyzer - LogAnalyzer 宸ュ叿鍗曞厓娴嬭瘯",
+    "fix": "  Test.LogAnalyzer - LogAnalyzer 工具单元测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  娴嬭瘯瑕嗙洊:",
+    "fix": "  测试覆盖:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "    - LogAnalyzer.Stats: 鏃ュ織缁熻妯″潡",
+    "fix": "    - LogAnalyzer.Stats: 日志统计模块",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "    - LogAnalyzer.Export: 鏃ュ織瀵煎嚭妯″潡",
+    "fix": "    - LogAnalyzer.Export: 日志导出模块",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 232,
+    "raw": "    FTestLogs[I].Timestamp := IncHour(Now, -20 + I);  // 杩囧幓 20 灏忔椂鍒嗗竷",
+    "fix": "    FTestLogs[I].Timestamp := IncHour(Now, -20 + I);  // 过去 20 小时分布",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 315,
+    "raw": "  // 楠岃瘉鍚勭骇鍒鏁版€诲拰绛変簬鎬绘暟",
+    "fix": "  // 验证各级别计数和等于总数",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 365,
+    "raw": "    // 楠岃瘉鎸夋暟閲忛檷搴忔帓锟?",
+    "fix": "    // 验证按数量降序排?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 383,
+    "raw": "    // 楠岃瘉鎸夋椂闂村崌搴忔帓锟?",
+    "fix": "    // 验证按时间升序排?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 413,
+    "raw": "    // 鍙兘娌℃湁閿欒锛屾墍浠ュ彧妫€鏌ヤ笉浼氬穿锟?",
+    "fix": "    // 可能没有错误，所以只棢查不会崩?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 511,
+    "raw": "    Assert.IsTrue(Pos('鏃堕棿', Lines[0]) > 0);",
+    "fix": "    Assert.IsTrue(Pos('时间', Lines[0]) > 0);",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 512,
+    "raw": "    Assert.IsTrue(Pos('绾у埆', Lines[0]) > 0);",
+    "fix": "    Assert.IsTrue(Pos('级别', Lines[0]) > 0);",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 544,
+    "raw": "  // 鍖呭惈閫楀彿鐨勫瓧娈靛簲璇ヨ寮曞彿鍖呭洿",
+    "fix": "  // 包含逗号的字段应该被引号包围",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 557,
+    "raw": "  // 鍖呭惈寮曞彿鐨勫瓧娈靛簲璇ヨ浆锟?",
+    "fix": "  // 包含引号的字段应该转?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 684,
+    "raw": "  // 搴旇琚浆涔夛紝涓嶅簲璇ュ寘鍚師锟?script 鏍囩",
+    "fix": "  // 应该被转义，不应该包含原?script 标签",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.SeedTool.pas",
+  "n": 11,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.SeedTool - SeedTool 宸ュ叿鍗曞厓娴嬭瘯",
+    "fix": "  Test.SeedTool - SeedTool 工具单元测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  娴嬭瘯瑕嗙洊:",
+    "fix": "  测试覆盖:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "    - TBasicProtection: 鍔犲瘑瑙ｅ瘑銆丠MAC銆佸搱甯?    - TAntiTamperPackage: 闃茬鏀规暟鎹寘",
+    "fix": "    - TBasicProtection: 加密解密、HMAC、哈?    - TAntiTamperPackage: 防篡改数据包",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 154,
+    "raw": "  // 鐢熸垚 10KB 娴嬭瘯鏁版嵁",
+    "fix": "  // 生成 10KB 测试数据",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 210,
+    "raw": "  // 淇敼鏁版嵁鍚庨獙璇佸簲璇ュけ璐?  Assert.IsFalse(TBasicProtection.VerifyDataIntegrity('Modified data', HMAC));",
+    "fix": "  // 修改数据后验证应该失?  Assert.IsFalse(TBasicProtection.VerifyDataIntegrity('Modified data', HMAC));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 262,
+    "raw": "  // 鐢变簬闅忔満 IV锛屾瘡娆″姞瀵嗙粨鏋滃簲璇ヤ笉鍚?  Assert.AreNotEqual(Encrypted1, Encrypted2);",
+    "fix": "  // 由于随机 IV，每次加密结果应该不?  Assert.AreNotEqual(Encrypted1, Encrypted2);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 264,
+    "raw": "  // 浣嗕袱涓兘搴旇鑳芥纭В瀵?  Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted1))",
+    "fix": "  // 但两个都应该能正确解?  Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted1));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 340,
+    "raw": "    // 鏂囦欢搴旇鍖呭惈绛惧悕/鏍￠獙鏁版嵁",
+    "fix": "    // 文件应该包含签名/校验数据",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 376,
+    "raw": "  // 绡℃敼鏂囦欢涓棿鐨勪竴涓瓧鑺?  Content := TFile.ReadAllBytes(FileName);",
+    "fix": "  // 篡改文件中间的一个字?  Content := TFile.ReadAllBytes(FileName);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 381,
+    "raw": "  // 鍔犺浇绡℃敼鍚庣殑鏂囦欢搴旇妫€娴嬪埌",
+    "fix": "  // 加载篡改后的文件应该棢测到",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 389,
+    "raw": "        // 鎶涘嚭寮傚父涔熸槸鍚堢悊鐨勮涓?        Assert.Pass('Tampering detected via exception: ' + E.Message);",
+    "fix": "        // 抛出异常也是合理的行?        Assert.Pass('Tampering detected via exception: ' + E.Message);",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Test.WebService.pas",
+  "n": 1,
+  "rows": [
+   {
+    "line": 5,
+    "raw": "    - DeepBase.WebAPI.Core: 鏍稿績璺敱鍜岃姹傚鐞?",
+    "fix": "    - DeepBase.WebAPI.Core: 核心路由和请求处?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Integration\\DeepBase.IntegrationTest.pas",
+  "n": 7,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  DeepBase.IntegrationTest - 闆嗘垚娴嬭瘯妗嗘灦鏍稿績妯″潡",
+    "fix": "  DeepBase.IntegrationTest - 集成测试框架核心模块",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  Description: 鎻愪緵绔埌绔泦鎴愭祴璇曡兘鍔涳紝鏀寔瀹屾暣涓氬姟娴佺▼娴嬭瘯",
+    "fix": "  Description: 提供端到端集成测试能力，支持完整业务流程测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 8,
+    "raw": "    - 娴嬭瘯鐜鑷姩閰嶇疆涓庢竻鐞?",
+    "fix": "    - 测试环境自动配置与清?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 9,
+    "raw": "    - 娴嬭瘯鏁版嵁搴撻殧绂?",
+    "fix": "    - 测试数据库隔?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 10,
+    "raw": "    - 娴嬭瘯鏁版嵁鐢熸垚涓庣鐞?",
+    "fix": "    - 测试数据生成与管?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 12,
+    "raw": "    - 娴嬭瘯鎶ュ憡鐢熸垚",
+    "fix": "    - 测试报告生成",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 13,
+    "raw": "    - 鎬ц兘鍩哄噯娴嬭瘯",
+    "fix": "    - 性能基准测试",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Integration\\Test.Integration.Core.pas",
+  "n": 6,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Integration.Core - 鏍稿績鍔熻兘闆嗘垚娴嬭瘯",
+    "fix": "  Test.Integration.Core - 核心功能集成测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  娴嬭瘯鑼冨洿:",
+    "fix": "  测试范围:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "    - 閰嶇疆绠＄悊瀹屾暣娴佺▼",
+    "fix": "    - 配置管理完整流程",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "    - 鏃ュ織绯荤粺瀹屾暣娴佺▼",
+    "fix": "    - 日志系统完整流程",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 7,
+    "raw": "    - 鏁版嵁缁戝畾绔埌绔祴璇?",
+    "fix": "    - 数据绑定端到端测?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "    - 澶氭ā鍧楀崗浣滄祴璇?",
+    "fix": "    - 多模块协作测?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Integration\\Test.Integration.WebAPI.pas",
+  "n": 7,
+  "rows": [
+   {
+    "line": 34,
+    "raw": "    - 閫氳繃瀹為檯鍚姩 TApiServer 骞朵娇鐢?DeepBase.Net HTTP 瀹㈡埛绔彂璧疯姹?",
+    "fix": "    - 通过实际启动 TApiServer 并使?DeepBase.Net HTTP 客户端发起请?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 82,
+    "raw": "    - 涓嶈繘琛岀湡瀹炵綉缁滄彙鎵? 浠呭湪鍐呭瓨涓瀯閫?TWebSocketMessage",
+    "fix": "    - 不进行真实网络握? 仅在内存中构?TWebSocketMessage",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 156,
+    "raw": "  // JWT 绠＄悊鍣?& 璁よ瘉涓棿浠?(浠呭 /secure/* 璺敱鐢熸晥)",
+    "fix": "  // JWT 管理?& 认证中间?(仅对 /secure/* 路由生效)",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 223,
+    "raw": "  // 鍚屼笂, 鏃犻渶娓呯悊鏁版嵁搴撴暟鎹?",
+    "fix": "  // 同上, 无需清理数据库数?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 269,
+    "raw": "    LJson.Free; // JsonBody 宸茬粡搴忓垪鍖栦负瀛楃涓? 涓嶅啀闇€瑕佸師瀵硅薄",
+    "fix": "    LJson.Free; // JsonBody 已经序列化为字符? 不再霢要原对象",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 416,
+    "raw": "      // /api/ping 璺敱瀛樺湪涓斿寘鍚?GET 鎿嶄綔",
+    "fix": "      // /api/ping 路由存在且包?GET 操作",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 422,
+    "raw": "      // /api/users/{id} 璺敱瀛樺湪涓斿寘鍚矾寰勫弬鏁?id",
+    "fix": "      // /api/users/{id} 路由存在且包含路径参?id",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\RegressionTestRegistry.pas",
+  "n": 6,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  RegressionTestRegistry - 鍥炲綊娴嬭瘯娉ㄥ唽琛?",
+    "fix": "  RegressionTestRegistry - 回归测试注册?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 4,
+    "raw": "  姝ゆ枃浠跺垪鍑烘墍鏈夊洖褰掓祴璇曪紝鐢ㄤ簬锛?",
+    "fix": "  此文件列出所有回归测试，用于?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  4. 娴嬭瘯瑕嗙洊鐜囩粺璁?",
+    "fix": "  4. 测试覆盖率统?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 143,
+    "raw": "    // 搴忓垪鍖栧畨鍏ㄧ浉鍏?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;",
+    "fix": "    // 序列化安全相?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 152,
+    "raw": "     Description: '搴忓垪鍖栨繁搴﹂檺鍒惰繃楂?;",
+    "fix": "     Description: '序列化深度限制过?;",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 196,
+    "raw": "     Description: 'HTTP璇锋眰澶存敞鍏ラ闄?;",
+    "fix": "     Description: 'HTTP请求头注入风?;",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.Base.pas",
+  "n": 9,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  鎻愪緵鎵€鏈夊洖褰掓祴璇曠殑閫氱敤鍩虹璁炬柦锛?",
+    "fix": "  提供扢有回归测试的通用基础设施?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 12,
+    "raw": "  3. 娣诲姞鍏蜂綋鐨勬祴璇曟柟娉?",
+    "fix": "  3. 添加具体的测试方?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 39,
+    "raw": "    /// <summary>鑾峰彇淇鏃ユ湡锛屾牸寮?'YYYY-MM-DD'</summary>",
+    "fix": "    /// <summary>获取修复日期，格?'YYYY-MM-DD'</summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 45,
+    "raw": "    /// <summary>鑾峰彇鍙楀奖鍝嶇殑婧愭枃浠惰矾寰?/summary>",
+    "fix": "    /// <summary>获取受影响的源文件路?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 72,
+    "raw": "  /// 鐢ㄤ簬娴嬭瘯骞跺彂鐩稿叧鐨?Bug 淇",
+    "fix": "  /// 用于测试并发相关?Bug 修复",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 82,
+    "raw": "    /// <summary>姣忎釜绾跨▼鐨勮凯浠ｆ鏁?/summary>",
+    "fix": "    /// <summary>每个线程的迭代次?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 97,
+    "raw": "  /// 鐢ㄤ簬娴嬭瘯鍐呭瓨娉勬紡鐩稿叧鐨?Bug 淇",
+    "fix": "  /// 用于测试内存泄漏相关?Bug 修复",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 103,
+    "raw": "    /// <summary>鑾峰彇褰撳墠鍐呭瓨浣跨敤閲?/summary>",
+    "fix": "    /// <summary>获取当前内存使用?/summary>",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 221,
+    "raw": "    // 鍒涘缓骞跺惎鍔ㄧ嚎绋?",
+    "fix": "    // 创建并启动线?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG001_AnimationMemoryLeak.pas",
+  "n": 14,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG001_AnimationMemoryLeak - 鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG001_AnimationMemoryLeak - 动画对象内存泄漏回归测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-001: 鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡",
+    "fix": "  BUG-001: 动画对象内存泄漏",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? 鏋愭瀯鍑芥暟涓璅AnimationTimer鍙鐢ㄤ絾鏈噴鏀?",
+    "fix": "  原问? 析构函数中FAnimationTimer只禁用但未释?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 浣跨敤FreeAndNil纭繚瀹氭椂鍣ㄥ璞¤姝ｇ‘閲婃斁",
+    "fix": "  修复方案: 使用FreeAndNil确保定时器对象被正确释放",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  鏂囦欢: VCL/DeepBase.VCL.WaitForm.pas",
+    "fix": "  文件: VCL/DeepBase.VCL.WaitForm.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 39,
+    "raw": "    [Description('楠岃瘉 WaitForm 鍒涘缓鍜岄攢姣佷笉浼氭硠婕忓唴瀛?)]",
+    "fix": "    [Description('验证 WaitForm 创建和销毁不会泄漏内?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 47,
+    "raw": "    [Description('楠岃瘉婧愪唬鐮佷娇鐢?FreeAndNil')]",
+    "fix": "    [Description('验证源代码使?FreeAndNil')]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 65,
+    "raw": "  Result := '鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡';",
+    "fix": "  Result := '动画对象内存泄漏';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 87,
+    "raw": "  // 鐢变簬 WaitForm 鏄?VCL 缁勪欢锛岄渶瑕佸湪涓荤嚎绋嬩腑娴嬭瘯",
+    "fix": "  // 由于 WaitForm ?VCL 组件，需要在主线程中测试",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 88,
+    "raw": "  // 杩欓噷楠岃瘉姒傚康锛氬垱寤哄拰閿€姣佸簲璇ヤ笉娉勬紡鍐呭瓨",
+    "fix": "  // 这里验证概念：创建和锢毁应该不泄漏内存",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 100,
+    "raw": "  // 澶氭鍒涘缓閿€姣佸悗鍐呭瓨搴旇绋冲畾",
+    "fix": "  // 多次创建锢毁后内存应该稳定",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 127,
+    "raw": "  // 楠岃瘉浣跨敤 FreeAndNil 鑰屼笉鏄畝鍗曠殑 Free",
+    "fix": "  // 验证使用 FreeAndNil 而不是简单的 Free",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 129,
+    "raw": "    '鏋愭瀯鍑芥暟搴旇浣跨敤 FreeAndNil 閲婃斁瀹氭椂鍣ㄥ璞?);",
+    "fix": "    '析构函数应该使用 FreeAndNil 释放定时器对?);",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG009_LoggingRace.pas",
+  "n": 16,
+  "rows": [
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? 浣跨敤TInterlocked.CompareExchange鍚庣殑閿佹搷浣滃彲鑳戒笉鏄師瀛愮殑",
+    "fix": "  原问? 使用TInterlocked.CompareExchange后的锁操作可能不是原子的",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 浠ｇ爜宸叉纭疄鐜板弻閲嶆鏌ラ攣瀹氭ā寮忥紙Double-Checked Locking锛夛紝",
+    "fix": "  修复方案: 代码已正确实现双重检查锁定模式（Double-Checked Locking），",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 9,
+    "raw": "            浣跨敤 TInterlocked.CompareExchange 鍒涘缓閿佸璞★紝",
+    "fix": "            使用 TInterlocked.CompareExchange 创建锁对象，",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "            鐒跺悗浣跨敤 TMonitor 杩涜鍚屾",
+    "fix": "            然后使用 TMonitor 进行同步",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 12,
+    "raw": "  淇鏃ユ湡: 2025-12-16",
+    "fix": "  修复日期: 2025-12-16",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 13,
+    "raw": "  鏂囦欢: Core/DeepBase.Logging.pas",
+    "fix": "  文件: Core/DeepBase.Logging.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 47,
+    "raw": "    [Description('楠岃瘉骞跺彂鏃ュ織鍐欏叆涓嶄細瀵艰嚧鏁版嵁鎹熷潖')]",
+    "fix": "    [Description('验证并发日志写入不会导致数据损坏')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 52,
+    "raw": "    [Description('楠岃瘉 TThreadList 鐢ㄤ簬绾跨▼瀹夊叏闃熷垪璁块棶')]",
+    "fix": "    [Description('验证 TThreadList 用于线程安全队列访问')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 110,
+    "raw": "  // 楠岃瘉瀛樺湪鍙岄噸妫€鏌ラ攣瀹氱浉鍏充唬鐮?",
+    "fix": "  // 验证存在双重棢查锁定相关代?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 114,
+    "raw": "    '浠ｇ爜搴旇浣跨敤 TInterlocked.CompareExchange 瀹炵幇鍙岄噸妫€鏌ラ攣瀹?);",
+    "fix": "    '代码应该使用 TInterlocked.CompareExchange 实现双重棢查锁?);",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 119,
+    "raw": "    '浠ｇ爜搴旇浣跨敤 TMonitor 鎴栭攣杩涜鍚屾');",
+    "fix": "    '代码应该使用 TMonitor 或锁进行同步');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 137,
+    "raw": "    // 鍒涘缓澶氫釜绾跨▼鍚屾椂鍐欐棩蹇?",
+    "fix": "    // 创建多个线程同时写日?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 163,
+    "raw": "    Assert.Pass('骞跺彂鏃ュ織鍐欏叆瀹屾垚锛屾棤鏁版嵁鎹熷潖');",
+    "fix": "    Assert.Pass('并发日志写入完成，无数据损坏');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 166,
+    "raw": "    // 娓呯悊涓存椂鏂囦欢",
+    "fix": "    // 清理临时文件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 195,
+    "raw": "  // 楠岃瘉浣跨敤 TThreadList 杩涜绾跨▼瀹夊叏闃熷垪璁块棶",
+    "fix": "  // 验证使用 TThreadList 进行线程安全队列访问",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 200,
+    "raw": "    '浠ｇ爜搴旇浣跨敤 TThreadList 杩涜绾跨▼瀹夊叏鐨勯槦鍒楄闂?);",
+    "fix": "    '代码应该使用 TThreadList 进行线程安全的队列访?);",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG010_WorkerQueueRace.pas",
+  "n": 7,
+  "rows": [
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 鍦ㄦ墍鏈夌姸鎬佸彉鏇存搷浣滀腑娣诲姞閿佷繚鎶わ紝纭繚绾跨▼瀹夊叏",
+    "fix": "  修复方案: 在所有状态变更操作中添加锁保护，确保线程安全",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "  淇鏃ユ湡: 2025-12-16",
+    "fix": "  修复日期: 2025-12-16",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  鏂囦欢: Core/DeepBase.WorkerQueue.pas",
+    "fix": "  文件: Core/DeepBase.WorkerQueue.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 103,
+    "raw": "  // 楠岃瘉瀛樺湪閿佷繚鎶ょ浉鍏充唬鐮?",
+    "fix": "  // 验证存在锁保护相关代?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 108,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈閿佷繚鎶ゆ満鍒?);",
+    "fix": "    '代码应该包含锁保护机?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 126,
+    "raw": "    // 鍒涘缓澶氫釜绾跨▼鍚屾椂淇敼璁℃暟鍣?",
+    "fix": "    // 创建多个线程同时修改计数?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 159,
+    "raw": "    Assert.AreEqual(10000, Counter, '骞跺彂鎿嶄綔鍚庤鏁板櫒鍊煎簲璇ユ纭?);",
+    "fix": "    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正?);",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG013_RSASignature.pas",
+  "n": 12,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  BUG-013: 鏀粯妯″潡RSA绛惧悕鏈疄鐜?  ",
+    "fix": "  BUG-013: 支付模块RSA签名未实?  ",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 52,
+    "raw": "    [Description('楠岃瘉缂哄皯绉侀挜鏃舵姏鍑烘槑纭敊璇?)]",
+    "fix": "    [Description('验证缺少私钥时抛出明确错?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 72,
+    "raw": "  Result := '鏀粯妯″潡RSA绛惧悕鏈疄鐜?;",
+    "fix": "  Result := '支付模块RSA签名未实?;",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 100,
+    "raw": "  // 璁＄畻绠€鍗曠殑 SHA256+Base64锛堣繖鏄敊璇殑瀹炵幇鏂瑰紡锛?  HashBytes := THashSHA2.GetHashBytes(TestContent);",
+    "fix": "  // 计算箢单的 SHA256+Base64（这是错误的实现方式?  HashBytes := THashSHA2.GetHashBytes(TestContent);",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 104,
+    "raw": "    'SHA256+Base64 搴旇浜х敓 44 瀛楃鐨勭粨鏋?);",
+    "fix": "    'SHA256+Base64 应该产生 44 字符的结?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 107,
+    "raw": "  // 杩欓噷鎴戜滑鍙獙璇佹蹇碉紝瀹為檯绛惧悕闇€瑕佺閽?  ",
+    "fix": "  // 这里我们只验证概念，实际签名霢要私?  ",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 118,
+    "raw": "  // - Base64 缂栫爜鍚庯細绾?344 瀛楃",
+    "fix": "  // - Base64 编码后：?344 字符",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 121,
+    "raw": "  // - Base64 缂栫爜鍚庯細绾?684 瀛楃",
+    "fix": "  // - Base64 编码后：?684 字符",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 123,
+    "raw": "  // 鐢变簬娌℃湁瀹為檯鐨勭閽ワ紝杩欓噷鍙獙璇佹蹇?  Assert.Pass('RSA 绛惧悕闀垮害楠岃瘉閫氳繃锛堥渶瑕佸疄闄呯閽ヨ繘琛屽畬鏁存祴璇曪級');",
+    "fix": "  // 由于没有实际的私钥，这里只验证概?  Assert.Pass('RSA 签名长度验证通过（需要实际私钥进行完整测试）');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 133,
+    "raw": "  // 杩欎笌 RSA-PSS 涓嶅悓锛屽悗鑰呬娇鐢ㄩ殢鏈哄～鍏?  ",
+    "fix": "  // 这与 RSA-PSS 不同，后者使用随机填?  ",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 144,
+    "raw": "  // 杩欐槸绛惧悕绠楁硶鐨勫熀鏈畨鍏ㄥ睘鎬?  ",
+    "fix": "  // 这是签名算法的基本安全属?  ",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 160,
+    "raw": "    Assert.IsFalse(Verifier.IsKeyLoaded, '鏈姞杞藉瘑閽ユ椂 IsKeyLoaded 搴旇涓?False');",
+    "fix": "    Assert.IsFalse(Verifier.IsKeyLoaded, '未加载密钥时 IsKeyLoaded 应该?False');",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG014_WeChatPaySignature.pas",
+  "n": 24,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG014_WeChatPaySignature - 寰俊鏀粯绛惧悕楠岃瘉鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG014_WeChatPaySignature - 微信支付签名验证回归测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-014: 寰俊鏀粯绛惧悕楠岃瘉缂哄け",
+    "fix": "  BUG-014: 微信支付签名验证缺失",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 9,
+    "raw": "  淇鏂规: 瀹炵幇瀹屾暣鐨凴SA-SHA256绛惧悕鍜岄獙绛惧姛鑳斤紝娣诲姞WeChatPublicKey閰嶇疆椤广€?",
+    "fix": "  修复方案: 实现完整的RSA-SHA256签名和验签功能，添加WeChatPublicKey配置项?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 11,
+    "raw": "  淇鏃ユ湡: 2025-12-16",
+    "fix": "  修复日期: 2025-12-16",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 12,
+    "raw": "  鏂囦欢: ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas",
+    "fix": "  文件: ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 46,
+    "raw": "    [Description('楠岃瘉绛惧悕楠岃瘉鍦ㄧ己灏戝叕閽ユ椂杩斿洖 False')]",
+    "fix": "    [Description('验证签名验证在缺少公钥时返回 False')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 50,
+    "raw": "    [Description('楠岃瘉 RSASign 鏂规硶瀛樺湪涓斿彲璋冪敤')]",
+    "fix": "    [Description('验证 RSASign 方法存在且可调用')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 54,
+    "raw": "    [Description('楠岃瘉绛惧悕鍐呭鏍煎紡姝ｇ‘')]",
+    "fix": "    [Description('验证签名内容格式正确')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 58,
+    "raw": "    [Description('楠岃瘉 Authorization 澶撮儴鏍煎紡姝ｇ‘')]",
+    "fix": "    [Description('验证 Authorization 头部格式正确')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 90,
+    "raw": "  Result := '寰俊鏀粯绛惧悕楠岃瘉缂哄け';",
+    "fix": "  Result := '微信支付签名验证缺失';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 121,
+    "raw": "    // 楠岃瘉鍒濆鍊间负绌?",
+    "fix": "    // 验证初始值为?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 124,
+    "raw": "      'WeChatPublicKey 鍒濆鍊煎簲璇ヤ负绌?);",
+    "fix": "      'WeChatPublicKey 初始值应该为?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 154,
+    "raw": "        // 楠岃瘉鍦ㄦ病鏈夊叕閽ョ殑鎯呭喌涓嬶紝绛惧悕楠岃瘉搴旇杩斿洖 False",
+    "fix": "        // 验证在没有公钥的情况下，签名验证应该返回 False",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 158,
+    "raw": "          '鍦ㄦ病鏈夐厤缃叕閽ョ殑鎯呭喌涓嬶紝绛惧悕楠岃瘉搴旇杩斿洖 False');",
+    "fix": "          '在没有配置公钥的情况下，签名验证应该返回 False');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 184,
+    "raw": "    // 涓嶈缃閽ワ紝楠岃瘉鏂规硶瀛樺湪浣嗕細鎶涘嚭閰嶇疆閿欒",
+    "fix": "    // 不设置私钥，验证方法存在但会抛出配置错误",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 200,
+    "raw": "      Assert.IsFalse(PaymentResult.Success, '缂哄皯绉侀挜鏃跺垱寤鸿鍗曞簲璇ュけ璐?);",
+    "fix": "      Assert.IsFalse(PaymentResult.Success, '缺少私钥时创建订单应该失?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 204,
+    "raw": "        '澶辫触娑堟伅搴旇鎸囩ず绉侀挜鏈厤缃?);",
+    "fix": "        '失败消息应该指示私钥未配?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 219,
+    "raw": "  // 楠岃瘉绛惧悕鍐呭鏍煎紡锛欻TTP璇锋眰鏂规硶\\nURL\\n鏃堕棿鎴砛n闅忔満瀛楃涓瞈n璇锋眰鎶ユ枃涓讳綋\\n",
+    "fix": "  // 验证签名内容格式：HTTP请求方法\\nURL\\n时间戳\\n随机字符串\\n请求报文主体\\n",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 220,
+    "raw": "  // 杩欐槸寰俊鏀粯 V3 API 鐨勭鍚嶆牸寮忚姹?",
+    "fix": "  // 这是微信支付 V3 API 的签名格式要?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 222,
+    "raw": "  // 鐢变簬 BuildAuthorizationHeader 鏄鏈夋柟娉曪紝鎴戜滑閫氳繃妫€鏌ユ枃妗ｅ拰浠ｇ爜鏉ラ獙璇?",
+    "fix": "  // 由于 BuildAuthorizationHeader 是私有方法，我们通过棢查文档和代码来验?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 223,
+    "raw": "  // 杩欓噷涓昏楠岃瘉鏍煎紡瑕佹眰琚纭悊瑙?",
+    "fix": "  // 这里主要验证格式要求被正确理?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 234,
+    "raw": "  // 楠岃瘉 Authorization 澶撮儴鏍煎紡锛?",
+    "fix": "  // 验证 Authorization 头部格式?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 237,
+    "raw": "  // 鐢变簬 BuildAuthorizationHeader 鏄鏈夋柟娉曪紝鎴戜滑閫氳繃妫€鏌ユ枃妗ｅ拰浠ｇ爜鏉ラ獙璇?",
+    "fix": "  // 由于 BuildAuthorizationHeader 是私有方法，我们通过棢查文档和代码来验?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 238,
+    "raw": "  // 杩欓噷涓昏楠岃瘉鏍煎紡瑕佹眰琚纭悊瑙?",
+    "fix": "  // 这里主要验证格式要求被正确理?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG034_HardcodedKeys.pas",
+  "n": 8,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG034_HardcodedKeys - 纭紪鐮佸瘑閽ユ紡娲炲洖褰掓祴璇?",
+    "fix": "  Test.Regression.BUG034_HardcodedKeys - 硬编码密钥漏洞回归测?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-034: 纭紪鐮佸瘑閽ユ紡娲?",
+    "fix": "  BUG-034: 硬编码密钥漏?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 53,
+    "raw": "    [Description('楠岃瘉瀵嗛挜閰嶇疆鍚庡姛鑳芥甯?)]",
+    "fix": "    [Description('验证密钥配置后功能正?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 81,
+    "raw": "  Result := '纭紪鐮佸瘑閽ユ紡娲?;",
+    "fix": "  Result := '硬编码密钥漏?;",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 176,
+    "raw": "      // 涓嶈缃瘑閽ョ洿鎺ュ姞瀵?",
+    "fix": "      // 不设置密钥直接加?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 188,
+    "raw": "    // 寮傚父娑堟伅搴旇娓呮鍦版寚绀洪棶棰?",
+    "fix": "    // 异常消息应该清楚地指示问?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 212,
+    "raw": "    // 浣跨敤鐢ㄦ埛閰嶇疆鐨勫瘑閽?",
+    "fix": "    // 使用用户配置的密?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 221,
+    "raw": "      '浣跨敤鐢ㄦ埛閰嶇疆鐨勫瘑閽ュ簲璇ヨ兘姝ｇ‘鍔犲瘑鍜岃В瀵?);",
+    "fix": "      '使用用户配置的密钥应该能正确加密和解?);",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG054_SemaphoreLeak.pas",
+  "n": 18,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG054_SemaphoreLeak - 寮规€фā寮忎俊鍙烽噺娉勬紡鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG054_SemaphoreLeak - 弹模式信号量泄漏回归测试",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? TSemaphore浣跨敤鍚庡彲鑳藉瓨鍦ㄦ硠婕忛闄╋紝寮傚父鎯呭喌涓嬫湭姝ｇ‘閲婃斁",
+    "fix": "  原问? TSemaphore使用后可能存在泄漏风险，异常情况下未正确释放",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 娣诲姞 NeedReleaseSemaphore 鏍囧織锛岀‘淇濆彧鍦ㄦ垚鍔熻幏鍙栦俊鍙烽噺鍚庢墠閲婃斁锛?",
+    "fix": "  修复方案: 添加 NeedReleaseSemaphore 标志，确保只在成功获取信号量后才释放?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 9,
+    "raw": "            淇闈為槦鍒楁ā寮忎笅鐨勪俊鍙烽噺鑾峰彇閫昏緫",
+    "fix": "            修复非队列模式下的信号量获取逻辑",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  淇鏃ユ湡: 2025-12-16",
+    "fix": "  修复日期: 2025-12-16",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 12,
+    "raw": "  鏂囦欢: Core/DeepBase.Resilience.pas",
+    "fix": "  文件: Core/DeepBase.Resilience.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 41,
+    "raw": "    [Description('楠岃瘉淇″彿閲忛噴鏀炬爣蹇楀瓨鍦?)]",
+    "fix": "    [Description('验证信号量释放标志存?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 45,
+    "raw": "    [Description('楠岃瘉寮傚父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')]",
+    "fix": "    [Description('验证异常情况下信号量正确释放')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 49,
+    "raw": "    [Description('楠岃瘉姝ｅ父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')]",
+    "fix": "    [Description('验证正常情况下信号量正确释放')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 106,
+    "raw": "  // 楠岃瘉瀛樺湪淇″彿閲忛噴鏀炬爣蹇?",
+    "fix": "  // 验证存在信号量释放标?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 111,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈淇″彿閲忛噴鏀炬帶鍒堕€昏緫');",
+    "fix": "    '代码应该包含信号量释放控制辑');",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 130,
+    "raw": "      // 妯℃嫙寮傚父",
+    "fix": "      // 模拟异常",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 133,
+    "raw": "      // 纭繚鍦ㄥ紓甯告儏鍐典笅閲婃斁淇″彿閲?",
+    "fix": "      // 确保在异常情况下释放信号?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 137,
+    "raw": "    // 楠岃瘉淇″彿閲忓凡閲婃斁锛堝彲浠ュ啀娆¤幏鍙栵級",
+    "fix": "    // 验证信号量已释放（可以再次获取）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 139,
+    "raw": "      '寮傚父鍚庝俊鍙烽噺搴旇琚纭噴鏀?);",
+    "fix": "      '异常后信号量应该被正确释?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 159,
+    "raw": "    // 姝ｅ父閲婃斁",
+    "fix": "    // 正常释放",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 162,
+    "raw": "    // 楠岃瘉鍙互鍐嶆鑾峰彇",
+    "fix": "    // 验证可以再次获取",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 164,
+    "raw": "      '姝ｅ父閲婃斁鍚庝俊鍙烽噺搴旇鍙互鍐嶆鑾峰彇');",
+    "fix": "      '正常释放后信号量应该可以再次获取');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG059_JsonDeserializationType.pas",
+  "n": 16,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG059_JsonDeserializationType - JSON鍙嶅簭鍒楀寲绫诲瀷楠岃瘉鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG059_JsonDeserializationType - JSON反序列化类型验证回归测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-059: JSON鍙嶅簭鍒楀寲绫诲瀷楠岃瘉缂哄け",
+    "fix": "  BUG-059: JSON反序列化类型验证缺失",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? JsonToObject鏂规硶缂哄皯绫诲瀷鐧藉悕鍗曢獙璇侊紝鐩存帴鍒涘缓浠绘剰绫诲瀷瀹炰緥",
+    "fix": "  原问? JsonToObject方法缺少类型白名单验证，直接创建任意类型实例",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 娣诲姞绫诲瀷鐧藉悕鍗曢獙璇佹満鍒讹紝鍙厑璁稿畨鍏ㄧ殑鍩虹绫诲瀷鍜屾爣璁颁簡",
+    "fix": "  修复方案: 添加类型白名单验证机制，只允许安全的基础类型和标记了",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 12,
+    "raw": "  鏂囦欢: Core/DeepBase.Serialization.pas",
+    "fix": "  文件: Core/DeepBase.Serialization.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 40,
+    "raw": "    [Description('楠岃瘉绫诲瀷鐧藉悕鍗曢獙璇佹満鍒跺瓨鍦?)]",
+    "fix": "    [Description('验证类型白名单验证机制存?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 44,
+    "raw": "    [Description('楠岃瘉鏈巿鏉冪被鍨嬭鎷掔粷')]",
+    "fix": "    [Description('验证未授权类型被拒绝')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 48,
+    "raw": "    [Description('楠岃瘉鍩虹绫诲瀷琚厑璁?)]",
+    "fix": "    [Description('验证基础类型被允?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 66,
+    "raw": "  Result := 'JSON鍙嶅簭鍒楀寲绫诲瀷楠岃瘉缂哄け';",
+    "fix": "  Result := 'JSON反序列化类型验证缺失';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 105,
+    "raw": "  // 楠岃瘉瀛樺湪绫诲瀷楠岃瘉鐩稿叧浠ｇ爜",
+    "fix": "  // 验证存在类型验证相关代码",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 112,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?);",
+    "fix": "    '代码应该包含类型白名单验证机?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 121,
+    "raw": "  // 瀹為檯娴嬭瘯闇€瑕佸簭鍒楀寲妯″潡鐨勫叿浣撳疄鐜?",
+    "fix": "  // 实际测试霢要序列化模块的具体实?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 122,
+    "raw": "  Assert.Pass('鏈巿鏉冪被鍨嬫嫆缁濇祴璇曢€氳繃浠ｇ爜瀹℃煡纭');",
+    "fix": "  Assert.Pass('未授权类型拒绝测试过代码审查确认');",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 131,
+    "raw": "  // 鍩虹绫诲瀷锛坰tring, integer, boolean 绛夛級搴旇琚厑璁?",
+    "fix": "  // 基础类型（string, integer, boolean 等）应该被允?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 132,
+    "raw": "  Assert.Pass('鍩虹绫诲瀷鍏佽娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');",
+    "fix": "  Assert.Pass('基础类型允许测试通过代码审查确认');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG060_SerializationDepth.pas",
+  "n": 15,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG060_SerializationDepth - 搴忓垪鍖栨繁搴﹂檺鍒跺洖褰掓祴璇?",
+    "fix": "  Test.Regression.BUG060_SerializationDepth - 序列化深度限制回归测?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-060: 搴忓垪鍖栨繁搴﹂檺鍒惰繃楂?",
+    "fix": "  BUG-060: 序列化深度限制过?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? MaxDepth榛樿鍊间负32锛屽彲鑳借繃楂橈紝瀹规槗鍙楀埌娣卞害宓屽鏀诲嚮",
+    "fix": "  原问? MaxDepth默认值为32，可能过高，容易受到深度嵌套攻击",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 灏嗘渶澶ф繁搴﹂檺鍒堕檷浣庡埌8锛岄槻姝㈡繁搴﹀祵濂楁敾鍑?",
+    "fix": "  修复方案: 将最大深度限制降低到8，防止深度嵌套攻?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 10,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  鏂囦欢: Core/DeepBase.Serialization.pas",
+    "fix": "  文件: Core/DeepBase.Serialization.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 39,
+    "raw": "    [Description('楠岃瘉榛樿鏈€澶ф繁搴︿笉瓒呰繃 8')]",
+    "fix": "    [Description('验证默认朢大深度不超过 8')]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 43,
+    "raw": "    [Description('楠岃瘉娣卞害宓屽琚嫆缁?)]",
+    "fix": "    [Description('验证深度嵌套被拒?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 61,
+    "raw": "  Result := '搴忓垪鍖栨繁搴﹂檺鍒惰繃楂?;",
+    "fix": "  Result := '序列化深度限制过?;",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 100,
+    "raw": "  // 楠岃瘉瀛樺湪娣卞害闄愬埗",
+    "fix": "  // 验证存在深度限制",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 105,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈娣卞害闄愬埗閰嶇疆');",
+    "fix": "    '代码应该包含深度限制配置');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 107,
+    "raw": "  // 楠岃瘉涓嶅寘鍚繃楂樼殑榛樿鍊?",
+    "fix": "  // 验证不包含过高的默认?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 110,
+    "raw": "    '榛樿娣卞害涓嶅簲璇ユ槸 32锛堣繃楂橈級');",
+    "fix": "    '默认深度不应该是 32（过高）');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 119,
+    "raw": "  // 瀹為檯娴嬭瘯闇€瑕佸簭鍒楀寲妯″潡鐨勫叿浣撳疄鐜?",
+    "fix": "  // 实际测试霢要序列化模块的具体实?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 120,
+    "raw": "  Assert.Pass('娣卞害宓屽鎷掔粷娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');",
+    "fix": "  Assert.Pass('深度嵌套拒绝测试通过代码审查确认');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG062_PluginSandbox.pas",
+  "n": 30,
+  "rows": [
+   {
+    "line": 7,
+    "raw": "          鎭舵剰鎻掍欢鍙兘閫氳繃 ../.. 璺緞璁块棶绯荤粺鏁忔劅鏂囦欢銆?",
+    "fix": "          恶意插件可能通过 ../.. 路径访问系统敏感文件?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 9,
+    "raw": "  淇鏂规: 娣诲姞鎻掍欢璺緞楠岃瘉 (IsValidPluginPath) 鍜屾暟瀛楃鍚嶉獙璇佹満鍒?",
+    "fix": "  修复方案: 添加插件路径验证 (IsValidPluginPath) 和数字签名验证机?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 10,
+    "raw": "            (VerifyPluginSignature)锛岀‘淇濇彃浠跺彧鑳戒粠鎸囧畾鐩綍鍔犺浇銆?",
+    "fix": "            (VerifyPluginSignature)，确保插件只能从指定目录加载?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 12,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 13,
+    "raw": "  鏂囦欢: Core/DeepBase.PluginManager.pas",
+    "fix": "  文件: Core/DeepBase.PluginManager.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 58,
+    "raw": "    [Description('楠岃瘉缁濆璺緞鏀诲嚮琚樆姝?)]",
+    "fix": "    [Description('验证绝对路径攻击被阻?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 62,
+    "raw": "    [Description('楠岃瘉鍚堟硶鎻掍欢璺緞琚厑璁?)]",
+    "fix": "    [Description('验证合法插件路径被允?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 70,
+    "raw": "    [Description('楠岃瘉鎻掍欢閰嶇疆璁块棶鎺у埗 - 鍙兘淇敼 Plugin. 鍓嶇紑鐨勯厤缃?)]",
+    "fix": "    [Description('验证插件配置访问控制 - 只能修改 Plugin. 前缀的配?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 116,
+    "raw": "  // 娓呯悊涓存椂鐩綍",
+    "fix": "  // 清理临时目录",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 122,
+    "raw": "      // 蹇界暐娓呯悊閿欒",
+    "fix": "      // 忽略清理错误",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 147,
+    "raw": "    // 璁剧疆閿欒浜嬩欢澶勭悊鍣?",
+    "fix": "    // 设置错误事件处理?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 150,
+    "raw": "    // 灏濊瘯浣跨敤璺緞閬嶅巻鏀诲嚮",
+    "fix": "    // 尝试使用路径遍历攻击",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 155,
+    "raw": "    Assert.IsFalse(LoadResult, '璺緞閬嶅巻鏀诲嚮搴旇琚樆姝紝LoadPlugin 搴旇繑鍥?False');",
+    "fix": "    Assert.IsFalse(LoadResult, '路径遍历攻击应该被阻止，LoadPlugin 应返?False');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 156,
+    "raw": "    Assert.IsTrue(FErrorFired, '搴旇瑙﹀彂閿欒浜嬩欢');",
+    "fix": "    Assert.IsTrue(FErrorFired, '应该触发错误事件');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 159,
+    "raw": "        '閿欒娑堟伅搴旇鎸囩ず璺緞闂');",
+    "fix": "        '错误消息应该指示路径问题');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 177,
+    "raw": "    // 灏濊瘯鍔犺浇鎻掍欢鐩綍澶栫殑缁濆璺緞",
+    "fix": "    // 尝试加载插件目录外的绝对路径",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 182,
+    "raw": "    Assert.IsFalse(LoadResult, '鎻掍欢鐩綍澶栫殑缁濆璺緞搴旇琚樆姝?);",
+    "fix": "    Assert.IsFalse(LoadResult, '插件目录外的绝对路径应该被阻?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 198,
+    "raw": "  // 鍒涘缓涓€涓櫄鎷熺殑 BPL 鏂囦欢锛堝彧鏄负浜嗘祴璇曡矾寰勯獙璇侊級",
+    "fix": "  // 创建丢个虚拟的 BPL 文件（只是为了测试路径验证）",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 206,
+    "raw": "    // 娉ㄦ剰锛氳繖閲屼細鍥犱负鏂囦欢涓嶆槸鐪熸鐨?BPL 鑰屽け璐ワ紝",
+    "fix": "    // 注意：这里会因为文件不是真正?BPL 而失败，",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 217,
+    "raw": "        '鍚堟硶璺緞涓嶅簲璇ヨЕ鍙戣矾寰勯獙璇侀敊璇?);",
+    "fix": "        '合法路径不应该触发路径验证错?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 220,
+    "raw": "    Assert.Pass('鍚堟硶鎻掍欢璺緞楠岃瘉閫氳繃');",
+    "fix": "    Assert.Pass('合法插件路径验证通过');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 236,
+    "raw": "  // 鍒涘缓涓€涓潪 BPL 鏂囦欢",
+    "fix": "  // 创建丢个非 BPL 文件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 259,
+    "raw": "  // 鍒涘缓鎻掍欢涓婁笅鏂?",
+    "fix": "  // 创建插件上下?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 267,
+    "raw": "      // 杩欎釜涓嶅簲璇ヨ璋冪敤锛屽洜涓哄簲璇ュ湪 SetConfig 涓姏鍑哄紓甯?",
+    "fix": "      // 这个不应该被调用，因为应该在 SetConfig 中抛出异?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 275,
+    "raw": "    // 娴嬭瘯 1: 灏濊瘯璁剧疆闈?Plugin. 鍓嶇紑鐨勯厤缃簲璇ュけ璐?",
+    "fix": "    // 测试 1: 尝试设置?Plugin. 前缀的配置应该失?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 283,
+    "raw": "    Assert.IsTrue(ExceptionRaised, '璁剧疆闈?Plugin. 鍓嶇紑鐨勯厤缃簲璇ユ姏鍑哄紓甯?);",
+    "fix": "    Assert.IsTrue(ExceptionRaised, '设置?Plugin. 前缀的配置应该抛出异?);",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 285,
+    "raw": "    // 娴嬭瘯 2: 灏濊瘯璁剧疆瀹夊叏鐩稿叧閰嶇疆搴旇澶辫触",
+    "fix": "    // 测试 2: 尝试设置安全相关配置应该失败",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 293,
+    "raw": "    Assert.IsTrue(ExceptionRaised, '璁剧疆瀹夊叏鐩稿叧閰嶇疆搴旇鎶涘嚭寮傚父');",
+    "fix": "    Assert.IsTrue(ExceptionRaised, '设置安全相关配置应该抛出异常');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 295,
+    "raw": "    // 娴嬭瘯 3: 璁剧疆鍚堟硶鐨?Plugin. 閰嶇疆搴旇鎴愬姛",
+    "fix": "    // 测试 3: 设置合法?Plugin. 配置应该成功",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 302,
+    "raw": "    Assert.IsFalse(ExceptionRaised, '璁剧疆鍚堟硶鐨?Plugin. 閰嶇疆搴旇鎴愬姛');",
+    "fix": "    Assert.IsFalse(ExceptionRaised, '设置合法?Plugin. 配置应该成功');",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG063_PluginConfigBypass.pas",
+  "n": 29,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG063_PluginConfigBypass - 鎻掍欢閰嶇疆鏉冮檺缁曡繃鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG063_PluginConfigBypass - 插件配置权限绕过回归测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-063: 鎻掍欢閰嶇疆鏉冮檺缁曡繃",
+    "fix": "  BUG-063: 插件配置权限绕过",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? 鎻掍欢鍙互閫氳繃SetConfig淇敼浠绘剰閰嶇疆锛屽寘鎷郴缁熺骇鍜屽畨鍏ㄧ浉鍏抽厤缃紝",
+    "fix": "  原问? 插件可以通过SetConfig修改任意配置，包括系统级和安全相关配置，",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 7,
+    "raw": "          瀛樺湪鏉冮檺鎻愬崌椋庨櫓銆?",
+    "fix": "          存在权限提升风险?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 9,
+    "raw": "  淇鏂规: 瀹炵幇鍩轰簬瑙掕壊鐨勯厤缃闂帶鍒讹紝闄愬埗鎻掍欢鍙兘淇敼 Plugin. 鍓嶇紑鐨勯厤缃紝",
+    "fix": "  修复方案: 实现基于角色的配置访问控制，限制插件只能修改 Plugin. 前缀的配置，",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "            骞剁姝慨鏀瑰寘鍚畨鍏ㄥ叧閿瓧鐨勯厤缃」銆?",
+    "fix": "            并禁止修改包含安全关键字的配置项?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 12,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 13,
+    "raw": "  鏂囦欢: Core/DeepBase.PluginManager.pas",
+    "fix": "  文件: Core/DeepBase.PluginManager.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 49,
+    "raw": "    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼绯荤粺绾ч厤缃?)]",
+    "fix": "    [Description('验证插件无法修改系统级配?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 53,
+    "raw": "    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - password')]",
+    "fix": "    [Description('验证插件无法修改安全相关配置 - password')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 57,
+    "raw": "    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - secret')]",
+    "fix": "    [Description('验证插件无法修改安全相关配置 - secret')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 61,
+    "raw": "    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - token')]",
+    "fix": "    [Description('验证插件无法修改安全相关配置 - token')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 65,
+    "raw": "    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - key')]",
+    "fix": "    [Description('验证插件无法修改安全相关配置 - key')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 69,
+    "raw": "    [Description('楠岃瘉鎻掍欢鍙互淇敼鑷繁鐨勯厤缃?(Plugin.鍓嶇紑)')]",
+    "fix": "    [Description('验证插件可以修改自己的配?(Plugin.前缀)')]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 73,
+    "raw": "    [Description('楠岃瘉閰嶇疆鍓嶇紑妫€鏌ュ尯鍒嗗ぇ灏忓啓')]",
+    "fix": "    [Description('验证配置前缀棢查区分大小写')]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 91,
+    "raw": "  Result := '鎻掍欢閰嶇疆鏉冮檺缁曡繃';",
+    "fix": "  Result := '插件配置权限绕过';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 135,
+    "raw": "      // 灏濊瘯淇敼绯荤粺绾ч厤缃?",
+    "fix": "      // 尝试修改系统级配?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 150,
+    "raw": "    Assert.IsTrue(ExceptionRaised, '鎻掍欢淇敼绯荤粺閰嶇疆搴旇鎶涘嚭寮傚父');",
+    "fix": "    Assert.IsTrue(ExceptionRaised, '插件修改系统配置应该抛出异常');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 152,
+    "raw": "      '搴旇鎶涘嚭 EArgumentException 琛ㄧず鍙傛暟鏃犳晥');",
+    "fix": "      '应该抛出 EArgumentException 表示参数无效');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 172,
+    "raw": "      // 灏濊瘯淇敼鍖呭惈 password 鐨勯厤缃?",
+    "fix": "      // 尝试修改包含 password 的配?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 180,
+    "raw": "      '鎻掍欢淇敼鍖呭惈 password 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');",
+    "fix": "      '插件修改包含 password 的配置应该抛?EInvalidOpException');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 207,
+    "raw": "      '鎻掍欢淇敼鍖呭惈 secret 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');",
+    "fix": "      '插件修改包含 secret 的配置应该抛?EInvalidOpException');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 234,
+    "raw": "      '鎻掍欢淇敼鍖呭惈 token 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');",
+    "fix": "      '插件修改包含 token 的配置应该抛?EInvalidOpException');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 261,
+    "raw": "      '鎻掍欢淇敼鍖呭惈 key 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');",
+    "fix": "      '插件修改包含 key 的配置应该抛?EInvalidOpException');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 289,
+    "raw": "    // 璁剧疆鍚堟硶鐨勬彃浠堕厤缃?",
+    "fix": "    // 设置合法的插件配?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 292,
+    "raw": "    Assert.IsTrue(ConfigSet, '鍚堟硶鐨勬彃浠堕厤缃簲璇ヨ璁剧疆');",
+    "fix": "    Assert.IsTrue(ConfigSet, '合法的插件配置应该被设置');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 293,
+    "raw": "    Assert.AreEqual('Test Plugin', SetValue, '閰嶇疆鍊煎簲璇ユ纭紶閫?);",
+    "fix": "    Assert.AreEqual('Test Plugin', SetValue, '配置值应该正确传?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 310,
+    "raw": "    // 娴嬭瘯灏忓啓 plugin. 鍓嶇紑锛堝簲璇ュけ璐ワ紝鍥犱负瑕佹眰 Plugin.锛?",
+    "fix": "    // 测试小写 plugin. 前缀（应该失败，因为要求 Plugin.?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 320,
+    "raw": "      '灏忓啓 plugin. 鍓嶇紑搴旇琚嫆缁濓紙瑕佹眰 Plugin.锛?);",
+    "fix": "      '小写 plugin. 前缀应该被拒绝（要求 Plugin.?);",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG066_PathTraversal.pas",
+  "n": 14,
+  "rows": [
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? 鏂囦欢鐩戞帶缂轰箯璺緞閬嶅巻楠岃瘉锛屽彲閫氳繃../璁块棶绯荤粺鏁忔劅鏂囦欢",
+    "fix": "  原问? 文件监控缺乏路径遍历验证，可通过../访问系统敏感文件",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 瀹炵幇涓ユ牸鐨勮矾寰勮鑼冨寲鍜岄獙璇佸嚱鏁帮紝闄愬埗鐩戞帶鑼冨洿",
+    "fix": "  修复方案: 实现严格的路径规范化和验证函数，限制监控范围",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 10,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  鏂囦欢: Core/DeepBase.FileWatcher.pas",
+    "fix": "  文件: Core/DeepBase.FileWatcher.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 47,
+    "raw": "    [Description('楠岃瘉 ../ 璺緞閬嶅巻琚樆姝?)]",
+    "fix": "    [Description('验证 ../ 路径遍历被阻?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 51,
+    "raw": "    [Description('楠岃瘉缁濆璺緞澶栭儴璁块棶琚樆姝?)]",
+    "fix": "    [Description('验证绝对路径外部访问被阻?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 55,
+    "raw": "    [Description('楠岃瘉璺緞瑙勮寖鍖栧嚱鏁板瓨鍦?)]",
+    "fix": "    [Description('验证路径规范化函数存?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 110,
+    "raw": "  // 瑙勮寖鍖栧悗搴旇妫€娴嬪埌璺緞閬嶅巻",
+    "fix": "  // 规范化后应该棢测到路径遍历",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 113,
+    "raw": "  // 楠岃瘉瑙勮寖鍖栧悗鐨勮矾寰勪笉鍦ㄥ師濮嬬洰褰曞唴",
+    "fix": "  // 验证规范化后的路径不在原始目录内",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 115,
+    "raw": "    '璺緞閬嶅巻鏀诲嚮搴旇琚娴嬪埌');",
+    "fix": "    '路径遍历攻击应该被检测到');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 128,
+    "raw": "  // 楠岃瘉澶栭儴缁濆璺緞涓嶅湪鐩戞帶鐩綍鍐?",
+    "fix": "  // 验证外部绝对路径不在监控目录?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 130,
+    "raw": "    '澶栭儴缁濆璺緞搴旇琚瘑鍒负涓嶅湪鐩戞帶鑼冨洿鍐?);",
+    "fix": "    '外部绝对路径应该被识别为不在监控范围?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 156,
+    "raw": "  // 楠岃瘉瀛樺湪璺緞楠岃瘉鐩稿叧浠ｇ爜",
+    "fix": "  // 验证存在路径验证相关代码",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 162,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈璺緞瑙勮寖鍖栨垨楠岃瘉鍑芥暟');",
+    "fix": "    '代码应该包含路径规范化或验证函数');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG070_LogInjection.pas",
+  "n": 17,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG070_LogInjection - 鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG070_LogInjection - 日志注入攻击风险回归测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-070: 鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓",
+    "fix": "  BUG-070: 日志注入攻击风险",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? 浣跨敤TFile.AppendAllText鐩存帴鍐欏叆鐢ㄦ埛杈撳叆锛屾湭杩涜杞箟鎴栬繃婊?",
+    "fix": "  原问? 使用TFile.AppendAllText直接写入用户输入，未进行转义或过?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 瀵规墍鏈夋棩蹇楀唴瀹硅繘琛岃浆涔夊拰楠岃瘉锛岄槻姝㈡棩蹇楁敞鍏ユ敾鍑?",
+    "fix": "  修复方案: 对所有日志内容进行转义和验证，防止日志注入攻?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 10,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  鏂囦欢: Core/DeepBase.Logging.pas",
+    "fix": "  文件: Core/DeepBase.Logging.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 39,
+    "raw": "    [Description('楠岃瘉鏃ュ織鍐呭杞箟鍑芥暟瀛樺湪')]",
+    "fix": "    [Description('验证日志内容转义函数存在')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 43,
+    "raw": "    [Description('楠岃瘉鎹㈣绗﹁杞箟')]",
+    "fix": "    [Description('验证换行符被转义')]",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 47,
+    "raw": "    [Description('楠岃瘉鎺у埗瀛楃琚繃婊?)]",
+    "fix": "    [Description('验证控制字符被过?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 65,
+    "raw": "  Result := '鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓';",
+    "fix": "  Result := '日志注入攻击风险';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 104,
+    "raw": "  // 楠岃瘉瀛樺湪鏃ュ織娓呯悊鐩稿叧浠ｇ爜",
+    "fix": "  // 验证存在日志清理相关代码",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 110,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈鏃ュ織鍐呭娓呯悊鍑芥暟');",
+    "fix": "    '代码应该包含日志内容清理函数');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 119,
+    "raw": "  // 楠岃瘉鎹㈣绗﹁杞箟锛岄槻姝㈡棩蹇椾吉閫?",
+    "fix": "  // 验证换行符被转义，防止日志伪?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 120,
+    "raw": "  // 瀹為檯娴嬭瘯闇€瑕佹棩蹇楁ā鍧楃殑鍏蜂綋瀹炵幇",
+    "fix": "  // 实际测试霢要日志模块的具体实现",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 121,
+    "raw": "  Assert.Pass('鎹㈣绗﹁浆涔夋祴璇曢€氳繃浠ｇ爜瀹℃煡纭');",
+    "fix": "  Assert.Pass('换行符转义测试过代码审查确认');",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 130,
+    "raw": "  // 楠岃瘉鎺у埗瀛楃琚繃婊?",
+    "fix": "  // 验证控制字符被过?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 131,
+    "raw": "  Assert.Pass('鎺у埗瀛楃杩囨护娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');",
+    "fix": "  Assert.Pass('控制字符过滤测试通过代码审查确认');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tests\\Regression\\Test.Regression.BUG073_EventTypeInjection.pas",
+  "n": 12,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  Test.Regression.BUG073_EventTypeInjection - 浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓鍥炲綊娴嬭瘯",
+    "fix": "  Test.Regression.BUG073_EventTypeInjection - 事件类型注入风险回归测试",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  BUG-073: 浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓",
+    "fix": "  BUG-073: 事件类型注入风险",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "  鍘熼棶棰? 鍏佽閫氳繃瀛楃涓插姩鎬佹敞鍐屼簨浠剁被鍨嬶紝鍙兘琚伓鎰忓埄鐢?",
+    "fix": "  原问? 允许通过字符串动态注册事件类型，可能被恶意利?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "  淇鏂规: 瀹炵幇浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?",
+    "fix": "  修复方案: 实现事件类型白名单验证机?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 10,
+    "raw": "  淇鏃ユ湡: 2025-01-27",
+    "fix": "  修复日期: 2025-01-27",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 11,
+    "raw": "  鏂囦欢: Core/DeepBase.EventBus.pas",
+    "fix": "  文件: Core/DeepBase.EventBus.pas",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 39,
+    "raw": "    [Description('楠岃瘉浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佸瓨鍦?)]",
+    "fix": "    [Description('验证事件类型白名单验证存?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 43,
+    "raw": "    [Description('楠岃瘉鎭舵剰浜嬩欢绫诲瀷琚嫆缁?)]",
+    "fix": "    [Description('验证恶意事件类型被拒?)]",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 61,
+    "raw": "  Result := '浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓';",
+    "fix": "  Result := '事件类型注入风险';",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 100,
+    "raw": "  // 楠岃瘉瀛樺湪浜嬩欢绫诲瀷楠岃瘉鐩稿叧浠ｇ爜",
+    "fix": "  // 验证存在事件类型验证相关代码",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 106,
+    "raw": "    '浠ｇ爜搴旇鍖呭惈浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?);",
+    "fix": "    '代码应该包含事件类型白名单验证机?);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 116,
+    "raw": "  Assert.Pass('鎭舵剰浜嬩欢绫诲瀷鎷掔粷娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');",
+    "fix": "  Assert.Pass('恶意事件类型拒绝测试通过代码审查确认');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\ThirdParty\\Payment\\DeepBase.Payment.Alipay.pas",
+  "n": 1,
+  "rows": [
+   {
+    "line": 9,
+    "raw": "    - 褰撻潰浠?鎵爜鏀粯 (alipay.trade.precreate)",
+    "fix": "    - 当面?扫码支付 (alipay.trade.precreate)",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\ThirdParty\\Payment\\DeepBase.Payment.Stripe.pas",
+  "n": 1,
+  "rows": [
+   {
+    "line": 646,
+    "raw": "  // BUG-109 FIX: 灏嗘椂闂存埑瀹瑰樊浠?00绉掗檷浣庡埌120绉掍互鍑忓皯閲嶆斁鏀诲嚮椋庨櫓",
+    "fix": "  // BUG-109 FIX: 将时间戳容差?00秒降低到120秒以减少重放攻击风险",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\ThirdParty\\Social\\DeepBase.Social.QQ.pas",
+  "n": 1,
+  "rows": [
+   {
+    "line": 97,
+    "raw": "  // BUG-019 FIX: 鍒濆鍖栧畨鍏ㄥ瓨鍌ㄨ缃?  FKeyStorageMode := ksmDPAPI;",
+    "fix": "  // BUG-019 FIX: 初始化安全存储设?  FKeyStorageMode := ksmDPAPI;",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\ThirdParty\\Social\\DeepBase.Social.WeChat.pas",
+  "n": 2,
+  "rows": [
+   {
+    "line": 8,
+    "raw": "    - 寰俊鍏紬鍙风櫥褰?(缃戦〉鎺堟潈)",
+    "fix": "    - 微信公众号登?(网页授权)",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 25,
+    "raw": "    wltMP         // 鍏紬鍙风綉椤垫巿鏉?",
+    "fix": "    wltMP         // 公众号网页授?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\ThirdParty\\Social\\DeepBase.Social.Weibo.pas",
+  "n": 2,
+  "rows": [
+   {
+    "line": 83,
+    "raw": "  // BUG-019 FIX: 鍒濆鍖栧畨鍏ㄥ瓨鍌ㄨ缃?  FKeyStorageMode := ksmDPAPI;",
+    "fix": "  // BUG-019 FIX: 初始化安全存储设?  FKeyStorageMode := ksmDPAPI;",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 113,
+    "raw": "      // Credential Manager 妯″紡涓嬫暟鎹凡缁忓畨鍏ㄥ瓨鍌?      Result := AEncryptedKey;",
+    "fix": "      // Credential Manager 模式下数据已经安全存?      Result := AEncryptedKey;",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\CLI\\CLI.DB.pas",
+  "n": 2,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  CLI.DB - 鏁版嵁搴撶鐞嗗懡浠?",
+    "fix": "  CLI.DB - 数据库管理命?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\CLI\\CLI.Main.pas",
+  "n": 3,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  CLI.Main - CLI 涓诲叆鍙ｅ拰鍛戒护鍒嗗彂",
+    "fix": "  CLI.Main - CLI 主入口和命令分发",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  璇存槑: 瑙ｆ瀽鍛戒护琛屽弬鏁帮紝鍒嗗彂鍒板悇瀛愬懡浠ゆā鍧?",
+    "fix": "  说明: 解析命令行参数，分发到各子命令模?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\LogAnalyzer\\LogAnalyzer.Export.pas",
+  "n": 21,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  LogAnalyzer.Export - 鏃ュ織瀵煎嚭妯″潡",
+    "fix": "  LogAnalyzer.Export - 日志导出模块",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  鍔熻兘:",
+    "fix": "  功能:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 43,
+    "raw": "    /// 瀵煎嚭涓?HTML 鏍煎紡 (甯︽牱寮忓拰琛ㄦ牸)",
+    "fix": "    /// 导出?HTML 格式 (带样式和表格)",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 46,
+    "raw": "      const ATitle: string = '鏃ュ織瀵煎嚭');",
+    "fix": "      const ATitle: string = '日志导出');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 49,
+    "raw": "    /// 瀵煎嚭涓虹函鏂囨湰鏍煎紡",
+    "fix": "    /// 导出为纯文本格式",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 78,
+    "raw": "    // 鍙屽紩鍙疯浆涔変负涓や釜鍙屽紩鍙?",
+    "fix": "    // 双引号转义为两个双引?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 111,
+    "raw": "    SL.Add('ID,鏃堕棿,绾у埆,鏉ユ簮,娑堟伅,璇︽儏');",
+    "fix": "    SL.Add('ID,时间,级别,来源,消息,详情');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 158,
+    "raw": "      SL.Text := JArray.Format(2);  // 鏍煎紡鍖栬緭鍑猴紝缂╄繘2绌烘牸",
+    "fix": "      SL.Text := JArray.Format(2);  // 格式化输出，缩进2空格",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 192,
+    "raw": "    // HTML 澶撮儴",
+    "fix": "    // HTML 头部",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 222,
+    "raw": "    // 鏍囬",
+    "fix": "    // 标题",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 225,
+    "raw": "    // 缁熻淇℃伅",
+    "fix": "    // 统计信息",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 230,
+    "raw": "      SL.Add(Format('    <span><strong>鏃堕棿鑼冨洿:</strong> %s ~ %s</span>', [",
+    "fix": "      SL.Add(Format('    <span><strong>时间范围:</strong> %s ~ %s</span>', [",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 235,
+    "raw": "    SL.Add(Format('    <span><strong>瀵煎嚭鏃堕棿:</strong> %s</span>', [",
+    "fix": "    SL.Add(Format('    <span><strong>导出时间:</strong> %s</span>', [",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 240,
+    "raw": "    // 琛ㄦ牸",
+    "fix": "    // 表格",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 245,
+    "raw": "    SL.Add('        <th style=\"width:150px\">鏃堕棿</th>');",
+    "fix": "    SL.Add('        <th style=\"width:150px\">时间</th>');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 246,
+    "raw": "    SL.Add('        <th style=\"width:60px\">绾у埆</th>');",
+    "fix": "    SL.Add('        <th style=\"width:60px\">级别</th>');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 247,
+    "raw": "    SL.Add('        <th style=\"width:120px\">鏉ユ簮</th>');",
+    "fix": "    SL.Add('        <th style=\"width:120px\">来源</th>');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 296,
+    "raw": "    SL.Add('  DeepBase 鏃ュ織瀵煎嚭');",
+    "fix": "    SL.Add('  DeepBase 日志导出');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 297,
+    "raw": "    SL.Add('  瀵煎嚭鏃堕棿: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));",
+    "fix": "    SL.Add('  导出时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 312,
+    "raw": "        SL.Add('    --- 璇︽儏 ---');",
+    "fix": "        SL.Add('    --- 详情 ---');",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\LogAnalyzer\\LogAnalyzer.Stats.pas",
+  "n": 20,
+  "rows": [
+   {
+    "line": 2,
+    "raw": "  LogAnalyzer.Stats - 鏃ュ織缁熻妯″潡",
+    "fix": "  LogAnalyzer.Stats - 日志统计模块",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 4,
+    "raw": "  鐗堟湰: 1.0",
+    "fix": "  版本: 1.0",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 5,
+    "raw": "  鍔熻兘:",
+    "fix": "  功能:",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 6,
+    "raw": "    - 鎸夌骇鍒粺璁℃棩蹇楁暟閲?",
+    "fix": "    - 按级别统计日志数?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 7,
+    "raw": "    - 鎸夋潵婧愮粺璁℃棩蹇楁暟閲?",
+    "fix": "    - 按来源统计日志数?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 8,
+    "raw": "    - 鏃堕棿鑼冨洿鍒嗘瀽",
+    "fix": "    - 时间范围分析",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 26,
+    "raw": "  /// 鏃ュ織缁熻缁撴灉",
+    "fix": "  /// 日志统计结果",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 40,
+    "raw": "  /// 鎸夋潵婧愬垎缁勭殑缁熻",
+    "fix": "  /// 按来源分组的统计",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 59,
+    "raw": "  /// 鏃ュ織缁熻鍒嗘瀽鍣?",
+    "fix": "  /// 日志统计分析?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 68,
+    "raw": "    /// 鑾峰彇鍩烘湰缁熻淇℃伅",
+    "fix": "    /// 获取基本统计信息",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 73,
+    "raw": "    /// 鎸夋潵婧愬垎缁勭粺璁?",
+    "fix": "    /// 按来源分组统?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 83,
+    "raw": "    /// 鎸夊ぉ鍒嗙粍缁熻",
+    "fix": "    /// 按天分组统计",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 88,
+    "raw": "    /// 鑾峰彇閿欒鏈€澶氱殑鏉ユ簮 (Top N)",
+    "fix": "    /// 获取错误朢多的来源 (Top N)",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 125,
+    "raw": "      // 鍞竴鏉ユ簮",
+    "fix": "      // 唯一来源",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 129,
+    "raw": "      // 鏃堕棿鑼冨洿",
+    "fix": "      // 时间范围",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 202,
+    "raw": "    // 鎸夋暟閲忛檷搴忔帓搴?",
+    "fix": "    // 按数量降序排?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 252,
+    "raw": "    // 鎸夋椂闂村崌搴忔帓搴?",
+    "fix": "    // 按时间升序排?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 285,
+    "raw": "      // 鎴柇鍒板ぉ",
+    "fix": "      // 截断到天",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 307,
+    "raw": "    // 鎸夋椂闂村崌搴忔帓搴?",
+    "fix": "    // 按时间升序排?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 334,
+    "raw": "  // 鎸夐敊璇暟闄嶅簭鎺掑簭",
+    "fix": "  // 按错误数降序排序",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\SeedTool\\uAntiTamperPackage.pas",
+  "n": 109,
+  "rows": [
+   {
+    "line": 4,
+    "raw": "  闃茬鏀规満鍒舵墦鍖呮ā鍧?",
+    "fix": "  防篡改机制打包模?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 7,
+    "raw": "  1. 鍥惧儚鏁版嵁鍔犲瘑/瑙ｅ瘑",
+    "fix": "  1. 图像数据加密/解密",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 9,
+    "raw": "  3. 绡℃敼妫€娴嬪拰瀹夊叏鍝嶅簲",
+    "fix": "  3. 篡改棢测和安全响应",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 10,
+    "raw": "  4. 鏁版嵁搴撹〃缁撴瀯绠＄悊",
+    "fix": "  4. 数据库表结构管理",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 13,
+    "raw": "  1. 鍦ㄩ」鐩腑寮曠敤姝ゅ崟鍏?",
+    "fix": "  1. 在项目中引用此单?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 14,
+    "raw": "  2. 璋冪敤 TAntiTamperPackage.SetupDatabase() 鍒濆鍖栨暟鎹簱",
+    "fix": "  2. 调用 TAntiTamperPackage.SetupDatabase() 初始化数据库",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 15,
+    "raw": "  3. 浣跨敤 TAntiTamperPackage.SaveSecureImage() 淇濆瓨鍔犲瘑鍥惧儚",
+    "fix": "  3. 使用 TAntiTamperPackage.SaveSecureImage() 保存加密图像",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 16,
+    "raw": "  4. 浣跨敤 TAntiTamperPackage.LoadSecureImage() 鍔犺浇骞舵牎楠屽浘鍍?",
+    "fix": "  4. 使用 TAntiTamperPackage.LoadSecureImage() 加载并校验图?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 19,
+    "raw": "  - FireDAC缁勪欢",
+    "fix": "  - FireDAC组件",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 20,
+    "raw": "  - System.Hash鍗曞厓",
+    "fix": "  - System.Hash单元",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 23,
+    "raw": "  - 鍦≧elease閰嶇疆涓畾涔塕ELEASE绗﹀彿浠ョ鐢ㄨ缁嗘棩蹇?",
+    "fix": "  - 在Release配置中定义RELEASE符号以禁用详细日?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 27,
+    "raw": "  {$DEFINE NO_DEBUG_LOG}  // 鐢熶骇鐜绂佺敤璇︾粏鏃ュ織",
+    "fix": "  {$DEFINE NO_DEBUG_LOG}  // 生产环境禁用详细日志",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 39,
+    "raw": "  // 鍔犲瘑绠楁硶绫诲瀷",
+    "fix": "  // 加密算法类型",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 42,
+    "raw": "  // 瀹夊叏閰嶇疆",
+    "fix": "  // 安全配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 44,
+    "raw": "    EncryptionKey: string;        // 鍔犲瘑瀵嗛挜",
+    "fix": "    EncryptionKey: string;        // 加密密钥",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 45,
+    "raw": "    DownloadURL: string;          // 瀹樼綉涓嬭浇鍦板潃",
+    "fix": "    DownloadURL: string;          // 官网下载地址",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 47,
+    "raw": "    EnableLogging: Boolean;       // 鏄惁鍚敤鏃ュ織",
+    "fix": "    EnableLogging: Boolean;       // 是否启用日志",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 49,
+    "raw": "    EncryptionType: TEncryptionType; // 鍔犲瘑绠楁硶绫诲瀷",
+    "fix": "    EncryptionType: TEncryptionType; // 加密算法类型",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 52,
+    "raw": "    KdfIterations: Integer;       // KDF杩唬娆℃暟",
+    "fix": "    KdfIterations: Integer;       // KDF迭代次数",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 53,
+    "raw": "    EnableHMAC: Boolean;          // 鏄惁鍚敤HMAC瀹屾暣鎬х鍚?",
+    "fix": "    EnableHMAC: Boolean;          // 是否启用HMAC完整性签?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 68,
+    "raw": "    class function DeriveKeyBytes: TBytes; // 鍩轰簬EncryptionKey+Salt鐨勮凯浠ｅ搱甯?",
+    "fix": "    class function DeriveKeyBytes: TBytes; // 基于EncryptionKey+Salt的迭代哈?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 69,
+    "raw": "    class function GetEffectiveKeyString: string; // 渚涘绉板姞瑙ｅ瘑浣跨敤鐨勬淳鐢熷瘑閽ワ紙hex锛?",
+    "fix": "    class function GetEffectiveKeyString: string; // 供对称加解密使用的派生密钥（hex?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 70,
+    "raw": "    class function ComputeHMACSHA256(const Data: TBytes): string; // HMAC绛惧悕",
+    "fix": "    class function ComputeHMACSHA256(const Data: TBytes): string; // HMAC签名",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 76,
+    "raw": "    // 鏁版嵁搴撹〃缁撴瀯绠＄悊",
+    "fix": "    // 数据库表结构管理",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 86,
+    "raw": "    // 鍔犲瘑瑙ｅ瘑",
+    "fix": "    // 加密解密",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 93,
+    "raw": "    // 瀹夊叏鍥惧儚鎿嶄綔",
+    "fix": "    // 安全图像操作",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 99,
+    "raw": "    // 瀹夊叏鍝嶅簲",
+    "fix": "    // 安全响应",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 108,
+    "raw": "// 榛樿閰嶇疆",
+    "fix": "// 默认配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 116,
+    "raw": "  Result.EncryptionType := etAES256; // 榛樿浣跨敤AES-256",
+    "fix": "  Result.EncryptionType := etAES256; // 默认使用AES-256",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 172,
+    "raw": "  // XOR鍔犲瘑鏄绉扮殑锛岃В瀵嗗拰鍔犲瘑浣跨敤鐩稿悓绠楁硶",
+    "fix": "  // XOR加密是对称的，解密和加密使用相同算法",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 194,
+    "raw": "// 鍩轰簬 SHA-256 鐨勭畝鍗曡凯浠DF锛岃緭鍑?2瀛楄妭",
+    "fix": "// 基于 SHA-256 的简单迭代KDF，输?2字节",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 210,
+    "raw": "  // 绉嶅瓙閲囩敤UTF-8瀛楃涓插弬涓庡搱甯?",
+    "fix": "  // 种子采用UTF-8字符串参与哈?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 212,
+    "raw": "  AccHex := THashSHA2.GetHashString(SeedStr); // 64浣嶅崄鍏繘鍒跺瓧绗︿覆",
+    "fix": "  AccHex := THashSHA2.GetHashString(SeedStr); // 64位十六进制字符串",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 217,
+    "raw": "  Result := HexToBytes(AccHex); // 32瀛楄妭",
+    "fix": "  Result := HexToBytes(AccHex); // 32字节",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 220,
+    "raw": "// 灏嗘淳鐢熷瘑閽ヨ浆涓篐EX瀛楃涓诧紝浣滀负瀵圭О鍙ｄ护",
+    "fix": "// 将派生密钥转为HEX字符串，作为对称口令",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 238,
+    "raw": "  // 杩斿洖鍗佸叚杩涘埗鍙ｄ护瀛楃涓?",
+    "fix": "  // 返回十六进制口令字符?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 242,
+    "raw": "// 璁＄畻 HMAC-SHA256 骞惰繑鍥濰EX",
+    "fix": "// 计算 HMAC-SHA256 并返回HEX",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 244,
+    "raw": "// 浣嗗彧瑕佹挱绉嶅拰楠岃瘉浣跨敤鐩稿悓閫昏緫锛岄槻绡℃敼浠嶇劧鏈夋晥",
+    "fix": "// 但只要播种和验证使用相同逻辑，防篡改仍然有效",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 260,
+    "raw": "  // 鏍规嵁閰嶇疆閫夋嫨鍔犲瘑绠楁硶",
+    "fix": "  // 根据配置选择加密算法",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 267,
+    "raw": "      raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨�');",
+    "fix": "      raise EAntiTamperException.Create('未知的加密类垄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 271,
+    "raw": "      WriteLog(Format('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]))",
+    "fix": "      WriteLog(Format('使用AES-256加密，数据长庄17: %d bytes', [Length(Result)]))",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 273,
+    "raw": "      WriteLog(Format('浣跨敤XOR鍔犲瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]));",
+    "fix": "      WriteLog(Format('使用XOR加密，数据长庄17: %d bytes', [Length(Result)]));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 281,
+    "raw": "  // 鏍规嵁閰嶇疆閫夋嫨瑙ｅ瘑绠楁硶",
+    "fix": "  // 根据配置选择解密算法",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 288,
+    "raw": "      raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨�');",
+    "fix": "      raise EAntiTamperException.Create('未知的加密类垄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 292,
+    "raw": "      WriteLog(Format('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]))",
+    "fix": "      WriteLog(Format('使用AES-256解密，数据长庄17: %d bytes', [Length(Result)]))",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 294,
+    "raw": "      WriteLog(Format('浣跨敤XOR瑙ｅ瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]));",
+    "fix": "      WriteLog(Format('使用XOR解密，数据长庄17: %d bytes', [Length(Result)]));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 301,
+    "raw": "  // 浣跨敤SHA-256杩涜瀹屾暣鎬ф牎楠?",
+    "fix": "  // 使用SHA-256进行完整性校?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 306,
+    "raw": "    WriteLog(Format('SHA-256鏍￠獙澶辫触: 鏈熸湜=%s, 瀹為檯=%s', [ExpectedHash, ActualHash]));",
+    "fix": "    WriteLog(Format('SHA-256校验失败: 期望=%s, 实际=%s', [ExpectedHash, ActualHash]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 320,
+    "raw": "      // 妫€鏌ヨ〃鏄惁瀛樺湪",
+    "fix": "      // 棢查表是否存在",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 328,
+    "raw": "        // 鍒涘缓鏂拌〃缁撴瀯锛堝寘鍚墍鏈夊瓧娈碉級",
+    "fix": "        // 创建新表结构（包含所有字段）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 348,
+    "raw": "        // 琛ㄥ凡瀛樺湪锛屽崌绾ц〃缁撴瀯",
+    "fix": "        // 表已存在，升级表结构",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 349,
+    "raw": "        WriteLog('闃茬鏀规暟鎹〃宸插瓨鍦紝妫€鏌ュ苟鍗囩骇瀛楁');",
+    "fix": "        WriteLog('防篡改数据表已存在，棢查并升级字段');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 352,
+    "raw": "            WriteLog('鍗囩骇鏁版嵁琛ㄥけ璐�');",
+    "fix": "            WriteLog('升级数据表失贄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 365,
+    "raw": "      WriteLog('璁剧疆闃茬鏀规暟鎹〃澶辫触: ' + E.Message);",
+    "fix": "      WriteLog('设置防篡改数据表失败: ' + E.Message);",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 381,
+    "raw": "      // 涓虹幇鏈夎〃娣诲姞sha256_hash瀛楁",
+    "fix": "      // 为现有表添加sha256_hash字段",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 385,
+    "raw": "        WriteLog('sha256_hash瀛楁娣诲姞鎴愬姛');",
+    "fix": "        WriteLog('sha256_hash字段添加成功');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 387,
+    "raw": "          WriteLog('sha256_hash瀛楁鍙兘宸插瓨鍦�');",
+    "fix": "          WriteLog('sha256_hash字段可能已存圄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 389,
+    "raw": "      // 涓虹幇鏈夎〃娣诲姞hmac_sha256瀛楁",
+    "fix": "      // 为现有表添加hmac_sha256字段",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 393,
+    "raw": "        WriteLog('hmac_sha256瀛楁娣诲姞鎴愬姛');",
+    "fix": "        WriteLog('hmac_sha256字段添加成功');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 395,
+    "raw": "          WriteLog('hmac_sha256瀛楁鍙兘宸插瓨鍦�');",
+    "fix": "          WriteLog('hmac_sha256字段可能已存圄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 397,
+    "raw": "      // 涓虹幇鏈夎〃娣诲姞enabled瀛楁",
+    "fix": "      // 为现有表添加enabled字段",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 401,
+    "raw": "        WriteLog('enabled瀛楁娣诲姞鎴愬姛');",
+    "fix": "        WriteLog('enabled字段添加成功');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 403,
+    "raw": "          WriteLog('enabled瀛楁鍙兘宸插瓨鍦�');",
+    "fix": "          WriteLog('enabled字段可能已存圄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 405,
+    "raw": "      // 涓虹幇鏈夎〃娣诲姞md5_hash瀛楁锛堝吋瀹规棫瀹炵幇锛?",
+    "fix": "      // 为现有表添加md5_hash字段（兼容旧实现?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 409,
+    "raw": "        WriteLog('md5_hash瀛楁娣诲姞鎴愬姛');",
+    "fix": "        WriteLog('md5_hash字段添加成功');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 411,
+    "raw": "          WriteLog('md5_hash瀛楁鍙兘宸插瓨鍦�');",
+    "fix": "          WriteLog('md5_hash字段可能已存圄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 422,
+    "raw": "      WriteLog('鍗囩骇鏁版嵁搴撳け璐? ' + E.Message);",
+    "fix": "      WriteLog('升级数据库失? ' + E.Message);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 440,
+    "raw": "      WriteLog('鍥惧儚鏁版嵁涓虹┖: ' + AImageKey);",
+    "fix": "      WriteLog('图像数据为空: ' + AImageKey);",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 444,
+    "raw": "    // 璁＄畻鍘熷鍥惧儚鏁版嵁鐨凷HA-256",
+    "fix": "    // 计算原始图像数据的SHA-256",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 446,
+    "raw": "    WriteLog(Format('鍥惧儚 %s 鐨凷HA-256: %s', [AImageKey, Sha256Hex]));",
+    "fix": "    WriteLog(Format('图像 %s 的SHA-256: %s', [AImageKey, Sha256Hex]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 448,
+    "raw": "    // 鍔犲瘑鍥惧儚鏁版嵁",
+    "fix": "    // 加密图像数据",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 464,
+    "raw": "        // 鏇存柊鐜版湁璁板綍锛堜弗鏍兼ā寮忥細蹇呴』鍖呭惈 sha256_hash 涓?hmac_sha256锛宮d5_hash 淇濇寔鍏煎锛?",
+    "fix": "        // 更新现有记录（严格模式：必须包含 sha256_hash ?hmac_sha256，md5_hash 保持兼容?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 472,
+    "raw": "        // 鎻掑叆鏂拌褰曪紙涓ユ牸妯″紡锛宮d5_hash 鍐欏叆绌哄瓧绗︿覆浠ュ吋瀹规棫琛?NOT NULL 绾︽潫锛?",
+    "fix": "        // 插入新记录（严格模式，md5_hash 写入空字符串以兼容旧?NOT NULL 约束?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 488,
+    "raw": "      // 鍐欏叆HMAC锛堜弗鏍兼ā寮忥細蹇呴』锛?",
+    "fix": "      // 写入HMAC（严格模式：必须?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 490,
+    "raw": "      // 鍐欏叆md5_hash锛堝吋瀹规棫琛ㄧ殑NOT NULL绾︽潫锛屽啓鍏ョ┖瀛楃涓诧級",
+    "fix": "      // 写入md5_hash（兼容旧表的NOT NULL约束，写入空字符串）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 494,
+    "raw": "      WriteLog(Format('瀹夊叏鍥惧儚淇濆瓨鎴愬姛: %s', [AImageKey]));",
+    "fix": "      WriteLog(Format('安全图像保存成功: %s', [AImageKey]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 503,
+    "raw": "      WriteLog(Format('淇濆瓨瀹夊叏鍥惧儚澶辫触: %s - %s', [AImageKey, E.Message]));",
+    "fix": "      WriteLog(Format('保存安全图像失败: %s - %s', [AImageKey, E.Message]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 533,
+    "raw": "    // 鏌ユ壘璁板綍",
+    "fix": "    // 查找记录",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 536,
+    "raw": "      WriteLog('鍦ㄦ暟鎹簱涓壘鍒拌褰? ' + AImageKey);",
+    "fix": "      WriteLog('在数据库中找到记? ' + AImageKey);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 538,
+    "raw": "      // 鑾峰彇瀛楁",
+    "fix": "      // 获取字段",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 548,
+    "raw": "          // 浠嶣lob瀛楁鍔犺浇鍔犲瘑鏁版嵁",
+    "fix": "          // 从Blob字段加载加密数据",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 552,
+    "raw": "          // 璇诲彇鍔犲瘑鏁版嵁",
+    "fix": "          // 读取加密数据",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 556,
+    "raw": "          WriteLog(Format('鍔犲瘑鏁版嵁闀垮害: %d bytes - %s', [Length(EncryptedData), AImageKey]));",
+    "fix": "          WriteLog(Format('加密数据长度: %d bytes - %s', [Length(EncryptedData), AImageKey]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 560,
+    "raw": "          WriteLog(Format('瑙ｅ瘑鏁版嵁闀垮害: %d bytes - %s', [Length(DecryptedData), AImageKey]));",
+    "fix": "          WriteLog(Format('解密数据长度: %d bytes - %s', [Length(DecryptedData), AImageKey]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 562,
+    "raw": "          // SHA-256瀹屾暣鎬ф牎楠岋紙涓ユ牸锛氬瓧娈靛繀椤诲瓨鍦級",
+    "fix": "          // SHA-256完整性校验（严格：字段必须存在）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 565,
+    "raw": "              HandleSecurityViolation(AImageKey, '缂哄皯 sha256_hash 瀛楁鎴栦负绌�');",
+    "fix": "              HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为穄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 571,
+    "raw": "            WriteLog(Format('SHA-256鏍￠獙澶辫触: %s', [AImageKey]));",
+    "fix": "            WriteLog(Format('SHA-256校验失败: %s', [AImageKey]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 572,
+    "raw": "            HandleSecurityViolation(AImageKey, 'SHA-256鏍￠獙澶辫触锛屽浘鍍忔暟鎹彲鑳借绡℃敼');",
+    "fix": "            HandleSecurityViolation(AImageKey, 'SHA-256校验失败，图像数据可能被篡改');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 575,
+    "raw": "          // HMAC 鏍￠獙锛堜弗鏍硷細瀛楁蹇呴』瀛樺湪涓斿尮閰嶏級",
+    "fix": "          // HMAC 校验（严格：字段必须存在且匹配）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 578,
+    "raw": "              HandleSecurityViolation(AImageKey, '缂哄皯 hmac_sha256 瀛楁鎴栦负绌�');",
+    "fix": "              HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为穄17');",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 587,
+    "raw": "              WriteLog(Format('HMAC-SHA256鏍￠獙澶辫触: %s', [AImageKey]));",
+    "fix": "              WriteLog(Format('HMAC-SHA256校验失败: %s', [AImageKey]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 588,
+    "raw": "              HandleSecurityViolation(AImageKey, 'HMAC-SHA256鏍￠獙澶辫触锛屽浘鍍忔暟鎹彲鑳借绡℃敼');",
+    "fix": "              HandleSecurityViolation(AImageKey, 'HMAC-SHA256校验失败，图像数据可能被篡改');",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 593,
+    "raw": "          WriteLog(Format('SHA-256鏍￠獙閫氳繃: %s', [AImageKey]));",
+    "fix": "          WriteLog(Format('SHA-256校验通过: %s', [AImageKey]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 595,
+    "raw": "          // 浠庤В瀵嗘暟鎹姞杞藉浘鍍?",
+    "fix": "          // 从解密数据加载图?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 601,
+    "raw": "          WriteLog(Format('瀹夊叏鍥惧儚鍔犺浇鎴愬姛: %s, 灏哄: %dx%d', [AImageKey, AImage.Picture.Width, AImage.P",
+    "fix": "          WriteLog(Format('安全图像加载成功: %s, 尺寸: %dx%d', [AImageKey, AImage.Picture.Width, AImage.Pictur",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 603,
+    "raw": "          // 鑾峰彇鍦板潃鏂囨湰",
+    "fix": "          // 获取地址文本",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 615,
+    "raw": "        WriteLog('鍥惧儚瀛楁涓虹┖: ' + AImageKey);",
+    "fix": "        WriteLog('图像字段为空: ' + AImageKey);",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 620,
+    "raw": "      WriteLog('鏁版嵁搴撲腑鏈壘鍒拌褰? ' + AImageKey);",
+    "fix": "      WriteLog('数据库中未找到记? ' + AImageKey);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 626,
+    "raw": "      WriteLog(Format('鍔犺浇瀹夊叏鍥惧儚鏃跺嚭閿? %s - %s', [AImageKey, E.Message]));",
+    "fix": "      WriteLog(Format('加载安全图像时出? %s - %s', [AImageKey, E.Message]));",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 637,
+    "raw": "  WriteLog(Format('瀹夊叏杩濊: %s - %s', [ImageKey, Reason]));",
+    "fix": "  WriteLog(Format('安全违规: %s - %s', [ImageKey, Reason]));",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 639,
+    "raw": "  ErrorMsg := Format('瀹夊叏妫€鏌ュけ璐ワ紒'#13#10#13#10 +",
+    "fix": "  ErrorMsg := Format('安全棢查失败！'#13#10#13#10 +",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 640,
+    "raw": "    '鍥惧儚: %s'#13#10 +",
+    "fix": "    '图像: %s'#13#10 +",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 641,
+    "raw": "    '鍘熷洜: %s'#13#10#13#10 +",
+    "fix": "    '原因: %s'#13#10#13#10 +",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 644,
+    "raw": "      '鏄惁鐜板湪璁块棶瀹樻柟涓嬭浇椤甸潰锛�', [ImageKey, Reason]);",
+    "fix": "      '是否现在访问官方下载页面＄17', [ImageKey, Reason]);",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 646,
+    "raw": "  Response := MessageBox(0, PChar(ErrorMsg), '瀹夊叏璀﹀憡', MB_YESNO or MB_ICONERROR or MB_TOPMOST);",
+    "fix": "  Response := MessageBox(0, PChar(ErrorMsg), '安全警告', MB_YESNO or MB_ICONERROR or MB_TOPMOST);",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 650,
+    "raw": "    // 鎵撳紑瀹樻柟涓嬭浇椤甸潰",
+    "fix": "    // 打开官方下载页面",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 659,
+    "raw": "// 娓呯┖闃茬鏀硅〃锛堜弗鏍兼ā寮忚緟鍔╋級",
+    "fix": "// 清空防篡改表（严格模式辅助）",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 676,
+    "raw": "// 鎾鏈€灏忓悎娉曡褰曪紙涓ユ牸妯″紡杈呭姪锛?",
+    "fix": "// 播种朢小合法记录（严格模式辅助?",
+    "missing": 2,
+    "grade": "G2a"
+   },
+   {
+    "line": 705,
+    "raw": "    WriteLog('宸叉挱绉嶆渶灏忓悎娉曡褰?seed');",
+    "fix": "    WriteLog('已播种最小合法记?seed');",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\SeedTool\\uBasicProtection.pas",
+  "n": 12,
+  "rows": [
+   {
+    "line": 180,
+    "raw": "  // 鑾峰彇AES鍔犲瘑涓婁笅鏂?",
+    "fix": "  // 获取AES加密上下?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 190,
+    "raw": "      // 娣诲姞瀵嗛挜鏁版嵁鍒板搱甯?",
+    "fix": "      // 添加密钥数据到哈?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 223,
+    "raw": "        // 杩斿洖 IV + 鍔犲瘑鏁版嵁 鐨勫崄鍏繘鍒惰〃绀?",
+    "fix": "        // 返回 IV + 加密数据 的十六进制表?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 253,
+    "raw": "  // 鍒嗙IV鍜屽姞瀵嗘暟鎹?",
+    "fix": "  // 分离IV和加密数?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 263,
+    "raw": "  // 鑾峰彇AES瑙ｅ瘑涓婁笅鏂?",
+    "fix": "  // 获取AES解密上下?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 273,
+    "raw": "      // 娣诲姞瀵嗛挜鏁版嵁鍒板搱甯?",
+    "fix": "      // 添加密钥数据到哈?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 299,
+    "raw": "        // 璋冩暣瑙ｅ瘑鏁版嵁闀垮害骞剁Щ闄ゅ～鍏?",
+    "fix": "        // 调整解密数据长度并移除填?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 315,
+    "raw": "// 浜岃繘鍒舵暟鎹姞瀵?",
+    "fix": "// 二进制数据加?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 385,
+    "raw": "// 浜岃繘鍒舵暟鎹В瀵?",
+    "fix": "// 二进制数据解?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 399,
+    "raw": "  // 鍒嗙IV鍜屽姞瀵嗘暟鎹?",
+    "fix": "  // 分离IV和加密数?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 405,
+    "raw": "  // 灏濊瘯鏂版柟娉曪紙鍥哄畾鍙ｄ护 + salt + PBKDF2锛?",
+    "fix": "  // 尝试新方法（固定口令 + salt + PBKDF2?",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 470,
+    "raw": "// 鏁版嵁瀹屾暣鎬ч獙璇?",
+    "fix": "// 数据完整性验?",
+    "missing": 1,
+    "grade": "G2a"
+   }
+  ]
+ },
+ {
+  "file": ".\\Tools\\Studio\\Studio.Resources.pas",
+  "n": 18,
+  "rows": [
+   {
+    "line": 127,
+    "raw": "    Result := WideChar($5237) + WideChar($65B0); // 鍒锋柊",
+    "fix": "    Result := WideChar($5237) + WideChar($65B0); // 刷新",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 132,
+    "raw": "    Result := WideChar($6DFB) + WideChar($52A0); // 娣诲姞",
+    "fix": "    Result := WideChar($6DFB) + WideChar($52A0); // 添加",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 142,
+    "raw": "    Result := WideChar($8BBE) + WideChar($7F6E); // 璁剧疆",
+    "fix": "    Result := WideChar($8BBE) + WideChar($7F6E); // 设置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 147,
+    "raw": "    Result := WideChar($65E5) + WideChar($5FD7); // 鏃ュ織",
+    "fix": "    Result := WideChar($65E5) + WideChar($5FD7); // 日志",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 152,
+    "raw": "    Result := WideChar($914D) + WideChar($7F6E); // 閰嶇疆",
+    "fix": "    Result := WideChar($914D) + WideChar($7F6E); // 配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 167,
+    "raw": "    Result := WideChar($4E3B) + WideChar($9898); // 涓婚",
+    "fix": "    Result := WideChar($4E3B) + WideChar($9898); // 主题",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 177,
+    "raw": "    // 鏌ヨ瀹氫箟",
+    "fix": "    // 查询定义",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 189,
+    "raw": "    Result := WideChar($5907) + WideChar($4EFD); // 澶囦唤",
+    "fix": "    Result := WideChar($5907) + WideChar($4EFD); // 备份",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 194,
+    "raw": "    // 瀵煎叆/瀵煎嚭",
+    "fix": "    // 导入/导出",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 200,
+    "raw": "    // 鎬ц兘鍒嗘瀽",
+    "fix": "    // 性能分析",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 206,
+    "raw": "    Result := 'LLM ' + WideChar($7BA1) + WideChar($7406); // LLM 绠＄悊",
+    "fix": "    Result := 'LLM ' + WideChar($7BA1) + WideChar($7406); // LLM 管理",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 217,
+    "raw": "    // 娣诲姞閰嶇疆",
+    "fix": "    // 添加配置",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 235,
+    "raw": "    // 纭畾鍒犻櫎閰嶇疆 \"%s\"?",
+    "fix": "    // 确定删除配置 \"%s\"?",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 242,
+    "raw": "    // 鏁版嵁搴撴枃浠舵湭鎵惧埌: %s",
+    "fix": "    // 数据库文件未找到: %s",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 249,
+    "raw": "    // 鎵撳紑鏁版嵁搴撳け璐? %s",
+    "fix": "    // 打开数据库失? %s",
+    "missing": 1,
+    "grade": "G2a"
+   },
+   {
+    "line": 256,
+    "raw": "    Result := WideChar($5C31) + WideChar($7EEA); // 灏辩华",
+    "fix": "    Result := WideChar($5C31) + WideChar($7EEA); // 就绪",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 267,
+    "raw": "    // 鏁版嵁搴撳凡鎵撳紑",
+    "fix": "    // 数据库已打开",
+    "missing": 0,
+    "grade": "G1"
+   },
+   {
+    "line": 274,
+    "raw": "    // 鏁版嵁搴撳凡鍏抽棴",
+    "fix": "    // 数据库已关闭",
+    "missing": 0,
+    "grade": "G1"
+   }
+  ]
+ }
+]

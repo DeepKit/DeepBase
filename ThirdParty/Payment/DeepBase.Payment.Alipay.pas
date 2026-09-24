@@ -6,7 +6,7 @@
   Supports:
     - 电脑网站支付 (alipay.trade.page.pay)
     - 手机网站支付 (alipay.trade.wap.pay)
-    - 褰撻潰浠?鎵爜鏀粯 (alipay.trade.precreate)
+    - 当面?扫码支付 (alipay.trade.precreate)
     - APP支付 (alipay.trade.app.pay)
     - 统一收单交易查询 (alipay.trade.query)
     - 缁熶竴鏀跺崟浜ゆ槗閫€娆?(alipay.trade.refund)

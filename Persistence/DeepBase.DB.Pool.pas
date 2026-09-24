@@ -7,7 +7,7 @@
   所属包: DeepBasePersistence
   功能:
   - 官方 profile 路径支持 SQLite + PostgreSQL 双数据库并存
-  - 淇濈暀鏃?DatabaseType/ConnectionString 鍏煎鍏ュ彛
+  - 保留?DatabaseType/ConnectionString 兼容入口
   - 杩炴帴鍋ュ悍妫€鏌?
   - 空闲连接回收
   - 杩炴帴娉勬紡妫€娴?
@@ -101,7 +101,7 @@ type
     csValidating  // 正在验证
   );
 
-  /// <summary>杩炴帴姹犱簨浠剁被鍨?/summary>
+  /// <summary>连接池事件类?/summary>
   TPoolEventType = (
     peConnectionCreated,
     peConnectionDestroyed,
@@ -117,7 +117,7 @@ type
   TPoolEvent = procedure(Sender: TObject; EventType: TPoolEventType;
     const Message: string) of object;
 
-  /// <summary>杩炴帴姹犵粺璁′俊鎭?/summary>
+  /// <summary>连接池统计信?/summary>
   TPoolStatistics = record
     TotalConnections: Integer;
     ActiveConnections: Integer;
@@ -139,7 +139,7 @@ type
 
   TUniConnectionPool = class;
 
-  /// <summary>姹犲寲杩炴帴鍖呰鍣?/summary>
+  /// <summary>池化连接包装?/summary>
   TPooledConnection = class
   private
     FPool: TUniConnectionPool;
@@ -167,7 +167,7 @@ type
     /// <summary>鏍囪涓烘棤鏁?/summary>
     procedure Invalidate;
 
-    /// <summary>楠岃瘉杩炴帴鏈夋晥鎬?/summary>
+    /// <summary>验证连接有效?/summary>
     function Validate: Boolean;
 
     /// <summary>Set connection state (for unit-test regression scenarios only).</summary>
@@ -266,13 +266,13 @@ type
     /// <summary>Create a configured FireDAC connection without opening it.</summary>
     function CreateUnopenedConnection: TFDConnection;
 
-    /// <summary>鑾峰彇杩炴帴锛堝甫瓒呮椂锛?/summary>
+    /// <summary>获取连接（带超时?/summary>
     function TryGetConnection(TimeoutMs: Cardinal; out Conn: TPooledConnection): Boolean;
 
-    /// <summary>鎵ц鎿嶄綔锛堣嚜鍔ㄨ幏鍙栧拰閲婃斁杩炴帴锛?/summary>
+    /// <summary>执行操作（自动获取和释放连接?/summary>
     procedure Execute(Proc: TProc<TFDConnection>);
 
-    /// <summary>鎵ц鏌ヨ锛堣嚜鍔ㄨ幏鍙栧拰閲婃斁杩炴帴锛?/summary>
+    /// <summary>执行查询（自动获取和释放连接?/summary>
     function Query<T>(Func: TFunc<TFDConnection, T>): T;
 
     /// <summary>娓呯┖鎵€鏈夌┖闂茶繛鎺?/summary>
@@ -370,10 +370,10 @@ type
     procedure ShutdownAll;
   end;
 
-/// <summary>鑾峰彇榛樿杩炴帴姹?/summary>
+/// <summary>获取默认连接?/summary>
 function DefaultPool: TUniConnectionPool;
 
-/// <summary>璁剧疆榛樿杩炴帴姹?/summary>
+/// <summary>设置默认连接?/summary>
 procedure SetDefaultPool(Pool: TUniConnectionPool);
 
 /// <summary>Get the default DB pool provider facade.</summary>
@@ -1461,7 +1461,7 @@ begin
       end
       else
       begin
-        // 鏃犳晥杩炴帴锛屾爣璁扮Щ闄?
+        // 无效连接，标记移?
         Pooled.Invalidate;
       end;
     end;
@@ -1533,7 +1533,7 @@ begin
         Exit;
       end;
 
-      // 鏃犲彲鐢ㄨ繛鎺ワ紝灏濊瘯鍒涘缓鏂拌繛鎺?
+      // 无可用连接，尝试创建新连?
       if FPool.Count < FConfig.MaxSize then
       begin
         try

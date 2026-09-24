@@ -80,7 +80,7 @@ constructor TWeiboConfig.Create;
 begin
   inherited Create(spWeibo);
   FScope := 'all';
-  // BUG-019 FIX: 鍒濆鍖栧畨鍏ㄥ瓨鍌ㄨ缃?  FKeyStorageMode := ksmDPAPI;
+  // BUG-019 FIX: 初始化安全存储设?  FKeyStorageMode := ksmDPAPI;
   FCredentialTarget := 'DeepBase.Social.Weibo';
 end;
 
@@ -110,7 +110,7 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.UnprotectString(AEncryptedKey);
     ksmCredential:
-      // Credential Manager 妯″紡涓嬫暟鎹凡缁忓畨鍏ㄥ瓨鍌?      Result := AEncryptedKey;
+      // Credential Manager 模式下数据已经安全存?      Result := AEncryptedKey;
   else
     // ksmPlainText
     Result := AEncryptedKey;

@@ -182,12 +182,12 @@ type
 
 implementation
 
-// 浠ヤ笅瀹炵幇鐩存帴鏉ヨ嚜鍘?uBasicProtection.pas锛屼繚鎸佽涔変笉鍙?
+// 以下实现直接来自?uBasicProtection.pas，保持语义不?
 
 class function TBasicProtection.GetDynamicKey: string;
 begin
   // 移除动态密钥生成，返回空字符串
-  // 杩欎釜鏂规硶宸茶寮冪敤锛屽缓璁娇鐢ㄦ洿瀹夊叏鐨勫瘑閽ョ鐞嗘柟妗?
+  // 这个方法已被弃用，建议使用更安全的密钥管理方?
   Result := '';
   
   // 记录警告日志

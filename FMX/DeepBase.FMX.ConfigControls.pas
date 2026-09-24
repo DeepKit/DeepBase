@@ -1,11 +1,11 @@
 ﻿{ ============================================================================
-  DeepBase.FMX.ConfigControls - FMX 閰嶇疆缁戝畾鎺т欢
+  DeepBase.FMX.ConfigControls - FMX 配置绑定控件
   
-  鐗堟湰: 1.0
-  璇存槑: 涓?Settings 琛ㄨ嚜鍔ㄧ粦瀹氱殑 FMX 鎺т欢
-  鎺т欢:
-    - TFMXConfigEdit: 缁戝畾瀛楃涓查厤缃?
-    - TFMXConfigCheckBox: 缁戝畾甯冨皵閰嶇疆
+  版本: 1.0
+  说明: ?Settings 表自动绑定的 FMX 控件
+  控件:
+    - TFMXConfigEdit: 绑定字符串配?
+    - TFMXConfigCheckBox: 绑定布尔配置
     - TFMXConfigSpinBox: 缁戝畾鏁板€奸厤缃?
   ============================================================================ }
 
@@ -25,7 +25,7 @@ uses
 
 type
   /// <summary>
-  /// 鑷姩缁戝畾閰嶇疆鐨?FMX Edit 鎺т欢
+  /// 自动绑定配置?FMX Edit 控件
   /// </summary>
   TFMXConfigEdit = class(TEdit)
   private
@@ -49,13 +49,13 @@ type
     procedure LoadFromConfig;
     
     /// <summary>
-    /// 淇濆瓨鍊煎埌閰嶇疆
+    /// 保存值到配置
     /// </summary>
     procedure SaveToConfig;
     
   published
     /// <summary>
-    /// 閰嶇疆閿悕
+    /// 配置键名
     /// </summary>
     property ConfigKey: string read FConfigKey write SetConfigKey;
     
@@ -65,18 +65,18 @@ type
     property DefaultValue: string read FDefaultValue write FDefaultValue;
     
     /// <summary>
-    /// 鑷姩鍔犺浇
+    /// 自动加载
     /// </summary>
     property AutoLoad: Boolean read FAutoLoad write FAutoLoad default True;
     
     /// <summary>
-    /// 鑷姩淇濆瓨
+    /// 自动保存
     /// </summary>
     property AutoSave: Boolean read FAutoSave write FAutoSave default True;
   end;
 
   /// <summary>
-  /// 鑷姩缁戝畾閰嶇疆鐨?FMX CheckBox 鎺т欢
+  /// 自动绑定配置?FMX CheckBox 控件
   /// </summary>
   TFMXConfigCheckBox = class(TCheckBox)
   private
@@ -105,7 +105,7 @@ type
   end;
 
   /// <summary>
-  /// 鑷姩缁戝畾閰嶇疆鐨?FMX SpinBox 鎺т欢
+  /// 自动绑定配置?FMX SpinBox 控件
   /// </summary>
   TFMXConfigSpinBox = class(TSpinBox)
   private

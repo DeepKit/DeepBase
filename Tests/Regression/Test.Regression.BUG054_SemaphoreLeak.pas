@@ -1,15 +1,15 @@
 ﻿{ ============================================================================
-  Test.Regression.BUG054_SemaphoreLeak - 寮规€фā寮忎俊鍙烽噺娉勬紡鍥炲綊娴嬭瘯
+  Test.Regression.BUG054_SemaphoreLeak - 弹模式信号量泄漏回归测试
 
   BUG-054: 寮规€фā寮忎俊鍙烽噺娉勬紡
   
-  鍘熼棶棰? TSemaphore浣跨敤鍚庡彲鑳藉瓨鍦ㄦ硠婕忛闄╋紝寮傚父鎯呭喌涓嬫湭姝ｇ‘閲婃斁
+  原问? TSemaphore使用后可能存在泄漏风险，异常情况下未正确释放
   
-  淇鏂规: 娣诲姞 NeedReleaseSemaphore 鏍囧織锛岀‘淇濆彧鍦ㄦ垚鍔熻幏鍙栦俊鍙烽噺鍚庢墠閲婃斁锛?
-            淇闈為槦鍒楁ā寮忎笅鐨勪俊鍙烽噺鑾峰彇閫昏緫
+  修复方案: 添加 NeedReleaseSemaphore 标志，确保只在成功获取信号量后才释放?
+            修复非队列模式下的信号量获取逻辑
   
-  淇鏃ユ湡: 2025-12-16
-  鏂囦欢: Core/DeepBase.Resilience.pas
+  修复日期: 2025-12-16
+  文件: Core/DeepBase.Resilience.pas
   浼樺厛绾? P1 (High)
   鍒嗙被: Concurrency
   ============================================================================ }
@@ -38,15 +38,15 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('楠岃瘉淇″彿閲忛噴鏀炬爣蹇楀瓨鍦?)]
+    [Description('验证信号量释放标志存?)]
     procedure Test_SemaphoreReleaseFlag_Exists;
     
     [Test]
-    [Description('楠岃瘉寮傚父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')]
+    [Description('验证异常情况下信号量正确释放')]
     procedure Test_ExceptionCase_SemaphoreReleased;
     
     [Test]
-    [Description('楠岃瘉姝ｅ父鎯呭喌涓嬩俊鍙烽噺姝ｇ‘閲婃斁')]
+    [Description('验证正常情况下信号量正确释放')]
     procedure Test_NormalCase_SemaphoreReleased;
   end;
 
@@ -103,12 +103,12 @@ begin
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 楠岃瘉瀛樺湪淇″彿閲忛噴鏀炬爣蹇?
+  // 验证存在信号量释放标?
   Assert.IsTrue(
     SourceCode.Contains('NeedReleaseSemaphore') or 
     SourceCode.Contains('SemaphoreAcquired') or
     SourceCode.Contains('ReleaseSemaphore'),
-    '浠ｇ爜搴旇鍖呭惈淇″彿閲忛噴鏀炬帶鍒堕€昏緫');
+    '代码应该包含信号量释放控制辑');
   
   LogTestEnd('Test_SemaphoreReleaseFlag_Exists', True);
 end;
@@ -127,16 +127,16 @@ begin
     Semaphore.Acquire;
     
     try
-      // 妯℃嫙寮傚父
+      // 模拟异常
       raise Exception.Create('Test exception');
     except
-      // 纭繚鍦ㄥ紓甯告儏鍐典笅閲婃斁淇″彿閲?
+      // 确保在异常情况下释放信号?
       Semaphore.Release;
     end;
     
-    // 楠岃瘉淇″彿閲忓凡閲婃斁锛堝彲浠ュ啀娆¤幏鍙栵級
+    // 验证信号量已释放（可以再次获取）
     Assert.IsTrue(Semaphore.WaitFor(100) = wrSignaled,
-      '寮傚父鍚庝俊鍙烽噺搴旇琚纭噴鏀?);
+      '异常后信号量应该被正确释?);
     Semaphore.Release;
   finally
     Semaphore.Free;
@@ -156,12 +156,12 @@ begin
     // 鑾峰彇淇″彿閲?
     Semaphore.Acquire;
     
-    // 姝ｅ父閲婃斁
+    // 正常释放
     Semaphore.Release;
     
-    // 楠岃瘉鍙互鍐嶆鑾峰彇
+    // 验证可以再次获取
     Assert.IsTrue(Semaphore.WaitFor(100) = wrSignaled,
-      '姝ｅ父閲婃斁鍚庝俊鍙烽噺搴旇鍙互鍐嶆鑾峰彇');
+      '正常释放后信号量应该可以再次获取');
     Semaphore.Release;
   finally
     Semaphore.Free;

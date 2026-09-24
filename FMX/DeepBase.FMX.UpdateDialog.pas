@@ -128,7 +128,7 @@ begin
     Dialog.BtnSkip.Visible := False;
   end;
 
-  // 绉诲姩绔樉绀?鍓嶅線鍟嗗簵"鑰屼笉鏄?涓嬭浇"
+  // 移动端显?前往商店"而不?下载"
   if Dialog.IsMobilePlatform then
     Dialog.BtnUpdate.Text := '前往商店';
 
@@ -217,13 +217,13 @@ procedure TFMXUpdateDialog.BtnUpdateClick(Sender: TObject);
 begin
   if FIsMobile then
   begin
-    // 绉诲姩绔烦杞簲鐢ㄥ晢搴?    if Assigned(FCallback) then
+    // 移动端跳转应用商?    if Assigned(FCallback) then
       FCallback(udaOpenStore);
     Close;
   end
   else
   begin
-    // 妗岄潰绔笅杞芥洿鏂?    if not FIsDownloading then
+    // 桌面端下载更?    if not FIsDownloading then
       StartDownload;
   end;
 end;

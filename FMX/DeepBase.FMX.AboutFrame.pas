@@ -1,11 +1,11 @@
 ﻿unit DeepBase.FMX.AboutFrame;
 
 {
-  DeepBase FMX AboutFrame - FireMonkey 鐗堝叧浜?鎵撹祻椤甸潰缁勪欢
+  DeepBase FMX AboutFrame - FireMonkey 版关?打赏页面组件
 
   功能:
   - 6 涓爣鍑?Tab 椤?(鍏紬鍙?寰俊/鏀粯瀹?BTC/USDT/鍏充簬鎴?
-  - 浠?SQLite 鏁版嵁搴撳畨鍏ㄥ姞杞藉浘鐗?(HMAC 绛惧悕楠岃瘉)
+  - ?SQLite 数据库安全加载图?(HMAC 签名验证)
   - BTC/USDT 地址复制功能
   - 鏈哄櫒鐮佹樉绀?
   - 鏍规嵁 enabled 瀛楁鍔ㄦ€佹樉绀?闅愯棌 Tab
@@ -29,7 +29,7 @@ uses
 
 type
   /// <summary>
-  /// FMX 鐗?AboutFrame - 鍏充簬/鎵撹祻椤甸潰缁勪欢
+  /// FMX ?AboutFrame - 关于/打赏页面组件
   /// </summary>
   TFMXAboutFrame = class(TFrame)
   private

@@ -1,11 +1,11 @@
 ﻿{ ============================================================================
-  RegressionTestRegistry - 鍥炲綊娴嬭瘯娉ㄥ唽琛?
+  RegressionTestRegistry - 回归测试注册?
 
-  姝ゆ枃浠跺垪鍑烘墍鏈夊洖褰掓祴璇曪紝鐢ㄤ簬锛?
+  此文件列出所有回归测试，用于?
   1. 蹇€熸煡鎵剧壒瀹?Bug 鐨勬祴璇?
   2. 验证所有已修复 Bug 都有对应测试
   3. CI 报告生成
-  4. 娴嬭瘯瑕嗙洊鐜囩粺璁?
+  4. 测试覆盖率统?
 
   鏇存柊璇存槑锛?
   - 添加新的回归测试时，请同时更新此文件
@@ -140,7 +140,7 @@ const
      Description: '动画对象内存泄漏';
      FixDate: '2025-01-27'),
 
-    // 搴忓垪鍖栧畨鍏ㄧ浉鍏?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;
+    // 序列化安全相?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG059_JsonDeserializationType';
      SourceFile: 'Core/DeepBase.Serialization.pas';
      Description: 'JSON反序列化类型验证缺失';
@@ -149,7 +149,7 @@ const
     (BugNumber: 'BUG-060'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG060_SerializationDepth';
      SourceFile: 'Core/DeepBase.Serialization.pas';
-     Description: '搴忓垪鍖栨繁搴﹂檺鍒惰繃楂?;
+     Description: '序列化深度限制过?;
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-018'; Priority: bpP1; Category: bcSecurity;
@@ -193,7 +193,7 @@ const
     (BugNumber: 'BUG-039'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG039_HTTPHeaderInjection';
      SourceFile: 'Core/DeepBase.Net.pas';
-     Description: 'HTTP璇锋眰澶存敞鍏ラ闄?;
+     Description: 'HTTP请求头注入风?;
      FixDate: '2025-01-27'),
 
     // 瀵嗙爜瀛︾浉鍏?

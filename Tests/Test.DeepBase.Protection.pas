@@ -145,7 +145,7 @@ begin
 
   Assert.IsNotEmpty(C1);
   Assert.IsNotEmpty(C2);
-  // 浣跨敤闅忔満 IV锛屾甯告儏鍐典笅涓ゆ瀵嗘枃搴斾笉鍚岋紙纰版挒姒傜巼鏋佷綆锛?
+  // 使用随机 IV，正常情况下两次密文应不同（碰撞概率极低?
   Assert.AreNotEqual(C1, C2, 'Two encryptions with random IV should produce different ciphertext');
 end;
 

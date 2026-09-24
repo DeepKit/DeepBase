@@ -1,13 +1,13 @@
 ﻿unit Test.DeepBase.FormState;
 
 {*******************************************************************************
-  DeepBase FormState 妯″潡鍗曞厓娴嬭瘯
+  DeepBase FormState 模块单元测试
   
-  娴嬭瘯鍐呭:
+  测试内容:
   - SaveFormState / RestoreFormState
   - 澶氭樉绀哄櫒杈圭晫妫€鏌?
-  - WindowState 澶勭悊
-  - Extra JSON 瀛楁
+  - WindowState 处理
+  - Extra JSON 字段
 *******************************************************************************}
 
 interface
@@ -155,7 +155,7 @@ begin
     FManager.InitializeWithDB(':memory:');
   FFormState := FManager.FormState;
   
-  // 鍒涘缓娴嬭瘯绐椾綋
+  // 创建测试窗体
   FTestForm := TForm.CreateNew(nil);
   // Component name must be a valid identifier (no braces / no dashes)
   FTestForm.Name := 'TestForm_' +
@@ -240,15 +240,15 @@ begin
   FTestForm.Top := OrigTop;
   FFormState.SaveFormState(FTestForm);
   
-  // 鏀瑰彉浣嶇疆
+  // 改变位置
   FTestForm.Left := 0;
   FTestForm.Top := 0;
   
   // 鎭㈠
   FFormState.RestoreFormState(FTestForm);
   
-  Assert.AreEqual(OrigLeft, FTestForm.Left, '宸﹁竟浣嶇疆搴旇鎭㈠');
-  Assert.AreEqual(OrigTop, FTestForm.Top, '椤堕儴浣嶇疆搴旇鎭㈠');
+  Assert.AreEqual(OrigLeft, FTestForm.Left, '左边位置应该恢复');
+  Assert.AreEqual(OrigTop, FTestForm.Top, '顶部位置应该恢复');
 end;
 
 procedure TTestDeepBaseFormState.Test_SaveRestore_Size;
@@ -262,15 +262,15 @@ begin
   FTestForm.Height := OrigHeight;
   FFormState.SaveFormState(FTestForm);
   
-  // 鏀瑰彉澶у皬
+  // 改变大小
   FTestForm.Width := 200;
   FTestForm.Height := 100;
   
   // 鎭㈠
   FFormState.RestoreFormState(FTestForm);
   
-  Assert.AreEqual(OrigWidth, FTestForm.Width, '瀹藉害搴旇鎭㈠');
-  Assert.AreEqual(OrigHeight, FTestForm.Height, '楂樺害搴旇鎭㈠');
+  Assert.AreEqual(OrigWidth, FTestForm.Width, '宽度应该恢复');
+  Assert.AreEqual(OrigHeight, FTestForm.Height, '高度应该恢复');
 end;
 
 procedure TTestDeepBaseFormState.Test_SaveRestore_WindowState_Normal;
@@ -299,17 +299,17 @@ end;
 
 procedure TTestDeepBaseFormState.Test_RestoreFormState_BoundaryCheck;
 begin
-  // 淇濆瓨涓€涓秴鍑哄睆骞曡寖鍥寸殑浣嶇疆
+  // 保存丢个超出屏幕范围的位置
   FTestForm.Left := -10000;
   FTestForm.Top := -10000;
   FFormState.SaveFormState(FTestForm);
   
-  // 鎭㈠鏃跺簲璇ヨ嚜鍔ㄨ皟鏁村埌鏈夋晥鑼冨洿
+  // 恢复时应该自动调整到有效范围
   FFormState.RestoreFormState(FTestForm);
   
-  // 绐椾綋搴旇鍦ㄥ彲瑙佽寖鍥村唴
-  Assert.IsTrue(FTestForm.Left >= -FTestForm.Width, '宸﹁竟浣嶇疆搴旇鍦ㄥ悎鐞嗚寖鍥村唴');
-  Assert.IsTrue(FTestForm.Top >= -FTestForm.Height, '椤堕儴浣嶇疆搴旇鍦ㄥ悎鐞嗚寖鍥村唴');
+  // 窗体应该在可见范围内
+  Assert.IsTrue(FTestForm.Left >= -FTestForm.Width, '左边位置应该在合理范围内');
+  Assert.IsTrue(FTestForm.Top >= -FTestForm.Height, '顶部位置应该在合理范围内');
 end;
 
 procedure TTestDeepBaseFormState.Test_RestoreFormState_ClampsStaleMultiMonitorBounds;
@@ -393,7 +393,7 @@ begin
   
   FFormState.DeleteFormState(FTestForm.Name);
   
-  Assert.IsFalse(FFormState.FormStateExists(FTestForm.Name), '鍒犻櫎鍚庝笉搴旇瀛樺湪');
+  Assert.IsFalse(FFormState.FormStateExists(FTestForm.Name), '删除后不应该存在');
 end;
 
 procedure TTestDeepBaseFormState.Test_FormStateExists;

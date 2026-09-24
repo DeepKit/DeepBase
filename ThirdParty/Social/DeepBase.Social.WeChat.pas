@@ -5,7 +5,7 @@
 
   Supports:
     - 寰俊寮€鏀惧钩鍙扮櫥褰?(缃戠珯搴旂敤)
-    - 寰俊鍏紬鍙风櫥褰?(缃戦〉鎺堟潈)
+    - 微信公众号登?(网页授权)
     - 获取用户信息
     - 鍒嗕韩鍒板井淇?
   Official Docs: https://developers.weixin.qq.com/doc/oplatform/
@@ -22,7 +22,7 @@ type
   /// <summary>WeChat login type</summary>
   TWeChatLoginType = (
     wltOpen,      // 寮€鏀惧钩鍙?(缃戠珯/APP)
-    wltMP         // 鍏紬鍙风綉椤垫巿鏉?
+    wltMP         // 公众号网页授?
   );
 
   /// <summary>WeChat configuration</summary>

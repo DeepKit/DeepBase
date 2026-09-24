@@ -3,7 +3,7 @@
 
   璇存槑:
     涓烘ā鏉垮伐绋嬫彁渚涚粺涓€鐨勮嚜鍔ㄦ洿鏂板垵濮嬪寲鍏ュ彛銆?    榛樿鍚敤 DeepBase 2026-05 鐨勭瓥鐣ュ寲闈欓粯鏇存柊缂栨帓锛?      - onExit/whenIdle staged 涓嬭浇
-      - 鍚庡彴杞瀹夎绐楀彛
+      - 后台轮询安装窗口
       - 閫€鍑鸿Е鍙戝畨瑁呯獥鍙?  ============================================================================ }
 
 unit Template.AutoUpdateBootstrap;
@@ -55,7 +55,7 @@ begin
     GAutoUpdater.CurrentVersion := DeepBase.Manager.DeepBase.Config.GetConfig('App.Version', '0.0.0');
   end;
 
-  // 杩愯鏃跺垱寤虹殑缁勪欢涓嶄細瑙﹀彂 Loaded锛涙墜鍔ㄥ紓姝ヨЕ鍙戜竴娆℃鏌ャ€?  TThread.ForceQueue(nil,
+  // 运行时创建的组件不会触发 Loaded；手动异步触发一次检查?  TThread.ForceQueue(nil,
     procedure
     begin
       if GAutoUpdater <> nil then

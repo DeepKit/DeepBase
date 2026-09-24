@@ -32,7 +32,7 @@ uses
     // KDF 涓?HMAC 璁剧疆
     Salt: string;                 // KDF鐩?
     KdfIterations: Integer;       // KDF迭代次数
-    EnableHMAC: Boolean;          // 鏄惁鍚敤HMAC瀹屾暣鎬х鍚?
+    EnableHMAC: Boolean;          // 是否启用HMAC完整性签?
   end;
 
   // 防篡改包主类
@@ -278,7 +278,7 @@ begin
   finally
     AES.Free;
   end;
-  WriteLog(Format(string('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));
+  WriteLog(Format(string('使用AES-256加密，数据长? %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
@@ -315,7 +315,7 @@ begin
   finally
     AES.Free;
   end;
-  WriteLog(Format(string('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));
+  WriteLog(Format(string('使用AES-256解密，数据长? %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
@@ -328,7 +328,7 @@ begin
   // BUG-036 FIX: Use constant-time comparison to prevent timing attacks
   if Length(ActualHash) <> Length(ExpectedHash) then
   begin
-    WriteLog(Format(string('SHA-256鏍￠獙澶辫触: 闀垮害涓嶅尮閰?鏈熸湜=%d, 瀹為檯=%d'), [Length(ExpectedHash), Length(ActualHash)]));
+    WriteLog(Format(string('SHA-256校验失败: 长度不匹?期望=%d, 实际=%d'), [Length(ExpectedHash), Length(ActualHash)]));
     Exit(False);
   end;
   

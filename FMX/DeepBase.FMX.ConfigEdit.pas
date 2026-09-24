@@ -1,10 +1,10 @@
 ﻿{ ============================================================================
-  DeepBase.FMX.ConfigEdit - FMX 閰嶇疆缂栬緫鎺т欢
+  DeepBase.FMX.ConfigEdit - FMX 配置编辑控件
   
-  鐗堟湰: 1.0
-  璇存槑: 鑷姩缁戝畾鍒?DeepBase 閰嶇疆鐨?FMX 缂栬緫鎺т欢
-  鎺т欢:
-    - TFMXConfigEdit: 瀛楃涓查厤缃紪杈?
+  版本: 1.0
+  说明: 自动绑定?DeepBase 配置?FMX 编辑控件
+  控件:
+    - TFMXConfigEdit: 字符串配置编?
     - TFMXConfigSpinBox: 鏁板€奸厤缃紪杈?
     - TFMXConfigSwitch: 甯冨皵閰嶇疆寮€鍏?
   ============================================================================ }
@@ -27,12 +27,12 @@ uses
 
 type
   /// <summary>
-  /// 鑷姩淇濆瓨妯″紡
+  /// 自动保存模式
   /// </summary>
   TConfigAutoSaveMode = (
-    asmNone,        // 涓嶈嚜鍔ㄤ繚瀛橈紝闇€鎵嬪姩璋冪敤 SaveValue
-    asmOnExit,      // 澶卞幓鐒︾偣鏃惰嚜鍔ㄤ繚瀛?
-    asmOnChange     // 鍊煎彉鍖栨椂绔嬪嵆淇濆瓨
+    asmNone,        // 不自动保存，霢手动调用 SaveValue
+    asmOnExit,      // 失去焦点时自动保?
+    asmOnChange     // 值变化时立即保存
   );
 
   /// <summary>
@@ -58,12 +58,12 @@ type
     constructor Create(AOwner: TComponent); override;
     
     /// <summary>
-    /// 淇濆瓨褰撳墠鍊煎埌閰嶇疆
+    /// 保存当前值到配置
     /// </summary>
     procedure SaveValue;
     
     /// <summary>
-    /// 閲嶆柊鍔犺浇閰嶇疆鍊?
+    /// 重新加载配置?
     /// </summary>
     procedure ReloadValue;
     
@@ -79,7 +79,7 @@ type
     
   published
     /// <summary>
-    /// 閰嶇疆閿悕
+    /// 配置键名
     /// </summary>
     property ConfigKey: string read FConfigKey write SetConfigKey;
     
@@ -89,7 +89,7 @@ type
     property ConfigCategory: string read FConfigCategory write FConfigCategory;
     
     /// <summary>
-    /// 鑷姩淇濆瓨妯″紡
+    /// 自动保存模式
     /// </summary>
     property AutoSaveMode: TConfigAutoSaveMode read FAutoSaveMode write FAutoSaveMode default asmOnExit;
   end;

@@ -124,12 +124,12 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Refresh: string;
   begin
-    Result := WideChar($5237) + WideChar($65B0); // 鍒锋柊
+    Result := WideChar($5237) + WideChar($65B0); // 刷新
   end;
   
   function ZH_Add: string;
   begin
-    Result := WideChar($6DFB) + WideChar($52A0); // 娣诲姞
+    Result := WideChar($6DFB) + WideChar($52A0); // 添加
   end;
   
   function ZH_Delete: string;
@@ -139,17 +139,17 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Settings: string;
   begin
-    Result := WideChar($8BBE) + WideChar($7F6E); // 璁剧疆
+    Result := WideChar($8BBE) + WideChar($7F6E); // 设置
   end;
   
   function ZH_Logs: string;
   begin
-    Result := WideChar($65E5) + WideChar($5FD7); // 鏃ュ織
+    Result := WideChar($65E5) + WideChar($5FD7); // 日志
   end;
   
   function ZH_Config: string;
   begin
-    Result := WideChar($914D) + WideChar($7F6E); // 閰嶇疆
+    Result := WideChar($914D) + WideChar($7F6E); // 配置
   end;
   
   function ZH_Data: string;
@@ -164,7 +164,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Themes: string;
   begin
-    Result := WideChar($4E3B) + WideChar($9898); // 涓婚
+    Result := WideChar($4E3B) + WideChar($9898); // 主题
   end;
   
   function ZH_SQLQuery: string;
@@ -174,7 +174,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Queries: string;
   begin
-    // 鏌ヨ瀹氫箟
+    // 查询定义
     Result := WideChar($67E5) + WideChar($8BE2) + WideChar($5B9A) + WideChar($4E49);
   end;
   
@@ -186,24 +186,24 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Backup: string;
   begin
-    Result := WideChar($5907) + WideChar($4EFD); // 澶囦唤
+    Result := WideChar($5907) + WideChar($4EFD); // 备份
   end;
   
   function ZH_ImportExport: string;
   begin
-    // 瀵煎叆/瀵煎嚭
+    // 导入/导出
     Result := WideChar($5BFC) + WideChar($5165) + '/' + WideChar($5BFC) + WideChar($51FA);
   end;
   
   function ZH_Profiler: string;
   begin
-    // 鎬ц兘鍒嗘瀽
+    // 性能分析
     Result := WideChar($6027) + WideChar($80FD) + WideChar($5206) + WideChar($6790);
   end;
   
   function ZH_LLM: string;
   begin
-    Result := 'LLM ' + WideChar($7BA1) + WideChar($7406); // LLM 绠＄悊
+    Result := 'LLM ' + WideChar($7BA1) + WideChar($7406); // LLM 管理
   end;
   
   function ZH_PromptTemplates: string;
@@ -214,7 +214,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_AddConfig: string;
   begin
-    // 娣诲姞閰嶇疆
+    // 添加配置
     Result := WideChar($6DFB) + WideChar($52A0) + WideChar($914D) + WideChar($7F6E);
   end;
   
@@ -232,28 +232,28 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_DeleteConfirm: string;
   begin
-    // 纭畾鍒犻櫎閰嶇疆 "%s"?
+    // 确定删除配置 "%s"?
     Result := WideChar($786E) + WideChar($5B9A) + WideChar($5220) + WideChar($9664) + 
               WideChar($914D) + WideChar($7F6E) + ' "%s"?';
   end;
   
   function ZH_FileNotFound: string;
   begin
-    // 鏁版嵁搴撴枃浠舵湭鎵惧埌: %s
+    // 数据库文件未找到: %s
     Result := WideChar($6570) + WideChar($636E) + WideChar($5E93) + WideChar($6587) + 
               WideChar($4EF6) + WideChar($672A) + WideChar($627E) + WideChar($5230) + ': %s';
   end;
   
   function ZH_OpenDBFailed: string;
   begin
-    // 鎵撳紑鏁版嵁搴撳け璐? %s
+    // 打开数据库失? %s
     Result := WideChar($6253) + WideChar($5F00) + WideChar($6570) + WideChar($636E) + 
               WideChar($5E93) + WideChar($5931) + WideChar($8D25) + ': %s';
   end;
   
   function ZH_Ready: string;
   begin
-    Result := WideChar($5C31) + WideChar($7EEA); // 灏辩华
+    Result := WideChar($5C31) + WideChar($7EEA); // 就绪
   end;
   
   function ZH_Refreshed: string;
@@ -264,14 +264,14 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_DBOpened: string;
   begin
-    // 鏁版嵁搴撳凡鎵撳紑
+    // 数据库已打开
     Result := WideChar($6570) + WideChar($636E) + WideChar($5E93) + WideChar($5DF2) + 
               WideChar($6253) + WideChar($5F00);
   end;
   
   function ZH_DBClosed: string;
   begin
-    // 鏁版嵁搴撳凡鍏抽棴
+    // 数据库已关闭
     Result := WideChar($6570) + WideChar($636E) + WideChar($5E93) + WideChar($5DF2) + 
               WideChar($5173) + WideChar($95ED);
   end;

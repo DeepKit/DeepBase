@@ -1,8 +1,8 @@
 ﻿{ ============================================================================
-  LogAnalyzer.Export - 鏃ュ織瀵煎嚭妯″潡
+  LogAnalyzer.Export - 日志导出模块
 
-  鐗堟湰: 1.0
-  鍔熻兘:
+  版本: 1.0
+  功能:
     - 瀵煎嚭涓?CSV 鏍煎紡
     - 瀵煎嚭涓?JSON 鏍煎紡
     - 瀵煎嚭涓?HTML 鏍煎紡 (甯︽牱寮?
@@ -40,13 +40,13 @@ type
     class procedure ExportToJSON(const ALogs: TArray<TLogEntry>; const AFileName: string);
 
     /// <summary>
-    /// 瀵煎嚭涓?HTML 鏍煎紡 (甯︽牱寮忓拰琛ㄦ牸)
+    /// 导出?HTML 格式 (带样式和表格)
     /// </summary>
     class procedure ExportToHTML(const ALogs: TArray<TLogEntry>; const AFileName: string;
-      const ATitle: string = '鏃ュ織瀵煎嚭');
+      const ATitle: string = '日志导出');
 
     /// <summary>
-    /// 瀵煎嚭涓虹函鏂囨湰鏍煎紡
+    /// 导出为纯文本格式
     /// </summary>
     class procedure ExportToText(const ALogs: TArray<TLogEntry>; const AFileName: string);
   end;
@@ -75,7 +75,7 @@ begin
   if (Pos(',', AValue) > 0) or (Pos('"', AValue) > 0) or
      (Pos(#13, AValue) > 0) or (Pos(#10, AValue) > 0) then
   begin
-    // 鍙屽紩鍙疯浆涔変负涓や釜鍙屽紩鍙?
+    // 双引号转义为两个双引?
     Result := '"' + StringReplace(AValue, '"', '""', [rfReplaceAll]) + '"';
   end
   else
@@ -108,7 +108,7 @@ begin
     SL.WriteBOM := True;
 
     // 鏍囬琛?
-    SL.Add('ID,鏃堕棿,绾у埆,鏉ユ簮,娑堟伅,璇︽儏');
+    SL.Add('ID,时间,级别,来源,消息,详情');
 
     // 鏁版嵁琛?
     for I := 0 to High(ALogs) do
@@ -155,7 +155,7 @@ begin
 
     SL := TStringList.Create;
     try
-      SL.Text := JArray.Format(2);  // 鏍煎紡鍖栬緭鍑猴紝缂╄繘2绌烘牸
+      SL.Text := JArray.Format(2);  // 格式化输出，缩进2空格
       SL.SaveToFile(AFileName, TEncoding.UTF8);
     finally
       SL.Free;
@@ -189,7 +189,7 @@ var
 begin
   SL := TStringList.Create;
   try
-    // HTML 澶撮儴
+    // HTML 头部
     SL.Add('<!DOCTYPE html>');
     SL.Add('<html lang="zh-CN">');
     SL.Add('<head>');
@@ -219,32 +219,32 @@ begin
     SL.Add('</head>');
     SL.Add('<body>');
 
-    // 鏍囬
+    // 标题
     SL.Add('  <h1>' + EscapeHTML(ATitle) + '</h1>');
 
-    // 缁熻淇℃伅
+    // 统计信息
     SL.Add('  <div class="stats">');
     SL.Add(Format('    <span><strong>鎬绘潯鏁?</strong> %d</span>', [Length(ALogs)]));
     if Length(ALogs) > 0 then
     begin
-      SL.Add(Format('    <span><strong>鏃堕棿鑼冨洿:</strong> %s ~ %s</span>', [
+      SL.Add(Format('    <span><strong>时间范围:</strong> %s ~ %s</span>', [
         FormatDateTime('yyyy-mm-dd hh:nn', ALogs[0].Timestamp),
         FormatDateTime('yyyy-mm-dd hh:nn', ALogs[High(ALogs)].Timestamp)
       ]));
     end;
-    SL.Add(Format('    <span><strong>瀵煎嚭鏃堕棿:</strong> %s</span>', [
+    SL.Add(Format('    <span><strong>导出时间:</strong> %s</span>', [
       FormatDateTime('yyyy-mm-dd hh:nn:ss', Now)
     ]));
     SL.Add('  </div>');
 
-    // 琛ㄦ牸
+    // 表格
     SL.Add('  <table>');
     SL.Add('    <thead>');
     SL.Add('      <tr>');
     SL.Add('        <th style="width:60px">ID</th>');
-    SL.Add('        <th style="width:150px">鏃堕棿</th>');
-    SL.Add('        <th style="width:60px">绾у埆</th>');
-    SL.Add('        <th style="width:120px">鏉ユ簮</th>');
+    SL.Add('        <th style="width:150px">时间</th>');
+    SL.Add('        <th style="width:60px">级别</th>');
+    SL.Add('        <th style="width:120px">来源</th>');
     SL.Add('        <th>娑堟伅</th>');
     SL.Add('      </tr>');
     SL.Add('    </thead>');
@@ -293,8 +293,8 @@ begin
   SL := TStringList.Create;
   try
     SL.Add('===============================================================================');
-    SL.Add('  DeepBase 鏃ュ織瀵煎嚭');
-    SL.Add('  瀵煎嚭鏃堕棿: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));
+    SL.Add('  DeepBase 日志导出');
+    SL.Add('  导出时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));
     SL.Add('  鎬绘潯鏁? ' + IntToStr(Length(ALogs)));
     SL.Add('===============================================================================');
     SL.Add('');
@@ -309,7 +309,7 @@ begin
       SL.Add('    ' + ALogs[I].Message);
       if ALogs[I].Details <> '' then
       begin
-        SL.Add('    --- 璇︽儏 ---');
+        SL.Add('    --- 详情 ---');
         SL.Add('    ' + StringReplace(ALogs[I].Details, #13#10, #13#10 + '    ', [rfReplaceAll]));
       end;
       SL.Add('');

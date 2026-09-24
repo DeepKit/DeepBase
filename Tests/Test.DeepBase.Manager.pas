@@ -96,7 +96,7 @@ begin
   // 获取全局单例引用
   FManager := DeepBase.Manager.DeepBase;
   
-  // 纭繚鍏ㄥ眬鍗曚緥琚噸缃?  if FManager.IsInitialized then
+  // 确保全局单例被重?  if FManager.IsInitialized then
     FManager.Finalize;
 
   RegisterManagerConnectionAdapter;
@@ -155,10 +155,10 @@ end;
 
 procedure TTestDeepBaseManager.Test_Finalize_WithoutInit;
 begin
-  // 鍦ㄦ湭鍒濆鍖栫殑鎯呭喌涓嬭皟鐢?Finalize 涓嶅簲璇ュ穿婧?
+  // 在未初始化的情况下调?Finalize 不应该崩?
   FManager.Finalize;
   // 如果执行到这里，说明没有崩溃
-  Assert.Pass('鏈垵濮嬪寲鏃惰皟鐢?Finalize 娌℃湁鎶涘嚭寮傚父');
+  Assert.Pass('未初始化时调?Finalize 没有抛出异常');
 end;
 
 procedure TTestDeepBaseManager.Test_InitializeEx_ReturnsErrorMsg;

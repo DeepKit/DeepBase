@@ -643,7 +643,7 @@ var
   TimestampInt, CurrentTime: Int64;
   I, Diff: Integer;
 const
-  // BUG-109 FIX: 灏嗘椂闂存埑瀹瑰樊浠?00绉掗檷浣庡埌120绉掍互鍑忓皯閲嶆斁鏀诲嚮椋庨櫓
+  // BUG-109 FIX: 将时间戳容差?00秒降低到120秒以减少重放攻击风险
   // 鍘熸潵鏄?鍒嗛挓锛岀幇鍦ㄦ敼涓?鍒嗛挓锛屽湪淇濊瘉姝ｅ父璇锋眰閫氳繃鐨勫悓鏃跺噺灏戞敾鍑荤獥鍙?
   TOLERANCE_SECONDS = 120; // 2 minutes tolerance (reduced from 5 minutes)
 begin

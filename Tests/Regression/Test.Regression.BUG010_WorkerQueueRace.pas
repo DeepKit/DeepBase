@@ -5,10 +5,10 @@
   
   鍘熼棶棰? 澶氫釜绾跨▼鍙兘鍚屾椂淇敼浣滀笟鐘舵€侊紝缂轰箯閫傚綋鍚屾
   
-  淇鏂规: 鍦ㄦ墍鏈夌姸鎬佸彉鏇存搷浣滀腑娣诲姞閿佷繚鎶わ紝纭繚绾跨▼瀹夊叏
+  修复方案: 在所有状态变更操作中添加锁保护，确保线程安全
   
-  淇鏃ユ湡: 2025-12-16
-  鏂囦欢: Core/DeepBase.WorkerQueue.pas
+  修复日期: 2025-12-16
+  文件: Core/DeepBase.WorkerQueue.pas
   浼樺厛绾? P1 (High)
   鍒嗙被: Concurrency
   ============================================================================ }
@@ -100,12 +100,12 @@ begin
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 楠岃瘉瀛樺湪閿佷繚鎶ょ浉鍏充唬鐮?
+  // 验证存在锁保护相关代?
   Assert.IsTrue(
     SourceCode.Contains('TMonitor.Enter') or 
     SourceCode.Contains('Lock') or
     SourceCode.Contains('TCriticalSection'),
-    '浠ｇ爜搴旇鍖呭惈閿佷繚鎶ゆ満鍒?);
+    '代码应该包含锁保护机?);
   
   LogTestEnd('Test_StateChange_HasLockProtection', True);
 end;
@@ -123,7 +123,7 @@ begin
   Lock := TObject.Create;
   
   try
-    // 鍒涘缓澶氫釜绾跨▼鍚屾椂淇敼璁℃暟鍣?
+    // 创建多个线程同时修改计数?
     for I := 0 to 9 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -156,7 +156,7 @@ begin
     end;
     
     // 楠岃瘉璁℃暟鍣ㄥ€兼纭?
-    Assert.AreEqual(10000, Counter, '骞跺彂鎿嶄綔鍚庤鏁板櫒鍊煎簲璇ユ纭?);
+    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正?);
   finally
     Lock.Free;
   end;

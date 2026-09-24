@@ -1,7 +1,7 @@
 ﻿{ ============================================================================
   Test.Regression.Base - 回归测试基类
 
-  鎻愪緵鎵€鏈夊洖褰掓祴璇曠殑閫氱敤鍩虹璁炬柦锛?
+  提供扢有回归测试的通用基础设施?
   - 标准化的 Bug 信息获取接口
   - 閫氱敤鐨?SetUp/TearDown 閫昏緫
   - 测试辅助方法
@@ -9,7 +9,7 @@
   浣跨敤鏂规硶锛?
   1. 继承 TRegressionTestBase
   2. 实现 GetBugNumber, GetBugDescription, GetFixDate
-  3. 娣诲姞鍏蜂綋鐨勬祴璇曟柟娉?
+  3. 添加具体的测试方?
   ============================================================================ }
 
 unit Test.Regression.Base;
@@ -36,13 +36,13 @@ type
     /// <summary>鑾峰彇 Bug 绠€鐭弿杩?/summary>
     function GetBugDescription: string; virtual; abstract;
 
-    /// <summary>鑾峰彇淇鏃ユ湡锛屾牸寮?'YYYY-MM-DD'</summary>
+    /// <summary>获取修复日期，格?'YYYY-MM-DD'</summary>
     function GetFixDate: string; virtual; abstract;
 
     /// <summary>鑾峰彇 Bug 浼樺厛绾э紝濡?'P0', 'P1'</summary>
     function GetPriority: string; virtual;
 
-    /// <summary>鑾峰彇鍙楀奖鍝嶇殑婧愭枃浠惰矾寰?/summary>
+    /// <summary>获取受影响的源文件路?/summary>
     function GetAffectedFile: string; virtual;
 
     /// <summary>璁板綍娴嬭瘯寮€濮嬩俊鎭?/summary>
@@ -69,7 +69,7 @@ type
 
   /// <summary>
   /// 并发回归测试基类
-  /// 鐢ㄤ簬娴嬭瘯骞跺彂鐩稿叧鐨?Bug 淇
+  /// 用于测试并发相关?Bug 修复
   /// </summary>
   TConcurrencyRegressionTestBase = class(TRegressionTestBase)
   private
@@ -79,7 +79,7 @@ type
     /// <summary>榛樿绾跨▼鏁?/summary>
     property ThreadCount: Integer read FThreadCount write FThreadCount;
 
-    /// <summary>姣忎釜绾跨▼鐨勮凯浠ｆ鏁?/summary>
+    /// <summary>每个线程的迭代次?/summary>
     property IterationCount: Integer read FIterationCount write FIterationCount;
 
     /// <summary>运行并发测试</summary>
@@ -94,13 +94,13 @@ type
 
   /// <summary>
   /// 内存回归测试基类
-  /// 鐢ㄤ簬娴嬭瘯鍐呭瓨娉勬紡鐩稿叧鐨?Bug 淇
+  /// 用于测试内存泄漏相关?Bug 修复
   /// </summary>
   TMemoryRegressionTestBase = class(TRegressionTestBase)
   private
     FInitialMemory: Int64;
   protected
-    /// <summary>鑾峰彇褰撳墠鍐呭瓨浣跨敤閲?/summary>
+    /// <summary>获取当前内存使用?/summary>
     function GetCurrentMemoryUsage: Int64;
 
     /// <summary>妫€鏌ュ唴瀛樻硠婕?/summary>
@@ -218,7 +218,7 @@ begin
   Errors := TStringList.Create;
   Lock := TObject.Create;
   try
-    // 鍒涘缓骞跺惎鍔ㄧ嚎绋?
+    // 创建并启动线?
     for I := 0 to FThreadCount - 1 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(

@@ -1,5 +1,5 @@
 ﻿{ ============================================================================
-  DeepBase.DB.DoQry - DoQry 鏁版嵁搴撹闂泦鎴愭ā鍧?
+  DeepBase.DB.DoQry - DoQry 数据库访问集成模?
   
   版本: 1.0
   所属包: DeepBasePersistence
@@ -34,7 +34,7 @@ const
   DOQRY_ERR_UNIQUE           = 4002;  // 唯一约束违反
   DOQRY_ERR_FOREIGN_KEY      = 4003;  // 外键约束违反
   DOQRY_ERR_NOT_FOUND        = 5001;  // 璁板綍鏈壘鍒?
-  DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 鏌ヨ瀹氫箟鏈壘鍒?
+  DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 查询定义未找?
   DOQRY_ERR_UNKNOWN          = 9999;  // 未知错误
 
 type
@@ -92,7 +92,7 @@ type
 procedure UniDbInit(const RootPath: string);
 
 /// <summary>
-/// 鍒涘缓鏌ヨ涓婁笅鏂?
+/// 创建查询上下?
 /// </summary>
 function UniDbMakeContext(Conn: TFDConnection; DBType: TUniDBType; 
   TimeoutSec: Integer = 30; const CorrelationId: string = ''): TUniQueryContext;
@@ -108,7 +108,7 @@ function UniDbNewCorrelationId: string;
 function UniDbBeginTx(const Ctx: TUniQueryContext): IUniTransaction;
 
 /// <summary>
-/// 鍦ㄤ簨鍔′腑鎵ц锛堣嚜鍔ㄦ彁浜?鍥炴粴锛?
+/// 在事务中执行（自动提?回滚?
 /// </summary>
 procedure UniDbRunInTx(const Ctx: TUniQueryContext; const Proc: TProc);
 
@@ -119,13 +119,13 @@ function UniDbSelect(const ProcName: string; const ParamsJson: string;
   var Data: TFDMemTable; const Ctx: TUniQueryContext): Integer;
 
 /// <summary>
-/// 鎵ц闈炴煡璇紙INSERT/UPDATE/DELETE锛?
+/// 执行非查询（INSERT/UPDATE/DELETE?
 /// </summary>
 function UniDbExec(const ProcName: string; const ParamsJson: string; 
   const Ctx: TUniQueryContext): Integer;
 
 /// <summary>
-/// 鎵ц INSERT 骞惰繑鍥炶嚜澧?ID
+/// 执行 INSERT 并返回自?ID
 /// </summary>
 function UniDbInsertReturningId(const ProcName: string; const ParamsJson: string; 
   const Ctx: TUniQueryContext): Integer;
@@ -137,7 +137,7 @@ function UniDbScalar(const ProcName: string; const ParamsJson: string;
   const Ctx: TUniQueryContext): Variant;
 
 /// <summary>
-/// 鏋勫缓 SQL 棰勮锛堣皟璇曠敤锛?
+/// 构建 SQL 预览（调试用?
 /// </summary>
 function UniDbBuildSqlPreview(const ProcName: string; const ParamsJson: string; 
   const Ctx: TUniQueryContext): string;
@@ -157,12 +157,12 @@ procedure UniDbClearQueryCache;
 procedure UniDbSetDirectSQLAllowed(Enabled: Boolean);
 
 /// <summary>
-/// 绮剧‘澶辨晥鏌愪釜 ProcName 鐨勭紦瀛?
+/// 精确失效某个 ProcName 的缓?
 /// </summary>
 procedure UniDbInvalidateQuery(const ProcName: string);
 
 /// <summary>
-/// 璁剧疆缂撳瓨 TTL锛堢锛夛紝榛樿 300锛? 鍒嗛挓锛?
+/// 设置缓存 TTL（秒），默认 300? 分钟?
 /// </summary>
 procedure UniDbSetCacheTTL(Seconds: Integer);
 
@@ -187,7 +187,7 @@ procedure UniDbClearPreparedStatements;
 procedure UniDbGetPreparedStats(out PoolSize, ReuseCount: Int64);
 
 /// <summary>
-/// 璁剧疆棰勭紪璇戣鍙ユ睜瀹归噺涓婇檺锛堥粯璁?500锛?
+/// 设置预编译语句池容量上限（默?500?
 /// </summary>
 procedure UniDbSetPreparedPoolMaxSize(MaxSize: Integer);
 
@@ -352,7 +352,7 @@ end;
 
 procedure UniDbShutdown;
 begin
-  // 娓呯悊鏌ヨ缂撳瓨锛涢攣瀵硅薄鐢?initialization/finalization 绠＄悊銆?
+  // 清理查询缓存；锁对象?initialization/finalization 管理?
   if Assigned(GQueryCacheLock) then
   begin
     TMonitor.Enter(GQueryCacheLock);
@@ -369,7 +369,7 @@ begin
     FreeAndNil(GQueryCache);
   end;
 
-  // 娓呯悊棰勭紪璇戣鍙ユ睜锛涢攣瀵硅薄鐢?initialization/finalization 绠＄悊銆?
+  // 清理预编译语句池；锁对象?initialization/finalization 管理?
   if Assigned(GPreparedPoolLock) then
   begin
     TMonitor.Enter(GPreparedPoolLock);
@@ -457,7 +457,7 @@ begin
 end;
 
 /// <summary>
-/// 鏍规嵁寮傚父瀵硅薄鎺ㄦ柇閿欒鐮侊紙浼樺厛浣跨敤 FireDAC 鍘熺敓閿欒绫诲瀷锛?
+/// 根据异常对象推断错误码（优先使用 FireDAC 原生错误类型?
 /// </summary>
 function InferErrorCode(E: Exception): Integer;
 var
@@ -597,7 +597,7 @@ begin
 end;
 
 /// <summary>
-/// 浠庢睜涓幏鍙栨垨鍒涘缓棰勭紪璇戞煡璇?
+/// 从池中获取或创建预编译查?
 /// </summary>
 function GetOrCreatePreparedQuery(Conn: TFDConnection; const SQL: string): TFDQuery;
 var
@@ -684,7 +684,7 @@ begin
 end;
 
 /// <summary>
-/// 閲婃斁鏌ヨ锛堝鏋滃惎鐢ㄦ睜鍖栵紝鍒欎繚鐣欙紱鍚﹀垯閲婃斁锛?
+/// 释放查询（如果启用池化，则保留；否则释放?
 /// </summary>
 procedure ReleaseQuery(Q: TFDQuery; Pooled: Boolean);
 var
@@ -716,7 +716,7 @@ begin
       end;
     end;
 
-    // 瀹夊叏鍏滃簳锛氳嫢鏈拷韪埌姹犳潯鐩紝鎸夐潪姹犲寲閲婃斁锛岄伩鍏嶆硠婕?
+    // 安全兜底：若未追踪到池条目，按非池化释放，避免泄?
     if Entry = nil then
       Q.Free;
   end;
@@ -725,7 +725,7 @@ end;
 { 内部日志辅助 }
 
 /// <summary>
-/// 璁板綍鏌ヨ鏃ュ織锛堢粨鏋勫寲 JSON 鏍煎紡锛?
+/// 记录查询日志（结构化 JSON 格式?
 /// </summary>
 procedure LogQuery(const Level, CorrId, ProcName: string; DBType: TUniDBType;
   const Kind, SQL, ParamsJson: string; DurationMs: Int64; Rows: Integer; 
@@ -749,7 +749,7 @@ begin
     udbSQLite: DBName := 'sqlite';
   end;
   
-  // 鏋勫缓缁撴瀯鍖?JSON 鏃ュ織
+  // 构建结构?JSON 日志
   JsonObj := TJSONObject.Create;
   try
     JsonObj.AddPair('component', 'doqry');
@@ -760,7 +760,7 @@ begin
     JsonObj.AddPair('duration_ms', TJSONNumber.Create(DurationMs));
     JsonObj.AddPair('rows', TJSONNumber.Create(Rows));
     
-    // SQL 鍜屽弬鏁颁粎鍦?DEBUG 绾у埆璁板綍锛堥伩鍏嶆晱鎰熸暟鎹硠婕忥級
+    // SQL 和参数仅?DEBUG 级别记录（避免敏感数据泄漏）
     if LogLevel = llDebug then
     begin
       // 截断过长 SQL
@@ -797,7 +797,7 @@ begin
 end;
 
 /// <summary>
-/// 缁戝畾 JSON 鍙傛暟鍒版煡璇紙鑷姩璇嗗埆 GUID锛?
+/// 绑定 JSON 参数到查询（自动识别 GUID?
 /// </summary>
 procedure BindJsonParams(Q: TFDQuery; const ParamsJson: string);
 var
@@ -941,7 +941,7 @@ begin
 end;
 
 /// <summary>
-/// 鍒ゆ柇鏄惁涓虹洿鎺?SQL锛堜互鍏抽敭瀛楀紑澶达級
+/// 判断是否为直?SQL（以关键字开头）
 /// </summary>
 function IsReadOnlyPragma(const Body: string): Boolean;
 const
@@ -1231,7 +1231,7 @@ begin
 end;
 
 /// <summary>
-/// 绮剧‘澶辨晥鏌愪釜 ProcName 鐨勭紦瀛?
+/// 精确失效某个 ProcName 的缓?
 /// </summary>
 procedure UniDbInvalidateQuery(const ProcName: string);
 var
@@ -1254,7 +1254,7 @@ begin
 end;
 
 /// <summary>
-/// 璁剧疆缂撳瓨 TTL锛堢锛?
+/// 设置缓存 TTL（秒?
 /// </summary>
 procedure UniDbSetCacheTTL(Seconds: Integer);
 begin

@@ -94,7 +94,7 @@ constructor TQQConfig.Create;
 begin
   inherited Create(spQQ);
   FScope := 'get_user_info';
-  // BUG-019 FIX: 鍒濆鍖栧畨鍏ㄥ瓨鍌ㄨ缃?  FKeyStorageMode := ksmDPAPI;
+  // BUG-019 FIX: 初始化安全存储设?  FKeyStorageMode := ksmDPAPI;
   FCredentialTarget := 'DeepBase.Social.QQ';
 end;
 

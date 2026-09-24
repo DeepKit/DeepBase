@@ -1,7 +1,7 @@
 ﻿{ ============================================================================
-  Test.Regression.BUG034_HardcodedKeys - 纭紪鐮佸瘑閽ユ紡娲炲洖褰掓祴璇?
+  Test.Regression.BUG034_HardcodedKeys - 硬编码密钥漏洞回归测?
 
-  BUG-034: 纭紪鐮佸瘑閽ユ紡娲?
+  BUG-034: 硬编码密钥漏?
   
   鍘熼棶棰? 澶氫釜妯″潡瀛樺湪纭紪鐮佸瘑閽ワ紝濡?@2241114'銆?Default_AntiTamper_Key_2025'绛夛紝
           杩欎簺瀵嗛挜鍙互琚€嗗悜宸ョ▼鎻愬彇銆?
@@ -50,7 +50,7 @@ type
     procedure Test_MissingKey_ThrowsClearError;
     
     [Test]
-    [Description('楠岃瘉瀵嗛挜閰嶇疆鍚庡姛鑳芥甯?)]
+    [Description('验证密钥配置后功能正?)]
     procedure Test_ConfiguredKey_WorksCorrectly;
   end;
 
@@ -78,7 +78,7 @@ end;
 
 function TBug034_HardcodedKeysTest.GetBugDescription: string;
 begin
-  Result := '纭紪鐮佸瘑閽ユ紡娲?;
+  Result := '硬编码密钥漏?;
 end;
 
 function TBug034_HardcodedKeysTest.GetFixDate: string;
@@ -173,7 +173,7 @@ begin
     ExceptionMessage := '';
     
     try
-      // 涓嶈缃瘑閽ョ洿鎺ュ姞瀵?
+      // 不设置密钥直接加?
       AES.GenerateIV;
       AES.EncryptString('Test data');
     except
@@ -185,7 +185,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, '未配置密钥时应该抛出异常');
-    // 寮傚父娑堟伅搴旇娓呮鍦版寚绀洪棶棰?
+    // 异常消息应该清楚地指示问?
     Assert.IsTrue(
       ExceptionMessage.Contains('key') or 
       ExceptionMessage.Contains('Key') or
@@ -209,7 +209,7 @@ begin
   
   AES := TAESCrypto.Create(aes256, aesCBC);
   try
-    // 浣跨敤鐢ㄦ埛閰嶇疆鐨勫瘑閽?
+    // 使用用户配置的密?
     AES.SetKeyFromPassword('UserConfiguredSecurePassword!@#$', TEncoding.UTF8.GetBytes('bug034_salt'));
     AES.GenerateIV;
     
@@ -218,7 +218,7 @@ begin
     Decrypted := AES.DecryptString(Encrypted);
     
     Assert.AreEqual(PlainText, Decrypted,
-      '浣跨敤鐢ㄦ埛閰嶇疆鐨勫瘑閽ュ簲璇ヨ兘姝ｇ‘鍔犲瘑鍜岃В瀵?);
+      '使用用户配置的密钥应该能正确加密和解?);
   finally
     AES.Free;
   end;

@@ -31,7 +31,7 @@ type
   { ============================================================================
     TWebApiIntegrationTest
     - 针对 HTTP/WebAPI Core + Auth + OpenAPI 的端到端测试
-    - 閫氳繃瀹為檯鍚姩 TApiServer 骞朵娇鐢?DeepBase.Net HTTP 瀹㈡埛绔彂璧疯姹?
+    - 通过实际启动 TApiServer 并使?DeepBase.Net HTTP 客户端发起请?
     ============================================================================ }
 
   [TestFixture]
@@ -79,7 +79,7 @@ type
   { ============================================================================
     TWebSocketRouterIntegrationTest
     - 重点验证 WebSocket 消息路由器的事件分发逻辑
-    - 涓嶈繘琛岀湡瀹炵綉缁滄彙鎵? 浠呭湪鍐呭瓨涓瀯閫?TWebSocketMessage
+    - 不进行真实网络握? 仅在内存中构?TWebSocketMessage
     ============================================================================ }
 
   [TestFixture]
@@ -153,7 +153,7 @@ begin
     end
   );
 
-  // JWT 绠＄悊鍣?& 璁よ瘉涓棿浠?(浠呭 /secure/* 璺敱鐢熸晥)
+  // JWT 管理?& 认证中间?(仅对 /secure/* 路由生效)
   FJWTManager := TJWTManager.Create('integration-test-secret');
 
   FAuthMiddleware := TAuthMiddleware.Create;
@@ -220,7 +220,7 @@ end;
 
 procedure TWebApiIntegrationTest.CleanupTestData;
 begin
-  // 鍚屼笂, 鏃犻渶娓呯悊鏁版嵁搴撴暟鎹?
+  // 同上, 无需清理数据库数?
   inherited;
 end;
 
@@ -266,7 +266,7 @@ begin
 
     LReq := FClient.Request('/api/echo').JsonBody(LJson);
   finally
-    LJson.Free; // JsonBody 宸茬粡搴忓垪鍖栦负瀛楃涓? 涓嶅啀闇€瑕佸師瀵硅薄
+    LJson.Free; // JsonBody 已经序列化为字符? 不再霢要原对象
   end;
 
   LResp := LReq.Post;
@@ -413,13 +413,13 @@ begin
       LPaths := LRoot.GetValue('paths') as TJSONObject;
       Assert.IsNotNull(LPaths, 'paths section should exist');
 
-      // /api/ping 璺敱瀛樺湪涓斿寘鍚?GET 鎿嶄綔
+      // /api/ping 路由存在且包?GET 操作
       Assert.IsTrue(LPaths.TryGetValue('/api/ping', LValue), 'paths should contain /api/ping');
       LPathObj := LValue as TJSONObject;
       Assert.IsNotNull(LPathObj.GetValue('get') as TJSONObject,
         'GET operation for /api/ping should exist');
 
-      // /api/users/{id} 璺敱瀛樺湪涓斿寘鍚矾寰勫弬鏁?id
+      // /api/users/{id} 路由存在且包含路径参?id
       Assert.IsTrue(LPaths.TryGetValue('/api/users/{id}', LValue),
         'paths should contain /api/users/{id}');
       LPathObj := LValue as TJSONObject;

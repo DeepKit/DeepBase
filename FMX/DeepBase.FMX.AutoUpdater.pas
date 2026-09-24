@@ -1,11 +1,11 @@
 ﻿{ ============================================================================
-  DeepBase.FMX.AutoUpdater - FMX 鑷姩鏇存柊缁勪欢
+  DeepBase.FMX.AutoUpdater - FMX 自动更新组件
   
-  鐗堟湰: 1.0
-  璇存槑: 璺ㄥ钩鍙伴潪鍙缁勪欢锛屽皝瑁呰嚜鍔ㄦ洿鏂版牳蹇冩ā鍧楀拰 UI 浜や簰
+  版本: 1.0
+  说明: 跨平台非可视组件，封装自动更新核心模块和 UI 交互
   
   鏀寔骞冲彴:
-    - Windows: 鐩存帴涓嬭浇瀹夎鍖?
+    - Windows: 直接下载安装?
     - macOS: 鐩存帴涓嬭浇 DMG/PKG
     - iOS: 璺宠浆 App Store
     - Android: 涓嬭浇 APK 鎴栬烦杞?Play Store
@@ -70,28 +70,28 @@ type
     /// <summary>鎵嬪姩妫€鏌ユ洿鏂?/summary>
     procedure CheckForUpdates;
     
-    /// <summary>闈欓粯妫€鏌ユ洿鏂帮紙涓嶆樉绀哄璇濇锛?/summary>
+    /// <summary>静默棢查更新（不显示对话框?/summary>
     procedure CheckForUpdatesSilent(Callback: TCheckUpdateCallback);
     
-    /// <summary>涓嬭浇骞跺畨瑁呮洿鏂?/summary>
+    /// <summary>下载并安装更?/summary>
     procedure DownloadAndInstall;
     
     /// <summary>浠呬笅杞芥洿鏂?/summary>
     procedure DownloadOnly;
     
-    /// <summary>鍙栨秷褰撳墠鎿嶄綔</summary>
+    /// <summary>取消当前操作</summary>
     procedure Cancel;
     
-    /// <summary>鎵撳紑搴旂敤鍟嗗簵椤甸潰锛堢Щ鍔ㄧ锛?/summary>
+    /// <summary>打开应用商店页面（移动端?/summary>
     procedure OpenAppStore;
     
-    /// <summary>鑾峰彇褰撳墠鏇存柊淇℃伅</summary>
+    /// <summary>获取当前更新信息</summary>
     property CurrentUpdateInfo: TUpdateInfo read FCurrentUpdateInfo;
     
     /// <summary>鏄惁姝ｅ湪妫€鏌?/summary>
     property IsChecking: Boolean read FIsChecking;
     
-    /// <summary>鏄惁姝ｅ湪涓嬭浇</summary>
+    /// <summary>是否正在下载</summary>
     property IsDownloading: Boolean read FIsDownloading;
     
     /// <summary>涓婃妫€鏌ユ椂闂?/summary>
@@ -113,7 +113,7 @@ type
     /// <summary>鍛ㄦ湡妫€鏌ラ棿闅旓紙灏忔椂锛?/summary>
     property CheckIntervalHours: Integer read FCheckIntervalHours write FCheckIntervalHours default 24;
     
-    /// <summary>鍙戠幇鏇存柊鏃惰嚜鍔ㄦ樉绀哄璇濇</summary>
+    /// <summary>发现更新时自动显示对话框</summary>
     property ShowDialogOnUpdate: Boolean read FShowDialogOnUpdate write FShowDialogOnUpdate default True;
     
     /// <summary>iOS App Store URL</summary>
@@ -122,22 +122,22 @@ type
     /// <summary>Android Play Store URL</summary>
     property PlayStoreUrl: string read FPlayStoreUrl write FPlayStoreUrl;
     
-    /// <summary>RSA 鍏挜锛堢敤浜庣鍚嶉獙璇侊級</summary>
+    /// <summary>RSA 公钥（用于签名验证）</summary>
     property PublicKey: string read FPublicKey write FPublicKey;
     
-    /// <summary>鍙戠幇鏇存柊鏃惰Е鍙?/summary>
+    /// <summary>发现更新时触?/summary>
     property OnUpdateAvailable: TUpdateAvailableEvent read FOnUpdateAvailable write FOnUpdateAvailable;
     
-    /// <summary>涓嬭浇杩涘害</summary>
+    /// <summary>下载进度</summary>
     property OnProgress: TUpdateProgressEvent read FOnProgress write FOnProgress;
     
     /// <summary>鏇存柊瀹屾垚</summary>
     property OnUpdateComplete: TUpdateCompleteEvent read FOnUpdateComplete write FOnUpdateComplete;
     
-    /// <summary>娌℃湁鏇存柊鏃惰Е鍙?/summary>
+    /// <summary>没有更新时触?/summary>
     property OnNoUpdate: TNotifyEvent read FOnNoUpdate write FOnNoUpdate;
     
-    /// <summary>妫€鏌ュ嚭閿欐椂瑙﹀彂</summary>
+    /// <summary>棢查出错时触发</summary>
     property OnCheckError: TGetStrProc read FOnCheckError write FOnCheckError;
   end;
 
@@ -190,7 +190,7 @@ begin
   inherited;
   if not (csDesigning in ComponentState) then
   begin
-    // 鍒濆鍖栨洿鏂扮鐞嗗櫒
+    // 初始化更新管理器
     if FUpdateUrl <> '' then
     begin
       Updater.Initialize(FUpdateUrl, FCurrentVersion);
@@ -291,7 +291,7 @@ begin
         FCurrentUpdateInfo := Info;
         ShowDialog := FShowDialogOnUpdate;
         
-        // 瑙﹀彂浜嬩欢锛屽厑璁哥敤鎴峰鐞?
+        // 触发事件，允许用户处?
         if Assigned(FOnUpdateAvailable) then
           FOnUpdateAvailable(Self, Info, ShowDialog);
         
@@ -308,7 +308,7 @@ end;
 
 procedure TFMXAutoUpdater.HandleUpdateAvailable(const Info: TUpdateInfo);
 begin
-  // 鏄剧ず鏇存柊瀵硅瘽妗?
+  // 显示更新对话?
   TFMXUpdateDialog.ShowDialog(Self, Info,
     procedure(Action: TUpdateDialogAction)
     begin
@@ -318,9 +318,9 @@ begin
         udaOpenStore:
           OpenAppStore;
         udaLater:
-          ; // 鐢ㄦ埛閫夋嫨绋嶅悗
+          ; // 用户选择稍后
         udaSkip:
-          ; // 鐢ㄦ埛閫夋嫨璺宠繃姝ょ増鏈?
+          ; // 用户选择跳过此版?
       end;
     end);
 end;
@@ -340,7 +340,7 @@ begin
   if FIsDownloading then
     Exit;
   
-  // 绉诲姩绔烦杞簲鐢ㄥ晢搴?
+  // 移动端跳转应用商?
   {$IF DEFINED(IOS) OR DEFINED(ANDROID)}
   OpenAppStore;
   Exit;

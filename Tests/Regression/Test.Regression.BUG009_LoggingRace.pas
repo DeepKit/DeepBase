@@ -3,14 +3,14 @@
 
   BUG-009: 鏃ュ織绯荤粺绔炴€佹潯浠?
   
-  鍘熼棶棰? 浣跨敤TInterlocked.CompareExchange鍚庣殑閿佹搷浣滃彲鑳戒笉鏄師瀛愮殑
+  原问? 使用TInterlocked.CompareExchange后的锁操作可能不是原子的
   
-  淇鏂规: 浠ｇ爜宸叉纭疄鐜板弻閲嶆鏌ラ攣瀹氭ā寮忥紙Double-Checked Locking锛夛紝
-            浣跨敤 TInterlocked.CompareExchange 鍒涘缓閿佸璞★紝
-            鐒跺悗浣跨敤 TMonitor 杩涜鍚屾
+  修复方案: 代码已正确实现双重检查锁定模式（Double-Checked Locking），
+            使用 TInterlocked.CompareExchange 创建锁对象，
+            然后使用 TMonitor 进行同步
   
-  淇鏃ユ湡: 2025-12-16
-  鏂囦欢: Core/DeepBase.Logging.pas
+  修复日期: 2025-12-16
+  文件: Core/DeepBase.Logging.pas
   浼樺厛绾? P1 (High)
   鍒嗙被: Concurrency
   ============================================================================ }
@@ -44,12 +44,12 @@ type
     procedure Test_DoubleCheckedLocking_Exists;
     
     [Test]
-    [Description('楠岃瘉骞跺彂鏃ュ織鍐欏叆涓嶄細瀵艰嚧鏁版嵁鎹熷潖')]
+    [Description('验证并发日志写入不会导致数据损坏')]
     [RepeatTest(5)]
     procedure Test_ConcurrentLogging_NoCorruption;
     
     [Test]
-    [Description('楠岃瘉 TThreadList 鐢ㄤ簬绾跨▼瀹夊叏闃熷垪璁块棶')]
+    [Description('验证 TThreadList 用于线程安全队列访问')]
     procedure Test_ThreadList_UsedForQueue;
   end;
 
@@ -107,16 +107,16 @@ begin
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 楠岃瘉瀛樺湪鍙岄噸妫€鏌ラ攣瀹氱浉鍏充唬鐮?
+  // 验证存在双重棢查锁定相关代?
   Assert.IsTrue(
     SourceCode.Contains('TInterlocked.CompareExchange') or 
     SourceCode.Contains('CompareExchange'),
-    '浠ｇ爜搴旇浣跨敤 TInterlocked.CompareExchange 瀹炵幇鍙岄噸妫€鏌ラ攣瀹?);
+    '代码应该使用 TInterlocked.CompareExchange 实现双重棢查锁?);
   
   Assert.IsTrue(
     SourceCode.Contains('TMonitor') or 
     SourceCode.Contains('Lock'),
-    '浠ｇ爜搴旇浣跨敤 TMonitor 鎴栭攣杩涜鍚屾');
+    '代码应该使用 TMonitor 或锁进行同步');
   
   LogTestEnd('Test_DoubleCheckedLocking_Exists', True);
 end;
@@ -134,7 +134,7 @@ begin
   
   Logger := TDeepBaseLogger.Create(TempLogPath);
   try
-    // 鍒涘缓澶氫釜绾跨▼鍚屾椂鍐欐棩蹇?
+    // 创建多个线程同时写日?
     for I := 0 to 4 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -160,10 +160,10 @@ begin
     end;
     
     // 濡傛灉娌℃湁寮傚父锛屾祴璇曢€氳繃
-    Assert.Pass('骞跺彂鏃ュ織鍐欏叆瀹屾垚锛屾棤鏁版嵁鎹熷潖');
+    Assert.Pass('并发日志写入完成，无数据损坏');
   finally
     Logger.Free;
-    // 娓呯悊涓存椂鏂囦欢
+    // 清理临时文件
     if TFile.Exists(TempLogPath) then
       TFile.Delete(TempLogPath);
   end;
@@ -192,12 +192,12 @@ begin
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 楠岃瘉浣跨敤 TThreadList 杩涜绾跨▼瀹夊叏闃熷垪璁块棶
+  // 验证使用 TThreadList 进行线程安全队列访问
   Assert.IsTrue(
     SourceCode.Contains('TThreadList') or 
     SourceCode.Contains('LockList') or
     SourceCode.Contains('UnlockList'),
-    '浠ｇ爜搴旇浣跨敤 TThreadList 杩涜绾跨▼瀹夊叏鐨勯槦鍒楄闂?);
+    '代码应该使用 TThreadList 进行线程安全的队列访?);
   
   LogTestEnd('Test_ThreadList_UsedForQueue', True);
 end;

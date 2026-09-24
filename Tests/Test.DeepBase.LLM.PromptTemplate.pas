@@ -90,7 +90,7 @@ end;
 
 procedure TTestLLMPromptTemplate.Setup;
 begin
-  // 浣跨敤鍐呭瓨鏁版嵁搴?
+  // 使用内存数据?
   FConnection := TFDConnection.Create(nil);
   FConnection.DriverName := 'SQLite';
   FConnection.Params.Database := ':memory:';

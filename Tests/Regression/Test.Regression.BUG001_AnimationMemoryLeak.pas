@@ -1,14 +1,14 @@
 ﻿{ ============================================================================
-  Test.Regression.BUG001_AnimationMemoryLeak - 鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡鍥炲綊娴嬭瘯
+  Test.Regression.BUG001_AnimationMemoryLeak - 动画对象内存泄漏回归测试
 
-  BUG-001: 鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡
+  BUG-001: 动画对象内存泄漏
   
-  鍘熼棶棰? 鏋愭瀯鍑芥暟涓璅AnimationTimer鍙鐢ㄤ絾鏈噴鏀?
+  原问? 析构函数中FAnimationTimer只禁用但未释?
   
-  淇鏂规: 浣跨敤FreeAndNil纭繚瀹氭椂鍣ㄥ璞¤姝ｇ‘閲婃斁
+  修复方案: 使用FreeAndNil确保定时器对象被正确释放
   
-  淇鏃ユ湡: 2025-01-27
-  鏂囦欢: VCL/DeepBase.VCL.WaitForm.pas
+  修复日期: 2025-01-27
+  文件: VCL/DeepBase.VCL.WaitForm.pas
   浼樺厛绾? P1 (High)
   鍒嗙被: Memory
   ============================================================================ }
@@ -36,7 +36,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('楠岃瘉 WaitForm 鍒涘缓鍜岄攢姣佷笉浼氭硠婕忓唴瀛?)]
+    [Description('验证 WaitForm 创建和销毁不会泄漏内?)]
     procedure Test_WaitForm_NoMemoryLeak;
     
     [Test]
@@ -44,7 +44,7 @@ type
     procedure Test_WaitForm_RepeatedCreateDestroy_MemoryStable;
     
     [Test]
-    [Description('楠岃瘉婧愪唬鐮佷娇鐢?FreeAndNil')]
+    [Description('验证源代码使?FreeAndNil')]
     procedure Test_SourceCode_UsesFreeAndNil;
   end;
 
@@ -62,7 +62,7 @@ end;
 
 function TBug001_AnimationMemoryLeakTest.GetBugDescription: string;
 begin
-  Result := '鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡';
+  Result := '动画对象内存泄漏';
 end;
 
 function TBug001_AnimationMemoryLeakTest.GetFixDate: string;
@@ -84,8 +84,8 @@ procedure TBug001_AnimationMemoryLeakTest.Test_WaitForm_NoMemoryLeak;
 begin
   LogTestStart('Test_WaitForm_NoMemoryLeak');
   
-  // 鐢变簬 WaitForm 鏄?VCL 缁勪欢锛岄渶瑕佸湪涓荤嚎绋嬩腑娴嬭瘯
-  // 杩欓噷楠岃瘉姒傚康锛氬垱寤哄拰閿€姣佸簲璇ヤ笉娉勬紡鍐呭瓨
+  // 由于 WaitForm ?VCL 组件，需要在主线程中测试
+  // 这里验证概念：创建和锢毁应该不泄漏内存
   
   // 瀹為檯娴嬭瘯闇€瑕?VCL 鐜锛岃繖閲岄€氳繃浠ｇ爜瀹℃煡楠岃瘉
   Assert.Pass('鍐呭瓨娉勬紡娴嬭瘯闇€瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
@@ -97,7 +97,7 @@ procedure TBug001_AnimationMemoryLeakTest.Test_WaitForm_RepeatedCreateDestroy_Me
 begin
   LogTestStart('Test_WaitForm_RepeatedCreateDestroy_MemoryStable');
   
-  // 澶氭鍒涘缓閿€姣佸悗鍐呭瓨搴旇绋冲畾
+  // 多次创建锢毁后内存应该稳定
   Assert.Pass('閲嶅鍒涘缓閿€姣佹祴璇曢渶瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
   
   LogTestEnd('Test_WaitForm_RepeatedCreateDestroy_MemoryStable', True);
@@ -124,9 +124,9 @@ begin
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 楠岃瘉浣跨敤 FreeAndNil 鑰屼笉鏄畝鍗曠殑 Free
+  // 验证使用 FreeAndNil 而不是简单的 Free
   Assert.IsTrue(SourceCode.Contains('FreeAndNil'),
-    '鏋愭瀯鍑芥暟搴旇浣跨敤 FreeAndNil 閲婃斁瀹氭椂鍣ㄥ璞?);
+    '析构函数应该使用 FreeAndNil 释放定时器对?);
   
   LogTestEnd('Test_SourceCode_UsesFreeAndNil', True);
 end;

@@ -1,13 +1,13 @@
 ﻿unit Test.DeepBase.Theme;
 
 {*******************************************************************************
-  DeepBase Theme 妯″潡鍗曞厓娴嬭瘯
+  DeepBase Theme 模块单元测试
   
-  娴嬭瘯鍐呭:
+  测试内容:
   - ApplyTheme
   - GetAvailableThemes
   - IsDarkTheme
-  - OnThemeChanged 浜嬩欢
+  - OnThemeChanged 事件
 *******************************************************************************}
 
 interface
@@ -136,7 +136,7 @@ begin
     end;
   end;
   
-  Assert.IsTrue(Found, string('搴旇鏈?Windows 榛樿涓婚'));
+  Assert.IsTrue(Found, string('应该?Windows 默认主题'));
 end;
 
 procedure TTestDeepBaseTheme.Test_CurrentTheme_NotEmpty;
@@ -175,7 +175,7 @@ begin
       FTheme.ApplyTheme('NonExistentTheme_' + TGUID.NewGuid.ToString);
     end,
     Exception,
-    '搴旂敤鏃犳晥涓婚涓嶅簲璇ユ姏鍑哄紓甯革紙搴旇闈欓粯澶辫触鎴栦娇鐢ㄩ粯璁わ級'
+    '应用无效主题不应该抛出异常（应该静默失败或使用默认）'
   );
 end;
 
@@ -183,7 +183,7 @@ procedure TTestDeepBaseTheme.Test_IsDarkTheme_ReturnsBoolean;
 var
   IsDark: Boolean;
 begin
-  // 鍙祴璇曡皟鐢ㄤ笉浼氬嚭閿?
+  // 只测试调用不会出?
   Assert.WillNotRaise(
     procedure
     begin
@@ -205,7 +205,7 @@ begin
   begin
     Info := FTheme.GetThemeInfo(Themes[0].Name);
     
-    Assert.IsNotEmpty(Info.Name, '涓婚淇℃伅鐨勫悕绉颁笉搴旇涓虹┖');
+    Assert.IsNotEmpty(Info.Name, '主题信息的名称不应该为空');
   end;
 end;
 
@@ -213,19 +213,19 @@ procedure TTestDeepBaseTheme.Test_OnThemeChanged_Event;
 var
   Themes: TArray<TThemeInfo>;
 begin
-  // OnThemeChanged 鏄?TNotifyEvent 绫诲瀷锛屼笉鏀寔鍖垮悕鏂规硶
-  // 娴嬭瘯绠€鍖? 鍙獙璇佸垏鎹富棰樹笉鎶ラ敊
+  // OnThemeChanged ?TNotifyEvent 类型，不支持匿名方法
+  // 测试箢? 只验证切换主题不报错
   Themes := FTheme.GetAvailableThemes;
   if Length(Themes) < 2 then
     Exit;
   
-  // 鍒囨崲鍒颁笉鍚岀殑涓婚
+  // 切换到不同的主题
   if FTheme.CurrentThemeName <> Themes[0].Name then
     FTheme.ApplyTheme(Themes[0].Name)
   else
     FTheme.ApplyTheme(Themes[1].Name);
   
-  Assert.Pass('涓婚鍒囨崲鎴愬姛');
+  Assert.Pass('主题切换成功');
 end;
 
 procedure TTestDeepBaseTheme.Test_SavedTheme_Persists;

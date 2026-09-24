@@ -1,7 +1,7 @@
 ﻿{ ============================================================================
-  FullDemo.MainForm - 缁煎悎婕旂ず涓荤獥浣?
+  FullDemo.MainForm - 综合演示主窗?
   
-  鐗堟湰: 1.0
+  版本: 1.0
   璇存槑: 婕旂ず DeepBase 妗嗘灦鎵€鏈夋牳蹇冨姛鑳?
   ============================================================================ }
 
@@ -169,7 +169,7 @@ begin
   
   // 鎭㈠绐椾綋鐘舵€?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
   
-  // 璁板綍鍚姩鏃ュ織
+  // 记录启动日志
   DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤宸插惎鍔�', 'App');
   
   UpdateStatusBar;
@@ -180,7 +180,7 @@ begin
   // 淇濆瓨绐椾綋鐘舵€?  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.FormState.SaveFormState(Self);
-    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤姝ｅ湪鍏抽棴', 'App');
+    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用正在关闭', 'App');
     DeepBase.Manager.DeepBase.Finalize;
   end;
   
@@ -199,12 +199,12 @@ begin
   // 涓昏彍鍗?
   CreateMainMenu;
   
-  // 椤甸潰鎺т欢
+  // 页面控件
   FPageControl := TPageControl.Create(Self);
   FPageControl.Parent := Self;
   FPageControl.Align := alClient;
   
-  // 鍒涘缓鍚勫姛鑳介〉
+  // 创建各功能页
   CreateConfigTab;
   CreateI18nTab;
   CreateLoggingTab;
@@ -256,7 +256,7 @@ begin
   
   FLblConfigDemo := TLabel.Create(Self);
   FLblConfigDemo.Parent := FTabConfig;
-  FLblConfigDemo.Caption := '閰嶇疆绠＄悊婕旂ず - 淇敼涓嬫柟鎺т欢锛屽€间細鑷姩淇濆瓨鍒版暟鎹簱';
+  FLblConfigDemo.Caption := '配置管理演示 - 修改下方控件，会自动保存到数据库';
   FLblConfigDemo.Font.Style := [fsBold];
   FLblConfigDemo.SetBounds(20, Y, 500, 20);
   Inc(Y, 40);
@@ -433,7 +433,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabMRU;
-  LblDemo.Caption := '鏈€杩戜娇鐢ㄩ」婕旂ず';
+  LblDemo.Caption := '朢近使用项演示';
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -502,7 +502,7 @@ begin
   
   FLblThemeDemo := TLabel.Create(Self);
   FLblThemeDemo.Parent := FTabTheme;
-  FLblThemeDemo.Caption := '涓婚鍒囨崲婕旂ず';
+  FLblThemeDemo.Caption := '主题切换演示';
   FLblThemeDemo.Font.Style := [fsBold];
   FLblThemeDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -596,7 +596,7 @@ procedure TMainForm.CreateTestCenterTab;
 begin
   FTabTestCenter := TTabSheet.Create(FPageControl);
   FTabTestCenter.PageControl := FPageControl;
-  FTabTestCenter.Caption := '娴嬭瘯涓績';
+  FTabTestCenter.Caption := '测试中心';
   
   FTestCenterFrame := TTestCenterFrame.Create(Self);
   FTestCenterFrame.Parent := FTabTestCenter;

@@ -1,11 +1,11 @@
 ﻿{ ============================================================================
-  LogAnalyzer.Stats - 鏃ュ織缁熻妯″潡
+  LogAnalyzer.Stats - 日志统计模块
 
-  鐗堟湰: 1.0
-  鍔熻兘:
-    - 鎸夌骇鍒粺璁℃棩蹇楁暟閲?
-    - 鎸夋潵婧愮粺璁℃棩蹇楁暟閲?
-    - 鏃堕棿鑼冨洿鍒嗘瀽
+  版本: 1.0
+  功能:
+    - 按级别统计日志数?
+    - 按来源统计日志数?
+    - 时间范围分析
     - 瓒嬪娍鍒嗘瀽
   ============================================================================ }
 
@@ -23,7 +23,7 @@ uses
 
 type
   /// <summary>
-  /// 鏃ュ織缁熻缁撴灉
+  /// 日志统计结果
   /// </summary>
   TLogStats = record
     TotalCount: Integer;
@@ -37,7 +37,7 @@ type
   end;
 
   /// <summary>
-  /// 鎸夋潵婧愬垎缁勭殑缁熻
+  /// 按来源分组的统计
   /// </summary>
   TSourceStats = record
     Source: string;
@@ -56,7 +56,7 @@ type
   end;
 
   /// <summary>
-  /// 鏃ュ織缁熻鍒嗘瀽鍣?
+  /// 日志统计分析?
   /// </summary>
   TLogStatsAnalyzer = class
   private
@@ -65,12 +65,12 @@ type
     constructor Create(const ALogs: TArray<TLogEntry>);
 
     /// <summary>
-    /// 鑾峰彇鍩烘湰缁熻淇℃伅
+    /// 获取基本统计信息
     /// </summary>
     function GetBasicStats: TLogStats;
 
     /// <summary>
-    /// 鎸夋潵婧愬垎缁勭粺璁?
+    /// 按来源分组统?
     /// </summary>
     function GetStatsBySource: TArray<TSourceStats>;
 
@@ -80,12 +80,12 @@ type
     function GetHourlyStats: TArray<TTimeSlotStats>;
 
     /// <summary>
-    /// 鎸夊ぉ鍒嗙粍缁熻
+    /// 按天分组统计
     /// </summary>
     function GetDailyStats: TArray<TTimeSlotStats>;
 
     /// <summary>
-    /// 鑾峰彇閿欒鏈€澶氱殑鏉ユ簮 (Top N)
+    /// 获取错误朢多的来源 (Top N)
     /// </summary>
     function GetTopErrorSources(ACount: Integer = 10): TArray<TSourceStats>;
 
@@ -122,11 +122,11 @@ begin
       // 鎸夌骇鍒鏁?
       Inc(Result.CountByLevel[ALogs[I].Level]);
 
-      // 鍞竴鏉ユ簮
+      // 唯一来源
       if not Sources.ContainsKey(ALogs[I].Source) then
         Sources.Add(ALogs[I].Source, True);
 
-      // 鏃堕棿鑼冨洿
+      // 时间范围
       if ALogs[I].Timestamp < Result.FirstTime then
         Result.FirstTime := ALogs[I].Timestamp;
       if ALogs[I].Timestamp > Result.LastTime then
@@ -199,7 +199,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 鎸夋暟閲忛檷搴忔帓搴?
+    // 按数量降序排?
     List.Sort(TComparer<TSourceStats>.Construct(
       function(const L, R: TSourceStats): Integer
       begin
@@ -249,7 +249,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 鎸夋椂闂村崌搴忔帓搴?
+    // 按时间升序排?
     List.Sort(TComparer<TTimeSlotStats>.Construct(
       function(const L, R: TTimeSlotStats): Integer
       begin
@@ -282,7 +282,7 @@ begin
   try
     for I := 0 to High(FLogs) do
     begin
-      // 鎴柇鍒板ぉ
+      // 截断到天
       SlotTime := DateOf(FLogs[I].Timestamp);
 
       if Dict.TryGetValue(SlotTime, Stats) then
@@ -304,7 +304,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 鎸夋椂闂村崌搴忔帓搴?
+    // 按时间升序排?
     List.Sort(TComparer<TTimeSlotStats>.Construct(
       function(const L, R: TTimeSlotStats): Integer
       begin
@@ -331,7 +331,7 @@ var
 begin
   AllStats := GetStatsBySource;
 
-  // 鎸夐敊璇暟闄嶅簭鎺掑簭
+  // 按错误数降序排序
   List := TList<TSourceStats>.Create;
   try
     for I := 0 to High(AllStats) do

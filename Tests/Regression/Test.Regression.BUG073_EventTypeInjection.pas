@@ -1,14 +1,14 @@
 ﻿{ ============================================================================
-  Test.Regression.BUG073_EventTypeInjection - 浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓鍥炲綊娴嬭瘯
+  Test.Regression.BUG073_EventTypeInjection - 事件类型注入风险回归测试
 
-  BUG-073: 浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓
+  BUG-073: 事件类型注入风险
   
-  鍘熼棶棰? 鍏佽閫氳繃瀛楃涓插姩鎬佹敞鍐屼簨浠剁被鍨嬶紝鍙兘琚伓鎰忓埄鐢?
+  原问? 允许通过字符串动态注册事件类型，可能被恶意利?
   
-  淇鏂规: 瀹炵幇浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?
+  修复方案: 实现事件类型白名单验证机?
   
-  淇鏃ユ湡: 2025-01-27
-  鏂囦欢: Core/DeepBase.EventBus.pas
+  修复日期: 2025-01-27
+  文件: Core/DeepBase.EventBus.pas
   浼樺厛绾? P1 (High)
   鍒嗙被: Security
   ============================================================================ }
@@ -36,11 +36,11 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('楠岃瘉浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佸瓨鍦?)]
+    [Description('验证事件类型白名单验证存?)]
     procedure Test_EventTypeWhitelist_Exists;
     
     [Test]
-    [Description('楠岃瘉鎭舵剰浜嬩欢绫诲瀷琚嫆缁?)]
+    [Description('验证恶意事件类型被拒?)]
     procedure Test_MaliciousEventType_IsRejected;
   end;
 
@@ -58,7 +58,7 @@ end;
 
 function TBug073_EventTypeInjectionTest.GetBugDescription: string;
 begin
-  Result := '浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓';
+  Result := '事件类型注入风险';
 end;
 
 function TBug073_EventTypeInjectionTest.GetFixDate: string;
@@ -97,13 +97,13 @@ begin
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 楠岃瘉瀛樺湪浜嬩欢绫诲瀷楠岃瘉鐩稿叧浠ｇ爜
+  // 验证存在事件类型验证相关代码
   Assert.IsTrue(
     SourceCode.Contains('Whitelist') or 
     SourceCode.Contains('AllowedEvents') or
     SourceCode.Contains('ValidateEventType') or
     SourceCode.Contains('IsValidEventType'),
-    '浠ｇ爜搴旇鍖呭惈浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?);
+    '代码应该包含事件类型白名单验证机?);
   
   LogTestEnd('Test_EventTypeWhitelist_Exists', True);
 end;
@@ -113,7 +113,7 @@ begin
   LogTestStart('Test_MaliciousEventType_IsRejected');
   
   // 瀹為檯娴嬭瘯闇€瑕?EventBus 妯″潡鐨勫叿浣撳疄鐜?
-  Assert.Pass('鎭舵剰浜嬩欢绫诲瀷鎷掔粷娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');
+  Assert.Pass('恶意事件类型拒绝测试通过代码审查确认');
   
   LogTestEnd('Test_MaliciousEventType_IsRejected', True);
 end;

@@ -2,7 +2,7 @@
   Test.WebService - WebService 工具单元测试
 
   测试覆盖:
-    - DeepBase.WebAPI.Core: 鏍稿績璺敱鍜岃姹傚鐞?
+    - DeepBase.WebAPI.Core: 核心路由和请求处?
     - DeepBase.WebAPI.Auth: 璁よ瘉涓棿浠?
     - DeepBase.WebAPI.OpenAPI: OpenAPI 文档生成
     - DeepBase.WebAPI.WebSocket: WebSocket 支持

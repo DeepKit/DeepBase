@@ -45,11 +45,11 @@ type
     FAutoSave: Boolean;
     FAutoRestore: Boolean;
     FForm: TCommonCustomForm;
-    FFormName: string;  // 鍙嚜瀹氫箟锛岄粯璁や娇鐢?Form.Name
+    FFormName: string;  // 可自定义，默认使?Form.Name
     FOnSaveExtra: TFMXSaveExtraEvent;
     FOnRestoreExtra: TFMXRestoreExtraEvent;
     
-    // 淇濆瓨鍘熷浜嬩欢澶勭悊鍣紙閾惧紡璋冪敤锛?
+    // 保存原始事件处理器（链式调用?
     FOldOnShow: TNotifyEvent;
     FOldOnClose: TCloseEvent;
     
@@ -96,17 +96,17 @@ type
     
   published
     /// <summary>
-    /// 绐椾綋鍏抽棴鏃惰嚜鍔ㄤ繚瀛樼姸鎬?
+    /// 窗体关闭时自动保存状?
     /// </summary>
     property AutoSave: Boolean read FAutoSave write FAutoSave default True;
     
     /// <summary>
-    /// 绐椾綋鏄剧ず鏃惰嚜鍔ㄦ仮澶嶇姸鎬?
+    /// 窗体显示时自动恢复状?
     /// </summary>
     property AutoRestore: Boolean read FAutoRestore write FAutoRestore default True;
     
     /// <summary>
-    /// 鑷畾涔夌獥浣撳悕锛堢暀绌哄垯浣跨敤 Form.Name锛?
+    /// 自定义窗体名（留空则使用 Form.Name?
     /// </summary>
     property FormName: string read FFormName write FFormName;
     
@@ -133,7 +133,7 @@ begin
   FStateRestored := False;
   FStateSaved := False;
   
-  // 灏濊瘯鑾峰彇鐖剁獥浣?
+  // 尝试获取父窗?
   if AOwner is TCommonCustomForm then
     FForm := TCommonCustomForm(AOwner);
 end;
@@ -223,7 +223,7 @@ end;
 
 procedure TFMXFormStateHelper.InternalOnShow(Sender: TObject);
 begin
-  // 鍏堟仮澶嶇姸鎬侊紙濡傛灉灏氭湭鎭㈠锛?
+  // 先恢复状态（如果尚未恢复?
   if FAutoRestore and (not FStateRestored) then
   begin
     RestoreState;
@@ -270,7 +270,7 @@ begin
   // 检查窗体是否在工作区内
   if not WorkArea.IntersectsWith(FormRect) then
   begin
-    // 绐椾綋瀹屽叏鍦ㄥ伐浣滃尯澶栵紝绉诲埌宸ヤ綔鍖轰腑蹇?
+    // 窗体完全在工作区外，移到工作区中?
     if Data.Width > WorkArea.Width then
       Data.Width := Round(WorkArea.Width - 20);
     if Data.Height > WorkArea.Height then

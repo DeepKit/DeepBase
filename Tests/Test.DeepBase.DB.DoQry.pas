@@ -1,7 +1,7 @@
 ﻿{ ============================================================================
   Test.DeepBase.DB.DoQry - DoQry 集成模块测试
   
-  璇存槑: 娴嬭瘯 DeepBase.DB.DoQry 妯″潡鐨勬牳蹇冨姛鑳?
+  说明: 测试 DeepBase.DB.DoQry 模块的核心功?
   ============================================================================ }
 
 unit Test.DeepBase.DB.DoQry;
@@ -200,7 +200,7 @@ uses
 
 procedure TTestDeepBaseDoQry.Setup;
 begin
-  // 浣跨敤鍐呭瓨鏁版嵁搴?
+  // 使用内存数据?
   FTestDBPath := ':memory:';
   
   FConnection := TFDConnection.Create(nil);
@@ -823,12 +823,12 @@ begin
   UniDbSetCacheTTL(1);
   UniDbClearQueryCache;
   
-  // 绗竴娆¤皟鐢紝搴旇鏈懡涓?
+  // 第一次调用，应该未命?
   UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "TTLTest", "age": 20}', Ctx);
   UniDbGetCacheStats(Hits, Misses, EntryCount);
   Assert.AreEqual(Int64(0), Hits, 'First call should be cache miss');
   
-  // 绗簩娆¤皟鐢紙鐩存帴 SQL 涓嶇紦瀛橈紝鎵€浠ヤ粛鐒舵槸 miss锛屼絾杩欓噷楠岃瘉 TTL 閫昏緫锛?
+  // 第二次调用（直接 SQL 不缓存，扢以仍然是 miss，但这里验证 TTL 逻辑?
   // 等待 TTL 过期
   Sleep(1500);
   
@@ -868,7 +868,7 @@ begin
   UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "Stats2", "age": 40}', Ctx);
   
   UniDbGetCacheStats(Hits, Misses, EntryCount);
-  // 鐩存帴 SQL 涓嶇粡杩囩紦瀛樻煡鎵撅紝miss 搴旇涓?0
+  // 直接 SQL 不经过缓存查找，miss 应该?0
   Assert.AreEqual(Int64(0), Hits, 'Direct SQL should not count as hits');
 end;
 
@@ -1144,7 +1144,7 @@ begin
   except
     on E: EDeepBaseDbError do
     begin
-      // 纭繚 ErrorCode 瀛楁瀛樺湪涓斾笉涓?0
+      // 确保 ErrorCode 字段存在且不?0
       Assert.IsTrue(E.ErrorCode > 0, 'ErrorCode should be greater than 0');
       Assert.IsNotEmpty(E.Message, 'Message should not be empty');
       Assert.IsNotEmpty(E.CorrelationId, 'CorrelationId should not be empty');
@@ -1197,7 +1197,7 @@ begin
   UniDbClearPreparedStatements;
   UniDbSetPreparedStatementPooling(True);
   try
-    // 鎵ц 10 娆＄浉鍚屾煡璇?
+    // 执行 10 次相同查?
     for I := 1 to 10 do
     begin
       Data.Free;
@@ -1227,7 +1227,7 @@ begin
   UniDbClearPreparedStatements;
   UniDbSetPreparedStatementPooling(True);
   try
-    // 鍒涘缓鍑犱釜姹犳潯鐩?
+    // 创建几个池条?
     UniDbSelect('SELECT 1', '', Data, Ctx);
     Data.Free; Data := nil;
     UniDbSelect('SELECT 2', '', Data, Ctx);

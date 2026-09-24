@@ -158,7 +158,7 @@ begin
   Id1 := FLicense.GetDeviceId;
   Id2 := FLicense.GetDeviceId;
   
-  Assert.AreEqual(Id1, Id2, '澶氭璋冪敤搴旇杩斿洖鐩稿悓鐨勮澶?ID');
+  Assert.AreEqual(Id1, Id2, '多次调用应该返回相同的设?ID');
 end;
 
 procedure TTestDeepBaseLicense.Test_ValidateLicense_EmptyKey_Invalid;
@@ -210,7 +210,7 @@ begin
   
   Info := FLicense.ValidateLicense(Key);
   
-  Assert.AreEqual(Ord(lsValid), Ord(Info.Status), '鐢熸垚鐨?Key 搴旇鍙互楠岃瘉閫氳繃');
+  Assert.AreEqual(Ord(lsValid), Ord(Info.Status), '生成?Key 应该可以验证通过');
   Assert.AreEqual(Ord(ltStandard), Ord(Info.LicenseType), 'license type should be correct');
   Assert.AreEqual('Test User', Info.IssuedTo, 'IssuedTo 应该正确');
 end;
@@ -221,7 +221,7 @@ var
 begin
   Info := Default(TLicenseInfo);
   
-  Assert.AreEqual(Ord(ltNone), Ord(Info.LicenseType), '榛樿绫诲瀷搴旇鏄?None');
+  Assert.AreEqual(Ord(ltNone), Ord(Info.LicenseType), '默认类型应该?None');
   Assert.AreEqual(Ord(lsInvalid), Ord(Info.Status), '默认状态应该是 Invalid');
 end;
 
@@ -350,7 +350,7 @@ begin
   
   // 停用后应该没有有效许可证
   Assert.AreEqual(Ord(ltNone), Ord(FLicense.CurrentLicenseInfo.LicenseType), 
-    '鍋滅敤鍚庤鍙瘉绫诲瀷搴旇鏄?None');
+    '停用后许可证类型应该?None');
 end;
 
 procedure TTestDeepBaseLicense.Test_CurrentLicenseInfo;
