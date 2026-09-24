@@ -1,0 +1,22 @@
+### 判据3 消费者契约取证 · 2026-09-24
+$ 契约单元数（判据要求 ≥18）
+units= 18
+
+$ contract-gate 正向判定
+契约门禁通过：18 单元（stable 18），单份核对无误，stable 公开签名与基线一致。
+check_contract EXIT=0
+
+$ contract-gate 负向样例（签名漂移/缺单元必须报红）
+OK  期望 EXIT=0 实得 0  — ① 控制组：worktree 未改动 → 与基线一致
+OK  期望 EXIT=1 实得 1  — ② 破坏：重命名公开符号 → 红
+OK  期望 EXIT=1 实得 1  — ③ 破坏：删除一条公开声明 → 红
+OK  期望 EXIT=0 实得 0  — ④ 兼容：仅新增公开声明 → 不红
+OK  期望 EXIT=1 实得 1  — ⑤ 契约声明单元缺失 → 红
+OK  期望 EXIT=1 实得 1  — ⑥ 同名单元两处定义 → 红
+OK  期望 EXIT=2 实得 2  — ⑦a stability 非法枚举 → EXIT=2
+OK  期望 EXIT=2 实得 2  — ⑦b units 为空 → EXIT=2
+OK  期望 EXIT=3 实得 3  — ⑧ 契约不可解析 → EXIT=3（fail-closed）
+OK  期望 EXIT=2 实得 2  — ⑨ 契约条目缺字段 → EXIT=2
+
+契约负向样本测试：全部通过
+test_negative EXIT=0

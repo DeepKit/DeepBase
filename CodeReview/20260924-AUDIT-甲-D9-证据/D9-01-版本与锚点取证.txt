@@ -1,0 +1,13 @@
+### 判据1+2 版本治理取证 · 2026-09-24
+$ git describe --tags
+audit/ehai-downstream-001-closed-228-g79670b96
+
+$ git rev-parse audit/ehai-downstream-001-closed  (禁改锚点)
+a73f088917e78201f47726f01d56c0434c6588f3
+
+$ git rev-parse HEAD
+79670b96ce66fc41e557c77408b55eecc38ea932
+
+内部 tag（待主控按段1 DEFERRED 处置，本单不动 tag）:
+pre-d13-deepbase
+v6.2.0-stageb-rc1

@@ -82,6 +82,15 @@ jobs:
       - name: Mojibake gate negative sample test
         run: node .\09_工程脚本\mojibake-gate\test_negative_sample.js
 
+      - name: Consumer contract gate (稳定单元存在且单份 + stable 公开签名不漂移，WO-20260924-AUDIT-甲-D9 段2)
+        run: node .\09_工程脚本\contract-gate\check_contract.js
+
+      - name: Consumer contract gate negative sample test
+        run: node .\09_工程脚本\contract-gate\test_negative_sample.js
+
+      - name: Compile-noise gate negative sample test (噪声解析/比对/跨面跳过与基线 fail-closed，WO-20260924-AUDIT-甲-D9 段4)
+        run: node .\09_工程脚本\build-gate\test_noise.js
+
   package-gate:
     name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]

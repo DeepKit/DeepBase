@@ -1,0 +1,27 @@
+{
+  "generated": "2026-09-24T04:44:21.719Z",
+  "generatedFrom": "git HEAD 79670b96ce66fc41e557c77408b55eecc38ea932 判定面=90 来源=manifest:T0-生产契约面.txt",
+  "surface": "manifest:T0-生产契约面.txt",
+  "_comment": "DeepBase 编译噪声基线（WO-20260924-AUDIT-甲-D9 段4 / DB-006）。noise=各 Hint/Warning 码在【surface 记录的判定面】上的出现次数，门禁只拦增长不拦存量；比对要求当前判定面与 surface 一致（跨面计数不可比）。",
+  "noise": {
+    "H2077": 401,
+    "H2164": 47,
+    "H2219": 139,
+    "H2269": 4,
+    "H2443": 118,
+    "W1000": 17,
+    "W1010": 13,
+    "W1024": 8,
+    "W1033": 77,
+    "W1035": 7,
+    "W1036": 6,
+    "W1050": 10,
+    "W1057": 1,
+    "W1073": 10,
+    "W1074": 6
+  },
+  "totals": {
+    "hints": 709,
+    "warnings": 155
+  }
+}

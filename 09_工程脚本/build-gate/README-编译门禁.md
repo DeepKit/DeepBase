@@ -93,10 +93,10 @@ cd ../.. && git worktree remove .tmp/wt_build
 
 三个 fail-closed 对两面各自成立（`.dpk` 不是二等公民）：枚举面 readdir 失败 ⇒ EXIT=2；
 整面计数为 0 ⇒ EXIT=2（空扫描不是「全都通过」）；任一 `BUILD_EXIT≠0` ⇒ EXIT=1。
-判定路径上不含豁免概念，可直接核对：
+判定路径上不含「范围内放行某个工程」的豁免概念，可直接核对（`skip|exempt|whitelist` = 放行词族）：
 
 ```
-grep -inE 'skip|exempt|whitelist|baseline' 09_工程脚本/build-gate/check_build.js | grep -v 被跳过
+grep -inE 'skip|exempt|whitelist' 09_工程脚本/build-gate/check_build.js | grep -v 被跳过
 ```
 
 命中**只允许**是一处：与其余四道门共用的枚举面目录名集 `gateSkipSet('Logs')`
@@ -104,6 +104,8 @@ grep -inE 'skip|exempt|whitelist|baseline' 09_工程脚本/build-gate/check_buil
 `CodeReview/20260923-AUDIT-甲-D4-证据/D4-04-判据4-判定路径grep.txt`）。
 它是「哪些目录不是工程真相源」的目录名屏蔽，不是「范围内放行某个工程」——后者在代码里不存在，
 反证有两条：统计行的 `被跳过` 恒为 `0`，且判定路径上没有任何按工程路径提前放行的分支。
+（`baseline` 一词刻意不进这条 grep：段4 的编译噪声基线是「按码只拦增长、不拦存量」的下限，
+判定面内每个工程照编照计、绝不放行，语义与放行词族正交，单列于 §七。）
 
 ## 五、环境真相源与四个环境坑
 
@@ -143,4 +145,24 @@ D3 交付时点 `.dpr` 面 67 / 46 绿 / 21 红的分类与「哪些工程进入
 21→16 的下降来自乙 D6 与甲 D5 的修复，不是判定面缩小）。
 **红不是这道门的缺陷，是这道门第一次照出了 S-3 那一类一直没被拦住的断裂。**
 
-*工单：`docs/ui/work-orders/WO-20260923-AUDIT-甲-D3-全库DPR编译门.md`（建 .dpr 面）、`docs/ui/work-orders/WO-20260923-AUDIT-甲-D4-编译门补DPK包工程面.md`（补 .dpk 面与契约分层）*
+## 七、编译噪声基线（WO-20260924-AUDIT-甲-D9 段4 / 外单 DB-006）
+
+这道门除「能不能编过」外，还如实报出 dcc64 的 Hint/Warning 计数（收尾统计行 `编译噪声 Hint=… Warning=… 按码=…`），
+并对一个**指定判定面**维持「按码不增长」的下限。口径本体（解析正则、增长判定、跨面跳过、fail-closed）都在
+`check_build.js` 的 `parseNoise` / `compareAgainstBaseline` / `compareNoise` / `emitNoiseBaseline`，此处不复述，只讲为什么这么设计。
+
+- **先报不修、不清零**：目标是「不增长」而非「零噪声」。存量噪声是正当技术债，清零会把「修没修」伪装成「绿不绿」；
+  只拦相对基线的**增长**与**新增码**，让「噪声下降来自真实修复，而不是视线转移」可核（口径同 §六 的 21→16）。
+- **基线绑定判定面身份**：噪声按码聚合、跨工程依赖链共享，只有**同一个面** emit 与 compare 的计数才可比。
+  `--emit-baseline` 记录当前 `清单来源` 到基线的 `surface` 字段；比对时若当前面 ≠ `surface`，如实跳过（仅观测、不报红也不冒充判过），
+  与子集「仅观测」同调。因此**绝不用 `--all` 当噪声基线面**——`--all` 是超集且含 T1 观测面的在册红件（恒非全绿），
+  失败单元不产出 Hint/Warning，据此写基线会系统性少计、把噪声藏进「缺失」。
+- **生产基线面 = 全绿的 T0**：`--manifest contracts/T0-生产契约面.txt --emit-baseline`（`all-dpk` + `DeepBaseTests.dpr`，
+  正是 Commerce/Speech 库单元所在、且恒全绿的那一面）。基线件 `noise-baseline.json` 的 `surface` 记 `manifest:T0-生产契约面.txt`，
+  `generatedFrom` 记 git HEAD；换 commit/换面须重取。emit 前面若红直接 EXIT=1 且不写基线。
+
+判定路径的负向守护在 `test_noise.js`（`node test_noise.js`，EXIT=0 为过）：解析真实 dcc64 噪声行形态、只拦增长与新增码、
+下降/归零放行、跨面跳过不判、基线缺溯源或 `noise` 非对象时 fail-closed 到 EXIT=2。它不依赖 dcc64，秒级，已入 CI（`.github/workflows/delphi-ci.yml`）。
+全量绿面「噪声不得增长」这条硬红需要真实 `--manifest T0` 全量编译（分钟级），是否在每次提交强制由主控在派 CI 时裁定（本单只交判定逻辑 + 基线 + 负向守护，不擅自往 CI 塞分钟级 job）。
+
+*工单：`docs/ui/work-orders/WO-20260923-AUDIT-甲-D3-全库DPR编译门.md`（建 .dpr 面）、`docs/ui/work-orders/WO-20260923-AUDIT-甲-D4-编译门补DPK包工程面.md`（补 .dpk 面与契约分层）、`docs/ui/work-orders/WO-20260924-AUDIT-甲-D9-发布治理与消费者契约.md` 段4（编译噪声不增长基线）*

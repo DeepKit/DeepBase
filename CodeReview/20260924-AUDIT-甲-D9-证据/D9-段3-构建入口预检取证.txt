@@ -1,0 +1,16 @@
+### 段3 / 判据4 构建入口取证 · 2026-09-24
+从仓库内另一目录 (\.tmp\seg3cwd) 调用 ..\..\build.bat 与 ..\..\run_tests.bat：
+  验证 (a) 位置无关（%~dp0 定根，任意 cwd 可调用）；(b) 工具链预检 fail-closed。
+  设 BDS 指向不存在路径 → 应在委托 PowerShell 之前 EXIT=2、不触发真实构建。
+  真实编译+跑测由段4 T0 面的 DeepBaseTests.dpr BUILD_EXIT=0 覆盖；全新克隆端到端 E2E 交 CI/主控。
+  bat 层刻意保持 ASCII-only：非 ASCII 控制台码页（cp936）下，if 块内的 UTF-8 汉字字节会含 0x29 ')'，
+  会提前闭合括号块并使 exit /b 逃逸（旧版实测 EXIT=0 而非 2）；构建逻辑真身在 UTF-8 安全的 ps1 层。
+
+$ (cwd=.tmp\seg3cwd) set "BDS=D:\nonexistent" && ..\..\build.bat -Profile Runtime
+[build.bat] ERROR: compiler not found at "D:\nonexistent\bin\dcc64.exe".
+            Set environment variable BDS to the Delphi install root, then retry.
+build.bat EXIT=2
+
+$ (cwd=.tmp\seg3cwd) set "BDS=D:\nonexistent" && ..\..\run_tests.bat
+[run_tests.bat] ERROR: compiler not found at "D:\nonexistent\bin\dcc64.exe". Set BDS to the Delphi install root, then retry.
+run_tests.bat EXIT=2

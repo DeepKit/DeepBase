@@ -16,6 +16,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { parseGateArgs } = require('../gate-args.js');
 const { gateSkipSet } = require('../gate-skip.js');
+const { loadGateBaseline } = require('../gate-baseline.js');
 
 const HERE = __dirname;
 const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -40,23 +41,34 @@ const UNIT_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance'
 const NS_CONTRACT = path.join(HERE, 'contracts', '命名空间声明.txt');
 const DUNITX_SOURCE = process.env.DEEPBASE_DUNITX_SOURCE || 'D:\\ProgramData\\delphi\\DUnitX\\Source';
 const FALLBACK_BDS = 'D:\\Program Files (x86)\\Embarcadero\\Studio\\37.0';
+// 编译噪声基线（WO-20260924-AUDIT-甲-D9 段4 / 外单 DB-006）：dcc64 报出的 Hint/Warning 按码计数。
+// 目标是【不增长】而非清零——存量噪声是正当技术债，清零会伪装成「全绿」；只拦新增/增长，让
+// 「噪声下降是修复的结果，不是视线的转移」可核。基线绑定【判定面身份】：只有同一面 emit 与 compare
+// 的按码计数才可比，跨面（子集 vs 超集）只观测不判定。生产噪声基线取自全绿的 T0 生产契约面
+// （--all 是超集、含 T1 观测面的在册红件，恒非全绿，不能作基线面）。
+const NOISE_BASELINE = path.join(HERE, 'noise-baseline.json');
 
-// 退出码：0=通过 / 1=有工程编译失败 / 2=枚举或输入面不可信（readdir 失败、计数为 0、清单与索引不一致、
-//         包依赖成环、找不到编译器、清单文件读不到或为空）/ 3=参数不合法
+// 退出码：0=通过 / 1=门禁报红（有工程编译失败 或 全量面编译噪声相对基线增长）/ 2=枚举或输入面不可信
+//         （readdir 失败、计数为 0、清单与索引不一致、包依赖成环、找不到编译器、清单/噪声基线读不到或不可信）/ 3=参数不合法
+// 注意：单个工程是否「编译通过」只看 BUILD_EXIT=0；Hint/Warning 从不把一次成功的编译改判为编译失败（段4 口径=先报不修）。
+//       噪声「增长」只影响门禁整体放行（EXIT 1），不改变任何工程的编译判定语义。
 const EXIT_OK = 0, EXIT_BUILD_FAILED = 1, EXIT_SCAN_FAILED = 2, EXIT_BAD_ARGS = 3;
 
 function usage() {
   console.log([
-    '编译门禁 用法: node check_build.js (--all | --dpr <path>... | --dpk <path>... | --manifest <file>...) [--root <dir>] [--help]',
+    '编译门禁 用法: node check_build.js (--all | --dpr <path>... | --dpk <path>... | --manifest <file>...) [--root <dir>] [--baseline <file>] [--emit-baseline] [--help]',
     '',
     '  两种模式的适用场景、实测耗时与判定口径见 README-编译门禁.md（本目录）。',
     '',
     '  --all       判定面 = git 已跟踪的全部 .dpr + 全部 .dpk（无例外）。',
     '  --dpr/--dpk 显式点名工程（可重复）；--manifest 读外部契约清单（可重复，取并集）。',
     '              清单每行一个仓内相对路径，或整面选择子 all-dpr / all-dpk；# 起注释。',
+    '  --baseline / --emit-baseline 编译噪声基线（段4）：--emit-baseline 从【当前判定面】写按码聚合的 Hint/Warning',
+    '              基线（要求该面全绿，失败单元不计噪声、否则基线少计）。判定时仅当本轮判定面与基线记录面一致才比对，',
+    '              只拦增长与新增码，不拦存量下降；跨面（如子集 vs 全量）计数不可比，仅观测不判定。',
     '  三种范围声明互斥且必须给一种；本门禁 fail-closed，不提供「跳过并继续报绿」的任何形态。',
     '',
-    'EXIT: 0=通过 1=有工程编译失败 2=枚举/输入面不可信 3=参数不合法',
+    'EXIT: 0=通过 1=编译失败或噪声增长 2=枚举/输入面不可信 3=参数不合法',
   ].join('\n'));
 }
 
@@ -69,7 +81,8 @@ function main() {
   const opts = parseGateArgs(process.argv.slice(2), {
     label: '编译',
     root: REPO_ROOT,
-    extra: ['all'],
+    baseline: NOISE_BASELINE,
+    extra: ['all', 'emit-baseline'],
     valued: ['dpr', 'dpk', 'manifest'],
   });
   if (opts.flags.has('help')) { usage(); process.exit(EXIT_OK); }
@@ -93,6 +106,7 @@ function main() {
   const stats = new Map(FACES.map(f => [f.key, faceStat(f)]));
   let resGenerated = 0;
   const failures = [];
+  const noise = new Map(); // 编译噪声：dcc64 报出的 Hint/Warning 按码聚合（段4 可观测性，全量面下比对基线）
 
   for (const face of FACES) {
     const targets = declared[face.key];
@@ -101,7 +115,9 @@ function main() {
     targets.forEach((rel, i) => {
       const ctx = projectEnv(root, rel, env, face);
       const res = compileOne(tools, root, rel, ctx, face, outRoot);
-      console.log(`[${face.key} ${i + 1}/${targets.length}] ${rel} CONFIG=${ctx.configTag} BUILD_EXIT=${res.exit}`);
+      const nh = sumCodes(res.codes);
+      console.log(`[${face.key} ${i + 1}/${targets.length}] ${rel} CONFIG=${ctx.configTag} BUILD_EXIT=${res.exit} HINT=${nh.hints} WARN=${nh.warnings}`);
+      for (const [code, n] of Object.entries(res.codes)) noise.set(code, (noise.get(code) || 0) + n);
       if (res.resGenerated) resGenerated++;
       if (res.exit === 0) { st.ok++; return; }
       st.failed++;
@@ -128,17 +144,114 @@ function main() {
     console.log(`编译门禁统计：${face.key.toUpperCase()}总数=${st.total} 成功=${st.ok} 失败=${st.failed} 被跳过=${st.total - st.ok - st.failed} 失败子路径=${env.scanFailures}`);
   }
   console.log(`编译门禁统计：判定面=${judgedTotal} 已跟踪=${trackedTotal} 清单来源=${declared.source} .res生成=${resGenerated} 编译器=${path.basename(tools.dcc64)} 陈旧DCU清理=${staleRemoved}`);
+  const noiseTotals = sumCodes(Object.fromEntries(noise));
+  console.log(`编译门禁统计：编译噪声 Hint=${noiseTotals.hints} Warning=${noiseTotals.warnings} 按码=${formatNoise(noise)}`);
 
   const failed = FACES.reduce((n, f) => n + stats.get(f.key).failed, 0);
-  if (failed > 0) {
-    console.error('编译门禁失败：' + failed + ' 个工程编译不过');
+  const reportFailures = () => {
     for (const face of FACES) for (const x of stats.get(face.key).items) {
       console.error(`  ${x.rel} EXIT=${x.exit}${x.killed ? ' (超时被终止)' : ''}  ${x.firstError}`);
     }
+  };
+
+  // 编译失败与噪声增长是两条正交的红（都记 EXIT 1）；噪声基线绑定【判定面身份】declared.source：
+  // 只有同一面 emit 与 compare 的按码计数才可比。--all 是超集且在本仓含 T1 观测面的在册红件（恒非全绿），
+  // 不能作基线面；生产噪声基线取自全绿的 T0 生产契约面（all-dpk + DeepBaseTests.dpr）。
+  if (opts.flags.has('emit-baseline')) {
+    if (failed > 0) {
+      console.error(`编译噪声基线未写入：判定面「${declared.source}」有 ${failed} 个工程编译失败。` +
+        `失败单元不产出 Hint/Warning，据此写基线会系统性少计、把噪声藏进"缺失"——基线必须来自全绿编译面。` +
+        `请用全绿判定面（如 --manifest contracts/T0-生产契约面.txt）重跑 --emit-baseline。`);
+      reportFailures();
+      process.exit(EXIT_BUILD_FAILED);
+    }
+    emitNoiseBaseline(opts.baseline, root, declared, noise, noiseTotals);
+    console.log(`编译噪声基线已写入：${opts.baseline}（判定面=${judgedTotal} 来源=${declared.source} 按码=${formatNoise(noise)}）`);
+    process.exit(EXIT_OK);
+  }
+  if (failed > 0) {
+    console.error('编译门禁失败：' + failed + ' 个工程编译不过');
+    reportFailures();
     process.exit(EXIT_BUILD_FAILED);
+  }
+  const cmp = compareNoise(opts.baseline, noise, declared.source);
+  if (!cmp.compared) {
+    // 面不一致：跨面计数不可比，如实跳过（不报红也不冒充判过），与子集「仅观测」同调。
+    console.log(`编译噪声基线未比对：本轮判定面「${declared.source}」≠ 基线记录面「${cmp.baselineSurface}」（跨面计数不可比）；噪声计数仅观测`);
+  } else if (cmp.violations.length) {
+    console.error('编译门禁失败：编译噪声相对基线增长（段4 口径=不增长，非清零；下降须来自真实修复）:');
+    cmp.violations.forEach(v => console.error('  ' + v));
+    process.exit(EXIT_BUILD_FAILED);
+  } else {
+    console.log(`编译噪声基线比对通过：判定面「${declared.source}」按码计数未超过 ${path.basename(opts.baseline)}`);
   }
   console.log(`编译门禁通过：${judgedTotal} 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）`);
   process.exit(EXIT_OK);
+}
+
+// dcc64 噪声行的真实形态是 `<file>(<line>) Hint: H2443 ...` / `<file>(<line>) Warning: W1035 ...`：
+// 严重级前面是【右括号 + 空格】，不是冒号。曾按 `: Hint:` 写正则→整条扫不中→恒报 Hint=0，
+// 把「解析器漏读所有噪声」伪装成「全库零噪声」——正是本门禁链要堵的「校验放行、取值静默丢」型 fail-open。
+// 故只锚定「严重级词 + 码」本身（Hint/Warning 后紧跟 H/W 数字码），不约束其左侧标点；
+// Error/Fatal 的 E/F 码不匹配 [HW]，天然排除。
+function parseNoise(out) {
+  const codes = {};
+  for (const line of out.split(/\r?\n/)) {
+    const m = /\b(?:Hint|Warning):\s+([HW]\d{3,5})\b/.exec(line);
+    if (m) codes[m[1]] = (codes[m[1]] || 0) + 1;
+  }
+  return codes;
+}
+
+function sumCodes(codes) {
+  let hints = 0, warnings = 0;
+  for (const [code, n] of Object.entries(codes)) {
+    if (code[0] === 'H') hints += n; else if (code[0] === 'W') warnings += n;
+  }
+  return { hints, warnings };
+}
+
+function formatNoise(noiseMap) {
+  const entries = [...noiseMap.entries()].filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  return entries.length ? entries.map(([c, n]) => `${c}=${n}`).join(',') : '(无)';
+}
+
+function gitHead(root) {
+  const r = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.trim() : 'unknown';
+}
+
+function emitNoiseBaseline(file, root, declared, noise, totals) {
+  const doc = {
+    generated: new Date().toISOString(),
+    generatedFrom: `git HEAD ${gitHead(root)} 清单来源=${declared.source} 已跟踪=${declared.trackedTotal}`,
+    surface: declared.source,
+    _comment: 'DeepBase 编译噪声基线（WO-20260924-AUDIT-甲-D9 段4 / DB-006）。noise=各 Hint/Warning 码在【surface 记录的判定面】上的出现次数，门禁只拦增长不拦存量；比对要求当前判定面与 surface 一致（跨面计数不可比）。',
+    noise: Object.fromEntries([...noise.entries()].filter(([, n]) => n > 0).sort()),
+    totals,
+  };
+  fs.writeFileSync(file, JSON.stringify(doc, null, 2) + '\n', 'utf8');
+}
+
+// 只拦「增长」与「新增码」：current[code] > baseline.noise[code]（缺省 0）即红。存量下降/归零是正当目标，一律放行。
+function compareAgainstBaseline(base, noise) {
+  const violations = [];
+  for (const [code, n] of noise) {
+    if (n === 0) continue;
+    const b = base[code] || 0;
+    if (n > b) violations.push(`${code}: 当前 ${n} > 基线 ${b}${b === 0 ? '（基线中不存在此码 = 新增噪声）' : ''}`);
+  }
+  return violations;
+}
+
+// 读基线（不可信 → loadGateBaseline 内 process.exit(2)）；仅当基线记录面与本轮判定面一致才比对。
+// 面不一致按「跨面计数不可比」如实跳过（不红），返回 compared=false 交由调用方打印观测说明。
+function compareNoise(file, noise, currentSurface) {
+  const baseline = loadGateBaseline({ file, label: '编译噪声', keys: { noise: 'object' } });
+  if (baseline.surface && currentSurface && baseline.surface !== currentSurface) {
+    return { compared: false, baselineSurface: baseline.surface, violations: [] };
+  }
+  return { compared: true, baselineSurface: baseline.surface || null, violations: compareAgainstBaseline(baseline.noise, noise) };
 }
 
 function faceStat(face) { return { key: face.key, total: 0, ok: 0, failed: 0, items: [] }; }
@@ -504,7 +617,7 @@ function compileOne(tools, root, rel, ctx, face, outRoot) {
   });
   const out = (r.stdout || '') + (r.stderr || '');
   const firstError = firstErrorLine(out) || (r.error ? 'spawn 失败: ' + r.error.message : '');
-  return { exit: r.status === null ? (r.signal ? 124 : 1) : r.status, firstError, killed: !!r.signal, resGenerated };
+  return { exit: r.status === null ? (r.signal ? 124 : 1) : r.status, firstError, killed: !!r.signal, resGenerated, codes: parseNoise(out) };
 }
 
 // `{$R *.res}`（以及设计包的 `{$R *.otares}`）引用的是 IDE 生成物且被 .gitignore 排除，干净检出里必然不存在。
@@ -573,4 +686,6 @@ function cleanSourceDcus(root, before) {
   return n;
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { parseNoise, sumCodes, compareAgainstBaseline, compareNoise };

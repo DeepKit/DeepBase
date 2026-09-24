@@ -1,0 +1,30 @@
+{
+  "$schema_note": "DeepBase 消费者契约（SSOT）。DeepBase 是 30+ 兄弟项目共享的平台库；本件声明「哪些单元是稳定 API、哪些是内部实现、哪些已废弃」。消费者（DeepSync 等）按路径引用本件，不再各自反向工程。",
+  "source_repo": "DeepKit/DeepBase",
+  "resolution": "sibling-by-path",
+  "default_root_env": "DEEPBASE_ROOT",
+  "default_root_relative": "../DeepBase",
+  "dot_name_note": "单元名含点号（A.B.C），消费者抓引用时正则须支持点分形式（如 [A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*)+），勿只匹配 [A-Za-z_]\\w*。",
+  "breaking_change_policy_default": "stability=stable 单元公开签名变更须在 CHANGELOG 记录并提升版本号；未记录不得合入 master。",
+  "required_dirs": ["Core", "Features", "Persistence"],
+  "units": [
+    { "unit": "DeepBase.i18n", "subdir": "Core", "stability": "stable", "consumers": 54, "critical": true, "why": "全仓 i18n 单一入口", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Config", "subdir": "Core", "stability": "stable", "consumers": 17, "critical": true, "why": "配置读写单一入口", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Manager", "subdir": "Core", "stability": "stable", "consumers": 13, "critical": true, "why": "DeepBase 门面/生命周期", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.AIErrorHandler.Bootstrap", "subdir": "Core", "stability": "stable", "consumers": 6, "critical": false, "why": "AI 错误处理装配", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.DB.DoQry", "subdir": "Persistence", "stability": "stable", "consumers": 4, "critical": true, "why": "DB 查询唯一入口（仅 Persistence 一份）", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Security", "subdir": "Core", "stability": "stable", "consumers": 3, "critical": false, "why": "安全基元", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Crypto.Random", "subdir": "Core", "stability": "stable", "consumers": 3, "critical": false, "why": "随机数", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Types", "subdir": "Core", "stability": "stable", "consumers": 2, "critical": false, "why": "共享类型", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Crypto.AES", "subdir": "Core", "stability": "stable", "consumers": 2, "critical": false, "why": "AES 加解密", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Crypto.Hash", "subdir": "Core", "stability": "stable", "consumers": 2, "critical": false, "why": "哈希", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Crypto.Encoding", "subdir": "Core", "stability": "stable", "consumers": 2, "critical": false, "why": "编码", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.MRU", "subdir": "Core", "stability": "stable", "consumers": 2, "critical": false, "why": "最近使用列表", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Licensing", "subdir": "Features", "stability": "stable", "consumers": 2, "critical": true, "why": "授权验签（禁区：只换呈现层不动验签逻辑）", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Unlock", "subdir": "Features", "stability": "stable", "consumers": 1, "critical": false, "why": "解锁流程（仅 Features 一份）", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.AutoFix", "subdir": "Core", "stability": "stable", "consumers": 1, "critical": false, "why": "自动修复", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.AutoFix.ScenarioRunner", "subdir": "Core", "stability": "stable", "consumers": 1, "critical": false, "why": "场景运行器", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Commerce.Types", "subdir": "Features", "stability": "stable", "consumers": 1, "critical": false, "why": "商务类型", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.Persistence.Manager.FireDAC", "subdir": "Persistence", "stability": "stable", "consumers": 1, "critical": true, "why": "FireDAC 持久化管理器", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" }
+  ]
+}

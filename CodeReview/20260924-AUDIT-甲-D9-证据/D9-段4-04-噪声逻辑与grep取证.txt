@@ -1,0 +1,36 @@
+### 段4 / 判据5 编译噪声取证 · 2026-09-24
+
+$ test_noise.js（解析真实dcc64行/只拦增长/跨面跳过/基线fail-closed）
+# 1. parseNoise：按码计数，非噪声行不计入
+  PASS H2443 计 2
+  PASS H2077 计 1
+  PASS W1035 计 1
+  PASS W1000（Hint 前缀但 W 码）按码名计入
+  PASS Fatal 码不入噪声集
+# 2. sumCodes：按码名前缀拆 H/W
+  PASS H 码合计 3 (H2443x2+H2077x1)
+  PASS W 码合计 2 (W1035x1+W1000x1)
+# 3. compareAgainstBaseline：只拦增长与新增码
+  PASS H2443 由 2 增长到 3 → 报红
+  PASS 全部与基线相等 → 放行
+  PASS H2443 下降到 1（存量减少=修复结果）→ 放行
+  PASS H2443 归零 → 放行
+  PASS 基线中不存在的新码出现 → 报红并标注新增
+  PASS 空基线（无记录）下任何噪声都算增长
+  PASS 多码同时增长 → 逐码报
+# 4. 基线文件不可信时 fail-closed 到 EXIT=2；跨面时如实跳过（子进程验证，避免拖崩本测试进程）
+  PASS 缺溯源 → EXIT=2
+  PASS noise 非对象 → EXIT=2
+  PASS 面一致可信基线正常比对（1<5 不增长）
+  PASS 面不一致 → 跳过比对（不红）
+
+编译噪声负向样例：PASS=18 FAIL=0
+test_noise EXIT=0
+
+$ README §四 放行词族 grep（应只命中 gateSkipSet 3 行）
+18:const { gateSkipSet } = require('../gate-skip.js');
+32:// 与其余四道门共用 gate-skip 的目录名集（`Logs` 是本门专属：dcc64 的编译日志落处）。
+34:const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
+
+口径说明：本门计数=判定面(26件)内 dcc64 各码出现次数累计（同一单元经包依赖链会被重复编译，故按码跨工程累加）；
+工单 DB-006 的『44 条』是 DeepSync 侧对『单个消费者实际拉取单元』的泄露度量，与本门『全绿生产面聚合下限』是两个口径，不可直接对齐。

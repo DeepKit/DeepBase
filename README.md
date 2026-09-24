@@ -87,6 +87,17 @@ DeepBase 是一�?**Delphi 企业级应用开发基础框架**，提供现代�
 - **数据�?*：FireDAC + SQLite（系统自带）
 - **单元测试**：DUnitX（可选）
 
+### 从零构建（仓内脚本，位置无关）
+
+全新克隆后，在仓库根目录打开命令提示符，仅凭仓内脚本即可完成构建与核心单测（脚本先校验 `BDS`/`dcc64` 再委派，随后打印真实产物路径 `TestResults\bpl64`/`dcp64`/`dcu64`）：
+
+```bat
+build.bat                 :: 构建 Win64 运行时包（默认 -Profile Runtime；追加参数透传，如 build.bat -Profile All）
+run_tests.bat             :: 编译并运行 Unit 测试（按 Category 排除 DB 依赖用例，无需手维护 fixture 白名单）
+```
+
+若 `BDS` 环境变量未设置，脚本回落到 `D:\Program Files (x86)\Embarcadero\Studio\37.0`（Delphi 13.1 Florence）。被 `contract/consumer-contract.json` 标记为 stable 的单元名含点号（`A.B.C`），消费者抓引用的正则须支持 `[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+`。
+
 ### 1. 安装�?
 
 1. 基础能力：编�?`DeepBaseCore.dpk`
