@@ -42,6 +42,9 @@ U="$U;$BDS/lib/Win64/release;$DUNITX"
 # 邻件回归要跑不在标准搜索面上的目录（如 DeepFlow/Tests）时用它追加，不另立一套口径
 [ -n "${DEEPBASE_EXTRA_U:-}" ] && U="$U;$DEEPBASE_EXTRA_U"
 NS="System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win"
+# 命名空间同理：被编单元的 .dproj 自带 DCC_Namespace 时，探针的缺省面比工程面窄会假红
+# （实测 uDoQryLegacy 的 uses ADODB 需要 Data.Win，prjDoQry.dproj 里声明了）
+[ -n "${DEEPBASE_EXTRA_NS:-}" ] && NS="$NS;$DEEPBASE_EXTRA_NS"
 ( cd "$ROOT" && "$DCC" -B "$DIR/B2FixtureRunner.dpr" -NU"$DIR" -N0"$DIR" -E"$DIR" -U"$U" -NS"$NS" ) 2>&1
 rc=${PIPESTATUS[0]}
 echo "BUILD_EXIT=$rc"

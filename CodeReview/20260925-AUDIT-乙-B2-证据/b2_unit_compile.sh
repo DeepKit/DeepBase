@@ -33,6 +33,9 @@ U="$U;$BDS/lib/Win64/release;$DUNITX"
 [ "$WITHG32" = 1 ] && U="$U;$G32"
 
 NS="System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win"
+# 与 b2_run_fixture.sh 同一口径：被编单元的 .dproj 自带 DCC_Namespace 时，探针缺省面比工程面窄会假红
+# （实测 uDoQryLegacy 的 uses ADODB 需要 Data.Win，prjDoQry.dproj 的 DCC_Namespace 里有）
+[ -n "${DEEPBASE_EXTRA_NS:-}" ] && NS="$NS;$DEEPBASE_EXTRA_NS"
 
 RC_ALL=0
 for f in "$@"; do

@@ -248,7 +248,10 @@ begin
     FSI := TFormatSettings.Invariant;
     case StringToParaType(paramType) of
       ptString:
-        Result := QuotedStr(StringReplace(value, '''', '''''', [rfReplaceAll]));
+        // B2-13：这里原先先手工把单引号双倍、再交 QuotedStr（它自己也会双倍），
+        // 同一个值被转义两遍，值里的单引号落库即变形。转义口径归一到 QuotedStr 一处，
+        // 与无类型入口 QuoteValue 共用同一套引号规则（此前是本文件里的两套引号器）。
+        Result := QuotedStr(value);
       ptInteger:
         begin
           // CR-006: 数值类型不再原样拼接，先严格校验，杜绝注入通道
@@ -1136,44 +1139,22 @@ end;
 
 function QuoteValue(const Value: string): string;
 var
-  i: Integer;
-  needQuote: Boolean;
   tempValue: string;
 begin
-  // 检查是否为空值
+  // 空串与字面量 NULL 是 legacy 的置空约定：调用方用这两个串表达「此字段置空」
   if (Value = '') or (Value = 'NULL') then
-  begin
-    Result := 'NULL';
-    Exit;
-  end;
-  
-  // 检查是否需要引号
-  needQuote := False;
-  for i := 1 to Length(Value) do
-  begin
-    if not (Value[i] in ['0'..'9', '.', '-', '+']) then
-    begin
-      needQuote := True;
-      Break;
-    end;
-  end;
-  
-  if not needQuote then
-  begin
-    Result := Value;
-    Exit;
-  end;
-  
-  // 替换所有中文括号为英文括号
-  tempValue := Value;
-  tempValue := StringReplace(tempValue, '（', '(', [rfReplaceAll]);
+    Exit('NULL');
+
+  // B2-13：旧实现先按字符集 0-9 . + - 猜「这串是数值」，猜中就原样拼进 SQL 并跳过转义，
+  // 于是 '1--' 一类值把注释符送进代码面、把同一行后面的约束注释掉。本函数拿不到 para_type，
+  // 「像数值」永远只是猜；无类型出口的唯一正确语义是一律按字符串字面量出，
+  // 需要数值语义请走 HandleParamValue（那里才有类型信息，也才做类型转换）。
+  // 中文括号归一是旧「加引号才做」的既有语义，随引号路径一起保留在全量生效的位置。
+  tempValue := StringReplace(Value, '（', '(', [rfReplaceAll]);
   tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
-  
-  // 处理单引号 (在SQL中单引号需要用两个单引号表示)
-  tempValue := StringReplace(tempValue, '''', '''''', [rfReplaceAll]);
-  
-  // 添加引号
-  Result := '''' + tempValue + '''';
+  // 转义只交给 QuotedStr 一处：与 HandleParamValue 的 string/date 分支同一口径，
+  // 不再在本文件里维持「手工包裹 + 手工双倍」的第二套引号器
+  Result := QuotedStr(tempValue);
 end;
 
 function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
