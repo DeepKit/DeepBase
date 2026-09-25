@@ -1,0 +1,47 @@
+# B2-11 修后：改动清单、编译与用例落点（件 DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas）
+
+## 1. 改动清单（全件 diff = 49 增 / 38 删，公开接口零变化）
+
+| # | 位置 | 改动 | 为什么 |
+| --- | --- | --- | --- |
+| a | :81-85 | `FLock` 的 doc 注释写出不变量：锁只在公开入口取一次，锁内一律走 `*NoLock` 件；点明「可重入是平台副作用不是本类契约」 | 把本次修的结构约束留在件上，防止下一个加锁件又走回重入 |
+| b | :90-91 | 私有声明 `ResolveStringNoLock` / `ResolveJSONNoLock` | 与被调件同批收口，命名沿用仓内既有先例 `Core/DeepBase.Hotkeys.pas:118-119` 的 `...NoLock` 口径 |
+| c | :521-529 | `ResolveString` 改为「取一次锁 + 转调 NoLock 件」的公开壳 | 写入口唯一：锁的获取只发生在公开入口 |
+| d | :531-552 | 原 `ResolveString` 主体整体下沉为 `ResolveStringNoLock`，体内只调无锁件 `FindVariable` | 不加锁、不减锁，行为逐字保持 |
+| e | :554-562 | `ResolveJSON` 改为公开壳 | 同上 |
+| f | :564-586 | `ResolveJSONNoLock`：横向调 `ResolveStringNoLock`（:577）、自递归调 `ResolveJSONNoLock`（:579） | 消掉 §2 表里唯一两条重入边；锁站点数不变（15 个 Enter），只是嵌套改为无锁内部件 |
+| g | 新文件 `Tests/Test.DeepBase.DeepFlow.ContextResolve.pas` | 8 条 DUnitX 回归用例 | 工单 §〇-4：自建新测试单元，不动 `Tests/DeepBaseTests.dpr`/.dproj 注册 |
+
+路线选择：期望给两条——「锁改递归语义」或「被调用函数不重复加锁」。取后者。
+理由：Windows 的 `TCriticalSection` 已经是可重入的，前一条要么什么都不改（维持隐式依赖），
+要么自造递归计数锁（把平台副作用升格为契约，并给每次 Enter/Leave 增加记账）；
+后者删除了隐式依赖本身，且站点数、加锁次数、公开 API 全不变，零性能成本。
+
+## 2. 判定落点
+
+| 工单判定 | 落点用例 | 实测 |
+| --- | --- | --- |
+| 嵌套解析用例有界返回（加超时断言） | `Test_ResolveJSON_NestedReturnsBounded`：解析跑在工作线程，主线程 `TEvent.WaitFor(5000)`，超时即 `Assert.Fail` | 修复后 8/8 绿；判别见 `B2-11-反事实与判别探针.txt` §2 |
+| 高并发解析用例无死锁 | `Test_ResolveJSON_HighConcurrency_NoDeadlock`：8 线程 × 150 轮，写侧 `DeleteVariable`+`SetVariable` 与读侧 `ResolveString`/`ResolveJSON` 真并发，20s 预算 | 同上 |
+| 全路径核对后写进提交说明 | §2 的 15 站点核对表（`B2-11-修前-代码事实与零覆盖.txt`）+ 提交说明正文 | 已写入 |
+
+## 3. 并发用例的构造取舍（避免"只读并发"冒充覆盖）
+
+`TResolveWorker.Execute` 每轮先 `DeleteVariable('t<i>')` 再 `SetVariable('t<i>', 'V<i>')`，然后解析引用该键的
+三层模板。原因：只读的并发测不到 `TObjectDictionary` 结构变更那侧的锁竞争；键归本线程私有、值由本线程写回，
+所以期望值保持确定——用例若变红，只可能来自并发本身，而不是竞态语义不确定。
+
+有界用例的失败路径故意不调 `TThread.Free`：`TThread.Destroy` 会 Join 已死锁的线程，会把整台 runner
+一起挂住，证据里就只剩墙钟超时而不是可读的用例红；改为 `Terminate` + `Assert.Fail` + `Exit`。
+
+## 4. 登记项（不顺手扩大范围）
+
+- R1：`TWorkflowContext` 在本仓无任何生产调用方（详见修前证据 §4）。本条 Critical 属潜在结构缺陷。
+- R2：`ResolveJSON` 对 `TJSONArray` 走 `Clone` 分支，数组元素内的 `${var}` 不解析。本次按"行为逐字保持"
+  只用 `Test_ResolveJSON_LeavesNonStringValuesUntouched` 把该边界固化，未改语义；是否要支持数组内解析属产品判断，报主控。
+- R3：`FindVariable` 是私有无锁件，靠调用方持锁；`GetVariable` 把 `TVariableValue` 引用透出到锁外
+  （调用方在无锁状态下读该对象）。这是本类既有设计，不在本条范围内，登记。
+- R4：同名重键的作用域优先级（step>workflow>input>output>global）在 `FindVariable` 里硬编码 5 元数组，
+  与 `TVariableScope` 枚举需人工同步；本条不改，登记。
+- R5：本单只按工单点名的两条重入边收口，`DeepFlow/Source/**` 其余 40+ 件未做同类锁纪律扫描；
+  若要全库铺，属另一条工单。

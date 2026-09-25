@@ -1,0 +1,176 @@
+# B2-11 用例真跑（原始输出，未剪辑）
+
+工具：`b2_unit_compile.sh`（单件 dcc64 探针）、`b2_run_fixture.sh`（一次性 DUnitX runner，
+三道 fail-closed：编译非 0⇒3、TotalTests=0⇒2、任一红⇒1）。判据 §〇-4 禁用全量套件当判据，
+这里一律跑全限定 fixture 子集。
+
+## 1. 被测件单件编译（修复后）
+
+```
+================================================================
+单元: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+2069 lines, 0.25 seconds, 109048 bytes code, 18328 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+```
+
+## 2. 新用例全量跑（8 条）
+
+```
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.ContextResolve） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25466 lines, 1.33 seconds, 2796160 bytes code, 383760 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.ContextResolve） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+```
+
+## 3. 复跑三次防抖（并发用例不吃运气）
+
+```
+--- 第 1 次 ---
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.ContextResolve） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25466 lines, 1.34 seconds, 2796160 bytes code, 383760 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.ContextResolve） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+--- 第 2 次 ---
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.ContextResolve） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25466 lines, 1.31 seconds, 2796160 bytes code, 383760 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.ContextResolve） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+--- 第 3 次 ---
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.ContextResolve） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25466 lines, 1.33 seconds, 2796160 bytes code, 383760 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.ContextResolve） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+```
+
+## 4. 未注册状态说明
+
+本单元**未**写入 `Tests/DeepBaseTests.dpr`/.dproj（工单 §〇-4：注册收口归主控）。
+待注册清单在 B2 收尾回执里统一上报；在此之前，`DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas`
+的解析面只有本探针覆盖，CI 里没有第二条覆盖路径。
+
+## 5. 负向样本（踩过才写的用例，可复现）
+
+### 5.1 测试单元少 `System.Classes` ⇒ TThread 全家不可用
+
+`TResolveWorker = class(TThread)` 只 uses `System.SysUtils, System.SyncObjs, System.JSON` 时的真实红：
+
+```
+================================================================
+单元: .tmp/b2/b11/neg/Test.DeepBase.DeepFlow.ContextResolve.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(24) Error: E2003 Undeclared identifier: 'TThread'
+.tmp\b2\b11\neg\.tmp/b2/b11/neg/Test.DeepBase.DeepFlow.ContextResolve.pas(34) Error: E2137 Method 'Execute' not found in base class
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(93) Error: E2034 Too many actual parameters
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(260) Error: E2003 Undeclared identifier: 'Start'
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(265) Error: E2003 Undeclared identifier: 'Terminate'
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(266) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(293) Error: E2003 Undeclared identifier: 'Start'
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(307) Error: E2003 Undeclared identifier: 'Terminate'
+.tmp\b2\b11\neg\Test.DeepBase.DeepFlow.ContextResolve.pas(308) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+```
+
+要点：`E2034 Too many actual parameters`（:93 `inherited Create(True)`）和
+`E2137 Method 'Execute' not found in base class` 都是 `TThread` 未解析成祖先类的连带结果，
+不是三处独立错误——看到这一组即先查 `System.Classes`。

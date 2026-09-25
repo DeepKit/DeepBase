@@ -1,0 +1,46 @@
+# B2-11 交付树四门复跑（基准 HEAD: 5d5aa18）
+
+- 复跑位置：仓根（四门以仓根为 cwd 取 `git ls-files` 口径）
+- 时序：本笔 payload 的前 7 件（SUT + 新测试单元 + 判别探针脚本 + 4 件 B2-11 证据）已入 index 后跑四门；
+  本文件在四门跑完后落盘并同笔提交 ⇒ 证据件数比门禁读数多 1（717 → 718）。
+
+## 四门原始判定
+
+```
+### node 09_工程脚本/encoding-gate/check_pas_encoding.js
+编码门禁通过：1000 个 .pas + 709 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+### node 09_工程脚本/eol-gate/check_eol.js
+行尾门禁通过：检查了 1553 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+
+### node 09_工程脚本/mojibake-gate/check_mojibake.js
+丙类损坏门禁通过：扫描 998 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+
+### node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:13: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1384 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1384 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:17: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤? L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md L1 .pas 婧愮爜闈為鏈熺函 LF → 门禁输出（预期包�?L1, L2, L3 违规�? 行尾门禁失败，违�?3 �? L2 .md 文档非预期包�?CRLF (要求 LF): docs/Bad_CRLF.md L1 .pas 源码非预期纯 LF (要求 CRLF): src/（替换符 6/44）
+证据编码门禁通过：扫描 717 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+```
+
+## 计数对照（B2-10 交付时 → 本笔）
+
+| 门 | B2-10 | B2-11 | 差 | 归因 |
+| --- | --- | --- | --- | --- |
+| .pas（编码门，走工作树） | 999 | 1000 | +1 | 新增 `Tests/Test.DeepBase.DeepFlow.ContextResolve.pas` |
+| eol 文件数 | 1552 | 1553 | +1 | 同上（其余 payload 为 .txt/.sh，不入 .pas 计数） |
+| .pas（丙类门，走 index） | 997 | 998 | +1 | 同上；本笔未新增/删除其他 .pas |
+| CodeReview 证据件 | 712 | 717 | +5 | 4 件 B2-11 证据 .txt + `b2_nonreentrant_probe.sh`（本件为第 6 件，落盘在门禁之后） |
+
+## 字节事实（落笔前探针复核）
+
+- `DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas`：`BOM=True CRLF=794 LF-only=0`
+  （Edit 工具会把 .pas 写成纯 LF，改完必须过 `.tmp/b2/normalize_bom_crlf.py` 再入门禁；
+  git diff 因 text 归一化看不到这段行尾抖动，属已知陷阱）
+- `Tests/Test.DeepBase.DeepFlow.ContextResolve.pas`：`BOM=True CRLF=327 LF-only=0`
+- 4 件证据 .txt 与 1 件探针 .sh：无 BOM、纯 LF（与该目录既有件同口径）
+- 修前后 SUT sha256：修复前（HEAD 版）`30bfde31fa3698a41711037c0511b506a3fc10fa95ed597e0b8d7781c3063a34`；
+  修复后工作树版 `04ab01ee1cdbf2d2d588de724d6eee7319128d3c4b1026e66e98990896549466`

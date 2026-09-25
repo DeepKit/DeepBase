@@ -79,11 +79,16 @@ type
     FVariables: TObjectDictionary<string, TVariableValue>;
     FScopeStack: TStack<TDictionary<string, TVariableValue>>;
     FVarRefPattern: TRegEx;
-    /// <summary>DATA2-035: 保护 FVariables 与 FScopeStack 的并发访问</summary>
+    /// <summary>DATA2-035: 保护 FVariables 与 FScopeStack 的并发访问。
+    /// <para>不变量：锁只在公开入口处取一次，公开件内部一律改调 <c>*NoLock</c> 件。
+    /// TCriticalSection 在 Windows 上恰好允许同线程重入，那是平台副作用而不是本类契约——
+    /// 依赖它等于把正确性押在锁原语上，锁一换成非重入实现（或跨平台语义变化）即成真死锁。</para></summary>
     FLock: TCriticalSection;
     
     function GetScopedKey(const AName: string; AScope: TVariableScope): string;
     function FindVariable(const AName: string): TVariableValue;
+    function ResolveStringNoLock(const ATemplate: string): string;
+    function ResolveJSONNoLock(const ATemplate: TJSONObject): TJSONObject;
   public
     constructor Create(const AWorkflowId, AInstanceId: string);
     destructor Destroy; override;
@@ -514,60 +519,66 @@ begin
 end;
 
 function TWorkflowContext.ResolveString(const ATemplate: string): string;
-var
-  Matches: TMatchCollection;
-  Match: TMatch;
-  VarName, VarValue: string;
 begin
   FLock.Enter;
   try
-    Result := ATemplate;
-
-    Matches := FVarRefPattern.Matches(ATemplate);
-    for Match in Matches do
-    begin
-      VarName := Match.Groups[1].Value;
-
-      var Variable := FindVariable(VarName);
-      if Variable <> nil then
-        VarValue := Variable.AsString
-      else
-        VarValue := '';
-
-      Result := StringReplace(Result, Match.Value, VarValue, [rfReplaceAll]);
-    end;
+    Result := ResolveStringNoLock(ATemplate);
   finally
     FLock.Leave;
   end;
 end;
 
-function TWorkflowContext.ResolveJSON(const ATemplate: TJSONObject): TJSONObject;
+function TWorkflowContext.ResolveStringNoLock(const ATemplate: string): string;
 var
-  Pair: TJSONPair;
-  ResolvedValue: string;
+  Matches: TMatchCollection;
+  Match: TMatch;
+  VarName, VarValue: string;
+begin
+  Result := ATemplate;
+
+  Matches := FVarRefPattern.Matches(ATemplate);
+  for Match in Matches do
+  begin
+    VarName := Match.Groups[1].Value;
+
+    var Variable := FindVariable(VarName);
+    if Variable <> nil then
+      VarValue := Variable.AsString
+    else
+      VarValue := '';
+
+    Result := StringReplace(Result, Match.Value, VarValue, [rfReplaceAll]);
+  end;
+end;
+
+function TWorkflowContext.ResolveJSON(const ATemplate: TJSONObject): TJSONObject;
 begin
   FLock.Enter;
   try
-    Result := TJSONObject.Create;
-
-    for Pair in ATemplate do
-    begin
-      if Pair.JsonValue is TJSONString then
-      begin
-        ResolvedValue := ResolveString(TJSONString(Pair.JsonValue).Value);
-        Result.AddPair(Pair.JsonString.Value, ResolvedValue);
-      end
-      else if Pair.JsonValue is TJSONObject then
-      begin
-        Result.AddPair(Pair.JsonString.Value, ResolveJSON(TJSONObject(Pair.JsonValue)));
-      end
-      else
-      begin
-        Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue);
-      end;
-    end;
+    Result := ResolveJSONNoLock(ATemplate);
   finally
     FLock.Leave;
+  end;
+end;
+
+function TWorkflowContext.ResolveJSONNoLock(const ATemplate: TJSONObject): TJSONObject;
+var
+  Pair: TJSONPair;
+begin
+  // B2-11：递归与横向调用都在同一把已持有的锁内走 *NoLock 件；
+  // 旧实现这里持锁调 ResolveString / 持锁自递归 ResolveJSON，正确性全靠
+  // Windows CRITICAL_SECTION 恰好可重入才没死锁。
+  Result := TJSONObject.Create;
+
+  for Pair in ATemplate do
+  begin
+    if Pair.JsonValue is TJSONString then
+      Result.AddPair(Pair.JsonString.Value,
+        ResolveStringNoLock(TJSONString(Pair.JsonValue).Value))
+    else if Pair.JsonValue is TJSONObject then
+      Result.AddPair(Pair.JsonString.Value, ResolveJSONNoLock(TJSONObject(Pair.JsonValue)))
+    else
+      Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue);
   end;
 end;
 

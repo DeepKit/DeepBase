@@ -1,0 +1,304 @@
+# B2-11 反事实与判别探针
+
+三条判据要区分两件事，本文件把它们分开取证：
+（甲）用例是否真咬人——解析行为一旦退化必须红；
+（乙）本次修复是否真有效——重入依赖一旦回来必须能被判别。
+在 Windows 真件临界区下（乙）无法由用例判别（§1），所以补一个不可重入替身探针（§2、§3）承担判别。
+
+## 1. 判别边界（P1：修前件 + 真件临界区 ⇒ 用例照样全绿）
+
+把 `DeepFlow.Workflow.Context.pas` 临时还原成 `5d5aa18` 版本（工单点名的重入形态），跑本次新用例：
+
+```
+== P1 前置：把工作树 SUT 换成 HEAD(5d5aa18) 版本 ==
+-- diff <(git show HEAD:S) S --
+EMPTY_DIFF：工作树 SUT 与 HEAD 版逐字节一致（即修复前形态）
+-- wc -l --
+783
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.ContextResolve） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25455 lines, 1.31 seconds, 2796208 bytes code, 383720 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.ContextResolve） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+```
+
+读法：8/8 全绿。`TCriticalSection` 在 Windows 包的是 `CRITICAL_SECTION`，同线程二次 `Enter` 放行，
+所以「持锁再调持锁件」的旧形在本平台不产生死锁。⇒ 工单判定（有界返回 / 高并发无死锁）在
+Windows 上判不出这次修复；这是判据的判别边界，登记为对主控的前提修正（见 `B2-11-修前-代码事实与零覆盖.txt` §3）。
+测完已按 sha256 还原：`04ab01ee1cdbf2d2d588de724d6eee7319128d3c4b1026e66e98990896549466`。
+
+## 2. 判别探针（P2/P3：换锁原语，替身与真件同 API，仅"不可重入"一处不同）
+
+`b2_nonreentrant_probe.sh`（本目录，已入库）在 `.tmp` 里造一个与
+`System.SyncObjs.TCriticalSection` 同名的替身件 `B2NoReentrantLock`（内部是 `TSemaphore(1,1)`，
+`Enter`=`Acquire`/`Leave`=`Release`，同线程二次 Enter 即阻塞），把它插进 SUT 副本的 uses 子句
+（Delphi 里后列单元的名字胜出，故完成遮蔽），其余搜索面/runner 模板与 `b2_run_fixture.sh` 同口径。
+SUT 来源由参数决定：`HEAD`=修复前，`WORKTREE`=修复后。替身件只在 `.tmp` 生成，不入库。
+
+| 编号 | SUT 来源 | 锁 | 跑的测试 | 结果 | 读法 |
+| --- | --- | --- | --- | --- | --- |
+| P2-0 对照 | HEAD | 替身（不可重入） | `Test_ResolveString_SingleVariable`（主线程，单层，无嵌套） | 1/1 PASSED，RUN_EXIT=0 | 证明替身探针本身没坏：同一 build 下非嵌套路径正常跑完 |
+| P2-1 复现 | HEAD | 替身 | `Test_ResolveJSON_ResolvesEveryNestedLevel`（主线程，三层嵌套） | RUN_EXIT=124（90s 墙钟杀掉） | 旧形 + 不可重入原语 = 真死锁，缺陷如实复现 |
+| P2-2 复现 | HEAD | 替身 | `Test_ResolveJSON_NestedReturnsBounded`（工作线程 + 5s 有界断言） | RUN_EXIT=124 | 见 §5 第二条：硬死锁下有界用例也拿不到可读红 |
+| P3 有效性 | WORKTREE | 替身 | 全部 8 条 | 8/8 PASSED，RUN_EXIT=0 | 修复后同一把不可重入锁下全绿 ⇒ 解析路径不再依赖重入 |
+
+P2-0 原始输出：
+
+```
+22:  System.RegularExpressions, System.Variants, System.SyncObjs, B2NoReentrantLock,
+== SUT 来源: HEAD   测试单元: Test.DeepBase.DeepFlow.ContextResolve ==
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25484 lines, 1.39 seconds, 2798404 bytes code, 384024 bytes data.
+BUILD_EXIT=0
+== 真跑（外部墙钟 90s；用例自身还有 5s/20s 有界断言兜在里层） ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..
+
+Tests Found   : 1
+Tests Ignored : 0
+Tests Passed  : 1
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=1 pass=1 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0 (124 = 被外部墙钟杀掉 = 真死锁)
+```
+
+P2-1 原始输出：
+
+```
+22:  System.RegularExpressions, System.Variants, System.SyncObjs, B2NoReentrantLock,
+== SUT 来源: HEAD   测试单元: Test.DeepBase.DeepFlow.ContextResolve ==
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25484 lines, 1.38 seconds, 2798404 bytes code, 384024 bytes data.
+BUILD_EXIT=0
+== 真跑（外部墙钟 90s；用例自身还有 5s/20s 有界断言兜在里层） ==
+RUN_EXIT=124 (124 = 被外部墙钟杀掉 = 真死锁)
+```
+
+P2-2 原始输出：
+
+```
+22:  System.RegularExpressions, System.Variants, System.SyncObjs, B2NoReentrantLock,
+== SUT 来源: HEAD   测试单元: Test.DeepBase.DeepFlow.ContextResolve ==
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25484 lines, 1.33 seconds, 2798404 bytes code, 384024 bytes data.
+BUILD_EXIT=0
+== 真跑（外部墙钟 90s；用例自身还有 5s/20s 有界断言兜在里层） ==
+RUN_EXIT=124 (124 = 被外部墙钟杀掉 = 真死锁)
+```
+
+P3 原始输出：
+
+```
+22:  System.RegularExpressions, System.Variants, System.SyncObjs, B2NoReentrantLock,
+== SUT 来源: WORKTREE   测试单元: Test.DeepBase.DeepFlow.ContextResolve ==
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+25495 lines, 1.34 seconds, 2798436 bytes code, 384064 bytes data.
+BUILD_EXIT=0
+== 真跑（外部墙钟 90s；用例自身还有 5s/20s 有界断言兜在里层） ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0 (124 = 被外部墙钟杀掉 = 真死锁)
+```
+
+## 3. 变异反事实（M1–M3：修后件，行为退化必须红）
+
+工具 `b2_counterfactual.sh`：只动工作树副本，trap 还原，还原后再显式复跑确认回绿。
+判据是"变红且红点集合与变异面吻合"，M1–M3 各自的还原复跑都是 8/8 绿。
+
+| 编号 | 变异（一行 perl，作用在修后件） | 红/绿 | 变红的用例 |
+| --- | --- | --- | --- |
+| M1 | 横向件不再解析：`ResolveStringNoLock(TJSONString(...).Value)` → `TJSONString(...).Value` | 4 红 / 4 绿 | `Test_ResolveJSON_ResolvesEveryNestedLevel`、`Test_ResolveJSON_DoesNotMutateTemplate`、`Test_ResolveJSON_NestedReturnsBounded`、`Test_ResolveJSON_HighConcurrency_NoDeadlock` |
+| M2 | 子对象不再下钻：`ResolveJSONNoLock(TJSONObject(Pair.JsonValue))` → `Pair.JsonValue.Clone as TJSONValue` | 3 红 / 5 绿 | `Test_ResolveJSON_ResolvesEveryNestedLevel`、`Test_ResolveJSON_NestedReturnsBounded`、`Test_ResolveJSON_HighConcurrency_NoDeadlock` |
+| M3 | 变量查找恒空：`var Variable := FindVariable(VarName);` → `var Variable := TVariableValue(nil);` | 6 红 / 2 绿 | 除 `Test_ResolveString_UnknownVariableYieldsEmpty`、`Test_ResolveJSON_LeavesNonStringValuesUntouched` 外全红 |
+
+M1 原始段（含注入 diff 与还原复跑）：
+
+```
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/ResolveStringNoLock\(TJSONString\(Pair\.JsonValue\)\.Value\)/TJSONString(Pair.JsonValue).Value/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -574,7 +574,7 @@
+   begin
+     if Pair.JsonValue is TJSONString then
+       Result.AddPair(Pair.JsonString.Value,
+-        ResolveStringNoLock(TJSONString(Pair.JsonValue).Value))
++        TJSONString(Pair.JsonValue).Value)
+     else if Pair.JsonValue is TJSONObject then
+       Result.AddPair(Pair.JsonString.Value, ResolveJSONNoLock(TJSONObject(Pair.JsonValue)))
+     else
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Failed  : 4
+Tests Errored : 0
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_ResolvesEveryNestedLevel
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_DoesNotMutateTemplate
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_NestedReturnsBounded
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_HighConcurrency_NoDeadlock
+RUNNER_STATS fixtureCount=1 testCount=8 pass=4 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas ==
+```
+
+M2 原始段：
+
+```
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/ResolveJSONNoLock\(TJSONObject\(Pair\.JsonValue\)\)/Pair.JsonValue.Clone as TJSONValue/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -576,7 +576,7 @@
+       Result.AddPair(Pair.JsonString.Value,
+         ResolveStringNoLock(TJSONString(Pair.JsonValue).Value))
+     else if Pair.JsonValue is TJSONObject then
+-      Result.AddPair(Pair.JsonString.Value, ResolveJSONNoLock(TJSONObject(Pair.JsonValue)))
++      Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue)
+     else
+       Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue);
+   end;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 3
+Tests Errored : 0
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_ResolvesEveryNestedLevel
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_NestedReturnsBounded
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_HighConcurrency_NoDeadlock
+RUNNER_STATS fixtureCount=1 testCount=8 pass=5 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas ==
+```
+
+M3 原始段：
+
+```
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/var Variable := FindVariable\(VarName\);/var Variable := TVariableValue(nil);/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -541,7 +541,7 @@
+   begin
+     VarName := Match.Groups[1].Value;
+ 
+-    var Variable := FindVariable(VarName);
++    var Variable := TVariableValue(nil);
+     if Variable <> nil then
+       VarValue := Variable.AsString
+     else
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Failed  : 6
+Tests Errored : 0
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveString_SingleVariable
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveString_TypedVariableUsesAsString
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_ResolvesEveryNestedLevel
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_DoesNotMutateTemplate
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_NestedReturnsBounded
+  Test.DeepBase.DeepFlow.ContextResolve.TTestDeepFlowContextResolve.Test_ResolveJSON_HighConcurrency_NoDeadlock
+RUNNER_STATS fixtureCount=1 testCount=8 pass=2 failure=6 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas ==
+```
+
+红点集合与变异面吻合：M1/M2 只打掉 `ResolveJSON` 链路（`ResolveString` 直调用例不受影响），
+M3 打掉所有需要解析出值的用例，两条"应当为空/应当原样克隆"的用例保持绿——
+说明用例不是靠整体崩红，而是各自盯住自己的面；`Test_ResolveJSON_LeavesNonStringValuesUntouched`
+在 M3 下保持绿，正是它固化克隆分支的意义。
+
+## 4. 用例真咬人的完整证据链
+
+M1 让并发用例红、M2 让并发用例红、M3 让并发用例红，且并发用例的红是 `Mismatched`/`Completed`
+计数与期望不符或 `FinishedWithin` 超时（不是进程整体崩），所以它有判别力；
+有界用例同理，三条变异里都变红。
+
+## 5. 诚实登记（探针的三条局限）
+
+1. （乙）类判别在本平台只能靠换锁原语，用例本身判不了「重入还原」。若有人把
+   `ResolveStringNoLock` 改回 `ResolveString`，Windows 上 CI 仍然全绿——替身探针不在 CI 里，
+   这条依赖 `FLock` doc 注释（:81-85）的声明与评审兜住，登记给主控。
+2. P2-2：硬死锁时工作线程永远占着替身信号量，进程退出前 DUnitX 无法把结果写完，
+   所以拿到的是 RUN_EXIT=124 而不是「超时断言红」。有界断言在修复后形态是恒绿的守卫，
+   在旧形下的实际信号由 P2-1（主线程 124）承担。不伪造可读红。
+3. 替身件与真件只在"可重入"一处不同，其余语义（如 SpinCount、异常安全）不等同；
+   它只用于证明重入依赖的存在与消除，不用于任何性能或行为结论。

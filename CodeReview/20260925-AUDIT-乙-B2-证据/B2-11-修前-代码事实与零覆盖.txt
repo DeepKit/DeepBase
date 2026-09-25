@@ -1,0 +1,102 @@
+# B2-11 修前代码事实与调用图核对（基准 HEAD: 5d5aa18，件为 DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas）
+
+工单原文：「`ResolveJSON` 持 `FLock` 调 `ResolveString`，后者内部再次 `Enter` 同一**非递归**临界区 ⇒ 自死锁
+（`FLock.Enter` 出现于 :303/:365/:398/:418 等多处，须逐一核对重入路径）」；
+期望原文：「锁改递归语义，或被调用函数不重复加锁——按调用图选一种，全路径核对后写进提交说明」；
+判定原文：「嵌套解析用例有界返回（加超时断言）；高并发解析用例无死锁」。
+
+## 0. 基线指纹
+
+- 基准 commit：`5d5aa18`（B2-10 落笔笔）
+- 修前件：784 行，`git show 5d5aa18:DeepFlow/Source/Workflow/DeepFlow.Workflow.Context.pas | sha256sum`
+  = `30bfde31fa3698a41711037c0511b506a3fc10fa95ed597e0b8d7781c3063a34`
+- 工单点名行号 `:549-562` 核对：属实（:549 `FLock.Enter`，:557 调 `ResolveString`，:562 自递归）
+
+## 1. 重入边的准确位置（修前 :544-570 原文）
+
+```pascal
+function TWorkflowContext.ResolveJSON(const ATemplate: TJSONObject): TJSONObject;
+var
+  Pair: TJSONPair;
+  ResolvedValue: string;
+begin
+  FLock.Enter;                       { :549 取锁 }
+  try
+    Result := TJSONObject.Create;
+
+    for Pair in ATemplate do
+    begin
+      if Pair.JsonValue is TJSONString then
+      begin
+        ResolvedValue := ResolveString(TJSONString(Pair.JsonValue).Value);   { :557 横向重入 }
+        Result.AddPair(Pair.JsonString.Value, ResolvedValue);
+      end
+      else if Pair.JsonValue is TJSONObject then
+      begin
+        Result.AddPair(Pair.JsonString.Value, ResolveJSON(TJSONObject(Pair.JsonValue)));  { :562 自递归重入 }
+      end
+      else
+      begin
+        Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue);
+      end;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+```
+
+`ResolveString`（修前 :516）自身也 `FLock.Enter`（:522），`ResolveJSON` 也在自身体内调自己——
+两条边都落在同一把 `FLock` 上，与工单表述一致。
+
+## 2. 全站点核对（工单要求「逐一核对重入路径」）
+
+修前共 15 个 `FLock.Enter` 站点。逐个列出持锁期间跨出的调用，以及该被调件是否再加同一把锁：
+
+| 站点 | 方法 | 锁内跨出 | 是否重入 |
+| --- | --- | --- | --- |
+| :303 | Destroy | FScopeStack.Pop/Free、FVariables.Free | 否 |
+| :365 | SetVariable | GetScopedKey、TVariableValue.Create/SetString..SetBoolean | 否（均为无锁件） |
+| :398 | SetVariableJSON | GetScopedKey、TVariableValue.SetJSON | 否 |
+| :418 | GetVariable | FindVariable(:332) | 否 |
+| :430 | GetVariableValue | FindVariable | 否 |
+| :446 | GetVariableJSON | FindVariable | 否 |
+| :460 | HasVariable | FindVariable | 否 |
+| :472 | DeleteVariable | GetScopedKey、FVariables.ContainsKey/Remove | 否 |
+| :491 | PushScope | FScopeStack.Push | 否 |
+| :501 | PopScope | FScopeStack.Pop、Scope.Keys/Remove、Scope.Free | 否 |
+| :522 | ResolveString | FindVariable、TRegEx.Matches、StringReplace | 否 |
+| :549 | ResolveJSON | **ResolveString(:516→:522 加锁)**、**ResolveJSON 自递归** | **是（两条）** |
+| :624 | ToJSON | TVariableValue.ToJSON | 否 |
+| :647 | FromJSON | TVariableValue.FromJSON | 否 |
+| :691 | GetAllVariables | TVariableValue.ToJSON | 否 |
+
+反向核对（不持锁但会调加锁件，因此不构成重入）：
+`EvaluateCondition`（修前 :574）与 `TExpressionEvaluator.EvaluateSimpleExpression`（:768）都调
+`GetVariableValue`（加锁），但它们自身全程不持 `FLock`——单向调用，合法。
+
+结论：重入路径全库唯一，就是 `ResolveJSON` 的 :557（横向）与 :562（自递归）两条边。
+
+## 3. 前提实测修正（须报主控）
+
+工单把现象写成「同一**非递归**临界区 ⇒ 自死锁」。实测：本件的 `FLock` 是
+`System.SyncObjs.TCriticalSection`，Windows 下包的是 `CRITICAL_SECTION`，**同线程重入 Enter 直接放行**
+（计数递增），因此修前形态在本平台不会自死锁——见 `B2-11-反事实与判别探针.txt` §1（P1：修前件 + 真件
+临界区 + 本次新用例 8/8 全绿）。
+
+真实缺陷是结构性的：正确性隐式依赖「锁原语恰好可重入」这一平台副作用。锁一换实现
+（非重入原语、跨平台语义变化）或被调件被他人改成不加锁版本，两条边立刻变成死锁——
+实测复现见同文件 §2（P2：修前件 + 不可重入替身 ⇒ 嵌套解析硬挂，RUN_EXIT=124）。
+
+据此选定期望里的第二种路线（被调件不重复加锁），而不是「锁改递归语义」：
+后者等于把平台副作用升格成契约，正是本次要消除的依赖。
+
+## 4. 零覆盖与影响面（须报主控）
+
+- 修复前全库无任何测试单元引用本件：
+  `grep -rn "DeepFlow.Workflow.Context" --include=*.pas .` 只命中件自身；`TWorkflowContext` 标识符
+  在 `Tests/` 下 0 命中。
+- 更深一层：`TWorkflowContext` 在本仓**没有任何生产调用方**——
+  `grep -rn "TWorkflowContext|Workflow\.Context" --include=*.pas --include=*.dpr .`（排除件自身与本次新测试）
+  0 命中；该件只作为 `Tests/DeepBaseTests.dpr:319` 的编译面存在。
+  ⇒ 本条 Critical 是潜在结构缺陷，不是线上活缺陷；修复照做，严重度与优先级请主控按事实重定级。
