@@ -6,7 +6,7 @@
 //     ⇒ BLOCK（新轨冻结隔离，H10）。
 //  O3 C1 同名类消解校验：Core\DeepBase.Plugins.Manager.pas 不得再声明 TDeepBasePluginManager ⇒ 出现即 FAIL。
 //  O4 生产单元（新轨 6 单元自身除外）的源码引用 DeepBase.Plugins.{6单元} ⇒ BLOCK（uses 级封锁）。
-// 用法: node check_build_ownership.js [--root <dir>] [--baseline <file>] [--emit-baseline]
+// 用法: node check_build_ownership.js [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root]
 // 退出码：0 通过；1 违规；2 基线不可信（gate-baseline.js）；3 参数不合法或扫描本身失败
 //   （3 的三种触发都是 fail-closed：读目录/读文件失败、构建文件面 0、生产单元面 0。
 //    「扫不到」绝不能报绿，见 WO-20260921-AUDIT-乙-P1 §〇 与 WO-20260924-AUDIT-乙-D7 §一-2）
@@ -15,6 +15,7 @@ const path = require('path');
 const { parseGateArgs } = require('../gate-args');
 const { gateSkipSet } = require('../gate-skip');
 const { loadGateBaseline } = require('../gate-baseline');
+const { guardedEmitBaseline } = require('../gate-emit-guard');
 
 // 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260924-AUDIT-乙-D7 §一-3）。
 // 此前的私有 arg() 用大小写敏感的 indexOf 取值且无未知参数校验：--ROOT / --rot 会被静默忽略，
@@ -25,16 +26,18 @@ const { loadGateBaseline } = require('../gate-baseline');
     label: '构建归属',
     root: path.join(__dirname, '../..'),
     baseline: path.join(__dirname, 'build_ownership_baseline.json'),
-    extra: ['emit-baseline'],
+    extra: ['emit-baseline', 'allow-narrow-root'],
   });
   if (opts.flags.has('help')) {
-    console.log('用法: node check_build_ownership.js [--root <dir>] [--baseline <file>] [--emit-baseline]');
+    console.log('用法: node check_build_ownership.js [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root]');
     process.exit(0);
   }
   var ROOT = opts.root;
   var BASELINE_P = opts.baseline;
   var EMIT = opts.flags.has('emit-baseline');
+  var ALLOW_NARROW = opts.flags.has('allow-narrow-root');
 }
+const REPO_ROOT = path.resolve(path.join(__dirname, '../..'));
 const PROD_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tools', 'DeepFlow'];
 const SKIP = gateSkipSet();
 const NEWTRACK = ['DeepBase.Plugins.CAbi', 'DeepBase.Plugins.CAbiLoader', 'DeepBase.Plugins.Contracts', 'DeepBase.Plugins.Manager', 'DeepBase.Plugins.SafeGuard', 'DeepBase.Plugins.Verifier'];
@@ -127,7 +130,9 @@ for (const u of prodUnits) {
 
 // O1：孤儿须入基线
 // 本门的 --emit-baseline 要读旧基线以保留人工 disposition，故基线校验放在 EMIT 之前：
-// 不允许在坏基线上重刷（否则 47 条人工标注会退回『待标注』）。守写入动作仍是 B1。
+// 不允许在坏基线上重刷（否则 47 条人工标注会退回『待标注』）。
+// 写入动作收口在 ../gate-emit-guard.js：新孤儿（基线外新键）由守卫拒绝 EXIT≠0——
+// 处置标注只能人工带 reason 登记，自动路径不得把「待标注」当默认值写进冻结基线。
 const baseline = loadGateBaseline({
   file: BASELINE_P, label: '构建归属',
   keys: { orphans: 'object' },
@@ -136,7 +141,11 @@ if (EMIT) {
   const emit = { generatedFrom: 'check_build_ownership.js', orphans: {} };
   for (const o of orphans) emit.orphans[o.path] = baseline.orphans[o.path] && baseline.orphans[o.path].disposition
     ? baseline.orphans[o.path] : { disposition: '待标注', reason: 'TODO' };
-  fs.writeFileSync(BASELINE_P, JSON.stringify(emit, null, 1));
+  guardedEmitBaseline({
+    label: '构建归属', baselinePath: BASELINE_P, root: ROOT, repoRoot: REPO_ROOT,
+    allowNarrowRoot: ALLOW_NARROW, scanCount: prodUnits.length,
+    entryKeys: ['orphans'], newBaseline: emit, space: 1, trailingNewline: false,
+  });
   console.log('baseline emitted: ' + orphans.length + ' orphans');
 } else {
   for (const o of orphans) {

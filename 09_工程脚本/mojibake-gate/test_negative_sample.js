@@ -160,7 +160,8 @@ if (!new RegExp('>\\s*存量\\s*' + stockCount + '[^\\n]*StockB\\.pas').test(ris
 fs.writeFileSync(path.join(tmp, 'StockB.pas'), Buffer.from(stockBefore, 'utf8'));
 
 // ── --emit-baseline 拒新增未登记件（判据 3「阻止新增条目被静默加入」）────────────
-const emit = capture(() => run(['--baseline', EMPTY_BASELINE, '--emit-baseline']));
+// 夹具仓 ≠ 仓库根，须显式 --allow-narrow-root 才会走到「新增键」比对（窄根自证是另一条判据，见共享测试 C1）。
+const emit = capture(() => run(['--baseline', EMPTY_BASELINE, '--emit-baseline', '--allow-narrow-root']));
 console.log('--emit-baseline（空基线）输出:\n' + (emit.out || '(全绿)'));
 if (emit.code === 0) bad('--emit-baseline 在存在未登记丙-B 件时不应 EXIT=0（那等于静默扩面）');
 if (!/拒绝新增|未登记/.test(emit.out)) bad('--emit-baseline 未声明拒绝新增未登记件');
@@ -191,7 +192,7 @@ if (!/拒绝新增|未登记/.test(emit.out)) bad('--emit-baseline 未声明拒�
     // 修前副本落在 tmp 内时 require('../mojibake-core') 等会 MODULE_NOT_FOUND，
     // 而 MODULE_NOT_FOUND 会让「未拦住」变成假通过 ⇒ 共享依赖一律改写为绝对路径。
     let portal = patched;
-    for (const m of ['gate-args', 'gate-skip', 'gate-baseline', 'mojibake-core']) {
+    for (const m of ['gate-args', 'gate-skip', 'gate-baseline', 'gate-emit-guard', 'mojibake-core']) {
       portal = portal.replace("require('../" + m + "')", 'require(' + JSON.stringify(path.resolve(HERE, '../' + m + '.js')) + ')');
     }
     fs.writeFileSync(before, portal);

@@ -17,6 +17,7 @@ const { spawnSync } = require('child_process');
 const { parseGateArgs } = require('../gate-args.js');
 const { gateSkipSet } = require('../gate-skip.js');
 const { loadGateBaseline } = require('../gate-baseline.js');
+const { guardedEmitBaseline } = require('../gate-emit-guard.js');
 
 const HERE = __dirname;
 const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -56,7 +57,7 @@ const EXIT_OK = 0, EXIT_BUILD_FAILED = 1, EXIT_SCAN_FAILED = 2, EXIT_BAD_ARGS = 
 
 function usage() {
   console.log([
-    '编译门禁 用法: node check_build.js (--all | --dpr <path>... | --dpk <path>... | --manifest <file>...) [--root <dir>] [--baseline <file>] [--emit-baseline] [--help]',
+    '编译门禁 用法: node check_build.js (--all | --dpr <path>... | --dpk <path>... | --manifest <file>...) [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root] [--help]',
     '',
     '  两种模式的适用场景、实测耗时与判定口径见 README-编译门禁.md（本目录）。',
     '',
@@ -66,6 +67,8 @@ function usage() {
     '  --baseline / --emit-baseline 编译噪声基线（段4）：--emit-baseline 从【当前判定面】写按码聚合的 Hint/Warning',
     '              基线（要求该面全绿，失败单元不计噪声、否则基线少计）。判定时仅当本轮判定面与基线记录面一致才比对，',
     '              只拦增长与新增码，不拦存量下降；跨面（如子集 vs 全量）计数不可比，仅观测不判定。',
+    '              写入侧同五道门走 gate-emit-guard.js：只减不增（新增码/抬升拒绝）、非仓库根扫描拒绝、写前 .bak；',
+    '              换判定面重生成基线属人工动作（先移除旧基线文件再 --emit-baseline），自动路径不得跨面改写。',
     '  三种范围声明互斥且必须给一种；本门禁 fail-closed，不提供「跳过并继续报绿」的任何形态。',
     '',
     'EXIT: 0=通过 1=编译失败或噪声增长 2=枚举/输入面不可信 3=参数不合法',
@@ -82,7 +85,7 @@ function main() {
     label: '编译',
     root: REPO_ROOT,
     baseline: NOISE_BASELINE,
-    extra: ['all', 'emit-baseline'],
+    extra: ['all', 'emit-baseline', 'allow-narrow-root'],
     valued: ['dpr', 'dpk', 'manifest'],
   });
   if (opts.flags.has('help')) { usage(); process.exit(EXIT_OK); }
@@ -165,7 +168,7 @@ function main() {
       reportFailures();
       process.exit(EXIT_BUILD_FAILED);
     }
-    emitNoiseBaseline(opts.baseline, root, declared, noise, noiseTotals);
+    emitNoiseBaseline(opts.baseline, root, declared, noise, noiseTotals, { allowNarrowRoot: opts.flags.has('allow-narrow-root'), scanCount: judgedTotal });
     console.log(`编译噪声基线已写入：${opts.baseline}（判定面=${judgedTotal} 来源=${declared.source} 按码=${formatNoise(noise)}）`);
     process.exit(EXIT_OK);
   }
@@ -221,7 +224,7 @@ function gitHead(root) {
   return r.status === 0 ? r.stdout.trim() : 'unknown';
 }
 
-function emitNoiseBaseline(file, root, declared, noise, totals) {
+function emitNoiseBaseline(file, root, declared, noise, totals, emitOpts) {
   const doc = {
     generated: new Date().toISOString(),
     generatedFrom: `git HEAD ${gitHead(root)} 清单来源=${declared.source} 已跟踪=${declared.trackedTotal}`,
@@ -230,7 +233,22 @@ function emitNoiseBaseline(file, root, declared, noise, totals) {
     noise: Object.fromEntries([...noise.entries()].filter(([, n]) => n > 0).sort()),
     totals,
   };
-  fs.writeFileSync(file, JSON.stringify(doc, null, 2) + '\n', 'utf8');
+  // 跨面 = 与旧基线的条目根本不可比，而且一旦写入会让后续同面判定静默变成「跨面跳过」
+  // （compareNoise 见面不一致即不比对 ⇒ 门禁无声失效）。换面重生成是人工动作，不由 emit 自动完成。
+  let incomparable = null;
+  if (fs.existsSync(file)) {
+    try {
+      const old = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (old && old.surface && old.surface !== doc.surface) {
+        incomparable = `判定面不一致：旧基线记录面「${old.surface}」≠ 本轮判定面「${doc.surface}」，跨面计数不可比；自动路径不得跨面改写基线（确要换面重生成：先人工移除旧基线文件，再 --emit-baseline）`;
+      }
+    } catch (e) { /* 旧基线不可解析交由守卫按 T2 语义拒绝（EXIT=2），此处不吞不判 */ }
+  }
+  guardedEmitBaseline({
+    label: '编译噪声', baselinePath: file, root, repoRoot: REPO_ROOT,
+    allowNarrowRoot: emitOpts.allowNarrowRoot, scanCount: emitOpts.scanCount,
+    entryKeys: ['noise'], newBaseline: doc, incomparableReason: incomparable,
+  });
 }
 
 // 只拦「增长」与「新增码」：current[code] > baseline.noise[code]（缺省 0）即红。存量下降/归零是正当目标，一律放行。

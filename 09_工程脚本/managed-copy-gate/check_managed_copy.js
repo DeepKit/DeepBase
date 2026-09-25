@@ -9,20 +9,35 @@
 //     调用次数；新文件出现调用或既有文件计数上升即违规，需评审后显式更新基线。
 // 扫描根与排除集（H10 口径）：仓库根，SKIP 目录集与行尾门禁一致
 //     （.git/.tmp/.claude/BuildOutput/DCUOutput/bin/dcu/TestResults 等）。
-// 用法: node check_managed_copy.js [--root <dir>] [--baseline <file>] [--emit-baseline]
-// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）。
+// 用法: node check_managed_copy.js [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root]
+// 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）；
+//        3 参数不合法 / 扫描自身失败（root 不可读）——fail-closed，绝不放行。
 const fs = require('fs');
 const path = require('path');
+const { parseGateArgs } = require('../gate-args');
 const { gateSkipSet } = require('../gate-skip');
 const { loadGateBaseline } = require('../gate-baseline');
+const { guardedEmitBaseline } = require('../gate-emit-guard');
 
-function arg(name, dflt) {
-  const i = process.argv.indexOf('--' + name);
-  return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt;
+// 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（同 eol/build-ownership；此前的私有 arg()
+// 对未知参数静默忽略、也不支持 = 取值，是 P2/D7 已收口过的同型裂缝，本门当时漏在外面）。
+{
+  const opts = parseGateArgs(process.argv.slice(2), {
+    label: '托管拷贝',
+    root: path.join(__dirname, '../..'),
+    baseline: path.join(__dirname, 'managed_copy_baseline.json'),
+    extra: ['emit-baseline', 'allow-narrow-root'],
+  });
+  if (opts.flags.has('help')) {
+    console.log('用法: node check_managed_copy.js [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root]');
+    process.exit(0);
+  }
+  var ROOT = opts.root;
+  var BASELINE_P = opts.baseline;
+  var EMIT = opts.flags.has('emit-baseline');
+  var ALLOW_NARROW = opts.flags.has('allow-narrow-root');
 }
-const ROOT = path.resolve(arg('root', path.join(__dirname, '../..')));
-const BASELINE_P = arg('baseline', path.join(__dirname, 'managed_copy_baseline.json'));
-const EMIT = process.argv.includes('--emit-baseline');
+const REPO_ROOT = path.resolve(path.join(__dirname, '../..'));
 const SKIP = gateSkipSet();
 
 // 非限定 Move( 与 System.Move(；排除 TFile.Move 等文件方法（前随 '.'）
@@ -33,7 +48,12 @@ const MANAGED_SIZEOF = /SizeOf\s*\(\s*(string|String|TArray\s*<|TStringDynArray|
 
 function walk(dir, out) {
   let ents;
-  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return out; }
+  // fail-closed：readdir 失败不得静默返回空数组（「没扫到」不能伪装成「扫过且干净」），
+  // 否则写基线的扫描面会静默缩水——正是写入守卫要在源头兜住的形态。
+  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) {
+    console.error(`托管拷贝门禁无法读取目录: ${dir} (${e.message})`);
+    process.exit(3);
+  }
   for (const e of ents) {
     if (SKIP.has(e.name)) continue;
     const p = path.join(dir, e.name);
@@ -51,12 +71,23 @@ function countCalls(text, re) {
 }
 
 const files = walk(ROOT, []).sort();
+// 空扫描即失败：仓库内必有 .pas；扫到 0 个说明 root 指错或 SKIP 规则吃掉了源码树
+// （与其余四道门同口径；对 --emit-baseline 而言这同时是写入守卫一的扫描面自证）。
+if (files.length === 0) {
+  console.error(`托管拷贝门禁失败：扫描 0 个 .pas（root=${ROOT}）。根因通常是 --root 指错目录；已按 fail-closed 拒绝放行。`);
+  process.exit(3);
+}
 const findings = []; // { rel, line, rule, detail }
 const counts = {};   // rel -> { move, fillchar }
 
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
-  const text = fs.readFileSync(f, 'latin1'); // 只匹配 ASCII 序列，编码无关
+  let text;
+  // 读取失败归「扫描自身失败」（EXIT=3）而非「违规」（EXIT=1）：环境问题不得冒领分诊问题。
+  try { text = fs.readFileSync(f, 'latin1'); } catch (e) { // 只匹配 ASCII 序列，编码无关
+    console.error(`托管拷贝门禁无法读取文件: ${rel} (${e.message})`);
+    process.exit(3);
+  }
   const moveN = countCalls(text, MEM_MOVE);
   const fillN = countCalls(text, FILL_CHAR);
   if (moveN || fillN) counts[rel] = { move: moveN, fillchar: fillN };
@@ -76,13 +107,17 @@ if (EMIT) {
     _comment: 'DeepBase 裸内存拷贝存量基线 (WO-20260919-AUDIT-乙-R2 E7)，禁止新增文件或将计数上升；变更须评审后显式更新',
     files: counts
   };
-  fs.writeFileSync(BASELINE_P, JSON.stringify(out, null, 2) + '\n', 'utf8');
-  console.log('托管拷贝基线生成完成：' + Object.keys(counts).length + ' 个文件含 Move/FillChar -> ' + BASELINE_P);
+  const cmp = guardedEmitBaseline({
+    label: '托管拷贝', baselinePath: BASELINE_P, root: ROOT, repoRoot: REPO_ROOT,
+    allowNarrowRoot: ALLOW_NARROW, scanCount: files.length,
+    entryKeys: ['files'], newBaseline: out,
+  });
+  console.log('托管拷贝基线生成完成：' + Object.keys(counts).length + ' 个文件含 Move/FillChar -> ' + BASELINE_P + (cmp.skipped ? '（首建）' : `（只减不增：条目 -${cmp.removed} / 计数下调 ${cmp.decreased}）`));
   process.exit(0);
 }
 
-// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复基线的动作，
-// 不能因为基线已坏就把自己锁在门外（守写入侧是 B1，守读取侧是 gate-baseline.js）。
+// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复存量的动作；
+// 守写入动作是 gate-emit-guard.js（窄根自证 / 只减不增 / 写前 .bak），守读取侧是 gate-baseline.js。
 const baseline = loadGateBaseline({
   file: BASELINE_P, label: '托管拷贝',
   keys: { files: 'object' },

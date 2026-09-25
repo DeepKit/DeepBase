@@ -26,10 +26,11 @@
 //
 // ── 存量清单：只减不增（工单 §二「不得用基线把洞盖上」；沿用甲 D6 已证正确立场）────
 //   baseline.pbStock = { "<rel>": { count, reason } }。门只拦 count 超过登记值的新增；
-//   --emit-baseline 只能【缩短】已登记件，绝不自动新增文件条目（新增必须人工带 reason 写进清单并说明）。
+//   --emit-baseline 只能【缩短】已登记件，绝不自动新增文件条目（新增必须人工带 reason 写进清单并说明）——
+//   该判据的实现收口在 ../gate-emit-guard.js（五道门共用一份，含窄根自证与写前 .bak）。
 //
 // 用法: node check_mojibake.js [--root <dir>] [--baseline <file>] [--build-red-list <log>]
-//                              [--list-hits] [--emit-baseline]
+//                              [--list-hits] [--emit-baseline] [--allow-narrow-root]
 // 退出码：0 通过；1 丙-B 新增违规；2 基线不可信/枚举失败；3 扫描自身失败（root 不可读 / 扫到 0 个 .pas /
 //        单文件读取失败 / 参数解析失败）——fail-closed，绝不放行。
 'use strict';
@@ -39,17 +40,18 @@ const { execFileSync } = require('child_process');
 const { parseGateArgs } = require('../gate-args');
 const { gateSkipSet } = require('../gate-skip');
 const { loadGateBaseline } = require('../gate-baseline');
+const { guardedEmitBaseline } = require('../gate-emit-guard');
 const core = require('../mojibake-core');
 
 const OPTS = parseGateArgs(process.argv.slice(2), {
   label: '丙类损坏',
   root: path.join(__dirname, '../..'),
   baseline: path.join(__dirname, 'pb_baseline.json'),
-  extra: ['list-hits', 'emit-baseline'],
+  extra: ['list-hits', 'emit-baseline', 'allow-narrow-root'],
   valued: ['build-red-list'],
 });
 if (OPTS.flags.has('help')) {
-  console.log('用法: node check_mojibake.js [--root <dir>] [--baseline <file>] [--build-red-list <log>] [--list-hits] [--emit-baseline]');
+  console.log('用法: node check_mojibake.js [--root <dir>] [--baseline <file>] [--build-red-list <log>] [--list-hits] [--emit-baseline] [--allow-narrow-root]');
   process.exit(0);
 }
 const REPO = OPTS.root;
@@ -179,29 +181,24 @@ if (OPTS.flags.has('list-hits')) {
 }
 
 if (OPTS.flags.has('emit-baseline')) {
-  // 只减不增：已登记件按当前实测下调；当前仍命中但未登记的文件 ⇒ 拒绝自动写入（须人工加 reason）。
+  // 只减不增统一走 ../gate-emit-guard.js：新增键（未登记文件）与 count 抬升一律拒绝 EXIT≠0，
+  // 已登记件按当前实测下调；窄根自证与写前 .bak 同在守卫里（五道门一份判据）。
+  const before = Object.keys(baseline.pbStock || {}).length;
   const stock = { ...(baseline.pbStock || {}) };
-  const unregistered = [];
-  for (const [rel, n] of perFile) {
-    if (rel in stock) { stock[rel] = { ...stock[rel], count: Math.min(n, stock[rel].count) }; }
-    else unregistered.push(`${rel} (${n} 处)`);
-  }
-  if (unregistered.length) {
-    console.error('丙类损坏门禁：--emit-baseline 拒绝新增以下未登记文件（新增条目必须人工写进清单并给出 reason 说明，禁止静默扩面）:');
-    unregistered.forEach(u => console.error('  ' + u));
-    process.exit(1);
-  }
+  for (const [rel, n] of perFile) stock[rel] = { ...stock[rel], count: n };
   const out = {
     generated: new Date().toISOString(),
     generatedFrom: `全量扫描 ${files.length} 个 tracked .pas（丙-B 结构性吞 ASCII 存量，只减不增）`,
     _comment: 'DeepBase 丙-B 存量清单（WO-20260924-AUDIT-甲-D8）。每条目 count 为该文件跨行未闭合串的事件数，门只拦超过 count 的新增。reason 说明该存量为何存在、归属哪张还原单。新增条目须人工带 reason，不得由 emit 自动生成。',
     pbStock: stock,
   };
-  const before = Object.keys(baseline.pbStock || {}).length;
-  const after = Object.keys(stock).length;
-  if (after > before) { console.error(`丙类损坏门禁：emit 后条目数(${after}) > 原清单(${before})，违反「只减不增」，拒绝写入。`); process.exit(1); }
-  fs.writeFileSync(BASELINE_P, JSON.stringify(out, null, 2) + '\n', 'utf8');
-  console.log(`已写出存量清单：${BASELINE_P}（条目 ${before}→${after}，总 count 只减不增）`);
+  const cmp = guardedEmitBaseline({
+    label: '丙类损坏', baselinePath: BASELINE_P, root: REPO,
+    repoRoot: path.resolve(path.join(__dirname, '../..')),
+    allowNarrowRoot: OPTS.flags.has('allow-narrow-root'), scanCount: files.length,
+    entryKeys: ['pbStock'], newBaseline: out,
+  });
+  console.log(`已写出存量清单：${BASELINE_P}（条目 ${before}→${Object.keys(stock).length}，只减不增：新增 0 / 抬升 0，计数下调 ${cmp.decreased}）`);
   process.exit(0);
 }
 

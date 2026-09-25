@@ -4,7 +4,7 @@
 //  L2 LF 规则：*.md 必须使用 LF 行尾（\n），禁止包含 CR（\r）。历史存量由 baseline 豁免，禁止新增违规。
 //  L3 混用规则：*.pas 禁止在同一文件内混用单CR行尾（CRLF）与纯 LF；含多重CR的文件归 L4，不进 L3。
 //  L4 多重CR规则：*.pas 禁止出现 \r\r\n 及以上的多重 CR 行尾（Delphi 按每个 CR 计行号，行号全部错位）。历史存量由 baseline 豁免，禁止新增违规。
-// 用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline]
+// 用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root]
 // 退出码：0 通过；1 违规；2 基线不可信（WO-20260923-AUDIT-乙-D5 §一-3，见 gate-baseline.js）；
 //        3 扫描自身失败（root 不可读/扫到 0 个文件/参数解析失败）——fail-closed，绝不放行。
 const fs = require('fs');
@@ -12,6 +12,7 @@ const path = require('path');
 const { parseGateArgs } = require('../gate-args');
 const { gateSkipSet } = require('../gate-skip');
 const { loadGateBaseline } = require('../gate-baseline');
+const { guardedEmitBaseline } = require('../gate-emit-guard');
 
 // 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
 // 本门禁此前零参数校验（--ROOT / --rot 被静默忽略，回落默认根后照常报 EXIT=0），
@@ -21,16 +22,18 @@ const { loadGateBaseline } = require('../gate-baseline');
     label: '行尾',
     root: path.join(__dirname, '../..'),
     baseline: path.join(__dirname, 'eol_baseline.json'),
-    extra: ['emit-baseline'],
+    extra: ['emit-baseline', 'allow-narrow-root'],
   });
   if (opts.flags.has('help')) {
-    console.log('用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline]');
+    console.log('用法: node check_eol.js [--root <dir>] [--baseline <file>] [--emit-baseline] [--allow-narrow-root]');
     process.exit(0);
   }
   var ROOT = opts.root;
   var BASELINE_P = opts.baseline;
   var EMIT = opts.flags.has('emit-baseline');
+  var ALLOW_NARROW = opts.flags.has('allow-narrow-root');
 }
+const REPO_ROOT = path.resolve(path.join(__dirname, '../..'));
 const SKIP = gateSkipSet();
 // 记录被 SKIP 规则吃掉的顶层目录，让「扫描面缩了什么」可见（WO-20260921-AUDIT-乙-P1 §〇 第 3 条）。
 const skippedDirs = new Set();
@@ -61,8 +64,9 @@ if (files.length === 0) {
   console.error(`行尾门禁失败：扫描 0 个文件（root=${ROOT}）。根因通常是 --root 指错目录；已按 fail-closed 拒绝放行。`);
   process.exit(3);
 }
-// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复基线的动作，
-// 不能因为基线已坏就把自己锁在门外（守写入侧是 B1，守读取侧是 gate-baseline.js）。
+// 基线只在检查路径被读取，故放在 EMIT 之后：`--emit-baseline` 是修复存量的动作。
+// 守写入动作是 gate-emit-guard.js（窄根自证 / 只减不增 / 写前 .bak），守读取侧是 gate-baseline.js：
+// 旧基线已损坏时 emit 不重刷而是 EXIT=2 —— 基线是 git 跟踪件，恢复路径唯一且可核：git checkout -- <file>。
 // 四态豁免集必须齐备——缺键即说明这份 JSON 不是本门禁的基线（被顶替/被清空），EXIT=2。
 
 // 四态行尾计数：以每个 LF 前置连续 CR 个数 k 分类——k=0 纯LF，k=1 CRLF，k>=2 多重CR
@@ -103,8 +107,13 @@ if (EMIT) {
   newBaseline.pas_mixed_exceptions.sort();
   newBaseline.md_crlf_exceptions.sort();
   newBaseline.pas_multicr_exceptions.sort();
-  fs.writeFileSync(BASELINE_P, JSON.stringify(newBaseline, null, 2) + '\n', 'utf8');
-  console.log('行尾基线生成完成：' + newBaseline.pas_lf_exceptions.length + ' pas LF, ' + newBaseline.pas_mixed_exceptions.length + ' pas mixed, ' + newBaseline.md_crlf_exceptions.length + ' md CRLF, ' + newBaseline.pas_multicr_exceptions.length + ' pas multicr -> ' + BASELINE_P);
+  const cmp = guardedEmitBaseline({
+    label: '行尾', baselinePath: BASELINE_P, root: ROOT, repoRoot: REPO_ROOT,
+    allowNarrowRoot: ALLOW_NARROW, scanCount: files.length,
+    entryKeys: ['pas_lf_exceptions', 'pas_mixed_exceptions', 'md_crlf_exceptions', 'pas_multicr_exceptions'],
+    newBaseline,
+  });
+  console.log('行尾基线生成完成：' + newBaseline.pas_lf_exceptions.length + ' pas LF, ' + newBaseline.pas_mixed_exceptions.length + ' pas mixed, ' + newBaseline.md_crlf_exceptions.length + ' md CRLF, ' + newBaseline.pas_multicr_exceptions.length + ' pas multicr -> ' + BASELINE_P + (cmp.skipped ? '（首建）' : `（只减不增：条目 -${cmp.removed} / 计数下调 ${cmp.decreased}）`));
   process.exit(0);
 }
 

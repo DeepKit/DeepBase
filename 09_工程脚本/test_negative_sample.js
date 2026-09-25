@@ -1,12 +1,14 @@
-// 共享守卫负向样本测试（WO-20260923-AUDIT-乙-D5 §一-2 与 §一-3）
-// 覆盖两件事，都是「门禁自己的防线」，不属于任何单道门禁的样本：
+// 共享守卫负向样本测试（WO-20260923-AUDIT-乙-D5 §一-2 与 §一-3；C 段见 WO-20260925-AUDIT-总控 包二 B1 §1）
+// 覆盖三件事，都是「门禁自己的防线」，不属于任何单道门禁的样本：
 //  A. SKIP 目录名集单一实现（gate-skip.js）：
 //     A1 静态——五道门必须引用共享模块，且源码内不得再残留内联 SKIP 字面量（漂移的物理来源）；
 //     A2 行为——`TestResults/` 下的构建文件必须被构建归属门跳过：旧口径（该门 SKIP 集缺这一项）
 //        会让它把孤儿单元判成「已被引用」而放行，新口径必须报 O1。这是 §四-5 口径分裂的实测后果。
 //  B. 基线文件状态自检（gate-baseline.js）：五道门各喂一份 `{}`（被清空/被顶替的最小形态）⇒
 //     必须 EXIT=2 且报「基线不可信」；另测非法 JSON、顶层数组、基线缺失与跨门顶替四种损坏形态。
-//     本项只读校验文件状态，不触碰 --emit-baseline 写路径（守写入动作是 B1，两者互补不重复）。
+//     本项只读校验文件状态，不触碰 --emit-baseline 写路径（守写入动作是 C 段，两者互补不重复）。
+//  C. 基线写入守卫（gate-emit-guard.js）：窄根拒绝 / 新增键拒绝 / 计数抬升拒绝 / 合规缩短放行，
+//     各 ≥2 例，且拒绝时基线文件必须原样（EXIT≠0 且未落盘），放行时必须留下写前 .bak。
 // 用法: node test_negative_sample.js   （退出码 0=守卫按预期拦截）
 const fs = require('fs');
 const path = require('path');
@@ -21,6 +23,7 @@ const GATES = {
   evidence: path.join(HERE, 'evidence-encoding-gate/check_evidence_encoding.js'),
   managedCopy: path.join(HERE, 'managed-copy-gate/check_managed_copy.js'),
   buildOwnership: path.join(HERE, 'build-ownership/check_build_ownership.js'),
+  mojibake: path.join(HERE, 'mojibake-gate/check_mojibake.js'),
 };
 
 let failed = false;
@@ -149,6 +152,137 @@ note('B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSO
   else note('B 溯源判据生效：无溯源同形基线 EXIT=2');
   if (withProv.code !== 0) fail('B 对照失败：完整可信基线被误拦（EXIT=' + withProv.code + '）\n' + withProv.err);
   else note('B 正向对照通过：可信基线正常放行（未过度兜底）');
+}
+
+// ── C 基线写入守卫：gate-emit-guard.js 的四判据（窄根 / 新增键 / 抬升 / 缩短）────────
+// 总单判据：新增键、抬高 count 的篡改 ⇒ EXIT≠0 且基线原样；合规缩短 ⇒ EXIT=0 且留写前 .bak。
+// 夹具都在临时目录（root ≠ 仓库根），凡要比对本身的一律显式 --allow-narrow-root；
+// C1 是唯一不开该开关的用例——它测的就是窄根本身必须被拒。
+{
+  const { checkOnlyDecrease } = require('./gate-emit-guard');
+  const core = require('./mojibake-core.js');
+  const cg = fs.mkdtempSync(path.join(os.tmpdir(), 'emitguard-'));
+  const mkDir = (name) => { const d = path.join(cg, name); fs.mkdirSync(d, { recursive: true }); return d; };
+  const writeJson = (file, obj) => fs.writeFileSync(file, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+  const assertRejected = (label, r, bp, raw, whyRe) => {
+    if (r.code === 0) fail(`${label} 未被拒绝（EXIT=0）：${whyRe}`);
+    else if (fs.readFileSync(bp, 'utf8') !== raw) fail(`${label} 拒绝后基线文件仍被改写（写守卫失效）`);
+    else if (!whyRe.test(r.err + r.out)) fail(`${label} 拒绝但未声明原因（取证链断裂）\n${r.err + r.out}`);
+    else note(`${label} 通过：EXIT=${r.code}，基线原样，原因已声明`);
+  };
+
+  // C0 单元级：扁平计数映射（编译噪声 noise:{码:次数} 形态）共用同一份只减不增判据
+  if (!checkOnlyDecrease({ noise: { H1: 5 } }, { noise: { H1: 6 } }, ['noise']).risen.length) fail('C0 计数抬升未被识别（扁平映射）');
+  if (!checkOnlyDecrease({ noise: { H1: 5 } }, { noise: { H1: 5, W9: 1 } }, ['noise']).added.length) fail('C0 新增码未被识别（扁平映射）');
+  if (checkOnlyDecrease({ noise: { H1: 5, W9: 3 } }, { noise: { H1: 4 } }, ['noise']).added.length) fail('C0 合规缩短被误拦（扁平映射）');
+  else note('C0 通过：编译噪声基线（扁平计数映射）与各门共用同一份只减不增判据');
+
+  // C1 窄根拒绝（eol / 托管拷贝 各 1 例）：root ≠ 仓库根且未放行 ⇒ EXIT≠0 且不落盘
+  for (const [name, gate] of [['eol', GATES.eol], ['托管拷贝', GATES.managedCopy]]) {
+    const src = mkDir('narrow-' + name);
+    fs.writeFileSync(path.join(src, 'A.pas'), Buffer.from('unit A;\ninterface\nimplementation\nend.\n', 'utf8'));
+    const bp = path.join(cg, 'narrow_' + name + '.json');
+    const r = run([gate, '--root', src, '--baseline', bp, '--emit-baseline']);
+    if (r.code === 0) fail(`C1 ${name} 窄根 --emit-baseline 未被拒绝（EXIT=0）`);
+    else if (fs.existsSync(bp)) fail(`C1 ${name} 窄根拒绝后仍写出了基线文件`);
+    else if (!/仓库根|窄根/.test(r.err + r.out)) fail(`C1 ${name} 窄根拒绝未声明原因（取证链断裂）\n${r.err + r.out}`);
+    else note(`C1 通过：${name} 窄根 emit 拒绝写入且未落盘`);
+  }
+
+  // C2 新增键拒绝（eol / 托管拷贝 / 构建归属 各 1 例）：基线外新条目一律不得由自动路径写入
+  {
+    const src = mkDir('add-eol');
+    for (const f of ['A.pas', 'B.pas']) fs.writeFileSync(path.join(src, f), Buffer.from(`unit ${f[0]};\ninterface\nimplementation\nend.\n`, 'utf8'));
+    const bp = path.join(cg, 'add_eol.json');
+    writeJson(bp, { _comment: 'C2 夹具', pas_lf_exceptions: ['A.pas'], pas_mixed_exceptions: [], md_crlf_exceptions: [], pas_multicr_exceptions: [] });
+    const raw = fs.readFileSync(bp, 'utf8');
+    assertRejected('C2 eol 新增键', run([GATES.eol, '--root', src, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']), bp, raw, /拒绝新增/);
+  }
+  {
+    const src = mkDir('add-mc');
+    fs.writeFileSync(path.join(src, 'X.pas'), Buffer.from('unit X;\r\ninterface\r\nimplementation\r\nprocedure W(var Buf; N: Integer);\r\nbegin\r\n  FillChar(Buf, N, 0);\r\nend;\r\nend.\r\n', 'utf8'));
+    const bp = path.join(cg, 'add_mc.json');
+    writeJson(bp, { _comment: 'C2 夹具', files: {} });
+    const raw = fs.readFileSync(bp, 'utf8');
+    assertRejected('C2 托管拷贝 新增键', run([GATES.managedCopy, '--root', src, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']), bp, raw, /拒绝新增/);
+  }
+  {
+    const root = mkDir('add-own');
+    for (const d of ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tools', 'DeepFlow']) fs.mkdirSync(path.join(root, d), { recursive: true });
+    fs.writeFileSync(path.join(root, 'Core', 'FooOk.pas'), Buffer.from('unit FooOk;\ninterface\nimplementation\nend.\n', 'utf8'));
+    fs.writeFileSync(path.join(root, 'Core', 'FooOrphan.pas'), Buffer.from('unit FooOrphan;\ninterface\nimplementation\nend.\n', 'utf8'));
+    fs.writeFileSync(path.join(root, 'prod.dpk'), Buffer.from('package prod;\ncontains\n  FooOk;\n.\n', 'utf8'));
+    const bp = path.join(cg, 'add_own.json');
+    writeJson(bp, { generatedFrom: 'test_negative_sample.js C2', orphans: {} });
+    const raw = fs.readFileSync(bp, 'utf8');
+    assertRejected('C2 构建归属 新增键（新孤儿）', run([GATES.buildOwnership, '--root', root, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']), bp, raw, /拒绝新增/);
+  }
+
+  // C3 计数抬升拒绝（托管拷贝 / 丙类损坏 各 1 例）
+  {
+    const src = mkDir('rise-mc');
+    fs.writeFileSync(path.join(src, 'Y.pas'), Buffer.from(
+      'unit Y;\r\ninterface\r\nimplementation\r\nprocedure P(var A, B);\r\nbegin\r\n  Move(A, B, 1);\r\n  Move(A, B, 2);\r\n  Move(A, B, 3);\r\nend;\r\nend.\r\n', 'utf8'));
+    const bp = path.join(cg, 'rise_mc.json');
+    writeJson(bp, { _comment: 'C3 夹具', files: { 'Y.pas': { move: 1, fillchar: 0 } } });
+    const raw = fs.readFileSync(bp, 'utf8');
+    assertRejected('C3 托管拷贝 抬升', run([GATES.managedCopy, '--root', src, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']), bp, raw, /拒绝抬高/);
+  }
+  {
+    const repo = mkDir('rise-pb');
+    execFileSync('git', ['-C', repo, 'init', '-q'], { stdio: 'pipe' });
+    const text = 'unit RiseB;\ninterface\nimplementation\nprocedure P;\nvar s: string;\nbegin\n  s := \'one\n  s := \'two\n  s := \'three\nend.\n';
+    fs.writeFileSync(path.join(repo, 'RiseB.pas'), Buffer.from(text, 'utf8'));
+    execFileSync('git', ['-C', repo, 'add', 'RiseB.pas'], { stdio: 'pipe' });
+    const n = core.scanUnterminatedStrings(text).length;
+    if (n < 2) fail(`C3 丙类夹具未产生 ≥2 个丙-B 事件（实际 ${n}），抬升用例不成立`);
+    else {
+      const bp = path.join(cg, 'rise_pb.json');
+      writeJson(bp, { generatedFrom: 'test_negative_sample.js C3', pbStock: { 'RiseB.pas': { count: n - 1, reason: 'C3 夹具：抬升用' } } });
+      const raw = fs.readFileSync(bp, 'utf8');
+      assertRejected('C3 丙类损坏 抬升', run([GATES.mojibake, '--root', repo, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']), bp, raw, /拒绝抬高/);
+    }
+  }
+
+  // C4 合规缩短放行 + 写前 .bak（eol / 托管拷贝 各 1 例）
+  {
+    const src = mkDir('shrink-eol');
+    fs.writeFileSync(path.join(src, 'A.pas'), Buffer.from('unit A;\ninterface\nimplementation\nend.\n', 'utf8'));   // 仍违规（纯 LF）
+    fs.writeFileSync(path.join(src, 'B.pas'), Buffer.from('unit B;\r\ninterface\r\nimplementation\r\nend.\r\n', 'utf8')); // 已修复（CRLF）
+    const bp = path.join(cg, 'shrink_eol.json');
+    writeJson(bp, { _comment: 'C4 夹具', pas_lf_exceptions: ['A.pas', 'B.pas'], pas_mixed_exceptions: [], md_crlf_exceptions: [], pas_multicr_exceptions: [] });
+    const raw = fs.readFileSync(bp, 'utf8');
+    const r = run([GATES.eol, '--root', src, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']);
+    if (r.code !== 0) fail(`C4 eol 合规缩短未放行（EXIT=${r.code}）\n${r.err + r.out}`);
+    else {
+      const written = JSON.parse(fs.readFileSync(bp, 'utf8'));
+      if (written.pas_lf_exceptions.join(',') !== 'A.pas') fail('C4 eol 缩短后条目未正确收敛：' + written.pas_lf_exceptions.join(','));
+      if (!fs.existsSync(bp + '.bak')) fail('C4 eol 写前未留 .bak 备份');
+      else if (JSON.parse(fs.readFileSync(bp + '.bak', 'utf8')).pas_lf_exceptions.join(',') !== 'A.pas,B.pas') fail('C4 eol .bak 不是写入前的旧基线');
+      else if (fs.readFileSync(bp + '.bak', 'utf8') !== raw) fail('C4 eol .bak 内容与写入前原件不一致');
+      else note('C4 通过：eol 缩短放行 EXIT=0，条目收敛，.bak 为写入前原件');
+    }
+  }
+  {
+    const src = mkDir('shrink-mc');
+    fs.writeFileSync(path.join(src, 'Z.pas'), Buffer.from('unit Z;\r\ninterface\r\nimplementation\r\nprocedure W(var Buf; N: Integer);\r\nbegin\r\n  FillChar(Buf, N, 0);\r\nend;\r\nend.\r\n', 'utf8'));
+    const bp = path.join(cg, 'shrink_mc.json');
+    writeJson(bp, { _comment: 'C4 夹具', files: { 'Z.pas': { move: 5, fillchar: 2 } } });
+    const raw = fs.readFileSync(bp, 'utf8');
+    const r = run([GATES.managedCopy, '--root', src, '--baseline', bp, '--emit-baseline', '--allow-narrow-root']);
+    if (r.code !== 0) fail(`C4 托管拷贝 合规缩短未放行（EXIT=${r.code}）\n${r.err + r.out}`);
+    else {
+      const written = JSON.parse(fs.readFileSync(bp, 'utf8'));
+      if (!written.files['Z.pas'] || written.files['Z.pas'].move !== 0 || written.files['Z.pas'].fillchar !== 1) {
+        fail('C4 托管拷贝 缩短后计数未收敛：' + JSON.stringify(written.files));
+      }
+      const bak = JSON.parse(fs.readFileSync(bp + '.bak', 'utf8'));
+      if (!bak.files['Z.pas'] || bak.files['Z.pas'].move !== 5) fail('C4 托管拷贝 .bak 不是写入前的旧基线');
+      else note('C4 通过：托管拷贝 计数下调放行 EXIT=0，.bak 为写入前原件');
+    }
+  }
+
+  fs.rmSync(cg, { recursive: true, force: true });
 }
 
 fs.rmSync(clean, { recursive: true, force: true });
