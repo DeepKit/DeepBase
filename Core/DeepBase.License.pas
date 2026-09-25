@@ -147,11 +147,11 @@ type
 implementation
 
 uses
-  DeepBase.Security.MachineIdentity;
+  DeepBase.Security.MachineIdentity,
+  DeepBase.Exceptions;
 
 const
   LICENSE_LEGACY_SECRET_ENV = 'DEEPBASE_LEGACY_LICENSE_SIGNING_KEY';
-  LICENSE_CI_SECRET = 'DeepBase-License-CI-Only';
   LICENSE_TABLE = 'LicenseInfo';
   LICENSE_VERSION = '1.0';
   /// <summary>Device ids are stored truncated; the length is part of the wire format.</summary>
@@ -160,10 +160,11 @@ const
 function ResolveLegacyLicenseSecret: string;
 begin
   Result := GetEnvironmentVariable(LICENSE_LEGACY_SECRET_ENV);
-  {$IFDEF CI}
   if Result = '' then
-    Result := LICENSE_CI_SECRET;
-  {$ENDIF}
+    raise EMissingConfigurationException.Create(
+      'Legacy license signing key is not configured. Set the ' +
+      LICENSE_LEGACY_SECRET_ENV + ' environment variable. ' +
+      'Refusing to fall back to an insecure built-in secret.');
 end;
 
 { TLicenseInfo }

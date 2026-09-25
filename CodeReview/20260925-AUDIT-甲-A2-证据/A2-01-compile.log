@@ -1,0 +1,6 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+26662 lines, 1.59 seconds, 3982464 bytes code, 455984 bytes data.
+
+COMPILE_EXIT=0
