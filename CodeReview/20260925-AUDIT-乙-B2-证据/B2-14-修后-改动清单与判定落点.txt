@@ -1,0 +1,89 @@
+B2-14 修后：改动清单、修法选型与判定落点
+基线 HEAD = fc5a62a；交付面为工作树实测。
+SUT  VCL/DeepBase.VCL.MVVMControls.pas    blob 57efd2ab4357db585d1c67caac43972b826e60bf
+     sha256 91263b1801f39cabf24937be7af5586704cee31406ebd548bfe59e4ba0e60e85（871 行，UTF-8 BOM，CRLF）
+新增 Tests/Test.DeepBase.VCL.CommandBinding.pas blob 8fabf4aa336b1cb0fdefd7eb96b8f4cb1094b16d
+     sha256 5611d3c8d7d0c33a1e08abdf702cdcf4b3356e03b2365049720f5d63dc841578（323 行 / 12278 字节）
+git diff --numstat（仅 SUT）⇒ 35 增 / 49 删，净 -14 行（885 ⇒ 871）。
+
+────────────────────────────────────────────────────────────────────
+一、公开面影响：零
+────────────────────────────────────────────────────────────────────
+本单元 interface 段 = :24..:268（`implementation` 起于 :269）。绑定类型 TCommandButtonBinding 与
+被删除的 GCommandBindings / RegisterCommandBinding / UnregisterCommandBinding 全部在 :269 之后。
+实测比对（HEAD 面 interface 段 vs 交付面 interface 段，逐字节）⇒ 无差异。
+⇒ 对调用方没有签名变化、没有可见类型变化；对外唯一可观察差异就是修复本身
+  （宿主死了绑定就死，命令上不再残留订阅）。工单 §〇-8「允许 breaking change」这条在本单没用上。
+
+────────────────────────────────────────────────────────────────────
+二、改动清单（交付面行号）
+────────────────────────────────────────────────────────────────────
+1) :282  TCommandButtonBinding = class → class(TComponent)
+   :289  新增私有 Detach（唯一的注销出口）
+   :293  新增 protected Notification override（按钮先死 → opRemove → Detach）
+   :297-298 构造函数加 AHost 参数并 reintroduce
+   :306  inherited Create(AHost)     ← 所有权交给宿主，不再有无主对象
+   :315  FButton.FreeNotification(Self)
+   :321  初始 Enabled（未变，只是随构造函数换体）
+   :330-341 Detach：退订 + 还原 OnClick + FButton := nil
+   :343-349 Notification：`if (Operation = opRemove) and (AComponent = FButton) then Detach`
+   删除：:341-355(HEAD) 的 GCommandBindings / RegisterCommandBinding / UnregisterCommandBinding
+         :871-883(HEAD) 的空 initialization 与 finalization 遍历
+   写点收敛：:463（TMVVMFormBase.BindCommand）与 :586（TMVVMFrameBase.BindCommand）
+         各自两行（Create + Register）⇒ 一行 TCommandButtonBinding.Create(Self, Button, Command, Parameter)
+2) Tests/Test.DeepBase.VCL.CommandBinding.pas（新建，5 条用例 + 观测型命令 TObservedCommand）
+   未改 Tests/DeepBaseTests.dpr/.dproj（§〇-4 归主控收口），未新增第三套 runner 口径。
+
+为什么 reintroduce 而不是 overload：少了按钮和命令的绑定是半个对象；reintroduce 让
+`TComponent.Create(AOwner)` 这种单参构造在编译期就不存在，比运行时判空兜底干净（§〇-8 fail-closed）。
+
+────────────────────────────────────────────────────────────────────
+三、修法选型：为什么是 Ownership + FreeNotification，而不是 OnDestroy/CM_RELEASE 或弱引用
+────────────────────────────────────────────────────────────────────
+工单期望句给了三条路：宿主持有 + OnDestroy/CM_RELEASE 注销 / 弱引用 / Ownership 管理。选 Ownership：
+1) 注销路径只剩一条。宿主销毁由组件树带走绑定 ⇒ 任何未来的宿主（含泛型 TMVVMForm<T>）
+   都不需要「记得」去挂 OnDestroy；手工接线等于再造一套登记/注销通道，与 SSOT 冲突。
+2) 弱引用解决不了本缺陷：引用变空只让「不崩」，命令上的订阅仍在 ⇒ 命令对象被绑定钉住不释放，
+   而且残留守卫仍会在下一次 Raise 时被调用。要退订就必须有确定析构时机 ⇒ 还是 Ownership。
+3) 跨 Owner 场景（按钮不属于宿主，如示例里按钮挂在别处）由平台自带的 FreeNotification/opRemove 覆盖，
+   而不是自己维护第二张引用表。RTL 依据（本机 37.0 rtl/common/System.Classes.pas）：
+   :17666 起 `TComponent.FreeNotification` 只在 `(Owner = nil) or (AComponent.Owner <> Owner)` 时登记
+     ⇒ 同 Owner（按钮是宿主子控件）时这次调用是空转，不会重复记账；
+   :17780 起 `DestroyComponents` 按 `FComponents.Last` 逆序释放
+     ⇒ 绑定晚于按钮创建 ⇒ 宿主销毁时绑定先析构、按钮此刻仍有效 ⇒ Detach 里写 OnClick 安全；
+   :17656 `RemoveFreeNotifications` 在析构链里把 opRemove 送出去 ⇒ 按钮先死那条有平台兜底。
+   这三条是读源码所得，不是推测；对应可跑证据在 B2-14-反事实探针.txt（M2/M3 各咬一条前提）。
+
+────────────────────────────────────────────────────────────────────
+四、判定落点（工单两条判据 ⇒ 用例 ⇒ 变异）
+────────────────────────────────────────────────────────────────────
+工单判据 A「反复创建销毁窗体后触发命令不再 AV（循环用例）」
+  ⇒ Test_Repeated_Create_Destroy_Loop_Trigger_Stays_Safe（ROUNDS=50，每轮建宿主→绑定→
+    RaiseCanExecuteChanged→销毁宿主；断言每轮结束时订阅者数回到 0，异常 try/except 收住并连轮次报出）
+  修前红（round=1 即残留 1 个订阅者，Tests Errored=0 ⇒ 没崩但确实残留）；修后绿；M1r 变异红。
+  口径修正已登记在 B2-14-修前-代码事实与零覆盖.txt §四：AV 不可作为判据（偶绿），
+  本单用「不崩 且 订阅面归零」双条件，比原判据更强。
+工单判据 B「单窗体生命周期回归绿」
+  ⇒ Test_Host_Destroy_Detaches_Binding_From_Command（M1r 红）
+  ⇒ Test_Button_Destroyed_Alone_Detaches_Binding（按钮先死，M3 红）
+  ⇒ Test_Click_Semantics_And_OnClick_Restored_On_Host_Destroy（OnClick 指针身份还原，M2/M4 红）
+  ⇒ Test_Enabled_State_Follows_Command（Enabled 跟随 CanExecute 的初始值与每次 Raise，M5a/M5b 红）
+  修后 5/5 全绿（RUNNER_VERDICT: PASSED，RUN_EXIT=0），原始输出见 B2-14-用例真跑-原始输出.txt。
+
+────────────────────────────────────────────────────────────────────
+五、登记项（本单不顺手改，报主控）
+────────────────────────────────────────────────────────────────────
+R1 框架侧写点无运行用例：TMVVMFrameBase.BindCommand 需要 TFrame 后代，而 TFrame 后代在无 IDE
+   环境下不可构造（实测 EResNotFound；且 TFrame 无 CreateNew，编译期 E2003），
+   探针原文在 B2-14-用例真跑-原始输出.txt §四。本单以「两条 BindCommand 收敛到同一构造函数、
+   构造体逐字相同」做结构覆盖，运行网缺口如实登记，不写假用例冒充。
+R2 新测试单元未注册（§〇-4 归主控），且 VCL/DeepBase.VCL.MVVMControls.pas 所在包
+   DeepBaseVCL.dpk 不在 09_工程脚本/build-gate/contracts/ 任何清单里（grep 无命中）
+   ⇒ 本单元与其测试当前都不在任何 CI 编译/测试面上 ⇒ 随 B2-05/06 一并请求纳入。
+R3 DeepBaseVCL.dpk 主树编译红：`Core\DeepBase.Security.DPAPI.pas(554) E2251 Ambiguous
+   overloaded call to 'SecureZeroMemory'`。归属实测（A/B 同面复跑）：把 SUT 换回 HEAD 面 blob
+   b6b70551 后同一命令同样红、hint 计数一致（H2077=6）⇒ 与本单无关，属 DPAPI 件；
+   另注：DPAPI 单件用 b2_unit_compile.sh 编是绿的（BUILD_EXIT=0），红只在该 dpk 的搜索面里出现
+   ⇒ 该红是「包面 vs 单件面」口径差异，登记给门禁治理面，本单不越权改。
+R4 同族未扫：本单只收了 MVVM 这一处「模块级登记列表只增不减」。全仓是否还有同类可变全局列表
+   属另立扫描项（需要枚举 initialization 建表 + 无配对注销的写法），不在 B2-14 范围内，登记待定。

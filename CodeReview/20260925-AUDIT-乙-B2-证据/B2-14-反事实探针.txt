@@ -1,0 +1,554 @@
+B2-14 反事实（变异）探针：每处修复都要能被单独回退并让用例变红
+探针：CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh <测试单元> <SUT> '<perl -pe 表达式>'
+SUT = VCL/DeepBase.VCL.MVVMControls.pas   测试单元 = Tests/Test.DeepBase.VCL.CommandBinding.pas
+判定口径：基线必须绿 / 变异必须红 / 还原必须绿，三步任一不成立 ⇒ CF_EXIT=4（探针自身 fail-closed；
+        只把红绿印给人看而自己恒退 0 的探针，本身就是本单要修的那类门禁）。
+        变异只动工作树副本，trap 覆盖正常/异常/中断一律还原；本轮 6 次跑完复验
+        SUT sha256 = 91263b1801f39cabf24937be7af5586704cee31406ebd548bfe59e4ba0e60e85（交付面未污染）。
+
+────────────────────────────────────────────────────────────────────
+一、变异清单与咬合结果（本表由本轮捕获件生成，CF_EXIT 取 .tmp/b2/G-exits.txt）
+────────────────────────────────────────────────────────────────────
+M1r  回退：删 Detach 里的退订 RemoveCanExecuteChangedHandler
+    变异处原行（交付面 :330）：FCommand.RemoveCanExecuteChangedHandler(HandleCanExecuteChanged);
+    红掉的用例（3 条）：Test_Button_Destroyed_Alone_Detaches_Binding Test_Host_Destroy_Detaches_Binding_From_Command Test_Repeated_Create_Destroy_Loop_Trigger_Stays_Safe 
+    变异态 pass/fail = 2/3    CF_EXIT=0
+
+M2  回退：绑定不挂宿主：inherited Create(AHost) 改 Create(nil)
+    变异处原行（交付面 :303）：inherited Create(AHost);
+    红掉的用例（1 条）：Test_Click_Semantics_And_OnClick_Restored_On_Host_Destroy 
+    变异态 pass/fail = 4/1    CF_EXIT=0
+
+M3  回退：删 FButton.FreeNotification(Self)
+    变异处原行（交付面 :312）：FButton.FreeNotification(Self);
+    红掉的用例（1 条）：Test_Button_Destroyed_Alone_Detaches_Binding 
+    变异态 pass/fail = 4/1    CF_EXIT=0
+
+M4  回退：删 Detach 里的 OnClick 还原
+    变异处原行（交付面 :335）：FButton.OnClick := FOriginalOnClick;
+    红掉的用例（1 条）：Test_Click_Semantics_And_OnClick_Restored_On_Host_Destroy 
+    变异态 pass/fail = 4/1    CF_EXIT=0
+
+M5a  回退：删构造函数里的初始 Enabled 赋值
+    变异处原行（交付面 :318）：FButton.Enabled := FCommand.CanExecute(FParameter);
+    红掉的用例（1 条）：Test_Enabled_State_Follows_Command 
+    变异态 pass/fail = 4/1    CF_EXIT=0
+
+M5b  回退：删 HandleCanExecuteChanged 里的 Enabled 赋值
+    变异处原行（交付面 :361）：FButton.Enabled := FCommand.CanExecute(FParameter);
+    红掉的用例（1 条）：Test_Enabled_State_Follows_Command 
+    变异态 pass/fail = 4/1    CF_EXIT=0
+
+为什么 M2 只红一条：绑定不挂宿主时，按钮随宿主一起释放仍会触发 opRemove ⇒ Detach 侥幸发生；
+只有「看 OnClick 是否还原」那条用例能区分 ⇒ 订阅面用例不能替代指针身份用例，两条都得在。
+为什么 M4 只能靠指针身份：绑定对象销毁时其接口字段被自动置 nil，残留在按钮上的旧方法指针调起来
+是空转 ⇒ 行为面完全正常，只有比 TMethod.Code/.Data 才看得见没还原。
+
+────────────────────────────────────────────────────────────────────
+二、探针手术性自检（先犯错、后收口，如实登记）
+────────────────────────────────────────────────────────────────────
+首轮 M1/M5 用「按行首尾空白匹配整句」的 s/// 注入，一次删掉两处同名语句 ⇒ 变异不手术：
+  ---- .tmp/b2/B2-14-CF-1.txt 的变异 diff（hunk 头与删除行） ----
+@@ -330,7 +330,6 @@
+-    FCommand.RemoveCanExecuteChangedHandler(HandleCanExecuteChanged);
+@@ -651,7 +650,6 @@
+-    FCommand.RemoveCanExecuteChangedHandler(HandleCanExecuteChanged);
+  ⇒ 同形语句在单元里有两处（:330 绑定 Detach / :651 TCommandButton 自己的退订），
+    全局删会连 :651 这条不属于本缺陷写点的行一起改 ⇒ 换带出现计数的 M1r，只咬 :330。
+  ---- .tmp/b2/B2-14-CF-M5.txt 的变异 diff（hunk 头与删除行） ----
+@@ -318,7 +318,6 @@
+-  FButton.Enabled := FCommand.CanExecute(FParameter);
+@@ -361,7 +360,6 @@
+-    FButton.Enabled := FCommand.CanExecute(FParameter);
+  ⇒ 同一赋值在构造函数与回调里各一处，全局删一次改两处 ⇒ 换按缩进锚定的 M5a（构造体内 2 空格）/ M5b（回调内 4 空格），一次只咬一处。
+
+────────────────────────────────────────────────────────────────────
+三、6 次变异完整原始输出（每段三步：基线 / 变异 / 还原）
+────────────────────────────────────────────────────────────────────
+
+======== M1r ========
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: BEGIN{$c=0} if(/FCommand\.RemoveCanExecuteChangedHandler/){$c++; $_="" if $c==1} ====
+---- 变异 diff（相对还原基线） ----
+@@ -330,7 +330,6 @@
+ procedure TCommandButtonBinding.Detach;
+ begin
+   if FCommand <> nil then
+-    FCommand.RemoveCanExecuteChangedHandler(HandleCanExecuteChanged);
+   
+   // Restore original click handler
+   if FButton <> nil then
+---- 变异后真跑（应红） ----
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Host_Destroy_Detaches_Binding_From_Command
+  Message: Expected [0] but got [1] B2-14: no button-binding subscriber may survive host destruction
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Repeated_Create_Destroy_Loop_Trigger_Stays_Safe
+  Message: Expected [] but got [ round=1 subscribers=1;] B2-14: create/destroy loop of 50 rounds raised or kept stale subscribers (stops at first) round=1 subscribers=1;
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Button_Destroyed_Alone_Detaches_Binding
+  Message: Expected [0] but got [1] B2-14: binding must detach itself when the button dies before its host
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=2 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+M1r CF_EXIT=0
+
+======== M2 ========
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/inherited Create\(AHost\);/inherited Create(nil);/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -303,7 +303,7 @@
+   ACommand: ICommand; const AParameter: TValue);
+ begin
+   // 所有权交给宿主而不是全局登记表：宿主销毁时组件树会把绑定一起带走，注销路径只剩这一条
+-  inherited Create(AHost);
++  inherited Create(nil);
+   FButton := AButton;
+   FCommand := ACommand;
+   FParameter := AParameter;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......F..
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Click_Semantics_And_OnClick_Restored_On_Host_Destroy
+  Message: Expected [140695359732752] but got [140695359726208] B2-14: OnClick code pointer must be restored to the pre-binding handler
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+M2 CF_EXIT=0
+
+======== M3 ========
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/^\s*FButton\.FreeNotification\(Self\);\r?\n// ====
+---- 变异 diff（相对还原基线） ----
+@@ -312,7 +312,6 @@
+   FOriginalOnClick := FButton.OnClick;
+   FButton.OnClick := HandleClick;
+   // 按钮与宿主不同 Owner 时按钮可以活得比登记动作短，按 VCL 口径取一份销毁通知
+-  FButton.FreeNotification(Self);
+   
+   // Subscribe to CanExecuteChanged
+   FCommand.AddCanExecuteChangedHandler(HandleCanExecuteChanged);
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....F....
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Button_Destroyed_Alone_Detaches_Binding
+  Message: Expected [0] but got [1] B2-14: binding must detach itself when the button dies before its host
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+M3 CF_EXIT=0
+
+======== M4 ========
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/^\s*FButton\.OnClick := FOriginalOnClick;\r?\n// ====
+---- 变异 diff（相对还原基线） ----
+@@ -335,7 +335,6 @@
+   // Restore original click handler
+   if FButton <> nil then
+   begin
+-    FButton.OnClick := FOriginalOnClick;
+     FButton := nil;
+   end;
+ end;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......F..
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Click_Semantics_And_OnClick_Restored_On_Host_Destroy
+  Message: Expected [140696848448528] but got [140696848441984] B2-14: OnClick code pointer must be restored to the pre-binding handler
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+M4 CF_EXIT=0
+
+======== M5a ========
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/^ {2}FButton\.Enabled := FCommand\.CanExecute\(FParameter\);\r?\n// ====
+---- 变异 diff（相对还原基线） ----
+@@ -318,7 +318,6 @@
+   FCommand.AddCanExecuteChangedHandler(HandleCanExecuteChanged);
+   
+   // Initial state
+-  FButton.Enabled := FCommand.CanExecute(FParameter);
+ end;
+ 
+ destructor TCommandButtonBinding.Destroy;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.........F
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Enabled_State_Follows_Command
+  Message: Condition is True when False expected. Enabled must follow the CanExecute initial value after BindCommand
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+M5a CF_EXIT=0
+
+======== M5b ========
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/^ {4}FButton\.Enabled := FCommand\.CanExecute\(FParameter\);\r?\n// ====
+---- 变异 diff（相对还原基线） ----
+@@ -361,7 +361,6 @@
+ procedure TCommandButtonBinding.HandleCanExecuteChanged(Sender: TObject);
+ begin
+   if FButton <> nil then
+-    FButton.Enabled := FCommand.CanExecute(FParameter);
+ end;
+ 
+ // ============================================================================
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.........F
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Enabled_State_Follows_Command
+  Message: Condition is False when True expected. [RaiseCanExecuteChanged must drive button Enabled]
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: VCL/DeepBase.VCL.MVVMControls.pas ==
+M5b CF_EXIT=0

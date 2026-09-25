@@ -1,0 +1,156 @@
+B2-14 用例真跑：修前红 / 修后绿 原始输出（本节以下由 .tmp/b2 捕获件直接串接，未手抄数字）
+探针：CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh（一次性 DUnitX 控制台 runner，
+      模板 附件/B2FixtureRunner.dpr：FailsOnNoAsserts=True + TestCount=0 判 NO_TEST_EXECUTED +
+      编译非 0 判 RUN_EXIT=3 ⇒「跑起来了」不算绿）
+测试单元：Tests/Test.DeepBase.VCL.CommandBinding.pas（交付面 323 行 / 12278 字节，
+      blob 8fabf4aa336b1cb0fdefd7eb96b8f4cb1094b16d，
+      sha256 5611d3c8d7d0c33a1e08abdf702cdcf4b3356e03b2365049720f5d63dc841578）
+三态切换方式：SUT 在「HEAD 面」与「交付面」之间按字节整件替换，每态重新编译 runner 后真跑：
+      修前 SUT sha256 31c9ecfa316f3d8b2c21115de608dbe5de9520b5194a2897ca3d03547d88fd1c（blob b6b70551…）
+      修后 SUT sha256 91263b1801f39cabf24937be7af5586704cee31406ebd548bfe59e4ba0e60e85（blob 57efd2ab…）
+判据口径：断言建在「命令上的订阅者计数」与「OnClick 指针身份」上，不建在「有没有崩」上——
+      访问已释放内存是否 AV 取决于堆状态，拿它当判据会做出偶绿用例（实测见 §一 要点 2）。
+
+════════════════════════════════════════════════════════════════════
+§一 修前（HEAD 面，blob b6b70551…）原始输出全文
+════════════════════════════════════════════════════════════════════
+命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.VCL.CommandBinding.pas
+
+== 编译一次性 runner（单元: Test.DeepBase.VCL.CommandBinding） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+VCL\DeepBase.VCL.MVVMControls.pas(201) Hint: H2269 Overriding virtual method 'TCommandButton.Click' has lower visibility (protected) than base class 'TButton' (public)
+VCL\DeepBase.VCL.MVVMControls.pas(354) Hint: H2443 Inline function 'TList.Remove' has not been expanded because unit 'System.Types' is not specified in USES list
+26857 lines, 1.59 seconds, 4481200 bytes code, 509304 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.VCL.CommandBinding） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.F.F.F.F..
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 1
+Tests Leaked  : 0
+Tests Failed  : 4
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Host_Destroy_Detaches_Binding_From_Command
+  Message: Expected [0] but got [1] B2-14: no button-binding subscriber may survive host destruction
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Repeated_Create_Destroy_Loop_Trigger_Stays_Safe
+  Message: Expected [] but got [ round=1 subscribers=1;] B2-14: create/destroy loop of 50 rounds raised or kept stale subscribers (stops at first) round=1 subscribers=1;
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Button_Destroyed_Alone_Detaches_Binding
+  Message: Expected [0] but got [1] B2-14: binding must detach itself when the button dies before its host
+
+  Test.DeepBase.VCL.CommandBinding.TTestMVVMCommandBinding.Test_Click_Semantics_And_OnClick_Restored_On_Host_Destroy
+  Message: Expected [140701509827440] but got [140701509820752] B2-14: OnClick code pointer must be restored to the pre-binding handler
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=1 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+要点：
+1) 残留订阅者在 round=1 就出现 ⇒「宿主死了订阅还在」是每轮必然，不是概率事件。
+2) 本轮 Tests Errored : 0 且进程正常交出统计 ⇒ 工单判据里的「AV」没发生；
+   「不崩」不等于「没问题」，判据必须落在订阅面（本用例正是咬在订阅面上）。
+3) 第 4 条红在 OnClick 指针身份：绑定对象销毁后其接口字段被自动置 nil，行为面看不出异常，
+   只有比指针才能发现没还原（同 B2-14-反事实探针.txt 的 M2/M4 判别依据）。
+4) 修前多出一条 H2443（:354 TList.Remove），来源正是零调用点的 UnregisterCommandBinding；
+   交付面该 hint 消失 ⇒ 与「删掉只增不减的登记表」互相印证。
+
+════════════════════════════════════════════════════════════════════
+§二 修后（交付面，blob 57efd2ab…）原始输出全文
+════════════════════════════════════════════════════════════════════
+命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.VCL.CommandBinding.pas
+
+== 编译一次性 runner（单元: Test.DeepBase.VCL.CommandBinding） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+VCL\DeepBase.VCL.MVVMControls.pas(201) Hint: H2269 Overriding virtual method 'TCommandButton.Click' has lower visibility (protected) than base class 'TButton' (public)
+26843 lines, 1.47 seconds, 4481376 bytes code, 509304 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.VCL.CommandBinding） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+════════════════════════════════════════════════════════════════════
+§三 交付两件单件编译实测全文
+════════════════════════════════════════════════════════════════════
+命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh VCL/DeepBase.VCL.MVVMControls.pas Tests/Test.DeepBase.VCL.CommandBinding.pas
+
+================================================================
+单元: VCL/DeepBase.VCL.MVVMControls.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+VCL\VCL/DeepBase.VCL.MVVMControls.pas(201) Hint: H2269 Overriding virtual method 'TCommandButton.Click' has lower visibility (protected) than base class 'TButton' (public)
+3450 lines, 0.33 seconds, 17453 bytes code, 2540 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.VCL.CommandBinding.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+VCL\DeepBase.VCL.MVVMControls.pas(201) Hint: H2269 Overriding virtual method 'TCommandButton.Click' has lower visibility (protected) than base class 'TButton' (public)
+25605 lines, 1.41 seconds, 12066 bytes code, 1308 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+H2269 是 HEAD 面 :201 既有 hint（TCommandButton.Click 可见性低于基类），两态都在 ⇒ 本单未新增噪声。
+
+════════════════════════════════════════════════════════════════════
+§四 宿主可构造性探针（框架侧运行用例缺口的实测依据）
+════════════════════════════════════════════════════════════════════
+一次性探针源码 .tmp/b2/frameprobe/FrameProbe.dpr / FrameProbeNoCreate.dpr（产物不入库）
+---- 运行输出 ----
+PROBE1 form via CreateNew:
+  OK created, ClassName=TSubForm
+PROBE2 frame via Create(nil):
+  EXCEPT EResNotFound / Resource TSubFrame not found
+PROBE3 button via Create(nil) (ownerless, for cross-owner path):
+  OK created, Owner is nil = TRUE
+---- 编译期证据（对 TFrame 后代调 CreateNew） ----
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.MVVMControls.pas(201) Hint: H2269 Overriding virtual method 'TCommandButton.Click' has lower visibility (protected) than base class 'TButton' (public)
+FrameProbeNoCreate.dpr(31) Error: E2003 Undeclared identifier: 'CreateNew'
+BUILD_EXIT=1
+
+⇒ 窗体侧可用公开 CreateNew 无资源构造（测试宿主走这条）。
+⇒ 框架侧 TFrame 后代既要求同名 DFM 资源、又没有 CreateNew 可绕，无 IDE 环境下不可实例化
+  ⇒ TMVVMFrameBase.BindCommand 那条写点没有运行用例，只有结构覆盖（两处 BindCommand 收敛到
+    同一个绑定构造函数，构造体同一）。缺口如实登记，见修后件 §四 R2。
+⇒ PROBE3 顺带证明「无主按钮」可构造且 Owner = nil：RTL 的 FreeNotification 只在
+  `(Owner = nil) or (AComponent.Owner <> Owner)` 时登记（rtl/common/System.Classes.pas:17666 起），
+  所以「按钮先死」这条跨 Owner 路径能被真跑用例覆盖（M3 变异正咬在这条上）。

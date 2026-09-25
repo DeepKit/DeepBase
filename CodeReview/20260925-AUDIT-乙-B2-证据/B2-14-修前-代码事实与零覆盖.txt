@@ -1,0 +1,66 @@
+B2-14 修前取证：代码事实、可达路径与零覆盖
+基线 HEAD = fc5a62a（本单开工前主控最后一笔）；被测件在 HEAD 的 blob = b6b7055173e9fd7647cfe2f5d77840006f64b327
+工作树面 sha256 = 31c9ecfa316f3d8b2c21115de608dbe5de9520b5194a2897ca3d03547d88fd1c（885 行，UTF-8 BOM，CRLF）
+行号以下按 HEAD 面（`git show HEAD:VCL/DeepBase.VCL.MVVMControls.pas`）。
+
+────────────────────────────────────────────────────────────────────
+一、工单点名的缺陷面（逐条对上代码）
+────────────────────────────────────────────────────────────────────
+工单：「`BindCommand` 登记进模块级 `GCommandBindings`，窗体销毁后无自动注销 ⇒ 野指针，
+      下次触发即 AV」，所指文件行 `VCL/DeepBase.VCL.MVVMControls.pas:450-457`。
+
+实测对应物（HEAD 面）：
+  :279  TCommandButtonBinding = class            ← 普通 TObject，没有 Owner，不受任何宿主生命周期管辖
+  :293  constructor Create(AButton; ACommand; AParameter)
+  :296  inherited Create           ← 无 Owner：绑定对象的生死与宿主无关
+  :302-303  FOriginalOnClick := FButton.OnClick; FButton.OnClick := HandleClick
+  :306  FCommand.AddCanExecuteChangedHandler(HandleCanExecuteChanged)   ← 订阅方是绑定对象自己
+  :312-322  destructor Destroy ⇒ 退订 + 还原 OnClick（销毁逻辑本身是对的，问题在没人调它）
+  :342  GCommandBindings: TList                  ← 模块级登记表，全单元唯一的所有权替代物
+  :344-349  RegisterCommandBinding ⇒ 只 Add，无条件
+  :351-355  UnregisterCommandBinding ⇒ 【全仓零调用点】（grep 结果见 §三）
+  :450-457  TMVVMFormBase.BindCommand  = Create + RegisterCommandBinding
+  :576-583  TMVVMFrameBase.BindCommand = Create + RegisterCommandBinding   ← 第二条同构写点，工单未点名
+  :871-883  initialization（空）/ finalization 遍历列表 Free
+
+⇒ 注销路径确实只剩 finalization 一条，即进程退出前不执行；宿主销毁 ⇒ 绑定对象仍活着、
+  仍订阅在命令上、其 FButton 字段指向已释放按钮。
+
+────────────────────────────────────────────────────────────────────
+二、可达路径（为什么不是「理论风险」）
+────────────────────────────────────────────────────────────────────
+按钮释放后仍会被解引用的那条链在 HEAD 面完整存在：
+  Command.RaiseCanExecuteChanged（Core/DeepBase.MVVM.pas:506-512，遍历订阅者）
+    → TCommandButtonBinding.HandleCanExecuteChanged（:334）
+    → :337 `FButton.Enabled := FCommand.CanExecute(FParameter)`   ← FButton 此时可已随宿主释放
+写已释放堆内存是否立刻 AV 取决于堆状态与页是否仍提交，Win64 下常见表现是「静默写花」而不是崩，
+这正是 §四 那条反事实结论的来源（工单表述修正见该节）。
+
+同类先例（同一批审计里已经收口过的写法，供修法对齐）：
+  Core/DeepBase.MVVM.pas:158-169 —— 宿主销毁时反注册订阅，不做掩耳盗铃式兜底。
+
+────────────────────────────────────────────────────────────────────
+三、零覆盖与零调用点实测
+────────────────────────────────────────────────────────────────────
+1) `UnregisterCommandBinding` 调用点 = 0：
+     grep -rn "UnregisterCommandBinding" --include="*.pas" .（排除 .tmp）
+     ⇒ 只命中 HEAD 面 :351 的定义行自身，无任何调用方。
+     登记入口有唯一写点、注销入口零调用点 = 只增不减的登记表，属 fail-open 结构。
+2) 修前不存在任何触及绑定面的测试单元：
+     git ls-files 下 uses 到 `DeepBase.VCL.MVVMControls` 的测试单元 = 0 件；
+     既有 Tests/Test.DeepBase.MVVM.pas 只在 Core 层覆盖 TRelayCommand 的订阅面
+     （:755 Test_RaiseCanExecuteChanged_NotifiesHandlers），不涉及 VCL 绑定生命周期。
+3) `BindCommand` 生产调用方 = 0：
+     grep -rn "BindCommand" --include="*.pas" . 排除 .tmp / Tests / 该单元自身 ⇒ 空。
+     全仓唯一 uses MVVMControls 的业务文件 Examples/MVVMDemo/MainForm.pas 不调用它。
+     ⇒ 该 API 当前只在示例工程的编译面上（且 DeepBaseVCL.dpk 不在 build-gate 契约清单里，见门禁件 §五）。
+
+────────────────────────────────────────────────────────────────────
+四、判据口径修正（报主控，不改工单原文）
+────────────────────────────────────────────────────────────────────
+工单判定写「反复创建销毁窗体后触发命令不再 AV（循环用例）」。实测：
+  修前面 + 50 轮「建宿主→绑定→触发命令→销毁宿主」循环用例，进程未 AV；
+  该用例改以「每轮结束时命令上的订阅者数必须回到 0」为断言 ⇒ 修前直接红（round=1 就 1 个残留）。
+  原始输出见 B2-14-用例真跑-原始输出.txt §一。
+⇒ 「是否崩」不是可用判据（偶绿），本单把它降级为「不崩且订阅面归零」的双条件；
+  原判据的意图（循环建销后触发命令不再有隐患）由订阅面断言更强地覆盖。
