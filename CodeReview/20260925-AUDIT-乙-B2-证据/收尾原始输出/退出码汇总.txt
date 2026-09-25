@@ -1,0 +1,11 @@
+gate-encoding EXIT=0
+gate-eol EXIT=0
+gate-mojibake EXIT=0
+gate-evidence EXIT=0
+build-T0 EXIT=1
+build-ALL EXIT=1
+DONE 2026-09-26T03:25:41+08:00
+build-T0@92c14d1 EXIT=1
+build-ALL@92c14d1 EXIT=1
+build-T0@347b126 EXIT=1
+ATTR DONE 2026-09-26T03:33:53+08:00
