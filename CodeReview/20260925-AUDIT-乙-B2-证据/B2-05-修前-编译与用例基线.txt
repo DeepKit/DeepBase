@@ -1,0 +1,80 @@
+B2-05 修前基线（RegionLocator 三件：SUT + 两个测试单元）
+HEAD 基准: f324ff0   采集时间: 2026-09-25 20:47:18
+方法：把 HEAD 的件取到 .tmp 单独喂 dcc64（工作树已是修后版本，不能用它当修前证据）
+路径前缀 .tmp\b2\b5pre\ 已在本文件内统一截去。
+
+== 1) 修前 SUT 原样编译（uses Graphics32） ==
+DeepBase.Desktop.Screen.Click.RegionLocator.pas(29) Fatal: F2613 Unit 'Graphics32' not found.
+
+== 2) 同一件仅把 uses 的 Graphics32 换成本机真实存在的单元名 GR32 后重编 ==
+   工单点名 3 处（假评分 CurrentScore:=0.5、TODO NCC、未声明 Row/Col/StartTime）。实测：
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(52) Error: E2204 Improper GUID syntax
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(70) Error: E2268 Parameters of this type cannot have default values
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(70) Error: E2026 Constant expression expected
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(93) Error: E2023 Function needs result type
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(131) Error: E2003 Undeclared identifier: 'MinConfidence'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(131) Error: E2029 ')' expected but ':' found
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(132) Error: E2003 Undeclared identifier: 'MaxScale'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(133) Error: E2003 Undeclared identifier: 'ScaleStep'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(134) Error: E2003 Undeclared identifier: 'ToleranceRGB'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(134) Error: E2029 ':=' expected but ':' found
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(135) Error: E2003 Undeclared identifier: 'UseROI'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(136) Error: E2003 Undeclared identifier: 'ROIBounds'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(137) Error: E2003 Undeclared identifier: 'FastMode'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(138) Error: E2029 'END' expected but ')' found
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(153) Error: E2007 Constant or type identifier expected
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(184) Error: E2003 Undeclared identifier: 'Allocate'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(226) Error: E2003 Undeclared identifier: 'MaxSingle'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(244) Error: E2003 Undeclared identifier: 'SizeToFit'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(256) Error: E2003 Undeclared identifier: 'Row'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(257) Error: E2003 Undeclared identifier: 'Col'
+  gr32\DeepBase.Desktop.Screen.Click.RegionLocator.pas(283) Error: E2003 Undeclared identifier: 'StartTime'
+  gr32/DeepBase.Desktop.Screen.Click.RegionLocator.pas(86) Error: E2065 Unsatisfied forward or external declaration: 'TScreenRegionLocator.RefineWithCrossCorrelation'
+  gr32/DeepBase.Desktop.Screen.Click.RegionLocator.pas(91) Error: E2065 Unsatisfied forward or external declaration: 'TScreenRegionLocator.BuildTemplatePyramid'
+  gr32/DeepBase.Desktop.Screen.Click.RegionLocator.pas(93) Error: E2065 Unsatisfied forward or external declaration: 'TScreenRegionLocator.DestroyPyramid'
+  gr32/DeepBase.Desktop.Screen.Click.RegionLocator.pas(99) Error: E2065 Unsatisfied forward or external declaration: 'TScreenRegionLocator.FindTemplate'
+  gr32/DeepBase.Desktop.Screen.Click.RegionLocator.pas(100) Error: E2065 Unsatisfied forward or external declaration: 'TScreenRegionLocator.FindTemplateInROI'
+  gr32/DeepBase.Desktop.Screen.Click.RegionLocator.pas(102) Error: E2065 Unsatisfied forward or external declaration: 'TScreenRegionLocator.FindAllTemplates'
+   => 共 27 条编译期错误（含 6 个声明了但从未实现的公开/私有方法）
+
+== 3) Graphics32 依赖在仓内与门禁搜索面内都不存在（不是这台机器没配路径） ==
+  库目录里有无 Graphics32.pas：  ls: cannot access '/d/ProgramData/delphi/graphics32/Source/Graphics32.pas': No such file or directory
+  TBitmap32 的真实单元名：/d/ProgramData/delphi/graphics32/Source/GR32.pas
+  本仓 ThirdParty 是否 vendor 该库：Cloud/ DB/ Payment/ Social/ UI/ 
+  build-gate 搜索面: const UNIT_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'ThirdParty/Payment', 'ThirdParty/Social', 'Tools/CLI', 'Tools/WebService', 'Tests', 'Tests/Regression', 'Tests/Integration']
+  图形库入门禁搜索面: false
+
+== 4) 旧测试单元 A：Test…RegionLocator.pas（HEAD）==
+  行数：75；结尾两行（没有 implementation 节，正文断在半句声明上）：
+    |
+    |procedure TTestScreenRegionLocator.Setup;
+
+== 5) 旧测试单元 B：Test…RegionLocator.Impl.pas（HEAD）==
+  假占位 / GR32 不存在的位图 API / 本机 DUnitX 不存在的断言 API：
+    69:  FSourceBitmap.Allocate(800, 600);
+    70:  FTemplateBitmap.Allocate(100, 100);
+    87:  Assert.GreaterOrEqual(MatchResult.Confidence, 0.7, 'Confidence threshold met');
+    104:    // TODO: Implement scale-adjusted matching
+    105:    BestScore := Max(BestScore, 0.8); // Placeholder
+    108:  Assert.Greater(BestScore, 0.7, 'Multi-scale search finds best match');
+    124:  // TODO: Execute constrained search
+    134:  Assert.Pass; // Placeholder for tolerance testing
+    143:    RandomTemp.Allocate(50, 50);
+    159:    EmptyBitmap.Allocate(10, 10);
+    162:    Assert.ExpectedException(Exception, 'Empty bitmap should raise exception');
+    175:    LargeTemplate.Allocate(500, 500);
+    176:    FSourceBitmap.Allocate(100, 100);
+    191:    PixelTemplate.Allocate(1, 1);
+    215:  Assert.Less(Elapsed, 100, 'Full screen search should complete in <100ms');
+    229:  Assert.Less(Elapsed, 10, 'ROI-constrained search should complete in <10ms');
+  本件 RegisterTestFixture 传的是自己的类名（不同于 DPIMapper.Impl 的 nil global 假注册），
+  但 11 个用例里 3 个是 Placeholder、2 个用不存在的 Assert API、5 个用不存在的位图 API ⇒
+  该件不可编译，也就从未在任何一次真跑里执行过（A/B 两件同名 Fixture 各说各话）：
+    248:  TDUnitX.RegisterTestFixture(TTestScreenRegionLocatorImpl);
+
+== 6) 上面那批断言 API 是否真的不存在（单独喂 dcc64 实测，不靠推断） ==
+  DxProbe.pas(7) Error: E2003 Undeclared identifier: 'Less'
+  DxProbe.pas(8) Error: E2003 Undeclared identifier: 'Greater'
+  DxProbe.pas(9) Error: E2003 Undeclared identifier: 'GreaterOrEqual'
+  DxProbe.pas(10) Error: E2003 Undeclared identifier: 'ExpectedException'
+  DxProbe.pas(10) Error: E2003 Undeclared identifier: 'Exception'

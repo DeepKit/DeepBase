@@ -1,0 +1,41 @@
+# B2-05 反事实探针原件：把评分改回常量假分数（本次修掉的正是「假占位/恒真」那一类），用例必须变红
+# 判据来自 SPW A0031 反事实检查：只报 14 passed 证明不了用例会咬人
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas 's/Result := Hits \/ Area;/Result := 0.5; \/\/ counterfactual: fake placeholder score/'
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=14 pass=14 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := Hits \/ Area;/Result := 0.5; \/\/ counterfactual: fake placeholder score/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -154,7 +154,7 @@
+       end;
+     end;
+   end;
+-  Result := Hits / Area;
++  Result := 0.5; // counterfactual: fake placeholder score
+ end;
+ 
+ class function TTemplateMatcher.FindMatches(const ASnapshot, ATemplate: TPixelBuffer;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 14
+Tests Ignored : 0
+Tests Passed  : 10
+Tests Failed  : 4
+Tests Errored : 0
+  Test.DeepBase.Desktop.Screen.Click.RegionLocator.TTestScreenRegionLocator.TestScoreAtExactPatchIsOne
+  Test.DeepBase.Desktop.Screen.Click.RegionLocator.TTestScreenRegionLocator.TestScoreAtMisalignedPatchIsHitFraction
+  Test.DeepBase.Desktop.Screen.Click.RegionLocator.TTestScreenRegionLocator.TestFindMatchesReturnsScreenCoordinates
+  Test.DeepBase.Desktop.Screen.Click.RegionLocator.TTestScreenRegionLocator.TestFindMatchesAcceptsPartialPatchAtThreshold
+RUNNER_STATS fixtureCount=1 testCount=14 pass=10 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=14 pass=14 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas ==
