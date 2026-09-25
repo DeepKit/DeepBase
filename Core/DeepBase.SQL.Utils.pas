@@ -64,12 +64,12 @@ begin
   // System.Character 的 IsLetter/IsLetterOrDigit 放行 Unicode 字母（如中文、
   // 西里尔同形字），会在“引号外拼标识符”的场合引入同形字注入面。
   // First character must be ASCII letter or underscore
-  if not (AName[1] in ['A' .. 'Z', 'a' .. 'z', '_']) then
+  if not CharInSet(AName[1], ['A' .. 'Z', 'a' .. 'z', '_']) then
     Exit(False);
   // Remaining characters: ASCII letter, digit, or underscore
   for var I := 2 to AName.Length do
   begin
-    if not (AName[I] in ['A' .. 'Z', 'a' .. 'z', '0' .. '9', '_']) then
+    if not CharInSet(AName[I], ['A' .. 'Z', 'a' .. 'z', '0' .. '9', '_']) then
       Exit(False);
   end;
   Result := True;
