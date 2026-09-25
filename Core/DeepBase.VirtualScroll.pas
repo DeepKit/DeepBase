@@ -459,13 +459,19 @@ end;
 function TVirtualDataSource.GetIndexAtOffset(Offset: Integer): Integer;
 var
   CurrentOffset: Integer;
+  Step: Integer;
 begin
   Result := 0;
   CurrentOffset := 0;
 
   while (Result < FItemCount) and (CurrentOffset < Offset) do
   begin
-    Inc(CurrentOffset, GetItemHeight(Result));
+    // A2-08：0/负高度项在本扫描中按至少 1px 推进，保证每轮迭代
+    // CurrentOffset 单调前进、循环有界，不再依赖高度恒正的外部约定。
+    Step := GetItemHeight(Result);
+    if Step < 1 then
+      Step := 1;
+    Inc(CurrentOffset, Step);
     if CurrentOffset <= Offset then
       Inc(Result);
   end;
