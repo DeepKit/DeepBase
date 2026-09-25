@@ -1,6 +1,6 @@
 ﻿unit DeepBase.LLM.HTTP;
 
-{ DeepBase LLM HTTP Transport �� OpenAI/Anthropic format adapter }
+{ DeepBase LLM HTTP Transport 支持 OpenAI/Anthropic format adapter }
 
 interface
 

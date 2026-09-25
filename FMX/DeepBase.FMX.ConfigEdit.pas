@@ -5,7 +5,7 @@
   说明: 自动绑定?DeepBase 配置?FMX 编辑控件
   控件:
     - TFMXConfigEdit: 字符串配置编?
-    - TFMXConfigSpinBox: 鏁板€奸厤缃紪杈?
+    - TFMXConfigSpinBox: 数值配置编辑
     - TFMXConfigSwitch: 甯冨皵閰嶇疆寮€鍏?
   ============================================================================ }
 
@@ -36,7 +36,7 @@ type
   );
 
   /// <summary>
-  /// FMX 配置编辑控件 - 瀛楃涓插€?
+  /// FMX 配置编辑控件 - 字符串
   /// </summary>
   TFMXConfigEdit = class(TEdit)
   private
@@ -68,12 +68,12 @@ type
     procedure ReloadValue;
     
     /// <summary>
-    /// 妫€鏌ュ€兼槸鍚﹀凡淇敼
+    /// 检查值是否已修改
     /// </summary>
     function IsModified: Boolean;
     
     /// <summary>
-    /// 鎭㈠鍘熷鍊?
+    /// 恢复原始值
     /// </summary>
     procedure RevertToOriginal;
     

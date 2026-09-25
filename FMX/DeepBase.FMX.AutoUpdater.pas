@@ -88,13 +88,13 @@ type
     /// <summary>获取当前更新信息</summary>
     property CurrentUpdateInfo: TUpdateInfo read FCurrentUpdateInfo;
     
-    /// <summary>鏄惁姝ｅ湪妫€鏌?/summary>
+    /// <summary>是否正在检查</summary>
     property IsChecking: Boolean read FIsChecking;
     
     /// <summary>是否正在下载</summary>
     property IsDownloading: Boolean read FIsDownloading;
     
-    /// <summary>涓婃妫€鏌ユ椂闂?/summary>
+    /// <summary>上次检查时间</summary>
     property LastCheckTime: TDateTime read FLastCheckTime;
     
   published

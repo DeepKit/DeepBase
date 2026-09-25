@@ -4,10 +4,10 @@
   版本: 1.1
   说明: 自动翻译?FMX 控件
   控件:
-    - TFMXi18nLabel: 鑷姩缈昏瘧鐨?Label
-    - TFMXi18nButton: 鑷姩缈昏瘧鐨?Button
-    - TFMXi18nCheckBox: 鑷姩缈昏瘧鐨?CheckBox
-    - TFMXi18nGroupBox: 鑷姩缈昏瘧鐨?GroupBox
+    - TFMXi18nLabel: 自动翻译的 Label
+    - TFMXi18nButton: 自动翻译的 Button
+    - TFMXi18nCheckBox: 自动翻译的 CheckBox
+    - TFMXi18nGroupBox: 自动翻译的 GroupBox
   ============================================================================ }
 
 unit DeepBase.FMX.I18nControls;

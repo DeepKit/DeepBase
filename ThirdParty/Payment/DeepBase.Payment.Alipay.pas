@@ -1,7 +1,7 @@
 ﻿unit DeepBase.Payment.Alipay;
 
 {*******************************************************************************
-  DeepBase Alipay (鏀粯瀹? Payment Integration
+  DeepBase Alipay (支付宝) Payment Integration
 
   Supports:
     - 电脑网站支付 (alipay.trade.page.pay)
@@ -286,7 +286,7 @@ begin
     Exit(False);
 
   {$IFDEF MSWINDOWS}
-  // 鍏煎浠呬紶鍏?Base64 主体的公钥配置  NormalizedKey := PublicKey;
+  // 兼容仅传入 Base64 主体的公钥配置  NormalizedKey := PublicKey;
   if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
     NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
       NormalizedKey + sLineBreak +

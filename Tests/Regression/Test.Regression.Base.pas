@@ -33,7 +33,7 @@ type
     /// <summary>获取 Bug 编号，如 'BUG-058'</summary>
     function GetBugNumber: string; virtual; abstract;
 
-    /// <summary>获取 Bug 绠€鐭弿杩?/summary>
+    /// <summary>获取 Bug 简短描述</summary>
     function GetBugDescription: string; virtual; abstract;
 
     /// <summary>获取修复日期，格?'YYYY-MM-DD'</summary>
@@ -63,7 +63,7 @@ type
     [TearDown]
     procedure TearDown; virtual;
 
-    /// <summary>鑾峰彇瀹屾暣鐨?Bug 淇℃伅瀛楃涓?/summary>
+    /// <summary>获取完整的 Bug 信息字符串</summary>
     function GetBugInfo: string;
   end;
 
@@ -76,7 +76,7 @@ type
     FThreadCount: Integer;
     FIterationCount: Integer;
   protected
-    /// <summary>榛樿绾跨▼鏁?/summary>
+    /// <summary>默认线程数</summary>
     property ThreadCount: Integer read FThreadCount write FThreadCount;
 
     /// <summary>每个线程的迭代次?/summary>
@@ -138,7 +138,7 @@ end;
 
 function TRegressionTestBase.GetPriority: string;
 begin
-  Result := 'P1'; // 榛樿浼樺厛绾?
+  Result := 'P1'; // 默认优先级
 end;
 
 function TRegressionTestBase.GetAffectedFile: string;
@@ -248,7 +248,7 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
 
-    // 鍚姩鎵€鏈夌嚎绋?
+    // 启动所有线程
     for I := 0 to FThreadCount - 1 do
       Threads[I].Start;
 

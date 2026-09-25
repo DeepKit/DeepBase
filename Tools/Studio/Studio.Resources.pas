@@ -110,7 +110,7 @@ class function TStudioResources.GetString(const Key: string): string;
   // Helper: Build Chinese strings using WideChar to avoid encoding issues
   function ZH_NoDBOpened: string;
   begin
-    // 鏈墦寮€鏁版嵁搴?
+    // 未打开数据库
     Result := WideChar($672A) + WideChar($6253) + WideChar($5F00) + 
               WideChar($6570) + WideChar($636E) + WideChar($5E93);
   end;

@@ -95,7 +95,7 @@ begin
     SourcePath := '..\Core\DeepBase.Serialization.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;

@@ -167,7 +167,7 @@ begin
   // 创建界面
   CreateUI;
   
-  // 鎭㈠绐椾綋鐘舵€?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
+  // 恢复窗体状  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
   
   // 记录启动日志
   DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启动', 'App');

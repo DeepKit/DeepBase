@@ -288,7 +288,7 @@ begin
   if AMode = rmPreview then
     Exit(TActionResult.DryRunOK(AActionKey, 'Preview passed'));
 
-  // 执行 Bridge 链——用锁内快���的引用数组，不再触碰 FBridges/LAction
+  // 执行 Bridge 链——用锁内快照的引用数组，不再触碰 FBridges/LAction
   for I := 0 to High(LBridgeRefs) do
   begin
     LBridge := LBridgeRefs[I];

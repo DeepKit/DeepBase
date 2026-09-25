@@ -113,7 +113,7 @@ begin
     raise EProtectionException.Create('获取加密上下文失败');
 end;
 
-// 数据填充（PKCS7�?
+// 数据填充（PKCS7）
 class function TBasicProtection.PadData(const AData: TBytes; ABlockSize: Integer): TBytes;
 var
   PadLength: Integer;
@@ -144,7 +144,7 @@ begin
   
   PadLength := AData[High(AData)];
   
-  // 楠岃瘉濉厖鐨勬纭€?
+  // 验证填充的正确性
   for I := Length(AData) - PadLength to High(AData) do
   begin
     if AData[I] <> PadLength then
@@ -209,7 +209,7 @@ begin
         PaddedData := PadData(DataBytes, 16);
         DataLen := Length(PaddedData);
         
-        // 涓哄姞瀵嗛鐣欒冻澶熺┖闂?
+        // 为加密预留足够空间
         SetLength(EncryptedData, DataLen + 16);
         Move(PaddedData[0], EncryptedData[0], DataLen);
         
@@ -530,7 +530,7 @@ begin
     raise EProtectionException.Create('Failed to get hash value');
 end;
 
-// 计算HMAC瀛楃涓?
+// 计算HMAC字符串
 class function TBasicProtection.CalculateHMAC(const AData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
 var
   DataBytes, KeyBytes, HMACBytes: TBytes;

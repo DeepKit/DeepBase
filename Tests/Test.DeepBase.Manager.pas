@@ -6,7 +6,7 @@
   测试内容:
   - Initialize / InitializeEx / InitializeWithDB
   - Finalize
-  - 閿欒鐮?
+  - 错误码
   - 鍋ュ悍妫€鏌?
 *******************************************************************************}
 
@@ -170,7 +170,7 @@ begin
   InitResult := FManager.InitializeWithDB(':memory:');
   
   Assert.IsTrue(InitResult, 'InitializeWithDB 应该成功');
-  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 搴旇涓?True');
+  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该为 True');
 end;
 
 procedure TTestDeepBaseManager.Test_HealthCheck_AfterInit;
@@ -219,7 +219,7 @@ begin
   FManager.InitializeWithDB(':memory:');
   
   Assert.AreEqual(DeepBase_VERSION, DeepBase_VERSION, 'Version constant should exist');
-  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 搴旇涓?True');
+  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该为 True');
 end;
 
 procedure TTestDeepBaseManager.Test_InitializeWithDB_WithoutConnectionAdapter_ShouldFailClearly;

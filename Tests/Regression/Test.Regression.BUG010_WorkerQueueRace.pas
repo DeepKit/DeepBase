@@ -3,7 +3,7 @@
 
   BUG-010: 宸ヤ綔闃熷垪鐘舵€佺珵浜?
   
-  原问题 澶氫釜绾跨▼鍙兘鍚屾椂淇敼浣滀笟鐘舵€侊紝缂轰箯閫傚綋鍚屾
+  原问题 多个线程可能同时修改作业状态，缺乏适当同步
   
   修复方案: 在所有状态变更操作中添加锁保护，确保线程安全
   
@@ -42,7 +42,7 @@ type
     procedure Test_StateChange_HasLockProtection;
     
     [Test]
-    [Description('楠岃瘉骞跺彂鐘舵€佸彉鏇翠笉浼氬鑷存暟鎹崯鍧?)]
+    [Description('验证并发状态变更不会导致数据损坏')]
     [RepeatTest(10)]
     procedure Test_ConcurrentStateChange_NoCorruption;
   end;
@@ -93,7 +93,7 @@ begin
     SourcePath := '..\Core\DeepBase.WorkerQueue.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;
@@ -144,7 +144,7 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
     
-    // 鍚姩鎵€鏈夌嚎绋?
+    // 启动所有线程
     for I := 0 to 9 do
       Threads[I].Start;
     
@@ -155,7 +155,7 @@ begin
       Threads[I].Free;
     end;
     
-    // 楠岃瘉璁℃暟鍣ㄥ€兼纭?
+    // 验证计数器值正确
     Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正?);
   finally
     Lock.Free;

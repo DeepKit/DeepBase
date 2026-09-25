@@ -3,7 +3,7 @@
   
   版本: 1.0
   所属包: DeepBasePersistence
-  说明: 灏?DoQry 库集成到 DeepBase 妗嗘灦锛岀粺涓€鏃ュ織鍜岄敊璇鐞?
+  说明: 将 DoQry 库集成到 DeepBase 框架，统一日志和错误处理
   线程安全: 所有公共方法均线程安全
   ============================================================================ }
 
@@ -33,7 +33,7 @@ const
   DOQRY_ERR_CONSTRAINT       = 4001;  // 约束违反
   DOQRY_ERR_UNIQUE           = 4002;  // 唯一约束违反
   DOQRY_ERR_FOREIGN_KEY      = 4003;  // 外键约束违反
-  DOQRY_ERR_NOT_FOUND        = 5001;  // 璁板綍鏈壘鍒?
+  DOQRY_ERR_NOT_FOUND        = 5001;  // 记录未找到
   DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 查询定义未找?
   DOQRY_ERR_UNKNOWN          = 9999;  // 未知错误
 
@@ -44,7 +44,7 @@ type
   TUniDBType = (udbPostgreSQL, udbSQLite);
 
   /// <summary>
-  /// 鏌ヨ涓婁笅鏂?
+  /// 查询上下文
   /// </summary>
   TUniQueryContext = record
     Connection: TFDConnection;
@@ -172,7 +172,7 @@ procedure UniDbSetCacheTTL(Seconds: Integer);
 procedure UniDbGetCacheStats(out Hits, Misses, EntryCount: Int64);
 
 /// <summary>
-/// 启用/绂佺敤棰勭紪璇戣鍙ュ鐢紙榛樿鍚敤锛?
+/// 启用/禁用预编译语句复用（默认启用）
 /// </summary>
 procedure UniDbSetPreparedStatementPooling(Enabled: Boolean);
 
@@ -408,7 +408,7 @@ begin
 end;
 
 /// <summary>
-/// 鏍规嵁寮傚父娑堟伅鎺ㄦ柇閿欒鐮侊紙鍏煎鍥為€€锛?
+/// 根据异常消息推断错误码（兼容回退）
 /// </summary>
 function InferErrorCodeFromMessage(const ErrMsg: string): Integer;
 var
@@ -792,7 +792,7 @@ end;
 procedure CopyQueryToMemTable(Src: TFDQuery; Dest: TFDMemTable);
 begin
   Dest.Close;
-  // TFDMemTable 鍙互鐩存帴浠?TFDQuery 复制数据
+  // TFDMemTable 可以直接从 TFDQuery 复制数据
   Dest.CopyDataSet(Src, [coStructure, coRestart, coAppend]);
 end;
 
@@ -1476,7 +1476,7 @@ begin
         Q.Open;
         Result := Q.RecordCount;
 
-        // 复制数据�?TFDMemTable
+        // 复制数据到 TFDMemTable
         if Data = nil then
           Data := TFDMemTable.Create(nil);
         CopyQueryToMemTable(Q, Data);

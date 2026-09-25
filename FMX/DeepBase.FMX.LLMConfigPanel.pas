@@ -1,5 +1,5 @@
 ﻿{ ============================================================================
-  DeepBase.FMX.LLMConfigPanel - FMX LLM ����������
+  DeepBase.FMX.LLMConfigPanel - FMX LLM 配置面板
   
   版本: 1.0
   说明: 提供 LLM 配置的可视化编辑界面 (FMX 跨平台版本)

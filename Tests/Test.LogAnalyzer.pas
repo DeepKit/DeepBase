@@ -230,7 +230,7 @@ begin
   begin
     FTestLogs[I].Id := I + 1;
     FTestLogs[I].Timestamp := IncHour(Now, -20 + I);  // 过去 20 小时分布
-    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 涓笉鍚屾潵锟?
+    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 个不同来源
 
     case I mod 6 of
       0: FTestLogs[I].Level := llTrace;

@@ -1,9 +1,9 @@
 ﻿{ ============================================================================
-  Test.Regression.BUG062_PluginSandbox - 鎻掍欢娌欑閫冮€搁闄╁洖褰掓祴璇?
+  Test.Regression.BUG062_PluginSandbox - 插件沙箱逃逸风险回归测试
 
-  BUG-062: 鎻掍欢娌欑閫冮€搁闄?
+  BUG-062: 插件沙箱逃逸风险
   
-  原问题 鎻掍欢鍔犺浇缂轰箯瀹夊叏楠岃瘉锛屽瓨鍦ㄨ矾寰勯亶鍘嗗拰浠ｇ爜瀹屾暣鎬ч闄┿€?
+  原问题 插件加载缺乏安全验证，存在路径遍历和代码完整性风险。
           恶意插件可能通过 ../.. 路径访问系统敏感文件?
   
   修复方案: 添加插件路径验证 (IsValidPluginPath) 和数字签名验证机?
@@ -51,7 +51,7 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('楠岃瘉璺緞閬嶅巻鏀诲嚮琚樆姝?- 使用 ../ 灏濊瘯閫冮€?)]
+    [Description('验证路径遍历攻击被阻止 - 使用 ../ 尝试逃逸')]
     procedure Test_PathTraversal_WithDotDot_ShouldBeBlocked;
     
     [Test]
@@ -63,7 +63,7 @@ type
     procedure Test_ValidPluginPath_ShouldBeAllowed;
     
     [Test]
-    [Description('楠岃瘉闈?BPL 鏂囦欢琚嫆缁?)]
+    [Description('验证非 BPL 文件被拒绝')]
     procedure Test_NonBPLFile_ShouldBeRejected;
     
     [Test]
@@ -85,7 +85,7 @@ end;
 
 function TBug062_PluginSandboxTest.GetBugDescription: string;
 begin
-  Result := '鎻掍欢娌欑閫冮€搁闄?;
+  Result := '插件沙箱逃逸风险';
 end;
 
 function TBug062_PluginSandboxTest.GetFixDate: string;
@@ -204,19 +204,19 @@ begin
     ValidPath := DummyBPLPath;
     
     // 注意：这里会因为文件不是真正?BPL 而失败，
-    // 浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛堥敊璇簲璇ユ槸 "Failed to load BPL" 而不是"Invalid path"锛?
+    // 但路径验证应该通过（错误应该是 "Failed to load BPL" 而不是"Invalid path"）
     FErrorFired := False;
     FLastErrorMessage := '';
     PluginManager.OnPluginError := HandlePluginError;
     
-    // 灏濊瘯鍔犺浇锛堜細鍥犱负涓嶆槸鐪熸鐨?BPL 鑰屽け璐ワ紝浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛?
+    // 尝试加载（会因为不是真正的 BPL 而失败，但路径验证应该通过）
     PluginManager.LoadPlugin(ValidPath);
     
     if FErrorFired then
       Assert.IsFalse(FLastErrorMessage.Contains('Invalid plugin path'),
         '合法路径不应该触发路径验证错?);
     
-    // 濡傛灉鍒拌揪杩欓噷锛岃鏄庤矾寰勯獙璇侀€氳繃浜?
+    // 如果到达这里，说明路径验证通过
     Assert.Pass('合法插件路径验证通过');
   finally
     PluginManager.Free;
@@ -241,7 +241,7 @@ begin
   try
     LoadResult := PluginManager.LoadPlugin(NonBPLPath);
     
-    Assert.IsFalse(LoadResult, '闈?BPL 鏂囦欢搴旇琚嫆缁?);
+    Assert.IsFalse(LoadResult, '非 BPL 文件应该被拒绝');
   finally
     PluginManager.Free;
   end;

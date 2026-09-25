@@ -164,7 +164,7 @@ type
     /// <summary>释放回连接池</summary>
     procedure Release;
 
-    /// <summary>鏍囪涓烘棤鏁?/summary>
+    /// <summary>标记为无效</summary>
     procedure Invalidate;
 
     /// <summary>验证连接有效?/summary>
@@ -260,7 +260,7 @@ type
     /// <summary>鍏抽棴杩炴帴姹?/summary>
     procedure Shutdown;
 
-    /// <summary>鑾峰彇涓€涓繛鎺?/summary>
+    /// <summary>获取一个连接</summary>
     function GetConnection: TPooledConnection;
 
     /// <summary>Create a configured FireDAC connection without opening it.</summary>
@@ -298,7 +298,7 @@ type
     property Config: TPoolConfig read FConfig write FConfig;
     property Initialized: Boolean read FInitialized;
 
-    // 蹇嵎灞炴€?
+    // 快捷属性
     property MinSize: Integer read FConfig.MinSize write FConfig.MinSize;
     property MaxSize: Integer read FConfig.MaxSize write FConfig.MaxSize;
     property AcquireTimeoutMs: Cardinal read FConfig.AcquireTimeoutMs write FConfig.AcquireTimeoutMs;

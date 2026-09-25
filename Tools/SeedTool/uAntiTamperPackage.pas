@@ -114,7 +114,7 @@ begin
   Result.EnableLogging := True;
   Result.LogFileName := 'antitamper_debug.log';
   Result.EncryptionType := etAES256; // 默认使用AES-256
-  // KDF/HMAC 榛樿鍊?
+  // KDF/HMAC 默认值
   Result.Salt := 'DeepMoveC_Default_Salt_2025';
   Result.KdfIterations := 5000;
   Result.EnableHMAC := True;
@@ -240,13 +240,13 @@ begin
 end;
 
 // 计算 HMAC-SHA256 并返回HEX
-// 娉ㄦ剰锛氳繖閲屽疄闄呰绠楃殑鏄?HMAC(SHA256(Data), Key)锛岃€岄潪鏍囧噯 HMAC(Data, Key)
+// 注意：这里实际计算的是 HMAC(SHA256(Data), Key)，而非标准 HMAC(Data, Key)
 // 但只要播种和验证使用相同逻辑，防篡改仍然有效
 class function TAntiTamperPackage.ComputeHMACSHA256(const Data: TBytes): string;
 var
   DataDigest, KeyHex: string;
 begin
-  // 先计算Data 的SHA-256 鎽樿锛屽啀璁＄畻鍏?HMAC
+  // 先计算Data 的SHA-256 摘要，再计算其 HMAC
   DataDigest := THash.DigestAsString(Data);
   KeyHex := GetEffectiveKeyString;
   Result := THashSHA2.GetHMAC(DataDigest, KeyHex);
@@ -452,7 +452,7 @@ begin
     try
       Query.Connection := AConnection;
       
-      // 妫€鏌ヨ褰曟槸鍚﹀瓨鍦?
+      // 检查记录是否存在
       Query.SQL.Text := 'SELECT COUNT(*) as cnt FROM ' + FConfig.TableName + ' WHERE image_key = :key';
       Query.ParamByName('key').AsString := AImageKey;
       Query.Open;
@@ -520,7 +520,7 @@ begin
   try
     if not Assigned(AImage) then
     begin
-      WriteLog('Image鎺т欢鏈垎閰? ' + AImageKey);
+      WriteLog('Image控件未分配 ' + AImageKey);
       Exit;
     end;
     
@@ -639,8 +639,8 @@ begin
   ErrorMsg := Format('安全棢查失败！'#13#10#13#10 +
     '图像: %s'#13#10 +
     '原因: %s'#13#10#13#10 +
-      '妫€娴嬪埌绋嬪簭鏂囦欢鍙兘琚鏀癸紝涓轰簡鎮ㄧ殑瀹夊叏锛岀▼搴忓皢閫€鍑恒€�'#13#10 +
-      '璇蜂粠瀹樻柟缃戠珯涓嬭浇鏈€鏂扮増鏈€�'#13#10#13#10 +
+      '检测到程序文件可能被篡改，为了您的安全，程序将退出。'#13#10 +
+      '请从官方网站下载最新版本。'#13#10#13#10 +
       '是否现在访问官方下载页面＄17', [ImageKey, Reason]);
     
   Response := MessageBox(0, PChar(ErrorMsg), '安全警告', MB_YESNO or MB_ICONERROR or MB_TOPMOST);
@@ -652,7 +652,7 @@ begin
   end;
   
   // 寮哄埗閫€鍑虹▼搴?
-    WriteLog('绋嬪簭鍥犲畨鍏ㄨ繚瑙勯€€鍑�');
+    WriteLog('程序因安全违规退出');
   ExitProcess(1);
 end;
 
@@ -667,7 +667,7 @@ begin
     Q.Connection := AConnection;
     Q.SQL.Text := 'DELETE FROM ' + FConfig.TableName;
     Q.ExecSQL;
-      WriteLog('宸叉竻绌洪槻绡℃敼鏁版嵁琛�');
+      WriteLog('已清空防篡改数据表');
   finally
     Q.Free;
   end;

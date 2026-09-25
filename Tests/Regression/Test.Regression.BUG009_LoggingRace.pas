@@ -100,7 +100,7 @@ begin
     SourcePath := '..\Core\DeepBase.Logging.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;
@@ -148,7 +148,7 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
     
-    // 鍚姩鎵€鏈夌嚎绋?
+    // 启动所有线程
     for I := 0 to 4 do
       Threads[I].Start;
     
@@ -185,7 +185,7 @@ begin
     SourcePath := '..\Core\DeepBase.Logging.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;

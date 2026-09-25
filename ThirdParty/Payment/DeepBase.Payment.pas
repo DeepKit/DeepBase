@@ -4,7 +4,7 @@
   DeepBase Payment Integration
 
   Unified interface for payment providers:
-    - Alipay (鏀粯瀹?
+    - Alipay (支付宝)
     - WeChat Pay (微信支付)
     - Stripe
     - PayPal

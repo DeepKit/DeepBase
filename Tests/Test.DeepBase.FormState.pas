@@ -282,7 +282,7 @@ begin
   
   FFormState.RestoreFormState(FTestForm);
   
-  Assert.AreEqual(Ord(wsNormal), Ord(FTestForm.WindowState), string('WindowState 搴旇鎭㈠涓?Normal'));
+  Assert.AreEqual(Ord(wsNormal), Ord(FTestForm.WindowState), string('WindowState 应该恢复为 Normal'));
 end;
 
 procedure TTestDeepBaseFormState.Test_SaveRestore_WindowState_Maximized;
@@ -294,7 +294,7 @@ begin
   
   FFormState.RestoreFormState(FTestForm);
   
-  Assert.AreEqual(Ord(wsMaximized), Ord(FTestForm.WindowState), string('WindowState 搴旇鎭㈠涓?Maximized'));
+  Assert.AreEqual(Ord(wsMaximized), Ord(FTestForm.WindowState), string('WindowState 应该恢复为 Maximized'));
 end;
 
 procedure TTestDeepBaseFormState.Test_RestoreFormState_BoundaryCheck;

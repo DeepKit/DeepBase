@@ -156,7 +156,7 @@ begin
   Assert.AreEqual(Integer(1), Integer(Length(Items)), 'should have 1 item');
   Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 应该正确');
   Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 应该正确');
-  Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 搴旇鑷冲皯涓?1'));
+  Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 应该至少为 1'));
 end;
 
 procedure TTestDeepBaseMRU.Test_GetMRUList_MaxItems;
@@ -244,7 +244,7 @@ var
   TempFile: string;
   Items: TArray<string>;
 begin
-  // 鍒涘缓涓€涓复鏃舵枃浠?
+  // 创建一个临时文件
   TempFile := TPath.Combine(TPath.GetTempPath, 'mru_test_' + TGUID.NewGuid.ToString + '.tmp');
   TFile.WriteAllText(TempFile, 'test');
   

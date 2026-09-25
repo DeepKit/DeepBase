@@ -71,7 +71,7 @@ end;
 
 class function TLogExporter.EscapeCSV(const AValue: string): string;
 begin
-  // CSV 瀛楁涓寘鍚€楀彿銆佸紩鍙锋垨鎹㈣绗︽椂闇€瑕佺敤寮曞彿鍖呭洿
+  // CSV 字段中包含逗号、引号或换行符时需要用引号包围
   if (Pos(',', AValue) > 0) or (Pos('"', AValue) > 0) or
      (Pos(#13, AValue) > 0) or (Pos(#10, AValue) > 0) then
   begin
@@ -107,7 +107,7 @@ begin
     // UTF-8 BOM for Excel compatibility
     SL.WriteBOM := True;
 
-    // 鏍囬琛?
+    // 标题行
     SL.Add('ID,时间,级别,来源,消息,详情');
 
     // 鏁版嵁琛?

@@ -408,7 +408,7 @@ begin
   
   FHotkeys.RegisterDefaultHotkeys(Defaults);
   
-  // 修改快捷�?
+  // 修改快捷键
   NewShortcut := TextToShortCut('Ctrl+X');
   FHotkeys.SetHotkey(Action, NewShortcut);
   
@@ -458,8 +458,8 @@ var
   I: Integer;
   Unused: TShortCut;
 begin
-  // Hotkeys 模块在初始化时可能已预置了一批默认快捷键�?
-  // 因此这里不要假设 'Ctrl+F' 一定不会被占用�?
+  // Hotkeys 模块在初始化时可能已预置了一批默认快捷键。
+  // 因此这里不要假设 'Ctrl+F' 一定不会被占用。
 
   FHotkeys.SetHotkey('existing.action', TextToShortCut('Ctrl+E'));
 
@@ -492,7 +492,7 @@ begin
   
   Conflict := FHotkeys.CheckHotkeyConflict(Shortcut);
   
-  Assert.AreEqual(Action, Conflict, '应该返回冲突�?Action 名称');
+  Assert.AreEqual(Action, Conflict, '应该返回冲突的 Action 名称');
 end;
 
 procedure TTestDeepBaseHotkeys.Test_GetAllHotkeys;
@@ -504,7 +504,7 @@ begin
   
   AllHotkeys := FHotkeys.GetAllHotkeys;
   
-  Assert.IsTrue(Length(AllHotkeys) >= 2, '应该至少�?2 个快捷键');
+  Assert.IsTrue(Length(AllHotkeys) >= 2, '应该至少有 2 个快捷键');
 end;
 
 procedure TTestDeepBaseHotkeys.Test_DeleteHotkey;

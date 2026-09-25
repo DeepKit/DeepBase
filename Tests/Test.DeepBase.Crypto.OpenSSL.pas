@@ -16,7 +16,7 @@ type
   ///
   /// 璇存槑锛?
   /// - 这些测试在没?libcrypto 时不会失败，只验证不会抛出意外异常；
-  /// - 褰撹繍琛岀幆澧冩纭儴缃?libcrypto 鏃讹紝浼氳繘涓€姝ラ獙璇侀殢鏈烘暟闀垮害鍜?AES-256-GCM 鐨勫姞瑙ｅ瘑寰€杩斻€?
+  /// - 当运行环境正确部署 libcrypto 时，会进一步验证随机数长度和 AES-256-GCM 的加解密往返。
   /// </summary>
   [TestFixture]
   TOpenSSLBasicTests = class

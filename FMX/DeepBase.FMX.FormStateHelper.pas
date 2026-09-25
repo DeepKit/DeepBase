@@ -2,7 +2,7 @@
   DeepBase.FMX.FormStateHelper - FMX 绐椾綋鐘舵€佸姪鎵嬬粍浠?
   
   版本: 1.0
-  说明: 拖放到FMX 绐椾綋涓婂嵆鍙嚜鍔ㄤ繚瀛?鎭㈠绐椾綋鐘舵€?
+  说明: 拖放到FMX 窗体上即可自动保存/恢复窗体状态
   功能:
     - 自动保存窗体位置、大小、WindowState
     - 自动恢复时检查显示器边界
@@ -80,7 +80,7 @@ type
     procedure SaveState;
     
     /// <summary>
-    /// 鎵嬪姩鎭㈠鐘舵€?
+    /// 手动恢复状态
     /// </summary>
     procedure RestoreState;
     
@@ -253,7 +253,7 @@ function TFMXFormStateHelper.GetScreenWorkArea: TRectF;
 var
   ScreenSvc: IFMXScreenService;
 begin
-  Result := TRectF.Create(0, 0, 1920, 1080); // 榛樿鍊?
+  Result := TRectF.Create(0, 0, 1920, 1080); // 默认值
   
   if TPlatformServices.Current.SupportsPlatformService(IFMXScreenService, ScreenSvc) then
     Result := TRectF.Create(0, 0, ScreenSvc.GetScreenSize.X, ScreenSvc.GetScreenSize.Y);

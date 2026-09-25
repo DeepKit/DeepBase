@@ -2,8 +2,8 @@
   Test.Regression.BUG013_RSASignature - 支付模块RSA签名回归测试
 
   BUG-013: 支付模块RSA签名未实?  
-  原问�? RSA2Sign方法只使用SHA256+Base64，未实现真正的RSA2-SHA256签名�?  
-  修复方案: 使用Windows CryptoAPI实现真正的RSA2-SHA256签名�?  
+  原问题: RSA2Sign方法只使用SHA256+Base64，未实现真正的RSA2-SHA256签名。  
+  修复方案: 使用Windows CryptoAPI实现真正的RSA2-SHA256签名。  
   修复日期: 2025-01-27
   文件: ThirdParty/Payment/DeepBase.Payment.Alipay.pas
   浼樺厛绾? P0 (Critical)
@@ -100,12 +100,13 @@ begin
   // 计算箢单的 SHA256+Base64（这是错误的实现方式?  HashBytes := THashSHA2.GetHashBytes(TestContent);
   SimpleSHA256Base64 := TNetEncoding.Base64.EncodeBytesToString(HashBytes);
   
-  // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符�?  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),
+  // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符）
+  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),
     'SHA256+Base64 应该产生 44 字符的结?);
   
   // RSA-2048 签名应该产生 256 字节，Base64 编码后约 344 字符
   // 这里我们只验证概念，实际签名霢要私?  
-  Assert.Pass('验证通过：RSA 签名长度应该远大于简�?SHA256+Base64');
+  Assert.Pass('验证通过：RSA 签名长度应该远大于简单 SHA256+Base64');
   
   LogTestEnd('Test_RSASign_IsNotSimpleSHA256Base64', True);
 end;
@@ -114,10 +115,12 @@ procedure TBug013_RSASignatureTest.Test_RSASign_HasCorrectLength;
 begin
   LogTestStart('Test_RSASign_HasCorrectLength');
   
-  // RSA-2048 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?56 字节
+  // RSA-2048 签名特征：
+  // - 原始签名：256 字节
   // - Base64 编码后：?344 字符
   
-  // RSA-4096 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?12 字节
+  // RSA-4096 签名特征：
+  // - 原始签名：512 字节
   // - Base64 编码后：?684 字符
   
   // 由于没有实际的私钥，这里只验证概?  Assert.Pass('RSA 签名长度验证通过（需要实际私钥进行完整测试）');

@@ -205,7 +205,7 @@ begin
   FI18n := FManager.I18n;
 
   // IMPORTANT: DeepBase 使用单例 Manager，测试之间会共享 I18n 实例?
-  // 涓洪伩鍏嶅墠搴忕敤渚嬪垏鎹㈣瑷€/缂撳瓨褰卞搷鍚庣画鐢ㄤ緥锛岃繖閲岀粺涓€澶嶄綅銆?
+  // 为避免前序用例切换语言/缓存影响后续用例，这里统一复位。
   FI18n.CurrentLanguage := 'en-US';
   FI18n.ClearCache;
 end;
@@ -312,7 +312,7 @@ var
 begin
   Languages := FI18n.GetAvailableLanguages;
   
-  // 鑷冲皯搴旇鏈変竴涓瑷€锛堥粯璁よ瑷€锛?
+  // 至少应该有一个语言（默认语言）
   Assert.IsTrue(Length(Languages) >= 1, '至少应该有一个可用语訢');
 end;
 
@@ -338,7 +338,7 @@ begin
   
   // 使用 SubscribeLanguageChange 代替直接设置 OnLanguageChanged
   // 因为 OnLanguageChanged ?TNotifyEvent 类型，不支持匿名方法
-  // 娴嬭瘯绠€鍖? 鍙獙璇佸垏鎹㈣瑷€涓嶆姤閿?
+  // 测试简化：只验证切换语言不报错
   Assert.WillNotRaise(
     procedure
     begin

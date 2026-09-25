@@ -3,10 +3,10 @@
 
   BUG-034: 硬编码密钥漏?
   
-  原问题 澶氫釜妯″潡瀛樺湪纭紪鐮佸瘑閽ワ紝濡?@2241114'銆?Default_AntiTamper_Key_2025'等，
-          杩欎簺瀵嗛挜鍙互琚€嗗悜宸ョ▼鎻愬彇銆?
+  原问题 多个模块存在硬编码密钥，如'@2241114'、'Default_AntiTamper_Key_2025'等，
+          这些密钥可以被逆向工程提取。
   
-  修复方案: 绉婚櫎鎵€鏈夌‖缂栫爜榛樿瀵嗛挜锛岃姹傜敤鎴锋樉寮忛厤缃瘑閽ャ€?
+  修复方案: 移除所有硬编码默认密钥，要求用户显式配置密钥。
   
   修复日期: 2025-12-16
   文件: Features/DeepBase.Protection.pas, Features/DeepBase.AntiTamper.pas
@@ -112,7 +112,7 @@ begin
     SourcePath := '..\Features\DeepBase.Protection.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;
@@ -143,7 +143,7 @@ begin
     SourcePath := '..\Features\DeepBase.AntiTamper.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;

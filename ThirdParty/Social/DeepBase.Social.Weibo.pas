@@ -95,7 +95,8 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.ProtectString(APlainKey);
     ksmCredential:
-      // Credential Manager 妯″紡涓嬩笉闇€瑕侀澶栧姞瀵?      Result := APlainKey;
+      // Credential Manager 模式下不需要额外加密
+      Result := APlainKey;
   else
     // ksmPlainText - 涓嶆帹鑽愶紝浣嗕繚鎸佸吋瀹规€?    Result := APlainKey;
   end;

@@ -40,7 +40,7 @@ type
     procedure Test_WaitForm_NoMemoryLeak;
     
     [Test]
-    [Description('楠岃瘉澶氭鍒涘缓閿€姣?WaitForm 内存稳定')]
+    [Description('验证多次创建销毁 WaitForm 内存稳定')]
     procedure Test_WaitForm_RepeatedCreateDestroy_MemoryStable;
     
     [Test]
@@ -87,8 +87,8 @@ begin
   // 由于 WaitForm ?VCL 组件，需要在主线程中测试
   // 这里验证概念：创建和锢毁应该不泄漏内存
   
-  // 瀹為檯娴嬭瘯闇€瑕?VCL 鐜锛岃繖閲岄€氳繃浠ｇ爜瀹℃煡楠岃瘉
-  Assert.Pass('鍐呭瓨娉勬紡娴嬭瘯闇€瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
+  // 实际测试需要 VCL 环境，这里通过代码审查验证
+  Assert.Pass('内存泄漏测试需要 VCL 环境，通过代码审查确认修复');
   
   LogTestEnd('Test_WaitForm_NoMemoryLeak', True);
 end;
@@ -98,7 +98,7 @@ begin
   LogTestStart('Test_WaitForm_RepeatedCreateDestroy_MemoryStable');
   
   // 多次创建锢毁后内存应该稳定
-  Assert.Pass('閲嶅鍒涘缓閿€姣佹祴璇曢渶瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
+  Assert.Pass('重复创建销毁测试需要 VCL 环境，通过代码审查确认修复');
   
   LogTestEnd('Test_WaitForm_RepeatedCreateDestroy_MemoryStable', True);
 end;
@@ -117,7 +117,7 @@ begin
     SourcePath := '..\VCL\DeepBase.VCL.WaitForm.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
+      Assert.Pass('源文件不可访问，跳过静态分析测试');
       Exit;
     end;
   end;

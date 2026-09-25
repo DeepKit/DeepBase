@@ -383,7 +383,8 @@ begin
   try
     try
       Package.LoadFromFile(FileName);
-      // 濡傛灉娌℃湁鎶涘嚭寮傚父锛屾鏌ュ畬鏁存€ф爣蹇?      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');
+      // 如果没有抛出异常，检查完整性标志
+      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');
     except
       on E: Exception do
         // 抛出异常也是合理的行?        Assert.Pass('Tampering detected via exception: ' + E.Message);

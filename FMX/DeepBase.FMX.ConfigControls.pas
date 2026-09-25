@@ -44,7 +44,7 @@ type
     constructor Create(AOwner: TComponent); override;
     
     /// <summary>
-    /// 浠庨厤缃姞杞藉€?
+    /// 从配置加载值
     /// </summary>
     procedure LoadFromConfig;
     
@@ -60,7 +60,7 @@ type
     property ConfigKey: string read FConfigKey write SetConfigKey;
     
     /// <summary>
-    /// 榛樿鍊?
+    /// 默认值
     /// </summary>
     property DefaultValue: string read FDefaultValue write FDefaultValue;
     

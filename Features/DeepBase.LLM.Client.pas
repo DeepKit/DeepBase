@@ -19,7 +19,7 @@ type
   TImageProgressCallback = reference to procedure(
     AProgress: Double; const AStatusText: string; AIsComplete: Boolean);
 
-  /// 消费程序接口 �?极简调用
+  /// 消费程序接口：极简调用
   ILLMClient = interface
     ['{F2A1B3C4-D5E6-7890-ABCD-EF1234567890}']
 
@@ -75,7 +75,7 @@ type
     function LastDurationMs: Integer;
   end;
 
-  /// 管理接口 �?配置 Providers �?Tiers
+  /// 管理接口：配置 Providers 与 Tiers
   ILLMAdmin = interface
     ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567891}']
 

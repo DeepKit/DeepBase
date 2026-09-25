@@ -136,17 +136,17 @@ type
     // ========================================
     
     /// <summary>
-    /// ��ȡ��ݼ�
+    /// 获取快捷键
     /// </summary>
     function GetHotkey(const ActionName: string): TShortCut;
     
     /// <summary>
-    /// ���ÿ�ݼ�
+    /// 设置快捷键
     /// </summary>
     procedure SetHotkey(const ActionName: string; Shortcut: TShortCut);
     
     /// <summary>
-    /// ע��Ĭ�Ͽ�ݼ���ֻ�ڲ�����ʱ���룩
+    /// 注册默认快捷键（只在不存在时插入）
     /// </summary>
     procedure RegisterDefaultHotkeys(const Defaults: TArray<THotkeyDefault>);
     
@@ -155,12 +155,12 @@ type
     // ========================================
     
     /// <summary>
-    /// ���õ�����ݼ�ΪĬ��ֵ
+    /// 重置单个快捷键为默认值
     /// </summary>
     procedure ResetHotkey(const ActionName: string);
     
     /// <summary>
-    /// �������п�ݼ�ΪĬ��ֵ
+    /// 重置所有快捷键为默认值
     /// </summary>
     procedure ResetAllHotkeys;
     
@@ -169,9 +169,9 @@ type
     // ========================================
     
     /// <summary>
-    /// ����ݼ���ͻ
+    /// 检查快捷键冲突
     /// </summary>
-    /// <returns>��ͻ�� ActionName���޳�ͻ���ؿ��ַ���</returns>
+    /// <returns>冲突的 ActionName，无冲突返回空字符串</returns>
     function CheckHotkeyConflict(Shortcut: TShortCut; const ExcludeActionName: string = ''): string;
     function CheckHotkeyConflictInScope(Shortcut: TShortCut;
       Scope: THotkeyScope; const ExcludeActionName: string = ''): string;
@@ -192,32 +192,32 @@ type
     // ========================================
     
     /// <summary>
-    /// ��ȡ���п�ݼ���Ϣ
+    /// 获取所有快捷键信息
     /// </summary>
     function GetAllHotkeys: THotkeyInfoArray;
     
     /// <summary>
-    /// ��ȡ��ݼ���ϸ��Ϣ (�������ý���)
+    /// 获取快捷键详细信息 (用于设置界面)
     /// </summary>
     function GetAllHotkeyDefaults: TArray<THotkeyDefault>;
     
     /// <summary>
-    /// ����ݼ��Ƿ��޸Ĺ�
+    /// 检查快捷键是否被修改过
     /// </summary>
     function IsHotkeyCustomized(const ActionName: string): Boolean;
     
     /// <summary>
-    /// ��ݼ�����
+    /// 快捷键数量
     /// </summary>
     function Count: Integer;
     
     /// <summary>
-    /// ɾ����ݼ�
+    /// 删除快捷键
     /// </summary>
     procedure DeleteHotkey(const ActionName: string);
     
     /// <summary>
-    /// ��ݼ�����¼�
+    /// 快捷键变更事件
     /// </summary>
     property OnHotkeyChanged: THotkeyChangedProc read FOnHotkeyChanged write FOnHotkeyChanged;
   end;

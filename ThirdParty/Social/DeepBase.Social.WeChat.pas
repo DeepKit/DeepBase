@@ -4,7 +4,7 @@
   DeepBase WeChat (微信) Social Integration
 
   Supports:
-    - 寰俊寮€鏀惧钩鍙扮櫥褰?(网站应用)
+    - 微信开放平台登录 (网站应用)
     - 微信公众号登?(网页授权)
     - 获取用户信息
     - 分享到微信

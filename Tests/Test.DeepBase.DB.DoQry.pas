@@ -1109,7 +1109,7 @@ begin
   end;
   
   try
-    // 鎻掑叆绗竴鏉?
+    // 插入第一条
     UniDbExec('INSERT INTO test_unique (code) VALUES (:code)', '{"code": "ABC"}', Ctx);
     // 插入重复的，应该触发唯一约束错误
     UniDbExec('INSERT INTO test_unique (code) VALUES (:code)', '{"code": "ABC"}', Ctx);

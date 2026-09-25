@@ -621,7 +621,7 @@ begin
     FEventBus.Subscribe<TTestEvent>(
       procedure(const Event: TTestEvent)
       begin
-        Sleep(50);  // BUG-027 FIX: 减少Sleep时间，主要用于验证异步特�?
+        Sleep(50);  // BUG-027 FIX: 减少Sleep时间，主要用于验证异步特性
         Executed := True;
         CompletionEvent.SetEvent;  // BUG-027 FIX: 信号通知完成
       end, epNormal, edmAsync);
@@ -632,7 +632,7 @@ begin
     // Should return quickly (not wait for sleep)
     Assert.IsFalse(Executed, 'Async handler should not have completed immediately');
 
-    // BUG-027 FIX: 使用事件等待替代固定Sleep，超时设�?000ms以适应高负载系�?
+    // BUG-027 FIX: 使用事件等待替代固定Sleep，超时设置 2000ms以适应高负载系统
     WaitResult := CompletionEvent.WaitFor(2000);
     Assert.AreEqual(wrSignaled, WaitResult, 'Async handler should complete within timeout');
     Assert.IsTrue(Executed, 'Async handler should complete eventually');

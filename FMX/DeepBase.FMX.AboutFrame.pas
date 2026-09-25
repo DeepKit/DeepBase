@@ -4,11 +4,11 @@
   DeepBase FMX AboutFrame - FireMonkey 版关?打赏页面组件
 
   功能:
-  - 6 个标准Tab 项(公众号微信/鏀粯瀹?BTC/USDT/鍏充簬鎴?
+  - 6 个标准Tab 项(公众号微信/支付宝/BTC/USDT/关于我们)
   - ?SQLite 数据库安全加载图?(HMAC 签名验证)
   - BTC/USDT 地址复制功能
   - 机器码显示
-  - 根据 enabled 瀛楁鍔ㄦ€佹樉绀?隐藏 Tab
+  - 根据 enabled 字段动态显示/隐藏 Tab
 
   使用方法:
     var Frame := TFMXAboutFrame.Create(Self);

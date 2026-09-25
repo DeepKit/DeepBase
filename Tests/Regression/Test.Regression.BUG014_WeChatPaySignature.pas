@@ -4,7 +4,7 @@
   BUG-014: 微信支付签名验证缺失
   
   原问题 RSA绛惧悕浣跨敤绠€鍗昐HA256而非PKCS#1 v1.5 RSA-SHA256锛?
-          Webhook楠岃瘉閫昏緫鏈畬鏁村疄鐜般€?
+          Webhook验证逻辑未完整实现。
   
   修复方案: 实现完整的RSA-SHA256签名和验签功能，添加WeChatPublicKey配置项?
   
@@ -113,10 +113,10 @@ begin
   
   Config := TWeChatPayConfig.Create;
   try
-    // 验证 WeChatPublicKey 灞炴€у瓨鍦ㄤ笖鍙鍐?
+    // 验证 WeChatPublicKey 属性存在且可读取
     Config.WeChatPublicKey := 'test_public_key';
     Assert.AreEqual('test_public_key', Config.WeChatPublicKey,
-      'WeChatPublicKey 灞炴€у簲璇ュ彲浠ユ纭鍐?);
+      'WeChatPublicKey 属性应该可以正确读取');
     
     // 验证初始值为?
     Config.WeChatPublicKey := '';
@@ -140,7 +140,7 @@ begin
   
   Config := TWeChatPayConfig.Create;
   try
-    // 涓嶈缃叕閽?
+    // 不设置公钥
     Config.WeChatPublicKey := '';
     Config.AppId := 'test_app_id';
     Config.MchId := 'test_mch_id';
@@ -222,7 +222,7 @@ begin
   // 由于 BuildAuthorizationHeader 是私有方法，我们通过棢查文档和代码来验?
   // 这里主要验证格式要求被正确理?
   
-  Assert.Pass('绛惧悕鍐呭鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);
+  Assert.Pass('签名内容格式验证通过（通过代码审查确认）');
   
   LogTestEnd('Test_SignContent_HasCorrectFormat', True);
 end;
@@ -237,7 +237,7 @@ begin
   // 由于 BuildAuthorizationHeader 是私有方法，我们通过棢查文档和代码来验?
   // 这里主要验证格式要求被正确理?
   
-  Assert.Pass('Authorization 澶撮儴鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);
+  Assert.Pass('Authorization 头部格式验证通过（通过代码审查确认）');
   
   LogTestEnd('Test_AuthorizationHeader_HasCorrectFormat', True);
 end;

@@ -5,9 +5,9 @@
     - TApiServer/TApiRouter 基本路由 & 中间件链
     - HTTP 请求解析: 路径参数 / 查询参数 / JSON Body
     - CORS 预检 OPTIONS 请求
-    - JWT Bearer 璁よ瘉涓棿浠?(TAuthMiddleware + TJWTManager)
+    - JWT Bearer 认证中间件 (TAuthMiddleware + TJWTManager)
     - OpenAPI 鏂囨。鐢熸垚鍣?(TOpenApiGenerator)
-    - WebSocket 娑堟伅璺敱鍣?(TWebSocketMessageRouter)
+    - WebSocket 消息路由器 (TWebSocketMessageRouter)
   ============================================================================ }
 
 unit Test.Integration.WebAPI;
@@ -102,7 +102,7 @@ var
 begin
   inherited;
 
-  // 鍚姩鐙珛鐨?WebAPI 鏈嶅姟鍣?(监听 127.0.0.1:18080)
+  // 启动独立的 WebAPI 服务器 (监听 127.0.0.1:18080)
   FServer := TApiServer.Create;
   FServer.Config.Host := '127.0.0.1';
   FServer.Config.Port := 18080;
@@ -184,7 +184,7 @@ begin
     end
   );
 
-  // 鍚姩鏈嶅姟鍣?
+  // 启动服务器
   FServer.Start;
 
   FBaseUrl := Format('http://%s:%d', [FServer.Config.Host, FServer.Config.Port]);
@@ -356,7 +356,7 @@ begin
     LJson := GetJsonObject(LResp);
     try
       Assert.AreEqual('user123', LJson.GetValue<string>('userId'));
-      // username 榛樿涓?subject 成username 声明, 杩欓噷鍙獙璇佸瓨鍦ㄥ嵆鍙?
+      // username 默认为 subject 或 username 声明, 这里只验证存在即可
       Assert.IsTrue(LJson.GetValue<string>('username') <> '', 'username should not be empty');
     finally
       LJson.Free;
@@ -372,7 +372,7 @@ var
   LResp: THttpResponse;
   LJson: TJSONObject;
 begin
-  // 鏈惡甯︿换浣曡璇佷俊鎭闂?/secure/profile
+  // 未携带任何认证信息访问 /secure/profile
   LResp := FClient.Get('/secure/profile');
   try
     Assert.AreEqual(401, LResp.StatusCode, 'Missing token should return 401');
