@@ -1,0 +1,82 @@
+B2-13 用例真跑：修前红 / 修后绿（原始输出，未删行）
+命令（两次同一张测试面，仅 SUT 面不同）：
+  DEEPBASE_EXTRA_NS="Data.Win" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.DoQry.Literal.pas
+测试单元面（两次一致）blob = eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc
+基线 commit = c935e0f
+
+════════════════════════════════════════════════════════════════════
+§1 修前（SUT = HEAD 面 blob 77cbe009815101f767465eff250d343fd4a62cd8）⇒ 判红
+════════════════════════════════════════════════════════════════════
+== 编译一次性 runner（单元: Test.DeepBase.DoQry.Literal） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\uDoQryLegacy.pas(853) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(982) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(865) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(1154) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+25033 lines, 1.67 seconds, 4374288 bytes code, 503056 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DoQry.Literal） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.F.F....
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Comment_Prefix_Values_Do_Not_Change_SQL
+  Message: Expected [] but got [ leaked-into-code-face[col = 1-- AND deleted = 0]] value [1--] changed SQL semantics: leaked-into-code-face[col = 1-- AND deleted = 0]
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Pure_Numeric_Set_Values_Stay_Inside_Literal
+  Message: Expected [0] but got [780] values that changed SQL semantics (780 total, first 20 listed): [-] leaked-into-code-face[col = - AND deleted = 0] [+] leaked-into-code-face[col = + AND deleted = 0] [.] leaked-into-code-face[col = . AND deleted = 0] [0] leaked-into-code-face[col = 0 AND deleted = 0] [1] leaked-into-code-face[col = 1 AND deleted = 0] [--] leaked-into-code-face[col = -- AND deleted = 0] [-+] leaked-into-code-face[col = -+ AND deleted = 0] [-.] leaked-into-code-face[col = -. AND deleted = 0] [-0] leaked-into-code-face[col = -0 AND deleted = 0] [-1] leaked-into-code-face[col = -1 AND deleted = 0] [+-] leaked-into-code-face[col = +- AND deleted = 0] [++] leaked-into-code-face[col = ++ AND deleted = 0] [+.] leaked-into-code-face[col = +. AND deleted = 0] [+0] leaked-into-code-face[col = +0 AND deleted = 0] [+1] leaked-into-code-face[col = +1 AND deleted = 0] [.-] leaked-into-code-face[col = .- AND deleted = 0] [.+] leaked-into-code-face[col = .+ AND deleted = 0] [..] leaked-into-code-face[col = .. AND deleted = 0] [.0] leaked-into-code-face[col = .0 AND deleted = 0] [.1] leaked-into-code-face[col = .1 AND deleted = 0]
+
+
+RUNNER_STATS fixtureCount=1 testCount=4 pass=2 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+════════════════════════════════════════════════════════════════════
+§2 修后（SUT = 交付面 sha256 8c4108fbcb178422cea0dacd2ce3362056ee7bada777019c29f9172f4a54d385）⇒ 判绿
+════════════════════════════════════════════════════════════════════
+== 编译一次性 runner（单元: Test.DeepBase.DoQry.Literal） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\uDoQryLegacy.pas(856) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(985) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(868) Hint: H2077 Value assigned to 'doQry' never used
+25014 lines, 1.51 seconds, 4374144 bytes code, 503072 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DoQry.Literal） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

@@ -1,0 +1,91 @@
+B2-13 修前取证：uDoQryLegacy.QuoteValue 的「像数值就原样拼」通道
+工单：docs/ui/work-orders/WO-20260925-AUDIT-乙-B2-功能与集成层缺陷修复.md（B2-13）
+本文件全部数字为 c935e0f 面上实测，非推断。
+
+────────────────────────────────────────────────────────────────────
+一、被测面与指纹（修前）
+────────────────────────────────────────────────────────────────────
+SUT            doQry/uDoQryLegacy.pas
+git blob       77cbe009815101f767465eff250d343fd4a62cd8   （git rev-parse HEAD:doQry/uDoQryLegacy.pas）
+工作树 sha256  a5bac7575d469e1dbbcb9317ea4b2ad4fdd5619aa39e2adfbcfdaae02c211dec
+行尾属性        git ls-files --eol ⇒ i/lf w/crlf attr=text eol=crlf（受 .gitattributes 管辖，非例外）
+基线登记        09_工程脚本/encoding-gate/pas_encoding_baseline.json 内（U+FFFD 存量件）
+
+────────────────────────────────────────────────────────────────────
+二、缺陷点（HEAD 面行号，均来自 git show HEAD: 的字节面）
+────────────────────────────────────────────────────────────────────
+:1137  function QuoteValue(const Value: string): string;   ← interface :27 导出，是全单元唯一「不带类型信息」的值出口
+:1151-1159  启发式判「需不需要引号」：逐字符测 Value[i] in ['0'..'9','.','-','+']，
+            只要全部命中该字符集就判为「不需要引号」
+:1161-1165  if not needQuote then begin Result := Value; Exit; end;
+            ⇒ 该分支既不转义也不包裹，字符直接进 SQL 代码面
+:1170-1176  另一分支才做中文括号归一 + 手工双倍单引号 + 手工 '' 包裹
+            ⇒ 同一文件里存在两套引号处理（另一套见 :251）
+:251     HandleParamValue 的 ptString 分支：QuotedStr(StringReplace(value,'''','''''',[rfReplaceAll]))
+            ⇒ 先手工双倍、再交 QuotedStr（它自己也会双倍），同一个值转义两遍，
+               值里的单引号落库即变形（数据正确性缺陷，与本单注入面同族同文件）
+
+QuoteValue 的调用面（全仓 grep，修前修后一致，只有 3 处拼接）：
+  :379  BuildCallSQL    CALL 实参
+  :467  BuildUpdateSQL  SET 子句
+  :544  BuildInsertSQL  VALUES 子句
+（WHERE 侧走的是带类型的 HandleParamValue：:301 / :839 / :1129，不在本出口）
+
+────────────────────────────────────────────────────────────────────
+三、下游防线为什么拦不住（掩耳盗铃面）
+────────────────────────────────────────────────────────────────────
+:654  procedure ValidateSQL(const SQL: string)   —— CR-012 后只做校验不做改写
+      实现只做一件事：遍历字符，遇单引号翻转 inSingleQuote，末尾不平衡则抛 EDatabaseException
+实测串：col = 1-- AND deleted = 0
+      该串含 0 个单引号 ⇒ 状态机恒为「引号外」⇒ ValidateSQL 放行
+      而数据库侧把 -- 之后的整段当行注释丢弃 ⇒ UPDATE 语句同行后面的约束条件（如 deleted = 0）失效
+结论：旧实现把「值」当「代码」送进语句，且本层校验对这种泄漏完全不敏感。
+
+────────────────────────────────────────────────────────────────────
+四、修前零覆盖证明
+────────────────────────────────────────────────────────────────────
+仓内既有 DoQry 名测试件（git ls-files Tests/ | grep -i doqry）：
+  Tests/Regression/Test.Regression.BUG338_DoQryBindTrim.pas
+  Tests/Regression/Test.Regression.BUG339_DoQrySweepInUse.pas
+  Tests/Regression/Test.Regression.BUG347_DoQryConnectionSerialize.pas
+  Tests/Test.DeepBase.DB.DoQry.pas
+逐件 uses 面（实测）：四件均 uses DeepBase.DB.DoQry（新轨 FireDAC 面），无一件 uses uDoQryLegacy。
+全仓 grep "QuoteValue|HandleParamValue|uDoQryLegacy"（--include=*.pas|*.dpr|*.dpk|*.dproj，排除 .tmp）
+修前命中集：doQry/doQryMain.pas、doQry/prjDoQry.dpr、doQry/prjDoQry.dproj、doQry/uDoQryLegacy.pas
+⇒ 该出口在修前没有任何测试单元覆盖，属于「工单点名缺陷 + 零回归网」。
+
+构建面归属（解释为什么门禁也没拦住）：
+  09_工程脚本/build-gate/contracts/T1-观测面.txt:76  doQry/prjDoQry.dpr
+  ⇒ 只进 T1 观测面（编译并判定，红不阻断），不在 T0 生产契约面；
+    且本单元不在任何 .dpr/.dpk 的测试注册面上（§〇-4 禁改 Tests/DeepBaseTests.dpr/.dproj，
+    本单按工单要求新建独立测试单元 Tests/Test.DeepBase.DoQry.Literal.pas，注册收口留给主控）。
+
+────────────────────────────────────────────────────────────────────
+五、探针假红登记（不是代码断裂，勿据此判红）
+────────────────────────────────────────────────────────────────────
+现象：b2_unit_compile.sh / b2_run_fixture.sh 在缺省命名空间下编译该单元报
+      doQry\uDoQryLegacy.pas(8) Fatal: F2613 Unit 'ADODB' not found.
+根因：探针的 -NS 缺省面比工程面窄；uDoQryLegacy 的 uses ADODB 需要 Data.Win，
+      而 doQry/prjDoQry.dproj 的 DCC_Namespace（Win64）里声明了 Data.Win。
+处置：两个探针统一加 DEEPBASE_EXTRA_NS 追加口径（不另立第二套 NS 清单），
+      实测 build-gate 判定 node 09_工程脚本/build-gate/check_build.js --dpr doQry/prjDoQry.dpr ⇒ BUILD_EXIT=0。
+
+────────────────────────────────────────────────────────────────────
+六、修前真跑（红）
+────────────────────────────────────────────────────────────────────
+测试单元 Tests/Test.DeepBase.DoQry.Literal.pas 最终面 blob = eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc
+（git hash-object，红/绿两次真跑与 4 个变异全部在同一张测试面上完成）
+实测结果：Tests Found 4 / Passed 2 / Failed 2 ⇒ RUN_EXIT=1
+  红项 1  Test_Comment_Prefix_Values_Do_Not_Change_SQL
+          leaked-into-code-face[col = 1-- AND deleted = 0]
+  红项 2  Test_Pure_Numeric_Set_Values_Stay_Inside_Literal
+          780 个反例（字符集 - + . 0 1 的 1..4 长度全空间 = 5+25+125+625 = 780，全部泄漏进代码面）
+  绿项    Test_Quote_Breaking_Values_Stay_Inside_Literal（旧代码本已走转义分支）
+  绿项    Test_Null_Sentinels_Keep_Legacy_Contract（置空约定未被本通道触碰）
+完整原始输出见 B2-13-用例真跑-原始输出.txt §1。
+
+判别力自审（同一轮里发现并修掉的判据缺陷，如实登记）：
+  穷举用例首版把计数串无条件拼进实际值（Assert.AreEqual('', CounterExamples + ' /bad=' + n)），
+  无缺陷时也恒红——那是「只报不拦」的反面：恒红同样不构成判据。
+  已改为 Assert.AreEqual(0, BadCount, …反例明细)，并把上面这份红在修后的断言面重取一次，
+  使红来自 780 个真实反例而不是断言写法。

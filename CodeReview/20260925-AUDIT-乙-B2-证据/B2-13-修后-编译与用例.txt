@@ -1,0 +1,86 @@
+B2-13 修后：改动清单、判定落点与编译实测
+基线 commit = c935e0f；本件为交付面实测。
+
+────────────────────────────────────────────────────────────────────
+一、改动清单
+────────────────────────────────────────────────────────────────────
+1) doQry/uDoQryLegacy.pas（SUT，交付面 sha256 8c4108fbcb178422cea0dacd2ce3362056ee7bada777019c29f9172f4a54d385）
+   git diff --numstat ⇒ 16 增 / 35 删（净 -19 行，删除的是启发式分支与第二套引号器）
+   a. QuoteValue（:1140 起）：删掉「字符集 {'0'..'9','.','-','+'} 判数值 ⇒ 原样拼接」的通道，
+      无类型出口一律走字符串字面量；转义只交给 QuotedStr 一处；
+      中文括号归一保留，并随引号路径一起变成全量生效（旧实现只在加引号分支做，行为一致）。
+      置空约定（空串与字面量 'NULL' ⇒ NULL）原样保留，属 legacy 契约，不在本单改动范围。
+   b. HandleParamValue 的 ptString 分支（:251）：去掉「先手工双倍单引号、再交 QuotedStr」的双重转义，
+      与 QuoteValue 共用同一套引号规则（修前该文件里存在两套引号器）。
+   公开接口未扩大：interface 仍只导出 QuoteValue（:27），未新增参数、未引入方言开关。
+2) Tests/Test.DeepBase.DoQry.Literal.pas（新建，204 行 / 7106 字节，blob eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc）
+   4 条用例：注释前缀族 / 数值字符集全空间穷举（780 值）/ 引号破坏族 / 置空约定契约。
+   断言不比对期望字面量，而是用单引号状态机把语句解剖成 Balanced / Scaffold / Literal 三态，
+   判据是「值不再改变 SQL 语义 + 值本身能被无损解回」，避免把方言引号形态抄进用例形成第二套真源。
+3) CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh、b2_unit_compile.sh
+   统一加 DEEPBASE_EXTRA_NS 追加口径（修前取证 §五 的探针假红根因），不另立第二套 NS 清单。
+
+────────────────────────────────────────────────────────────────────
+二、编译实测（三条独立判据，全绿）
+────────────────────────────────────────────────────────────────────
+命令: DEEPBASE_EXTRA_NS="Data.Win" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh doQry/uDoQryLegacy.pas Tests/Test.DeepBase.DoQry.Literal.pas
+================================================================
+单元: doQry/uDoQryLegacy.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\doQry/uDoQryLegacy.pas(856) Hint: H2077 Value assigned to 'doQry' never used
+doQry\doQry/uDoQryLegacy.pas(985) Hint: H2077 Value assigned to 'doQry' never used
+doQry\doQry/uDoQryLegacy.pas(868) Hint: H2077 Value assigned to 'doQry' never used
+1740 lines, 0.33 seconds, 109037 bytes code, 17400 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.DoQry.Literal.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\uDoQryLegacy.pas(856) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(985) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(868) Hint: H2077 Value assigned to 'doQry' never used
+23776 lines, 1.30 seconds, 6565 bytes code, 1004 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+命令: node 09_工程脚本/build-gate/check_build.js --dpr doQry/prjDoQry.dpr（门禁总 EXIT=0）
+[dpr 1/1] doQry/prjDoQry.dpr CONFIG=prjDoQry.dproj BUILD_EXIT=0 HINT=4 WARN=0
+编译门禁统计：DPR总数=1 成功=1 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=93 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=4 Warning=0 按码=H2077=3,H2164=1
+编译噪声基线未比对：本轮判定面「named」≠ 基线记录面「manifest:T0-生产契约面.txt」（跨面计数不可比）；噪声计数仅观测
+编译门禁通过：1 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）
+
+一次性 runner 编译（用例真跑同一条命令的 BUILD_EXIT 段）见 B2-13-用例真跑-原始输出.txt，两次均 BUILD_EXIT=0。
+
+三态判定汇总：修前红 4/2/2（RUN_EXIT=1）→ 修后绿 4/4/0（RUN_EXIT=0）→ 4 个变异全部被咬（CF_EXIT=0，M4a 恒等变异如实登记为不成立）。
+
+────────────────────────────────────────────────────────────────────
+四、登记项（本单不顺手改，交主控判定）
+────────────────────────────────────────────────────────────────────
+R1  方言残余通道：本修把「值不再改变 SQL 语义」钉死在单引号状态机上，
+    QuotedStr + 单引号双写在 SQL Server / PostgreSQL(standard_conforming_strings=on) /
+    Oracle / SQLite 上是无损且正确的；MySQL 默认模式还把反斜杠当转义符，只双写不够。
+    该单元是 ADO（SQL Server）面，仓内没有可复用的参数化 API 供 legacy 轨调用，
+    真正的收口是让这三处拼接改走服务端/驱动参数绑定，而不是在本单元加方言开关
+    （加开关=引入第二套真源且需要 TDatabaseType 贯穿，属过度兜底）。
+    ⇒ 登记为结构性议题，不在 B2-13 范围内动。
+R2  置空约定冲突：空串与字面量 'NULL' 都写不出「字符串 NULL」本身（legacy 既有契约，
+    工单未授权改语义，原样保留并已有用例钉住）。
+R3  中文括号归一：旧实现只在「加引号」分支做归一，纯数值字符集分支不可能出现中文括号
+    （中文括号不属于 0-9 . + -），因此改成全量归一对旧行为无新增变形面。
+R4  带类型入口无外部回归：HandleParamValue(:237)、ValidateSQL(:654)、ValidateSQLQuotes(:52)
+    都在 implementation 段（implementation 起于 :43），interface 不导出 ⇒ 新测试单元够不到，
+    ptInteger/ptFloat/ptDate 的严格转换（CR-006）目前只由代码面保证。
+    要建回归网必须扩公开面或建 friend 单元，属结构决策 ⇒ 交主控。
+R5  行为变更（工单口径允许 breaking change）：CALL 实参里「看起来像数值」的串从裸拼改为带引号，
+    由服务端做隐式转换；UPDATE/INSERT 同理。这是本单的目的，不是副作用。
+R6  新测试单元 Tests/Test.DeepBase.DoQry.Literal.pas 未注册（§〇-4 归主控收口），
+    且 doQry/prjDoQry.dpr 只在 T1-观测面 ⇒ 本单元当前不在任何 CI 编译矩阵里，
+    随 B2-05/06 一并列入「纳入 CI 编译矩阵」登记清单。

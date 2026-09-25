@@ -1,0 +1,448 @@
+B2-13 反事实（变异）探针：证明用例真的咬得住这次修复
+判据：基线必须绿 / 注入变异必须红 / 还原必须绿，三态缺一即 EXIT=4
+      （b2_counterfactual.sh 自身 fail-closed，不接受「跑起来了就算绿」）
+驱动：.tmp/b2/b13/b13_cf_driver.sh（临时件不入库），逐个变异调用
+      CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh
+SUT  交付面 sha256 8c4108fbcb178422cea0dacd2ce3362056ee7bada777019c29f9172f4a54d385（变异前=还原后，脚本内自检）
+测试面 blob eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc（四个变异共用同一张测试面）
+运行前置：DEEPBASE_EXTRA_NS="Data.Win"（见「修前取证」§五，探针 NS 面窄于工程面会假红）
+
+────────────────────────────────────────────────────────────────────
+一、结果矩阵（实测，非推断）
+────────────────────────────────────────────────────────────────────
+编号  注入的变异（都打在修复的那一处或它的邻句）                     三态            CF_EXIT  红项
+M1    Result := QuotedStr(tempValue)                                 PASSED/FAILED/    0      Test_Quote_Breaking_Values_Stay_Inside_Literal
+        ⇒ string(#39)+tempValue+string(#39)                            PASSED                    （quote-unbalanced）
+M2    Result := QuotedStr(tempValue)                                 PASSED/FAILED/    0      全部 4 条
+        ⇒ Result := tempValue;（值不再进字面量＝工单点名缺陷等价类）     PASSED                    （leaked-into-code-face ×3 维 + null 约定）
+M3    if (Value = '') or (Value = 'NULL') then                        PASSED/FAILED/    0      Test_Null_Sentinels_Keep_Legacy_Contract
+        ⇒ if (Value = '') then（丢掉 'NULL' 置空约定）                   PASSED                    （Expected [NULL] but got ['NULL']）
+M4b   Result := QuotedStr(tempValue)                                 PASSED/FAILED/    0      Test_Quote_Breaking_Values_Stay_Inside_Literal
+        ⇒ QuotedStr(StringReplace(tempValue, #39, #39#39))             PASSED                    （literal-face-not-equal-to-value）
+           （过度转义＝本次从 HandleParamValue 摘掉的那类双重转义）
+
+三态各别覆盖到判据的三个维度，说明断言不是只看一件事：
+  Balanced  维度由 M1 咬住（引号被撑破）
+  Scaffold  维度由 M2 咬住（值漏进代码面）
+  Literal   维度由 M4b 咬住（代码面看着没事，但值本身被转义了两遍 → 落库变形）
+  置空约定  由 M3 咬住
+
+────────────────────────────────────────────────────────────────────
+二、如实登记：M4 的第一次写法是恒等变异，不构成证据
+────────────────────────────────────────────────────────────────────
+M4a  注入文本  QuotedStr(StringReplace(tempValue, '''', '''''', [rfReplaceAll]))
+结果      基线绿 / 变异绿 / 还原绿 ⇒ CF_EXIT=4（探针正确判为「反事实不成立」）
+根因      Delphi 里 '''' 只表示一个单引号字符，'''''' 才表示两个；
+          M4a 实际写的是「把 ' 替换成 '」＝空操作，测试当然不会红。
+处置      改写成 M4b（用 string(#39) 显式拼接，避免引号字面量再被数错），
+          M4b 三态成立。保留 M4a 的原始输出（本文件 §3.4）而不是删掉，
+          因为「探针没咬住」本身是判别力信息；它同时证明本套用例不会被恒等变异蒙过。
+
+────────────────────────────────────────────────────────────────────
+三、原始输出（b2_counterfactual.sh 全文，未删行）
+────────────────────────────────────────────────────────────────────
+
+──────── 3.1 M1 ────────
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := QuotedStr\(tempValue\);/Result := string(#39) + tempValue + string(#39);/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1154,7 +1154,7 @@
+   tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
+   // 转义只交给 QuotedStr 一处：与 HandleParamValue 的 string/date 分支同一口径，
+   // 不再在本文件里维持「手工包裹 + 手工双倍」的第二套引号器
+-  Result := QuotedStr(tempValue);
++  Result := string(#39) + tempValue + string(#39);
+ end;
+ 
+ function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....F..
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Quote_Breaking_Values_Stay_Inside_Literal
+  Message: Expected [] but got [ quote-unbalanced] value [abc' OR 1=1 --] changed SQL semantics: quote-unbalanced
+
+
+RUNNER_STATS fixtureCount=1 testCount=4 pass=3 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+──────── 3.2 M2 ────────
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := QuotedStr\(tempValue\);/Result := tempValue;/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1154,7 +1154,7 @@
+   tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
+   // 转义只交给 QuotedStr 一处：与 HandleParamValue 的 string/date 分支同一口径，
+   // 不再在本文件里维持「手工包裹 + 手工双倍」的第二套引号器
+-  Result := QuotedStr(tempValue);
++  Result := tempValue;
+ end;
+ 
+ function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
+---- 变异后真跑（应红） ----
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Comment_Prefix_Values_Do_Not_Change_SQL
+  Message: Expected [] but got [ leaked-into-code-face[col = 1-- AND deleted = 0]] value [1--] changed SQL semantics: leaked-into-code-face[col = 1-- AND deleted = 0]
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Pure_Numeric_Set_Values_Stay_Inside_Literal
+  Message: Expected [0] but got [780] values that changed SQL semantics (780 total, first 20 listed): [-] leaked-into-code-face[col = - AND deleted = 0] [+] leaked-into-code-face[col = + AND deleted = 0] [.] leaked-into-code-face[col = . AND deleted = 0] [0] leaked-into-code-face[col = 0 AND deleted = 0] [1] leaked-into-code-face[col = 1 AND deleted = 0] [--] leaked-into-code-face[col = -- AND deleted = 0] [-+] leaked-into-code-face[col = -+ AND deleted = 0] [-.] leaked-into-code-face[col = -. AND deleted = 0] [-0] leaked-into-code-face[col = -0 AND deleted = 0] [-1] leaked-into-code-face[col = -1 AND deleted = 0] [+-] leaked-into-code-face[col = +- AND deleted = 0] [++] leaked-into-code-face[col = ++ AND deleted = 0] [+.] leaked-into-code-face[col = +. AND deleted = 0] [+0] leaked-into-code-face[col = +0 AND deleted = 0] [+1] leaked-into-code-face[col = +1 AND deleted = 0] [.-] leaked-into-code-face[col = .- AND deleted = 0] [.+] leaked-into-code-face[col = .+ AND deleted = 0] [..] leaked-into-code-face[col = .. AND deleted = 0] [.0] leaked-into-code-face[col = .0 AND deleted = 0] [.1] leaked-into-code-face[col = .1 AND deleted = 0]
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Quote_Breaking_Values_Stay_Inside_Literal
+  Message: Expected [] but got [ quote-unbalanced] value [abc' OR 1=1 --] changed SQL semantics: quote-unbalanced
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Null_Sentinels_Keep_Legacy_Contract
+  Message: Expected ['null'] but got [null] 
+
+
+RUNNER_STATS fixtureCount=1 testCount=4 pass=0 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+──────── 3.3 M3 ────────
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if \(Value = \x27\x27\) or \(Value = \x27NULL\x27\) then/if (Value = \x27\x27) then/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1142,7 +1142,7 @@
+   tempValue: string;
+ begin
+   // 空串与字面量 NULL 是 legacy 的置空约定：调用方用这两个串表达「此字段置空」
+-  if (Value = '') or (Value = 'NULL') then
++  if (Value = '') then
+     Exit('NULL');
+ 
+   // B2-13：旧实现先按字符集 0-9 . + - 猜「这串是数值」，猜中就原样拼进 SQL 并跳过转义，
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......F
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Null_Sentinels_Keep_Legacy_Contract
+  Message: Expected [NULL] but got ['NULL'] 
+
+
+RUNNER_STATS fixtureCount=1 testCount=4 pass=3 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+──────── 3.4 M4a（恒等变异，判定不成立） ────────
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := QuotedStr\(tempValue\);/Result := QuotedStr(StringReplace(tempValue, \x27\x27, \x27\x27\x27\x27, [rfReplaceAll]));/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1154,7 +1154,7 @@
+   tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
+   // 转义只交给 QuotedStr 一处：与 HandleParamValue 的 string/date 分支同一口径，
+   // 不再在本文件里维持「手工包裹 + 手工双倍」的第二套引号器
+-  Result := QuotedStr(tempValue);
++  Result := QuotedStr(StringReplace(tempValue, '', '''', [rfReplaceAll]));
+ end;
+ 
+ function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
+---- 变异后真跑（应红） ----
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定不成立：基线=RUNNER_VERDICT: PASSED 变异=RUNNER_VERDICT: PASSED 还原=RUNNER_VERDICT: PASSED ⇒ 用例咬不住这次修复，判据不成立 ==
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+──────── 3.5 M4b（成立） ────────
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := QuotedStr\(tempValue\);/Result := QuotedStr(StringReplace(tempValue, string(#39), string(#39) + string(#39), [rfReplaceAll]));/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1154,7 +1154,7 @@
+   tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
+   // 转义只交给 QuotedStr 一处：与 HandleParamValue 的 string/date 分支同一口径，
+   // 不再在本文件里维持「手工包裹 + 手工双倍」的第二套引号器
+-  Result := QuotedStr(tempValue);
++  Result := QuotedStr(StringReplace(tempValue, string(#39), string(#39) + string(#39), [rfReplaceAll]));
+ end;
+ 
+ function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....F..
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.DoQry.Literal.TTestDoQryLiteral.Test_Quote_Breaking_Values_Stay_Inside_Literal
+  Message: Expected [] but got [ literal-face-not-equal-to-value[abc'' OR 1=1 --]] value [abc' OR 1=1 --] changed SQL semantics: literal-face-not-equal-to-value[abc'' OR 1=1 --]
+
+
+RUNNER_STATS fixtureCount=1 testCount=4 pass=3 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: doQry/uDoQryLegacy.pas ==
