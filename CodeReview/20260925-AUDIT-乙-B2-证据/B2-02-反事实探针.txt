@@ -1,0 +1,170 @@
+# B2-02 反事实（变异）探针原始输出
+# 探针: b2_counterfactual.sh（基线→注入→应红→还原→复绿，SUT 只动工作树副本，trap 还原）
+# 结论: 4/4 变异均被咬红；每次还原后复跑 6/6 绿
+
+===== M1 =====
+#### M1: GetNativeWindowHandle 回退为「冒充前台窗口」（HEAD :188 原缺陷形态）
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/GetCurrentPropertyValue\(UIA_NativeWindowHandlePropertyId\)/Int64(GetForegroundWindow)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -198,7 +198,7 @@
+   // 这就是"目标元素自身窗口"的定义。旧实现在这里返回 GetForegroundWindow
+   // （且误读 ProcessId 属性），使 IsElementWindowInForeground 恒真、定位校验形同虚设。
+   Result := ElementWindowHandleFromNativeProperty(
+-    GetCurrentPropertyValue(UIA_NativeWindowHandlePropertyId));
++    Int64(GetForegroundWindow));
+ end;
+ 
+ function ElementWindowHandleFromNativeProperty(const AValue: Variant): HWND;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Failed  : 4
+Tests Errored : 0
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_HandleComesFromNativeWindowProperty
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_NonForegroundElementWindow_IsRejected
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_Int32HighBitHandle_SignExtendedRoundTrip
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_SameWindowAsForeground_IsAccepted
+RUNNER_STATS fixtureCount=1 testCount=6 pass=2 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+
+===== M2 =====
+#### M2: 前景判据回退为恒真（Result := True）
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := \(AWindow = AForeground\) or IsChild\(AForeground, AWindow\);/Result := True;/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -221,7 +221,7 @@
+   // 0 = "元素无窗口" 或 "系统当前无前景窗口"，两种情况都不构成"目标窗口在前台"的证据
+   if (AWindow = HWND(0)) or (AForeground = HWND(0)) then
+     Exit(False);
+-  Result := (AWindow = AForeground) or IsChild(AForeground, AWindow);
++  Result := True;
+ end;
+ 
+ function IsElementWindowInForeground(const AElementHwnd: HWND): Boolean;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_NonForegroundElementWindow_IsRejected
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+
+===== M3 =====
+#### M3: 前景判据的 HWND(0) fail-closed 守卫失效（元素无句柄/系统无前景被当成相等）
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if \(AWindow = HWND\(0\)\) or \(AForeground = HWND\(0\)\) then/if False then/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -219,7 +219,7 @@
+ function IsWindowInForeground(const AWindow, AForeground: HWND): Boolean;
+ begin
+   // 0 = "元素无窗口" 或 "系统当前无前景窗口"，两种情况都不构成"目标窗口在前台"的证据
+-  if (AWindow = HWND(0)) or (AForeground = HWND(0)) then
++  if False then
+     Exit(False);
+   Result := (AWindow = AForeground) or IsChild(AForeground, AWindow);
+ end;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_ZeroHandle_IsNeverAcceptedAsForeground
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+
+===== M4 =====
+#### M4: 属性类型守卫失效（非数值属性值也进 Int64 换算）
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if not VarIsNumeric\(AValue\) then/if False then/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -207,7 +207,7 @@
+ begin
+   Result := HWND(0);
+   // VarIsNumeric 覆盖 null/empty/字符串等"取不到句柄"的形态，一律折算成无窗口
+-  if not VarIsNumeric(AValue) then
++  if False then
+     Exit;
+   LRaw := VarAsType(AValue, varInt64);
+   if LRaw = 0 then
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 0
+Tests Errored : 1
+  Test.DeepBase.UIA.ElementWindow.TTestUIAElementWindow.Test_MissingHandleProperty_FailsClosedToZero
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=0 error=1 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.UIA.Engine.pas ==
+
+## 探针口径修正记录（两轮假绿，均为方法问题，落此防复犯）
+
+1) M2 首版假绿：本会话 `GetForegroundWindow` 实测返回 0（无桌面前景），把
+   `IsWindowInForeground` 改成 `Result := True` 后，用例里所有负例的前景参数都是实时
+   前景 ⇒ 全部先命中 `HWND(0)` 守卫而得 False，变异逃过检测。修法：判定用例补一条
+   「前景参数给定确定非 0 的真实窗口（GetDesktopWindow）」的负例，正例不再用实时前景
+   （否则 `or (F = HWND(0))` 这种写法本身就是永真兜底）。修后 M2 = 1 红。
+2) M4 首版假绿：`if not VarIsNumeric(AValue) then Exit;` 在源码里是折行写法，
+   单行 perl 表达式没匹配上（diff 段为空即是证据），变异根本没注入。修法：改成
+   只替换条件行（`if False then`）后 M4 = 1 红（E2010 类 Variant 转换异常被 DUnitX
+   记为 error，同样算红）。⇒ 「变异 diff 为空」必须当成探针失败来看，不能看 RUN_EXIT。

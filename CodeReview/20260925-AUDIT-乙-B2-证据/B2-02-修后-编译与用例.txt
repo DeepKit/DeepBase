@@ -1,0 +1,66 @@
+# B2-02 修后实现口径、编译与用例
+# 落笔前基线 HEAD: f1d141e ；本件对应的改动 = Features/DeepBase.UIA.Engine.pas + 新测试单元
+
+## 1) 改动面
+
+$ git diff --numstat（相对 f1d141e）
+48      9       Features/DeepBase.UIA.Engine.pas
+
+实测行数（非估算）：
+- `Features/DeepBase.UIA.Engine.pas` 584 行（修前 545）
+- `Tests/Test.DeepBase.UIA.ElementWindow.pas` 198 行（新建，UTF-8 BOM + CRLF）
+两文件均在 .pas 门禁扫描面内（修后编码门禁 .pas 计数 996→997）。
+
+## 2) 句柄来源：唯一入口，取不到即 HWND(0)
+
+$ grep -n "ElementWindowHandleFromNativeProperty\|IsWindowInForeground\|IsElementWindowInForeground" Features/DeepBase.UIA.Engine.pas
+153:  function ElementWindowHandleFromNativeProperty(const AValue: Variant): HWND;   # interface 声明
+157:  function IsWindowInForeground(const AWindow, AForeground: HWND): Boolean;
+161:  function IsElementWindowInForeground(const AElementHwnd: HWND): Boolean;
+195:function TUIAElementAdapter.GetNativeWindowHandle: HWND;
+200:  Result := ElementWindowHandleFromNativeProperty(
+201:    GetCurrentPropertyValue(UIA_NativeWindowHandlePropertyId));
+204:function ElementWindowHandleFromNativeProperty(const AValue: Variant): HWND;
+219:function IsWindowInForeground(const AWindow, AForeground: HWND): Boolean;
+227:function IsElementWindowInForeground(const AElementHwnd: HWND): Boolean;
+229:  Result := IsWindowInForeground(AElementHwnd, GetForegroundWindow);
+355:function TUIAEngineWin32.VerifyForegroundWindow(const Element: IUIAElement): Boolean;
+357:  Result := IsElementWindowInForeground(Element.GetNativeWindowHandle);
+
+结构口径（三处各留一个职责，不再互相冒充）：
+- :200-201 句柄唯一来源 = UIA `NativeWindowHandle` 属性（provider 沿元素树向上给出的最近
+  窗口祖先），新增常量 `UIA_NativeWindowHandlePropertyId = 30020`（:30）与既有属性 ID 同块；
+- :204-217 纯换算：非数值（VT_EMPTY/字符串/接口值）与 0 一律得 `HWND(0)`，
+  VT_I4 高位句柄按符号扩展回完整 64 位窗口；
+- :219-225 纯判据，前景句柄由参数给定（可确定测试），任一侧为 0 先判否——
+  否则「元素无句柄」会与「系统无前景」相互抵消成新的恒真；
+- :227-230 唯一采样 `GetForegroundWindow` 的位置；:355-357 校验函数只剩一行转调，
+  `FindElement`(:291) 与 `SetValue`(:375) 两个消费点自动获得真实判定。
+
+## 3) 编译与既有面不回归
+
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.UIA.Engine.pas
+（原始输出见《B2-02-用例真跑.txt》§1，BUILD_EXIT=0）
+$ bash .../b2_run_fixture.sh Tests/Test.DeepBase.UIA.ElementWindow.pas       → 6/6 PASSED
+$ bash .../b2_run_fixture.sh Tests/Test.DeepBase.UIA.UnifiedActuator.pas     → 3 PASSED / 1 IGNORED（修前同集合，见同件 §3）
+
+## 4) 夹具为什么能测生产实现
+
+`TUIAElementAdapter.GetCurrentPropertyValue` 加 `virtual`（:144）后，测试子类
+`TFakeNativeWindowElement` 只替换「属性值从哪来」这一个点（raw 传 nil，不触达 COM），
+`GetNativeWindowHandle`/换算/判据全部走生产代码。Delphi 接口调度经虚表命中后代 override，
+因此 `IUIAElement(El).GetNativeWindowHandle` 测的就是 :195 那个本体而不是副本。
+
+## 5) 登记项（不在本单内掩饰）
+
+R1 前景=Desktop 且 Desktop 的窗口枚举：修前 `FindElement` 的归属校验只在
+   `Locator.TargetProcessName <> ''` 时执行（HEAD :249），本单未改该开关——属
+   B2-02 判据范围外（判据只要求「非前台元素必须被拒绝」），登记不动。
+R2 §3 的 `GetCurrentProcessName` 自比较恒真（进程归属校验同样失效）：修法需要
+   句柄/进程号→进程名的单一真源 helper 并上提到 `IWindowMonitor`，跨单元接口变更，
+   报主控另单；本单只修窗口链，避免半修状态冒充"归属校验已可用"。
+R3 `IsWindowInForeground` 的 `IsChild` 分支（元素是前景窗口的子孙）只被"负例"约束，
+   正例需要真实父子窗口现场，属桌面会话依赖，未建用例；该分支的缺失只会导致
+   更严（拒绝合法目标），不会导致误接受，与 §〇-8 fail-closed 口径一致。
+R4 新测试单元未注册进 `Tests/DeepBaseTests.dpr/.dproj`（§〇-4 归主控收口），
+   本单证据由一次性 runner 真跑产出。

@@ -1,0 +1,81 @@
+# B2-02 修前代码事实与零覆盖证明
+# 基准 HEAD: f1d141e（B2-07 落笔后；本条取证在改动落地前完成）
+# 判据（工单原文）：构造非前台元素，定位校验必须能拒绝；既有 UIA 用例不回归
+# 缺陷定位指针：WO-20260925-AUDIT-乙-B2 §B2-02；开工取证见同目录《B2-段0-开工取证.md》
+
+## 1) 缺陷本体：元素窗口句柄直接取前台窗口
+
+$ git show HEAD:Features/DeepBase.UIA.Engine.pas | sed -n '182,189p'
+function TUIAElementAdapter.GetNativeWindowHandle: HWND;
+var
+  Val: OleVariant;
+begin
+  FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId, Val);
+  // Return the current focus window as a proxy for element window
+  Result := GetForegroundWindow;
+end;
+
+三处事实同时成立：
+- :186 读的是 `UIA_ProcessIdPropertyId`（进程号），而 :188 返回的是 `GetForegroundWindow`
+  ——读到的值 `Val` 从未被使用，句柄来源与元素无关；
+- 注释自认是 proxy（"以前台窗口代替元素窗口"），不是笔误而是设计性冒用；
+- 正确来源在本仓早已有据：同一 commit 之前的审计记录
+  `CodeReview/20260918-Features-A-Browser桌面UIA.md:458` 已写明「`GetNativeWindowHandle`
+  取 `UIA_NativeWindowHandlePropertyId`（`GetCurrentPropertyValue` 转 HWND）」，
+  而 :29 一族的属性 ID 常量块里根本没有定义 30020，即修复建议从未落地。
+
+## 2) 连带后果：前景校验恒真 ⇒ 定位与保护双双失效
+
+$ git show HEAD:Features/DeepBase.UIA.Engine.pas | sed -n '314,319p'
+function TUIAEngineWin32.VerifyForegroundWindow(const Element: IUIAElement): Boolean;
+begin
+  var ElementHwnd := Element.GetNativeWindowHandle;
+  var ForegroundHwnd := GetForegroundWindow;
+  Result := (ElementHwnd = ForegroundHwnd) or IsChild(ForegroundHwnd, ElementHwnd);
+end;
+
+:316 与 :317 取的是同一个前台窗口 ⇒ `ElementHwnd = ForegroundHwnd` 恒真，整个函数是常量。
+它有两个消费点，逐个失效：
+- :250 `FindElement` 命中后 `not VerifyElementOwnership(Result, ...)` 的二次确认（:311 转调本函数）
+  ⇒ 元素定位正确性完全不受校验；
+- :336 `SetValue` 在 `SetFocus` 之后的「前景已改变即中止」保护 ⇒ 永远不触发，
+  输入会打到焦点实际所在的别的应用窗口上。
+
+## 3) 同族恒真（本单只登记，不在 B2-02 内顺手改）
+
+$ git show HEAD:Features/DeepBase.UIA.Engine.pas | sed -n '191,194p'
+function TUIAElementAdapter.GetCurrentProcessName: string;
+begin
+  Result := FLocator.TargetProcessName;
+end;
+
+`VerifyElementOwnership`（:305-309）拿 `Element.GetCurrentProcessName` 与调用方传入的
+`Locator.TargetProcessName` 比较，而前者就是把同一个 locator 字段原样吐回来 ⇒ 自比较恒真。
+正确修法需要「窗口句柄/进程号 → 进程名」的解析并作为单一真源复用，仓内现只有
+`TWindowMonitor.GetProcessNameFromHWND`，且未挂在 `IWindowMonitor` 接口上；
+把它提到接口上属跨单元接口变更，超出 B2-02「窗口链」范围，登记主控另单处理（见修后 §R2）。
+
+## 4) 零覆盖：修复前不存在任何用例触达句柄链
+
+$ git grep -n "GetNativeWindowHandle\|VerifyForegroundWindow\|UIA_NativeWindowHandlePropertyId" HEAD -- Tests
+（无输出）
+
+$ git grep -n "IsElementWindowInForeground\|ElementWindowHandleFromNativeProperty" HEAD
+（无输出 ⇒ 这两个判据函数修复前根本不存在）
+
+既有 UIA 测试面只有 `Tests/Test.DeepBase.UIA.UnifiedActuator.pas`（4 例，其中 1 例
+[Ignore] 需真实桌面会话），不覆盖窗口归属/前景校验，故缺陷长期无人踩到。
+
+## 5) 归档登记与代码不符（假修复线索，报主控）
+
+$ sed -n '361,366p' bugfix-archive.md
+### BUG-253: TUIAElementAdapter.GetNativeWindowHandle 返回错误数据
+- 修复: 改用 UIA_NativeWindowHandlePropertyId (30020) 查询真实窗口句柄。
+- 状态: ✅ 已修复 (DATA-P1-002)
+
+归档声明已修复，HEAD :188 实测仍是 `Result := GetForegroundWindow`，且 HEAD 全文件
+无 `UIA_NativeWindowHandlePropertyId` 定义（:29 附近常量块只有 30011/30012/30005/30003/30002）
+⇒ 归档「✅ 已修复」为假状态。同段 BUG-254 声称把 `UIA_ProcessIdPropertyId` 改成 30010，
+HEAD :29 实为 30002；微软口径 UIA_ProcessIdPropertyId = 30002（30010 是
+UIA_IsControlElementPropertyId），即该条记录的"修复值"本身是错的，代码值反而是对的。
+结论：归档记录不可当作修复证据，需主控决定是否回写状态。

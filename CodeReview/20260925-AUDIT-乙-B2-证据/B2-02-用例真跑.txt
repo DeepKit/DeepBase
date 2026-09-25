@@ -1,0 +1,100 @@
+# B2-02 用例真跑（原始输出，非自报）
+# 探针: b2_unit_compile.sh / b2_run_fixture.sh（一次性 DUnitX runner，三道 fail-closed 门）
+# §1 被修单元单编  §2 新夹具 6 例  §3 既有 UIA 夹具不回归
+
+===== §1 b2_unit_compile.sh Features/DeepBase.UIA.Engine.pas =====
+================================================================
+单元: Features/DeepBase.UIA.Engine.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+Features\DeepBase.UIA.Engine.pas(539) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+10375 lines, 0.52 seconds, 44333 bytes code, 7848 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+===== §2 b2_run_fixture.sh Tests/Test.DeepBase.UIA.ElementWindow.pas =====
+== 编译一次性 runner（单元: Test.DeepBase.UIA.ElementWindow） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+Features\DeepBase.UIA.Engine.pas(539) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+33643 lines, 1.64 seconds, 4252848 bytes code, 489624 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.UIA.ElementWindow） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+===== §3 b2_run_fixture.sh Tests/Test.DeepBase.UIA.UnifiedActuator.pas（既有 UIA 面：4 例，其中 1 例 [Ignore] 需真实桌面会话 ⇒ 3 PASSED，红项 0） =====
+== 编译一次性 runner（单元: Test.DeepBase.UIA.UnifiedActuator） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+Features\DeepBase.UIA.Engine.pas(539) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+Features\DeepBase.Desktop.Perception.Engine.pas(532) Hint: H2077 Value assigned to 'TDesktopPerceptionEngine.CaptureToBitmap' never used
+Features\DeepBase.Desktop.Perception.Engine.pas(610) Hint: H2077 Value assigned to 'LChanged' never used
+Tests\Test.DeepBase.UIA.UnifiedActuator.pas(45) Hint: H2219 Private symbol 'HasDesktopSession' declared but never used
+35023 lines, 1.69 seconds, 4370108 bytes code, 513736 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.UIA.UnifiedActuator） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+......I
+
+Tests Found   : 4
+Tests Ignored : 1
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=3 failure=0 error=0 ignored=1
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

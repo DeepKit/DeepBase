@@ -8,7 +8,7 @@ unit DeepBase.UIA.Engine;
 interface
 
 uses
-  System.SysUtils, System.Generics.Collections, System.IOUtils, System.Win.ComObj,
+  System.SysUtils, System.Variants, System.Generics.Collections, System.IOUtils, System.Win.ComObj,
   Winapi.Windows,
   {$IFDEF MSWINDOWS}
   UIAutomationClient_TLB,
@@ -27,6 +27,7 @@ const
   UIA_NamePropertyId         = 30005;
   UIA_ControlTypePropertyId  = 30003;
   UIA_ProcessIdPropertyId    = 30002; // UIA_ProcessIdPropertyId
+  UIA_NativeWindowHandlePropertyId = 30020;
 
   // UIA Pattern IDs
   UIA_ValuePatternId   = 10002;
@@ -140,12 +141,24 @@ type
     constructor Create(const ARaw: IUIAutomationElement; const ALocator: TUIAElementLocator);
     function GetCurrentPattern(PatternId: Integer; out Pattern: IUnknown): HRESULT;
     procedure SetFocus;
-    function GetCurrentPropertyValue(PropertyId: Integer): Variant;
+    function GetCurrentPropertyValue(PropertyId: Integer): Variant; virtual;
     function GetNativeWindowHandle: HWND;
     function GetCurrentProcessName: string;
     function GetLocator: TUIAElementLocator;
     function GetRaw: IUnknown;
   end;
+
+  /// <summary>把 UIA NativeWindowHandle 属性值还原成窗口句柄。属性缺失、为 0 或
+  /// 类型不符一律得 HWND(0)——取不到就承认取不到（B2-02）。</summary>
+  function ElementWindowHandleFromNativeProperty(const AValue: Variant): HWND;
+
+  /// <summary>窗口是否就是给定前景窗口本身或其子孙（纯判据，前景句柄由调用方给定，
+  /// 便于在非交互会话下确定测试）。任一侧为 HWND(0) 一律判否。</summary>
+  function IsWindowInForeground(const AWindow, AForeground: HWND): Boolean;
+
+  /// <summary>元素自身窗口是否仍在前景（B2-02 唯一判据处）。元素句柄为 0 或当前无
+  /// 前景窗口一律判否，否则「无句柄」会与「无前景」相互抵消成恒真。</summary>
+  function IsElementWindowInForeground(const AElementHwnd: HWND): Boolean;
   {$ENDIF}
 
 implementation
@@ -180,12 +193,40 @@ begin
 end;
 
 function TUIAElementAdapter.GetNativeWindowHandle: HWND;
-var
-  Val: OleVariant;
 begin
-  FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId, Val);
-  // Return the current focus window as a proxy for element window
-  Result := GetForegroundWindow;
+  // UIA 的 NativeWindowHandle 属性由 provider 沿元素树向上给出最近的窗口祖先，
+  // 这就是"目标元素自身窗口"的定义。旧实现在这里返回 GetForegroundWindow
+  // （且误读 ProcessId 属性），使 IsElementWindowInForeground 恒真、定位校验形同虚设。
+  Result := ElementWindowHandleFromNativeProperty(
+    GetCurrentPropertyValue(UIA_NativeWindowHandlePropertyId));
+end;
+
+function ElementWindowHandleFromNativeProperty(const AValue: Variant): HWND;
+var
+  LRaw: Int64;
+begin
+  Result := HWND(0);
+  // VarIsNumeric 覆盖 null/empty/字符串等"取不到句柄"的形态，一律折算成无窗口
+  if not VarIsNumeric(AValue) then
+    Exit;
+  LRaw := VarAsType(AValue, varInt64);
+  if LRaw = 0 then
+    Exit;
+  // UIA 在 32 位 provider 上以 VT_I4 给出 HWND，高位符号扩展后仍指向同一窗口
+  Result := HWND(UIntPtr(LRaw));
+end;
+
+function IsWindowInForeground(const AWindow, AForeground: HWND): Boolean;
+begin
+  // 0 = "元素无窗口" 或 "系统当前无前景窗口"，两种情况都不构成"目标窗口在前台"的证据
+  if (AWindow = HWND(0)) or (AForeground = HWND(0)) then
+    Exit(False);
+  Result := (AWindow = AForeground) or IsChild(AForeground, AWindow);
+end;
+
+function IsElementWindowInForeground(const AElementHwnd: HWND): Boolean;
+begin
+  Result := IsWindowInForeground(AElementHwnd, GetForegroundWindow);
 end;
 
 function TUIAElementAdapter.GetCurrentProcessName: string;
@@ -313,9 +354,7 @@ end;
 
 function TUIAEngineWin32.VerifyForegroundWindow(const Element: IUIAElement): Boolean;
 begin
-  var ElementHwnd := Element.GetNativeWindowHandle;
-  var ForegroundHwnd := GetForegroundWindow;
-  Result := (ElementHwnd = ForegroundHwnd) or IsChild(ForegroundHwnd, ElementHwnd);
+  Result := IsElementWindowInForeground(Element.GetNativeWindowHandle);
 end;
 
 function TUIAEngineWin32.SetValue(const Locator: TUIAElementLocator;

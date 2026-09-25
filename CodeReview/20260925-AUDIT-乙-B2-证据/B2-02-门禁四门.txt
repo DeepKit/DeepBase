@@ -1,0 +1,21 @@
+# B2-02 交付树四门复跑（§〇-3）
+# 时点：引擎改动 + 新测试单元 + 本单三份证据已入索引（git add 后复跑，证据门禁扫 ls-files 才会含本单新证）
+# 本件自身在扫描之后落盘，属自指排除项，与同目录既有 B2-* 门禁件同口径
+
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js
+编码门禁通过：997 个 .pas + 709 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+$ node 09_工程脚本/eol-gate/check_eol.js
+行尾门禁通过：检查了 1550 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+
+$ node 09_工程脚本/mojibake-gate/check_mojibake.js
+丙类损坏门禁通过：扫描 995 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:17: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤? L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md L1 .pas 婧愮爜闈為鏈熺函 LF → 门禁输出（预期包�?L1, L2, L3 违规�? 行尾门禁失败，违�?3 �? L2 .md 文档非预期包�?CRLF (要求 LF): docs/Bad_CRLF.md L1 .pas 源码非预期纯 LF (要求 CRLF): src/（替换符 6/44）
+证据编码门禁通过：扫描 701 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+
