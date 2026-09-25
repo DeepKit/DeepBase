@@ -1,0 +1,7 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Governance\DeepBase.Governance.ReviewQueue.SQLite.pas(827) Hint: H2077 Value assigned to 'TReviewQueueSQLite.MarkExecuted' never used
+35214 lines, 1.81 seconds, 6783092 bytes code, 704808 bytes data.
+
+COMPILE_EXIT=0

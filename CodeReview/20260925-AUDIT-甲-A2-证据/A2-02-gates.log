@@ -1,0 +1,18 @@
+A2-02 gates run 2026-09-25 (repo root = /d/_Progs/02Business/DeepBase)
+
+== eol-gate (--root full repo) ==
+行尾门禁通过：检查了 1536 个文件（.pas CRLF / .md LF），跳过目录 11
+EOL_EXIT=0
+
+== encoding-gate (--root full repo) ==
+编码门禁通过：984 个 .pas + 708 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+ENC_EXIT=0
+
+== mojibake-gate (--root full repo) ==
+MOJI_EXIT=3 (环境红：他人同工作区在途改动删除了 Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.Impl.pas，门禁 fail-closed 读文件 ENOENT；与本单两文件无关，本单未触碰该文件)
+
+== mojibake-gate (本单两文件隔离复跑) ==
+MOJI_NARROW_EXIT=0
+
+== evidence-encoding-gate (--root full repo) ==
+EVID_EXIT=0（扫描 617 件证据文件，NUL 违规 0，E3 命中 240 行均在存量 21 件封顶内）

@@ -785,7 +785,6 @@ function TEncryptedConfigurationSource.Load: TDictionary<string, string>;
 var
   LInnerData: TDictionary<string, string>;
   LPair: TPair<string, string>;
-  LDecrypted: string;
   LCipherBytes: TBytes;
 begin
   Result := TDictionary<string, string>.Create;
@@ -795,20 +794,24 @@ begin
     begin
       if ShouldDecrypt(LPair.Key) and (LPair.Value <> '') then
       begin
+        // A2-02 fail-closed：被标记为加密的键必须成功解密，否则抛异常拒绝装载。
+        // 旧实现在 except 分支把 Base64 密文原样写入配置表（"might not be
+        // encrypted"），损坏/被篡改的密文会以明文的身份继续被上层消费。
         try
-          // Decode Base64 and decrypt using DPAPI
           LCipherBytes := TNetEncoding.Base64.DecodeStringToBytes(LPair.Value);
-          if Length(LCipherBytes) > 0 then
-            LDecrypted := DecryptDpapiLocal(LCipherBytes)
-          else
-            LDecrypted := '';
-          Result.AddOrSetValue(LPair.Key, LDecrypted);
+          if Length(LCipherBytes) = 0 then
+            raise EConfigurationException.CreateFmt(
+              'TEncryptedConfigurationSource: key "%s" is flagged encrypted but '
+              + 'its value is not valid Base64 ciphertext.', [LPair.Key]);
+          Result.AddOrSetValue(LPair.Key, DecryptDpapiLocal(LCipherBytes));
         except
-          // If decryption fails, use original value (might not be encrypted)
-          {$IFDEF DEBUG}
-          OutputDebugString(PChar('DeepBase.Configuration: Failed to decrypt key: ' + LPair.Key));
-          {$ENDIF}
-          Result.AddOrSetValue(LPair.Key, LPair.Value);
+          on E: EConfigurationException do
+            raise;
+          on E: Exception do
+            raise EConfigurationException.CreateFmt(
+              'TEncryptedConfigurationSource: failed to decrypt key "%s"; '
+              + 'refusing to load ciphertext as plaintext (%s)',
+              [LPair.Key, E.Message]);
         end;
       end
       else
