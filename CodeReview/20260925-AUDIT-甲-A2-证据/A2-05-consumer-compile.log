@@ -1,0 +1,13 @@
+A2-05 consumer-unit compile check (fork deleted from DeepBase.Math.Random)
+git_base=f9bf978
+--- DeepBase.Services.Math.pas ---
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+7680 lines, 0.19 seconds, 19965 bytes code, 3484 bytes data.
+SVC_EXIT=0
+--- Test.DeepBase.Math.pas ---
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+25613 lines, 1.06 seconds, 23976 bytes code, 3068 bytes data.
+MATHTEST_EXIT=0

@@ -13,7 +13,7 @@
   - DeepBase.Math.Geometry      — TVector2, TVector3, TMatrix2, TMatrix3
   - DeepBase.Math.Statistics    — TStatistics, TInterpolation
   - DeepBase.Math.Interpolation — TEasing
-  - DeepBase.Math.Random        — TRandomDist, TSecureRandom
+  - DeepBase.Math.Random        — TRandomDist
 
   Author: DeepBase Team
   Created: 2025-11-29

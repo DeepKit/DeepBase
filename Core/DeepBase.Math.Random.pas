@@ -8,7 +8,9 @@
   - TRandomDist: random distribution generators (uniform, normal, exponential,
     Poisson, binomial, geometric, triangular, log-normal, beta, gamma,
     chi-squared, shuffle, weighted choice)
-  - TSecureRandom: CSPRNG backed by BCryptGenRandom (OS entropy)
+
+  Note: the CSPRNG is DeepBase.Random.TSecureRandom — single source of truth;
+  no second TSecureRandom lives here.
 
   Author: DeepBase Team
   Created: 2025-11-29
@@ -18,9 +20,6 @@ interface
 
 uses
   System.SysUtils, System.Math, System.SyncObjs,
-  {$IFDEF MSWINDOWS}
-  Winapi.Windows,
-  {$ENDIF}
   DeepBase.Exceptions,
   DeepBase.Math, DeepBase.Math.Geometry, DeepBase.Math.Statistics;
 
@@ -85,31 +84,7 @@ type
     class function WeightedChoice(const AWeights: array of Double): Integer; static;
   end;
 
-  /// <summary>Secure random number generator using system entropy</summary>
-  TSecureRandom = class
-  private
-    class var FInstance: TSecureRandom;
-    class var FLock: TObject;
-    class constructor Create;
-    class destructor Destroy;
-  public
-    class function Instance: TSecureRandom;
-    function NextBytes(const ALength: Integer): TBytes;
-    function NextInt(const AMax: Integer): Integer;
-    function NextDouble: Double;
-    function NextString(const ALength: Integer): string;
-  end;
-
 implementation
-
-const
-  BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
-
-{$IFDEF MSWINDOWS}
-function BCryptGenRandom(hAlgorithm: THandle; pbBuffer: PByte;
-  cbBuffer: Cardinal; dwFlags: Cardinal): Integer; stdcall;
-  external 'bcrypt.dll';
-{$ENDIF}
 
 { TRandomDist }
 
@@ -394,91 +369,6 @@ begin
   end;
 
   Result := High(AWeights);
-end;
-
-{ TSecureRandom }
-
-class constructor TSecureRandom.Create;
-begin
-  FLock := TObject.Create;
-end;
-
-class destructor TSecureRandom.Destroy;
-begin
-  FreeAndNil(FInstance);
-  FreeAndNil(FLock);
-end;
-
-class function TSecureRandom.Instance: TSecureRandom;
-begin
-  if not Assigned(FInstance) then
-  begin
-    TMonitor.Enter(FLock);
-    try
-      if not Assigned(FInstance) then
-        FInstance := TSecureRandom.Create;
-    finally
-      TMonitor.Exit(FLock);
-    end;
-  end;
-  Result := FInstance;
-end;
-
-function TSecureRandom.NextBytes(const ALength: Integer): TBytes;
-begin
-  if ALength <= 0 then
-    raise EArgumentException.Create('Length must be positive');
-  SetLength(Result, ALength);
-  {$IFDEF MSWINDOWS}
-  if BCryptGenRandom(0, @Result[0], Cardinal(ALength),
-       BCRYPT_USE_SYSTEM_PREFERRED_RNG) <> 0 then
-    raise EDeepBaseException.Create('BCryptGenRandom failed — OS CSPRNG unavailable');
-  {$ELSE}
-  // CR-296: 非 Windows 平台暂无实现——显式失败而非链接错误/静默不安全
-  raise ENotSupportedException.Create(
-    'TSecureRandom.NextBytes: CSPRNG not implemented on this platform');
-  {$ENDIF}
-end;
-
-function TSecureRandom.NextInt(const AMax: Integer): Integer;
-var
-  Bytes: TBytes;
-  Value: Cardinal;
-begin
-  if AMax <= 0 then
-    raise EArgumentException.Create('Max must be positive');
-
-  Bytes := NextBytes(4);
-  Value := (Cardinal(Bytes[0]) shl 24) or (Cardinal(Bytes[1]) shl 16) or
-           (Cardinal(Bytes[2]) shl 8) or Cardinal(Bytes[3]);
-  Result := Integer(Value mod Cardinal(AMax));
-end;
-
-function TSecureRandom.NextDouble: Double;
-var
-  Bytes: TBytes;
-  Value: UInt64;
-begin
-  Bytes := NextBytes(8);
-  Value := (UInt64(Bytes[0]) shl 56) or (UInt64(Bytes[1]) shl 48) or
-           (UInt64(Bytes[2]) shl 40) or (UInt64(Bytes[3]) shl 32) or
-           (UInt64(Bytes[4]) shl 24) or (UInt64(Bytes[5]) shl 16) or
-           (UInt64(Bytes[6]) shl 8) or UInt64(Bytes[7]);
-  Result := (Value shr 11) * (1.0 / (1 shl 53));
-end;
-
-function TSecureRandom.NextString(const ALength: Integer): string;
-const
-  CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-var
-  I: Integer;
-begin
-  if ALength <= 0 then
-    raise EArgumentException.Create('Length must be positive');
-
-  SetLength(Result, ALength);
-  for I := 1 to ALength do
-    Result[I] := CHARSET[NextInt(Length(CHARSET)) + 1];
 end;
 
 end.
