@@ -2,6 +2,31 @@ B2-13 修后：改动清单、判定落点与编译实测
 基线 commit = c935e0f；本件为交付面实测。
 
 ────────────────────────────────────────────────────────────────────
+〇、工单选路（①局部修 / ②迁参数化并报调用点清单）
+────────────────────────────────────────────────────────────────────
+选 ①：局部修 QuoteValue。
+不选 ② 的实测依据（工单要求选②须先列调用点清单报主控，这里把两条路的调用点都列全）：
+  QuoteValue 的全部调用点只有 3 处，且都在本单元内、都在「拿不到 para_type」的文本构建器里：
+    :379 BuildCallSQL    CALL 实参
+    :467 BuildUpdateSQL  SET 子句
+    :544 BuildInsertSQL  VALUES 子句
+  WHERE 侧已经有类型通道：:301 / :839 / :1129 走 HandleParamValue（按 para_type 严格转换）。
+  参数化新轨确实存在但不是「换一行调用」的量级，实测：
+    · doQry/src/uDoQryExecutor.pas 提供 ExecSelect/ExecNonQuery/ExecInsertReturningId/ExecScalar，
+      内部用 Q.ParamByName 真绑定（:135 / :163），签名口径是 Proc 名 + ParamsJson；
+    · 全仓 uses uDoQryExecutor/uDoQryParamPool/uDoQryDialect 的只有 doQry/src 自身与
+      doQry/examples/DoQryDemo/DoQryDemo.dpr 一个示例工程；
+    · 而 DoQryDemo.dpr 在 09_工程脚本/build-gate/contracts/T1-观测面.txt:72-75 明确登记为
+      「保持红，未移面」⇒ 新轨当前不在任何编译绿的可交付面上；
+    · 生产入口 doQry/prjDoQry.dpr 只 uses doQryMain + uDoQryLegacy，未接新轨；
+      uDoQryLegacy 文件头也没有 deprecated 标记（工单 ② 里「文件头标 deprecated」这一条无从叠加）。
+  ⇒ 选 ② 等于把三个生产拼接点迁到一个从未编译绿的轨，并同时改调用方契约（字段图/proc 名 → ParamsJson），
+    那是换轨重写而非本缺陷修复；① 能在写入口唯一处消除整个缺陷类。
+    新轨转正 + legacy 三处迁移作为结构性登记项交主控（见 §四 R1）。
+  「数值走类型转换而非字符启发式」这半句在 ① 下的落点：无类型出口不再猜数值，
+  需要数值语义必须由调用方给出 para_type 并走 HandleParamValue 的 ptInteger/ptFloat 严格转换。
+
+────────────────────────────────────────────────────────────────────
 一、改动清单
 ────────────────────────────────────────────────────────────────────
 1) doQry/uDoQryLegacy.pas（SUT，交付面 sha256 8c4108fbcb178422cea0dacd2ce3362056ee7bada777019c29f9172f4a54d385）
@@ -67,10 +92,10 @@ BUILD_EXIT=0
 R1  方言残余通道：本修把「值不再改变 SQL 语义」钉死在单引号状态机上，
     QuotedStr + 单引号双写在 SQL Server / PostgreSQL(standard_conforming_strings=on) /
     Oracle / SQLite 上是无损且正确的；MySQL 默认模式还把反斜杠当转义符，只双写不够。
-    该单元是 ADO（SQL Server）面，仓内没有可复用的参数化 API 供 legacy 轨调用，
-    真正的收口是让这三处拼接改走服务端/驱动参数绑定，而不是在本单元加方言开关
-    （加开关=引入第二套真源且需要 TDatabaseType 贯穿，属过度兜底）。
-    ⇒ 登记为结构性议题，不在 B2-13 范围内动。
+    该单元是 ADO（SQL Server）面；仓内确有参数执行器（doQry/src/uDoQryExecutor，见 §〇 实测：
+    只被保持红的 DoQryDemo 引用，不在任何绿面上），所以真正的收口是「新轨转正 + 这三处迁移」，
+    而不是在本单元加方言开关（加开关=引入第二套真源且需要 TDatabaseType 贯穿，属过度兜底）。
+    ⇒ 迁移与新轨转正作为结构性议题登记交主控，不在 B2-13 范围内动。
 R2  置空约定冲突：空串与字面量 'NULL' 都写不出「字符串 NULL」本身（legacy 既有契约，
     工单未授权改语义，原样保留并已有用例钉住）。
 R3  中文括号归一：旧实现只在「加引号」分支做归一，纯数值字符集分支不可能出现中文括号
