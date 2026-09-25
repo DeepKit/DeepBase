@@ -23,6 +23,7 @@ uses
   System.Math,
   System.JSON,
   System.Generics.Collections,
+  System.Generics.Defaults,
   System.SyncObjs,
   System.Messaging;
 
@@ -204,7 +205,15 @@ type
   /// Singleton Theme Engine for HB Visual Infrastructure (Shared Core).
   /// </summary>
   THbTheme = class
-  private
+  private type
+    /// <summary>A2-10: TNotifyEvent 判等必须同时比对 TMethod 的 Code（方法地址）
+    /// 与 Data（实例 Self）。默认 comparer 只看 Code，多实例注册同名方法时
+    /// 第二个实例会被误判「已存在」，Remove 也会摘错实例。</summary>
+    TListenerComparer = class(TComparer<TNotifyEvent>)
+    public
+      function Compare(const Left, Right: TNotifyEvent): Integer; override;
+    end;
+
     class var FLock: TCriticalSection;
     class var FRegistry: TDictionary<string, THbThemeDefinition>;
     class var FCurrentThemeId: string;
@@ -537,13 +546,39 @@ end;
 
 { THbTheme }
 
+function THbTheme.TListenerComparer.Compare(const Left, Right: TNotifyEvent): Integer;
+var
+  LM, RM: TMethod;
+begin
+  LM := TMethod(Left);
+  RM := TMethod(Right);
+  if LM.Code <> RM.Code then
+  begin
+    if NativeUInt(LM.Code) < NativeUInt(RM.Code) then
+      Exit(-1);
+    Exit(1);
+  end;
+  if LM.Data <> RM.Data then
+  begin
+    if NativeUInt(LM.Data) < NativeUInt(RM.Data) then
+      Exit(-1);
+    Exit(1);
+  end;
+  Result := 0;
+end;
+
 class constructor THbTheme.Create;
+var
+  Comparer: IComparer<TNotifyEvent>;
 begin
   FLock := TCriticalSection.Create;
   FRegistry := TDictionary<string, THbThemeDefinition>.Create;
   FOverrides := TDictionary<string, THbTokens>.Create;
   FOverrideHook := nil;
-  FListeners := TList<TNotifyEvent>.Create;
+  // 显式接口变量：TList<T>.Create 多重载下嵌套类实例的隐式接口转换会报
+  // E2250（重载解析不识别），先绑定 IComparer<TNotifyEvent>。
+  Comparer := TListenerComparer.Create;
+  FListeners := TList<TNotifyEvent>.Create(Comparer);
   FCurrentThemeId := 'huanjin-gold';
   FCurrentDensity := hdComfortable;
   FGranularity := gMedium;
