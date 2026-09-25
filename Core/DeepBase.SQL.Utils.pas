@@ -14,8 +14,33 @@ uses
   System.SysUtils;
 
 type
+  /// <summary>
+  /// A2-15: 受支持的 SQL 方言。判定只允许经 DriverNameToDialect 的
+  /// FireDAC 驱动名精确匹配表得到，禁止在各调用点用 ToLower/Contains
+  /// 之类的裸字符串包含判断（原 SQLLogger 用 Contains('postgres') 判 PG，
+  /// 而 FireDAC 的 PG DriverName 是 'PG'，条件恒假）。
+  /// </summary>
+  TSQLDialect = (sdUnknown, sdSQLite, sdPostgreSQL, sdMSSQL, sdMySQL);
+
   TSQLUtils = class
   public
+    /// <summary>
+    /// A2-15: 把 FireDAC 连接驱动名映射为方言（大小写不敏感的精确匹配）。
+    /// 未列入常量表的驱动名返回 sdUnknown，调用方必须自行决定 fail 语义，
+    /// 不得猜测方言。
+    /// </summary>
+    class function DriverNameToDialect(const ADriverName: string): TSQLDialect; static;
+
+    /// <summary>
+    /// A2-16: 按方言生成分派"插入且冲突忽略"语句。
+    /// SQLite 保留 INSERT OR IGNORE；PG 用 INSERT ... ON CONFLICT DO NOTHING。
+    /// 其余方言（含 sdUnknown）抛 EArgumentException——不猜语义（fail-closed）。
+    /// ATable/AColumns/AValues/AConflictColumns 必须由调用方以受信任常量拼接，
+    /// 标识符需先过 ValidateIdentifier。
+    /// </summary>
+    class function BuildInsertIgnoreSQL(ADialect: TSQLDialect;
+      const ATable, AColumns, AValues, AConflictColumns: string): string; static;
+
     /// <summary>
     /// Returns True if AName is a valid SQL identifier:
     /// starts with letter or underscore, contains only [a-zA-Z0-9_],
@@ -47,7 +72,17 @@ type
     /// fragment. AContext is included in the error message for diagnostics.
     /// </summary>
     class procedure ValidateColumnDef(const AColumnDef, AContext: string); static;
-  end;
+end;
+
+const
+  // A2-15: FireDAC 驱动名集中定义（与 DriverNameToDialect 同处维护）。
+  // 判定只允许走这张常量表的精确匹配，禁止调用点裸字符串包含判断。
+  DRIVER_NAME_SQLITE = 'SQLITE';
+  DRIVER_NAME_PG = 'PG';
+  // 兼容部分部署里 Params.DriverID 写成全称的别名，仍是精确匹配而非 Contains
+  DRIVER_NAME_PG_ALIAS = 'POSTGRESQL';
+  DRIVER_NAME_MSSQL = 'MSSQL';
+  DRIVER_NAME_MYSQL = 'MYSQL';
 
 implementation
 
@@ -55,6 +90,40 @@ uses
   System.Character,
   System.RegularExpressions,
   System.SysConst;
+
+class function TSQLUtils.DriverNameToDialect(const ADriverName: string): TSQLDialect;
+begin
+  if SameText(ADriverName, DRIVER_NAME_SQLITE) then
+    Exit(sdSQLite);
+  if SameText(ADriverName, DRIVER_NAME_PG) or
+     SameText(ADriverName, DRIVER_NAME_PG_ALIAS) then
+    Exit(sdPostgreSQL);
+  if SameText(ADriverName, DRIVER_NAME_MSSQL) then
+    Exit(sdMSSQL);
+  if SameText(ADriverName, DRIVER_NAME_MYSQL) then
+    Exit(sdMySQL);
+  Result := sdUnknown;
+end;
+
+class function TSQLUtils.BuildInsertIgnoreSQL(ADialect: TSQLDialect;
+  const ATable, AColumns, AValues, AConflictColumns: string): string;
+begin
+  case ADialect of
+    sdSQLite:
+      Result := Format('INSERT OR IGNORE INTO %s (%s) VALUES (%s)',
+        [ATable, AColumns, AValues]);
+    sdPostgreSQL:
+      Result := Format('INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO NOTHING',
+        [ATable, AColumns, AValues, AConflictColumns]);
+  else
+    // A2-16: 未支持的方言直接抛错——静默回退到某一方言语法会在另一
+    // 引擎上报错或产生重复行，属 fail-open。
+    raise EArgumentException.CreateFmt(
+      'BuildInsertIgnoreSQL: unsupported SQL dialect %d for table %s ' +
+      '(only SQLite and PostgreSQL emit INSERT-and-ignore-conflict)',
+      [Ord(ADialect), ATable]);
+  end;
+end;
 
 class function TSQLUtils.IsValidIdentifier(const AName: string): Boolean;
 begin

@@ -35,7 +35,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
-  System.StrUtils;
+  System.StrUtils,
+  DeepBase.SQL.Utils;
 
 type
   TSQLLogLevel = (sllDebug, sllInfo, sllWarn, sllError);
@@ -63,8 +64,7 @@ type
   /// </summary>
   TSQLLogger = class
   private
-    class var FEnabled: Boolean;
-    class var FSlowQueryThresholdMs: Integer;
+    class var FEnabled: Boolean;    class var FSlowQueryThresholdMs: Integer;
     class var FLogLevel: TSQLLogLevel;
     class var FDestinations: TLogDestinations;
     class var FLogFilePath: string;
@@ -184,6 +184,15 @@ type
     /// Generate new session ID
     /// </summary>
     class procedure NewSession;
+
+    /// <summary>
+    /// A2-15: 按方言生成 Logs 建表 DDL（PG 用 BIGSERIAL，SQLite 用
+    /// INTEGER PRIMARY KEY AUTOINCREMENT）。公开为单测缝：方言分派可在
+    /// 无真实 PG 服务器的情况下断言，不再只能靠 Contains 分支自证。
+    /// 不支持的方言抛 EArgumentException——回退到另一引擎方言建表属
+    /// fail-open（原缺陷即 PG 分支恒假，SQLite DDL 被甩给 PG）。
+    /// </summary>
+    class function BuildCreateLogsTableSQL(ADialect: TSQLDialect): string; static;
     
     // Properties
     class property Enabled: Boolean read FEnabled write FEnabled;
@@ -211,6 +220,40 @@ uses
   Winapi.Windows,
   {$ENDIF}
   FireDAC.Comp.Client;
+
+class function TSQLLogger.BuildCreateLogsTableSQL(ADialect: TSQLDialect): string;
+begin
+  case ADialect of
+    sdSQLite:
+      Result :=
+        'CREATE TABLE IF NOT EXISTS Logs (' +
+        '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+        '  LogLevel VARCHAR(16),' +
+        '  Source VARCHAR(32),' +
+        '  Message VARCHAR(500),' +
+        '  LogTime TIMESTAMP,' +
+        '  SessionId VARCHAR(64),' +
+        '  MachineName VARCHAR(128),' +
+        '  Extra TEXT' +
+        ')';
+    sdPostgreSQL:
+      Result :=
+        'CREATE TABLE IF NOT EXISTS Logs (' +
+        '  Id BIGSERIAL PRIMARY KEY,' +
+        '  LogLevel VARCHAR(16),' +
+        '  Source VARCHAR(32),' +
+        '  Message VARCHAR(500),' +
+        '  LogTime TIMESTAMP,' +
+        '  SessionId VARCHAR(64),' +
+        '  MachineName VARCHAR(128),' +
+        '  Extra TEXT' +
+        ')';
+  else
+    raise EArgumentException.CreateFmt(
+      'TSQLLogger.BuildCreateLogsTableSQL: unsupported SQL dialect %d - ' +
+      'no Logs DDL is defined for it (fail-closed, A2-15)', [Ord(ADialect)]);
+  end;
+end;
 
 { TSQLLogger }
 
@@ -540,6 +583,8 @@ class procedure TSQLLogger.EnsureLogsTable(ADBConnection: TObject);
 var
   Conn: TFDConnection;
   Q: TFDQuery;
+  LDialect: TSQLDialect;
+  LDriverName: string;
 begin
   // Fast path — once the table has been created we never check again.
   // The read of FLogsTableEnsured is intentionally lock-free here:
@@ -551,36 +596,27 @@ begin
   Conn := TFDConnection(ADBConnection);
   if not Conn.Connected then Exit;
 
+  // A2-15: 方言判定走 DriverNameToDialect 精确匹配表（原实现用
+  // DriverName.ToLower.Contains('postgres')，而 FireDAC 的 PG 驱动名是
+  // 'PG'，条件恒假——PG 连接永远拿到 SQLite 专用 AUTOINCREMENT DDL）。
+  // DriverName 未就绪时回退 Params.DriverID，与 Authorization 层同源口径。
+  LDriverName := Conn.DriverName;
+  if LDriverName = '' then
+    LDriverName := Conn.Params.Values['DriverID'];
+  LDialect := TSQLUtils.DriverNameToDialect(LDriverName);
+  if LDialect = sdUnknown then
+  begin
+    // 未知方言不猜 DDL，本次跳过建表（下次写入重试），避免把错误
+    // 方言的建表语句甩给数据库。
+    Exit;
+  end;
+
   Q := TFDQuery.Create(nil);
   try
     Q.Connection := Conn;
-    // CR-229: 按驱动方言建表（原 SQLite 专用 AUTOINCREMENT 在 PG 直接语法错），
-    // 且仅在建表成功后才置 ensured 标志——失败时下次写入重试，
-    // 而不是把"数据库日志目标永久静默失效"固化下来。
-    if Conn.DriverName.ToLower.Contains('postgres') then
-      Q.SQL.Text :=
-        'CREATE TABLE IF NOT EXISTS Logs (' +
-        '  Id BIGSERIAL PRIMARY KEY,' +
-        '  LogLevel VARCHAR(16),' +
-        '  Source VARCHAR(32),' +
-        '  Message VARCHAR(500),' +
-        '  LogTime TIMESTAMP,' +
-        '  SessionId VARCHAR(64),' +
-        '  MachineName VARCHAR(128),' +
-        '  Extra TEXT' +
-        ')'
-    else
-      Q.SQL.Text :=
-        'CREATE TABLE IF NOT EXISTS Logs (' +
-        '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
-        '  LogLevel VARCHAR(16),' +
-        '  Source VARCHAR(32),' +
-        '  Message VARCHAR(500),' +
-        '  LogTime TIMESTAMP,' +
-        '  SessionId VARCHAR(64),' +
-        '  MachineName VARCHAR(128),' +
-        '  Extra TEXT' +
-        ')';
+    // CR-229: 按驱动方言建表，且仅在建表成功后才置 ensured 标志——
+    // 失败时下次写入重试，而不是把"数据库日志目标永久静默失效"固化下来。
+    Q.SQL.Text := BuildCreateLogsTableSQL(LDialect);
     try
       Q.ExecSQL;
       FLogsTableEnsured := True;   // CR-229: 成功才置位
