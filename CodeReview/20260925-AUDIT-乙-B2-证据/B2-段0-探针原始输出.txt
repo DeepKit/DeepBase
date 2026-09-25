@@ -1,0 +1,23 @@
+== 编译器版本 ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+EXIT=0
+
+== 编译 D:/_Progs/02Business/DeepBase/.tmp/b2/B2Seg0Probe.dpr ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+70 lines, 0.14 seconds, 1481092 bytes code, 203520 bytes data.
+BUILD_EXIT=0
+
+== 运行 ==
+== P1 JSON boolean round trip ==
+serialized       : {"is_active":{"booleanValue":true}}
+TryGetValue<string> = TRUE / value=[true]
+SameText(value,'true') = TRUE
+TryGetValue<Boolean> = TRUE / value=TRUE
+runtime class    : TJSONTrue
+== P2 TCriticalSection re-entrancy ==
+first Enter  : ok
+second Enter : returned without blocking
+CONCLUSION: same-thread re-entrant = True (no deadlock on this primitive)
+RUN_EXIT=0

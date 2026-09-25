@@ -1,0 +1,43 @@
+==== 一、编译面：逐 API 存在性（EXIT=0 即存在） ====
+[可用]   Winapi.Windows.GetDpiForSystem
+[可用]   Winapi.Windows.GetDpiForWindow
+[不可用] Winapi.Windows.MonitorFromPoint(P, flags)
+         api3.dpr(5) Error: E2003 Undeclared identifier: 'MonitorFromPoint' api3.dpr(5) Error: E2003 Undeclared identifier: 'MONITOR_DEFAULTTOPRIMARY'
+[不可用] Winapi.Windows.GetDpiForMonitor
+         api4.dpr(5) Error: E2003 Undeclared identifier: 'GetDpiForMonitor' api4.dpr(5) Error: E2003 Undeclared identifier: 'MDT_EFFECTIVE_DPI'
+[可用]   TMonitor.Handle
+[可用]   TMonitor.PixelsPerInch
+[不可用] TMonitor.Scale
+         api7.dpr(5) Error: E2003 Undeclared identifier: 'Scale'
+[可用]   TScreen.MonitorFromPoint(P) 单参
+[不可用] TScreen.DefaultMonitor
+         api9.dpr(5) Error: E2003 Undeclared identifier: 'DefaultMonitor' api9.dpr(5) Error: E2066 Missing operator or semicolon
+[不可用] System.Math.Clamp(Double)
+         api10.dpr(5) Error: E2003 Undeclared identifier: 'Clamp'
+[可用]   System.Math.Min/Max(Double)
+[可用]   System.Win.HighDpi.IsDpiAware
+[不可用] 旧实现里的 fmt()(单元内不存在)
+         api13.dpr(5) Error: E2003 Undeclared identifier: 'fmt'
+
+==== 二、引用面：整个单元是否存在（Graphics32 / Winapi.Shcore） ====
+[不可用] uses Graphics32
+         u1.dpr(1) Fatal: F2613 Unit 'Graphics32' not found.
+[不可用] uses GR32
+         u2.dpr(1) Fatal: F2613 Unit 'GR32' not found.
+[不可用] uses Winapi.Shcore
+         u3.dpr(1) Fatal: F2613 Unit 'Winapi.Shcore' not found.
+
+==== 三、运行期真值：Screen 在纯控制台进程里是否可用 + 各 DPI 取值实测 ====
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+16 lines, 0.27 seconds, 3083316 bytes code, 326040 bytes data.
+BUILD_EXIT=0
+Screen = nil ? FALSE
+MonitorCount=1
+Screen.PixelsPerInch=96
+Screen.Width=1920  SM_CXSCREEN=1920
+GetSystemMetrics(LOGPIXELSX)=0  <- 常量配对错误：LOGPIXELSX 属 GetDeviceCaps
+MonitorFromPoint(50,50) assigned=TRUE
+Mon.PixelsPerInch=96  Handle=146809977
+RUN_EXIT=0
+
+== 探针产物目录: .tmp/b2/dpiprobe（gitignored，不入库） ==
