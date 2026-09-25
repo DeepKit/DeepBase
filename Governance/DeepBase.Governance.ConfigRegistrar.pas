@@ -417,7 +417,10 @@ begin
     if not LHasRow then
     begin
       // DATA2-023: Use SetMode so the default value gets an HMAC signature.
-      SetMode(MODE_OBSERVE);
+      // A2-14: fail-closed——出厂默认 enforce（原默认 observe 与 DATA2-023
+      // 「default to enforce for safety」的既定语义相反，属 fail-open）。
+      // 需要观察模式的调用方必须显式 SetMode(MODE_OBSERVE)。
+      SetMode(MODE_ENFORCE);
     end;
   finally
     FreeAndNil(LQuery);
@@ -1005,7 +1008,8 @@ var
   LQuery: TFDQuery;
   LMode, LSig: string;
 begin
-  Result := MODE_OBSERVE;
+  // A2-14: 无已持久化模式时的兜底与 DATA2-023 注释语义一致——enforce。
+  Result := MODE_ENFORCE;
   LMode := '';
   LSig := '';
   LQuery := TFDQuery.Create(nil);
@@ -1036,8 +1040,10 @@ begin
       else
       begin
         // Tampered mode detected — reset to safe default and re-sign.
-        SetMode(MODE_OBSERVE);
-        Result := MODE_OBSERVE;
+        // A2-14: safe default = enforce（原实现写回 observe，与本方法头
+        // 「Default to enforce for safety」的注释直接矛盾，属骗人注释+fail-open）。
+        SetMode(MODE_ENFORCE);
+        Result := MODE_ENFORCE;
       end;
     end;
   finally
