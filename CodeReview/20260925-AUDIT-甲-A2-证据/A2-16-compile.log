@@ -1,0 +1,32 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Governance\DeepBase.Governance.ReviewQueue.SQLite.pas(827) Hint: H2077 Value assigned to 'TReviewQueueSQLite.MarkExecuted' never used
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.Collections.pas(728) Hint: H2164 Variable 'Node' is declared but never used in 'DeepBase.Collections.TLRUCache<K,V>.Evict'
+Core\DeepBase.Collections.pas(116) Hint: H2219 Private symbol 'Evict' declared but never used
+Tests\Regression\Test.Regression.A8_InFlightUnloadGate.pas(128) Hint: H2077 Value assigned to 'LStart' never used
+Persistence\DeepBase.SQLLogger.pas(665) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(666) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(667) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(668) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(671) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(672) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(673) Hint: H2443 Inline function 'TFDParam.SetAsDateTime' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(674) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(675) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(685) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Governance\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used
+Governance\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used
+Governance\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used
+Governance\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used
+Tests\Test.DeepBase.ConfigRegistrarDefaultMode.pas(131) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Test.DeepBase.ConfigRegistrarDefaultMode.pas(152) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Test.DeepBase.ConfigRegistrarDefaultMode.pas(153) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+61659 lines, 3.42 seconds, 11228416 bytes code, 1050200 bytes data.
+
+COMPILE_EXIT=0

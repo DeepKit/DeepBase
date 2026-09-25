@@ -11,6 +11,7 @@ interface
 
 uses
   DeepBase.Authorization,
+  DeepBase.SQL.Utils,
   FireDAC.Comp.Client;
 
 function CreateAuthorizationStorage(
@@ -29,6 +30,7 @@ type
   TFireDACAuthorizationStorage = class(TInterfacedObject, IAuthorizationStorage)
   private
     FConnection: TFDConnection;
+    function CurrentDialect: TSQLDialect;
     function IsPostgreSQL: Boolean;
     function ReadRoleIdByName(const RoleName: string): Integer;
     function ReadUserIdByName(const Username: string): Integer;
@@ -62,16 +64,23 @@ begin
   FConnection := AConnection;
 end;
 
-function TFireDACAuthorizationStorage.IsPostgreSQL: Boolean;
+function TFireDACAuthorizationStorage.CurrentDialect: TSQLDialect;
 var
   DriverName: string;
 begin
+  // A2-16: 方言判定唯一入口——复用 A2-15 的 FireDAC 驱动名精确匹配表
+  // （SSOT），禁止调用点各自 Contains/SameText 散判。
   if not Assigned(FConnection) then
-    Exit(False);
+    Exit(sdUnknown);
   DriverName := FConnection.DriverName;
   if DriverName = '' then
     DriverName := FConnection.Params.Values['DriverID'];
-  Result := SameText(DriverName, 'PG') or SameText(DriverName, 'PostgreSQL');
+  Result := TSQLUtils.DriverNameToDialect(DriverName);
+end;
+
+function TFireDACAuthorizationStorage.IsPostgreSQL: Boolean;
+begin
+  Result := CurrentDialect = sdPostgreSQL;
 end;
 
 class function TFireDACAuthorizationStorage.FieldAsBool(
@@ -697,12 +706,16 @@ begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  // INSERT OR IGNORE eliminates the TOCTOU race between SELECT and INSERT
+  // INSERT-and-ignore-conflict eliminates the TOCTOU race between SELECT and
+  // INSERT. A2-16: 语句按方言分派（SQLite INSERT OR IGNORE / PG
+  // ON CONFLICT DO NOTHING），原来硬编码 SQLite 专有语法在 PG 必抛语法错；
+  // 其余方言 BuildInsertIgnoreSQL 直接抛异常（fail-closed，不猜语义）。
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text :=
-      'INSERT OR IGNORE INTO auth_user_roles (user_id, role_id) VALUES (:user_id, :role_id)';
+    Query.SQL.Text := TSQLUtils.BuildInsertIgnoreSQL(
+      CurrentDialect, 'auth_user_roles', 'user_id, role_id',
+      ':user_id, :role_id', 'user_id, role_id');
     Query.ParamByName('user_id').AsInteger := UserId;
     Query.ParamByName('role_id').AsInteger := RoleId;
     Query.ExecSQL;
