@@ -367,6 +367,11 @@ type
     function GetBackupArchivePath(const ABackupId: string): string;
     function GetManifestPath(const ABackupId: string): string;
 
+    /// <summary>把备份归档解析为可按 zip 读取的明文路径（B2-07 单一入口）。
+    /// 加密归档解密到同根下的 tmp.zip；ATempPath 非空时调用方必须在所有出口删除。</summary>
+    function PlainArchivePath(const ABackupId, AArchivePath: string;
+      out ATempPath: string): string;
+
   protected
     // virtual: 测试子类可固定 ID，逼近"同 ID 二次备份覆盖归档"缺陷路径
     function GenerateBackupId: string; virtual;
@@ -1814,6 +1819,33 @@ begin
     Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip');
 end;
 
+function TCloudBackupManager.PlainArchivePath(const ABackupId, AArchivePath: string;
+  out ATempPath: string): string;
+var
+  LTemp: string;
+begin
+  // 加密归档不能直接交给 TZipFile（B2-07）：所有"按 zip 读备份"的消费点
+  // （VerifyBackup / InternalRestore）必须先经本函数得到明文路径。
+  // ATempPath 非空即表示返回值是本次新建的临时明文，所有权移交调用方删除。
+  ATempPath := '';
+  if not (Assigned(FEncryptor) and AArchivePath.EndsWith('.enc')) then
+    Exit(AArchivePath);
+
+  LTemp := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'tmp.zip');
+  try
+    FEncryptor.DecryptFile(AArchivePath, LTemp);
+  except
+    // DecryptFile 先 fmCreate 落地再校验 MAC：损坏/口令不符时磁盘上已留半空文件。
+    // 判定要求"不留半开临时文件"，故在抛错前就地清掉。
+    if TFile.Exists(LTemp) then
+      TFile.Delete(LTemp);
+    raise;
+  end;
+
+  ATempPath := LTemp;
+  Result := LTemp;
+end;
+
 function TCloudBackupManager.GetManifestPath(const ABackupId: string): string;
 begin
   Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'manifest.json');
@@ -1840,6 +1872,13 @@ begin
   DoProgress;
   
   try
+    // B2-07 fail-closed：EnableEncryption 决定归档取 .enc 扩展名，但只有同时配了
+    // EncryptionKey 才存在加密器。请求加密却无密钥时旧行为是写出明文并挂上 .enc
+    // 后缀（伪密文），故拒绝产出归档，而不是留下"看起来已加密"的现场。
+    if FConfig.EnableEncryption and not Assigned(FEncryptor) then
+      raise EBackupException.Create(
+        'Encryption requested but no encryption key configured; backup refused');
+
     // 创建清单
     LManifest := TBackupManifest.Create;
     try
@@ -2011,7 +2050,7 @@ end;
 procedure TCloudBackupManager.InternalRestore(const ABackupId: string;
   const ATargetPath: string);
 var
-  LArchivePath, LTempPath, LDestPath: string;
+  LArchivePath, LPlainPath, LTempPath, LDestPath: string;
   LManifest: TBackupManifest;
 begin
   FCancelled := False;
@@ -2045,54 +2084,49 @@ begin
         
       TDirectory.CreateDirectory(LDestPath);
       
-      // 解密（如果需要）
+      // 解密（B2-07：与 VerifyBackup 共用同一明文解析入口，不再各写一份）
       if Assigned(FEncryptor) and LArchivePath.EndsWith('.enc') then
       begin
         FStatus := bsDecrypting;
         FProgress.Status := bsDecrypting;
         DoProgress;
-        
-        LTempPath := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'tmp.zip');
-        FEncryptor.DecryptFile(LArchivePath, LTempPath);
-      end
-      else
-        LTempPath := LArchivePath;
-        
-      if FCancelled then
-      begin
-        if LTempPath <> LArchivePath then
-          TFile.Delete(LTempPath);
-        raise EBackupCancelledException.Create('Restore cancelled');
       end;
-      
-      // 解压
-      FStatus := bsDecompressing;
-      FProgress.Status := bsDecompressing;
-      DoProgress;
-      
-      FStatus := bsRestoring;
-      FProgress.Status := bsRestoring;
-      DoProgress;
-      
-      FCompressor.ExtractArchive(LTempPath, LDestPath,
-        procedure(ACurrent, ATotal: Integer)
-        begin
-          FProgress.ProcessedFiles := ACurrent;
-          DoProgress;
-        end);
-        
-      // 清理临时文件
-      if LTempPath <> LArchivePath then
-        TFile.Delete(LTempPath);
-        
-      // 更新统计
-      FStatistics.TotalBytesRestored := FStatistics.TotalBytesRestored + LManifest.TotalSize;
-      FStatistics.LastRestoreTime := Now;
-      
-      FStatus := bsCompleted;
-      FProgress.Status := bsCompleted;
-      DoRestoreComplete(True, '');
-      
+
+      LPlainPath := PlainArchivePath(ABackupId, LArchivePath, LTempPath);
+
+      try
+        if FCancelled then
+          raise EBackupCancelledException.Create('Restore cancelled');
+
+        // 解压
+        FStatus := bsDecompressing;
+        FProgress.Status := bsDecompressing;
+        DoProgress;
+
+        FStatus := bsRestoring;
+        FProgress.Status := bsRestoring;
+        DoProgress;
+
+        FCompressor.ExtractArchive(LPlainPath, LDestPath,
+          procedure(ACurrent, ATotal: Integer)
+          begin
+            FProgress.ProcessedFiles := ACurrent;
+            DoProgress;
+          end);
+
+        // 更新统计
+        FStatistics.TotalBytesRestored := FStatistics.TotalBytesRestored + LManifest.TotalSize;
+        FStatistics.LastRestoreTime := Now;
+
+        FStatus := bsCompleted;
+        FProgress.Status := bsCompleted;
+        DoRestoreComplete(True, '');
+      finally
+        // 旧实现只在成功路径删临时明文，解压抛错即把解密后的原文留在备份根下
+        if LTempPath <> '' then
+          TFile.Delete(LTempPath);
+      end;
+
     finally
       LManifest.Free;
     end;
@@ -2512,6 +2546,8 @@ end;
 function TCloudBackupManager.VerifyBackup(const ABackupId: string): Boolean;
 var
   LArchivePath: string;
+  LPlainPath: string;
+  LTempPath: string;
   LManifest: TBackupManifest;
   LZip: TZipFile;
   LManifestPaths: TDictionary<string, TBackupFileInfo>;
@@ -2533,64 +2569,72 @@ begin
     Exit;
 
   try
-    LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
+    // B2-07: 加密归档必须先解密再开 zip，旧实现直接把 .zip.enc 交给 TZipFile，
+    // 加密备份的完整性校验在启用加密时必然失败。临时明文由 finally 统一回收。
+    LPlainPath := PlainArchivePath(ABackupId, LArchivePath, LTempPath);
     try
-      LZip := TZipFile.Create;
+      LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
       try
-        LZip.Open(LArchivePath, zmRead);
+        LZip := TZipFile.Create;
         try
-          // File count must match manifest
-          if LZip.FileCount <> LManifest.FileCount then
-            Exit;
-
-          // Build lookup from manifest relative paths to file info
-          LManifestPaths := TDictionary<string, TBackupFileInfo>.Create(LManifest.Files.Count);
+          LZip.Open(LPlainPath, zmRead);
           try
-            for LFileInfo in LManifest.Files do
-              LManifestPaths.Add(LFileInfo.RelativePath.Replace('\', '/'), LFileInfo);
+            // File count must match manifest
+            if LZip.FileCount <> LManifest.FileCount then
+              Exit;
 
-            LVerifiedCount := 0;
+            // Build lookup from manifest relative paths to file info
+            LManifestPaths := TDictionary<string, TBackupFileInfo>.Create(LManifest.Files.Count);
+            try
+              for LFileInfo in LManifest.Files do
+                LManifestPaths.Add(LFileInfo.RelativePath.Replace('\', '/'), LFileInfo);
 
-            // Verify each zip entry against manifest checksum
-            for I := 0 to LZip.FileCount - 1 do
-            begin
-              LEntryName := LZip.FileName[I].Replace('\', '/');
+              LVerifiedCount := 0;
 
-              // Every archive entry must exist in manifest
-              if not LManifestPaths.TryGetValue(LEntryName, LFileInfo) then
-                Exit;
-
-              // Verify SHA256 of entry content
-              if LFileInfo.Checksum <> '' then
+              // Verify each zip entry against manifest checksum
+              for I := 0 to LZip.FileCount - 1 do
               begin
-                LZip.Read(I, LStream, LLocalHeader);
-                try
-                  LStream.Position := 0;
-                  LEntryHash := THashSHA2.GetHashString(LStream);
-                finally
-                  LStream.Free;
+                LEntryName := LZip.FileName[I].Replace('\', '/');
+
+                // Every archive entry must exist in manifest
+                if not LManifestPaths.TryGetValue(LEntryName, LFileInfo) then
+                  Exit;
+
+                // Verify SHA256 of entry content
+                if LFileInfo.Checksum <> '' then
+                begin
+                  LZip.Read(I, LStream, LLocalHeader);
+                  try
+                    LStream.Position := 0;
+                    LEntryHash := THashSHA2.GetHashString(LStream);
+                  finally
+                    LStream.Free;
+                  end;
+
+                  if not SameText(LEntryHash, LFileInfo.Checksum) then
+                    Exit;
                 end;
 
-                if not SameText(LEntryHash, LFileInfo.Checksum) then
-                  Exit;
+                Inc(LVerifiedCount);
               end;
 
-              Inc(LVerifiedCount);
+              // All manifest entries must have been found in archive
+              Result := LVerifiedCount = LManifestPaths.Count;
+            finally
+              LManifestPaths.Free;
             end;
-
-            // All manifest entries must have been found in archive
-            Result := LVerifiedCount = LManifestPaths.Count;
           finally
-            LManifestPaths.Free;
+            LZip.Close;
           end;
         finally
-          LZip.Close;
+          LZip.Free;
         end;
       finally
-        LZip.Free;
+        LManifest.Free;
       end;
     finally
-      LManifest.Free;
+      if LTempPath <> '' then
+        TFile.Delete(LTempPath);
     end;
   except
     Result := False;

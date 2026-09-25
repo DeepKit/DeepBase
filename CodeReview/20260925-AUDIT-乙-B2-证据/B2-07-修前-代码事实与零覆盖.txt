@@ -1,0 +1,65 @@
+# B2-07 修前代码事实与零覆盖证明
+# 基准 HEAD: 8289118（B2-08 落笔后；本条取证在改动落地前完成，见 §〇-1 逐件独立提交流程）
+# 判据（工单原文）：加密备份往返用例 EXIT=0；损坏密文用例 EXIT≠0 且不留半开临时文件
+# 缺陷定位指针：WO-20260925-AUDIT-乙-B2 §B2-07；开工取证见同目录《B2-段0-开工取证.md》
+
+## 1) 缺陷本体：VerifyBackup 以 zip 方式打开未解密的 .zip.enc
+
+$ git show HEAD:Features/DeepBase.CloudBackup.pas | grep -n "LZip.Open"
+1218:    LZip.Open(AArchivePath, zmWrite);     # TBackupCompressor.CreateArchive（写侧，无关）
+1274:    LZip.Open(AArchivePath, zmRead);      # TBackupCompressor.ExtractArchive（收明文路径，见 §3）
+2540:        LZip.Open(LArchivePath, zmRead);  # ★ TCloudBackupManager.VerifyBackup —— 直接开加密归档
+
+而 GetBackupArchivePath 在启用加密时给出的就是密文文件：
+
+$ sed -n '1814,1820p' Features/DeepBase.CloudBackup.pas
+function TCloudBackupManager.GetBackupArchivePath(const ABackupId: string): string;
+begin
+  if FConfig.EnableEncryption then
+    Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip.enc')
+  else
+    Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip');
+end;
+
+后果链条（同一文件内可核对，不需外部假设）：
+- `TZipFile.Open(<密文>, zmRead)` 必抛（zip 魔数不存在），被 VerifyBackup 外层的
+  `except Result := False` 吞成「校验不通过」；
+- InternalRestore 在 2031 行把 VerifyBackup 作为恢复前置门禁（Top20 #15 接入），
+  门禁必然拒放 ⇒ 启用加密的备份既不可验证也不可恢复；
+- 恢复路径本身（2049-2059）早就有正确的「解密到 tmp.zip 再交给 ExtractArchive」写法，
+  即同一文件内两套读法：恢复侧解密、校验侧不解密——这是分叉而不是缺能力。
+
+## 2) 零覆盖：修复前不存在任何加密备份用例
+
+$ git grep -n "EnableEncryption" HEAD -- 'Tests/*.pas'
+HEAD:Tests/Test.DeepBase.CloudBackup.pas:695:  Assert.IsFalse(Config.EnableEncryption);   # 默认值断言
+HEAD:Tests/Test.DeepBase.CloudBackup.pas:830:  LCfg.EnableEncryption := False;
+HEAD:Tests/Test.DeepBase.CloudBackup.pas:1090:   LCfg.EnableEncryption := False;
+HEAD:Tests/Test.DeepBase.CloudBackup.pas:1159:   LCfg.EnableEncryption := False;
+HEAD:Tests/Test.DeepBase.CloudBackup.pas:1192:   LCfg.EnableEncryption := False;
+（Tests/Test.DeepBase.CloudSync.pas 的 True 属另一模块 DeepBase.CloudSync，不经本文件加密通道）
+
+$ git grep -n "\.zip\.enc\|DecryptFile\|tmp\.zip" HEAD -- 'Tests/*.pas'
+（无输出）
+
+即：CloudBackup 的测试面里 EnableEncryption 一律为 False，`.zip.enc`、`DecryptFile`、
+`tmp.zip` 三个词在测试目录零命中 ⇒ 「加密备份」整条链路（写/校验/恢复/临时文件回收）
+此前无任何用例覆盖，缺陷得以长期存在。
+
+## 3) 附带同族事实（本单一并收口，逐条给出处）
+
+3.1 恢复侧临时明文只在成功路径回收：
+$ git show HEAD:Features/DeepBase.CloudBackup.pas | grep -n "TFile.Delete(LTempPath)\|if LTempPath <> LArchivePath"
+2064（取消分支）、2086（成功分支）两处删除，中间 2077 `FCompressor.ExtractArchive` 抛错
+即从 2100 的 except 逃逸 ⇒ 解密后的明文 `tmp.zip` 留在备份根，无任何出口回收。
+（备份写侧 1921/1935 同样只有成功/取消两个删除点。）
+
+3.2 「请求加密但未配密钥」= 写出明文并挂 .zip.enc 后缀（伪密文）：
+构造侧 `if FConfig.EnableEncryption and (FConfig.EncryptionKey <> '')` 才建 FEncryptor，
+而命名侧只看 `FConfig.EnableEncryption` ⇒ 密钥缺失时 InternalBackup 走 1971-1978 的
+「明文 tmp.zip 直接 Move 到 <id>.zip.enc」分支（HEAD 1939-1946）。归档名声称已加密、内容是明文。
+
+3.3 第二处 LZip.Open（1274，TBackupCompressor.ExtractArchive）定性：非缺陷。
+该函数是纯 zip 工具，契约要求调用方给明文路径；仓内唯一调用点是 InternalRestore
+（HEAD 2077），其入参 LTempPath 在加密分支下就是解密产物。修复后调用方改为
+统一的明文解析入口，1274 保持不动，不再新增第二条判断。

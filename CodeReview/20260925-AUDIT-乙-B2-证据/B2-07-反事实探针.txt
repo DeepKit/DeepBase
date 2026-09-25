@@ -1,0 +1,100 @@
+# B2-07 反事实（变异）探针（原始输出）
+# 工具：b2_counterfactual.sh（变异前基线 → 注入 → 真跑应变红 → 还原 → 显式复跑回绿）
+# 判定口径：变异后必须出现 Failed>0，否则该用例不咬人；每轮还原后必须回 PASSED
+# 变异点：M1 退回缺陷本体（未解密即开 zip）；M2 解密失败前的半开临时文件清理；
+#         M3 「请求加密但未配密钥」的拒绝产出；M4 两处出口的临时明文回收
+# 中文断言消息行按 D8/E3 口径不落盘（管道内会落成非 UTF-8 字节），只保留纯 ASCII 判定行
+
+==== M1 退回缺陷本体：VerifyBackup 直接以未解密归档开 zip ====
+
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+@@ -2577,7 +2577,7 @@
+       try
+         LZip := TZipFile.Create;
+         try
+-          LZip.Open(LPlainPath, zmRead);
++          LZip.Open(LArchivePath, zmRead);
+           try
+             // File count must match manifest
+             if LZip.FileCount <> LManifest.FileCount then
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 2
+Tests Errored : 0
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_EncryptedBackup_VerifiesTrue
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_EncryptedBackup_RestoresPayloadAndLeavesNoTemp
+RUNNER_STATS fixtureCount=1 testCount=7 pass=5 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== M2 变异：解密失败即抛错前先删半开临时文件
+expr: s/if TFile\.Exists\(LTemp\) then/if False then/
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+-    if TFile.Exists(LTemp) then
++    if False then
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Passed  : 4
+Tests Failed  : 3
+Tests Errored : 0
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_CorruptedCiphertext_VerifyFailsAndLeavesNoTemp
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_CorruptedCiphertext_RestoreBlockedAndLeavesNoTemp
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_WrongKey_VerifyFailsAndLeavesNoTemp
+RUNNER_STATS fixtureCount=1 testCount=7 pass=4 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+
+==== M3 变异：请求加密但无密钥时拒绝产出伪密文归档
+expr: s/and not Assigned\(FEncryptor\) then/and False then/
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+-    if FConfig.EnableEncryption and not Assigned(FEncryptor) then
++    if FConfig.EnableEncryption and False then
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Passed  : 6
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_EncryptionRequestedWithoutKey_RefusesBackup
+RUNNER_STATS fixtureCount=1 testCount=7 pass=6 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+
+==== M4 变异：所有出口回收解密临时明文
+expr: s/if LTempPath <> .. then/if False then/g
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+-        if LTempPath <> '' then
++        if False then
+-      if LTempPath <> '' then
++      if False then
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Passed  : 6
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.CloudBackup.EncryptedVerify.TTestEncryptedBackupVerify.Test_EncryptedBackup_RestoresPayloadAndLeavesNoTemp
+RUNNER_STATS fixtureCount=1 testCount=7 pass=6 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+

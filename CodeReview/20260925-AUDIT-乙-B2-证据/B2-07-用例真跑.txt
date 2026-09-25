@@ -1,0 +1,66 @@
+# B2-07 用例真跑（一次性 runner 原始输出，未裁剪）
+# 基线 HEAD: 8289118 + 本单工作树改动；runner 口径见同目录 b2_run_fixture.sh 头注（三道 fail-closed）
+# 判据映射：1) 加密备份往返 EXIT=0 → Test_EncryptedBackup_VerifiesTrue / Test_EncryptedBackup_RestoresPayloadAndLeavesNoTemp
+#          2) 损坏密文 EXIT≠0 且不留半开临时文件 → Test_CorruptedCiphertext_* / Test_WrongKey_*（断言含 TmpResidueCount=0）
+#          3) 既存面不回归 → Test.DeepBase.CloudBackup 全量 49 例
+
+== B2-07 用例真跑（原始输出，未裁剪）==
+== 时间: 2026-09-25T14:24:08Z  基线 HEAD: 8289118（工作树含本单改动）==
+
+---- 1) 新增单元 Tests/Test.DeepBase.CloudBackup.EncryptedVerify.pas ----
+== 编译一次性 runner（单元: Test.DeepBase.CloudBackup.EncryptedVerify） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+29664 lines, 1.70 seconds, 3819804 bytes code, 483000 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.CloudBackup.EncryptedVerify） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+---- 2) 既存单元回归 Tests/Test.DeepBase.CloudBackup.pas（同目录全量 fixture）----
+== 编译一次性 runner（单元: Test.DeepBase.CloudBackup） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+30644 lines, 1.42 seconds, 3860980 bytes code, 486184 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.CloudBackup） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..................................................................................................
+
+Tests Found   : 49
+Tests Ignored : 0
+Tests Passed  : 49
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=49 pass=49 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

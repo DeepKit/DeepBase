@@ -1,0 +1,57 @@
+# B2-07 修后：编译判据、改动面与登记项
+# 基准 HEAD: 8289118（本笔提交前）
+
+======== 1) 单元素编译（b2_unit_compile.sh，含新测试单元的依赖面）========
+================================================================
+单元: Features/DeepBase.CloudBackup.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+6278 lines, 0.28 seconds, 173534 bytes code, 27688 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+======== 2) 改动面（git diff --numstat / 行数实测）========
+124	80	Features/DeepBase.CloudBackup.pas
+(新文件未纳入 diff 统计，行数实测：)
+ 2664 Features/DeepBase.CloudBackup.pas
+  316 Tests/Test.DeepBase.CloudBackup.EncryptedVerify.pas
+ 2980 total
+
+======== 3) 修复后的读法收口（唯一入口）========
+372:    function PlainArchivePath(const ABackupId, AArchivePath: string;
+1223:    LZip.Open(AArchivePath, zmWrite);
+1279:    LZip.Open(AArchivePath, zmRead);
+1822:function TCloudBackupManager.PlainArchivePath(const ABackupId, AArchivePath: string;
+2095:      LPlainPath := PlainArchivePath(ABackupId, LArchivePath, LTempPath);
+2574:    LPlainPath := PlainArchivePath(ABackupId, LArchivePath, LTempPath);
+2580:          LZip.Open(LPlainPath, zmRead);
+
+======== 4) 残留与登记（本单不修，逐条给出处与理由）========
+
+R1 文件规模越线（结构性）：Features/DeepBase.CloudBackup.pas 修后 2664 行（HEAD 2620 行，
+   本单净 +44），已越过 AGENTS「单文件 2000 行必须结构审查」线，且是修复前既存状态。
+   文件内按类型天然可分：清单/记录类型与 JSON 序列化、TBackupCompressor、TBackupEncryptor、
+   TCloudBackupClient、TBackupScheduler、TCloudBackupManager。本单不动：把 6 个类型的搬迁
+   混进缺陷修复提交会让 §〇-1「每条缺陷独立提交」失效。→ 报主控另开结构性工单。
+
+R2 双次解密代价：InternalRestore 在 2070 以 VerifyBackup 作前置门禁，而 VerifyBackup 与本函数
+   现在各自经 PlainArchivePath 解密一遍（同一归档 = 两次 PBKDF2 + 全量 AES 解密 + 两份临时明文
+   先后落地）。正确解法是恢复链路一次解密、校验与解压共用同一明文（临时文件所有权跨函数传递），
+   属生命周期重构，不是本单判据所需。→ 登记。
+
+R3 临时文件名同义冲突：备份写侧用 <root>/<id>.tmp.zip 作明文 zip 中转（InternalBackup），
+   读侧用同名作解密产物（PlainArchivePath）。BackupFullAsync/RestoreAsync 可并发，
+   同一 id 的写与读会互踩该文件。修法应是把临时件走独立目录并带唯一后缀，属结构性收口。→ 登记。
+
+R4 命名口径与加密器判据仍分叉：GetBackupArchivePath 只看 FConfig.EnableEncryption，
+   构造侧看 EnableEncryption and EncryptionKey<>''。本单以 InternalBackup 的 fail-closed 守卫
+   把「无密钥却产出 .enc 名归档」这条路径关掉（守卫之后两判据不再有可观测差异），
+   因此不再引入第三个谓词（避免为不可达分支加抽象）。若后续加密钥轮转/换密钥，
+   两处判据必须合一，届时以本条为触发点。
+
+R5 测试注册：Tests/Test.DeepBase.CloudBackup.EncryptedVerify.pas 按 §〇-4 不改
+   Tests/DeepBaseTests.dpr/.dproj，待主控收口注册；本单证据由一次性 runner 真跑产出
+   （b2_run_fixture.sh），非自报。
