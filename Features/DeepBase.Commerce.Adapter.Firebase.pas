@@ -47,6 +47,34 @@ type
       ATimeoutMs: Integer = 15000): TFirebaseConfig; static;
   end;
 
+  // Firestore 文档「字段值」编解码的唯一实现处：无状态、不触网，可离线回归。
+  // 拆出来的理由是「写入形态与读取形态必须对称」这条此前无处可测——映射层原先是
+  // TFirebaseCommerceStorage 的私有方法，而该类的构造又被服务端专用门禁用例挡着，
+  // 只能靠真实 Firestore 往返才能暴露错配（B2-01）。
+  TFirebaseFieldCodec = class
+  public
+    class function ExtractFields(Obj: TJSONObject): TJSONObject;
+    class function StrField(Fields: TJSONObject; const AKey: string): string;
+    class function Int64Field(Fields: TJSONObject; const AKey: string): Int64;
+    class function IntField(Fields: TJSONObject; const AKey: string): Integer;
+    class function BoolField(Fields: TJSONObject; const AKey: string): Boolean;
+    class function WrapValue(const AValue: string): TJSONObject; overload;
+    class function WrapValue(AValue: Int64): TJSONObject; overload;
+    class function WrapValue(AValue: Integer): TJSONObject; overload;
+    class function WrapValue(AValue: Boolean): TJSONObject; overload;
+    class function ParseUser(Fields: TJSONObject): TCommerceUserData;
+    class function ParseOrder(Fields: TJSONObject): TCommerceOrderData;
+    class function ParsePayment(Fields: TJSONObject): TCommercePaymentData;
+    class function ParseProduct(Fields: TJSONObject): TCommerceProductData;
+    class function ParseEntitlement(Fields: TJSONObject): TCommerceEntitlementData;
+    class function UserToFields(const AUser: TCommerceUserData): TJSONObject;
+    class function OrderToFields(const AOrder: TCommerceOrderData): TJSONObject;
+    class function PaymentToFields(const APayment: TCommercePaymentData): TJSONObject;
+    class function ProductToFields(const AProduct: TCommerceProductData): TJSONObject;
+    class function EntitlementToFields(const AEntitlement: TCommerceEntitlementData): TJSONObject;
+    class function MakeFieldFilter(const AField, AOp, AValue: string): TJSONObject;
+  end;
+
   TFirebaseCommerceStorage = class(TInterfacedObject, ICommerceStorage)
   private
     FConfig: TFirebaseConfig;
@@ -59,26 +87,6 @@ type
     function FirestorePatch(const AUrl: string; ABody: TJSONObject): TJSONObject;
     function FirestoreQuery(const ACollection: string;
       AQuery: TJSONObject): TJSONArray;
-    function ExtractFields(Obj: TJSONObject): TJSONObject;
-    function StrField(Fields: TJSONObject; const AKey: string): string;
-    function Int64Field(Fields: TJSONObject; const AKey: string): Int64;
-    function IntField(Fields: TJSONObject; const AKey: string): Integer;
-    function BoolField(Fields: TJSONObject; const AKey: string): Boolean;
-    function WrapValue(const AValue: string): TJSONObject; overload;
-    function WrapValue(AValue: Int64): TJSONObject; overload;
-    function WrapValue(AValue: Integer): TJSONObject; overload;
-    function WrapValue(AValue: Boolean): TJSONObject; overload;
-    function ParseUser(Fields: TJSONObject): TCommerceUserData;
-    function ParseOrder(Fields: TJSONObject): TCommerceOrderData;
-    function ParsePayment(Fields: TJSONObject): TCommercePaymentData;
-    function ParseProduct(Fields: TJSONObject): TCommerceProductData;
-    function ParseEntitlement(Fields: TJSONObject): TCommerceEntitlementData;
-    function UserToFields(const AUser: TCommerceUserData): TJSONObject;
-    function OrderToFields(const AOrder: TCommerceOrderData): TJSONObject;
-    function PaymentToFields(const APayment: TCommercePaymentData): TJSONObject;
-    function ProductToFields(const AProduct: TCommerceProductData): TJSONObject;
-    function EntitlementToFields(const AEntitlement: TCommerceEntitlementData): TJSONObject;
-    function MakeFieldFilter(const AField, AOp, AValue: string): TJSONObject;
   public
     constructor Create(const AConfig: TFirebaseConfig);
     destructor Destroy; override;
@@ -250,14 +258,14 @@ begin
   Result := TJSONArray(LValue);
 end;
 
-function TFirebaseCommerceStorage.ExtractFields(Obj: TJSONObject): TJSONObject;
+class function TFirebaseFieldCodec.ExtractFields(Obj: TJSONObject): TJSONObject;
 begin
   if Obj.TryGetValue<TJSONObject>('fields', Result) then
     Exit;
   Result := nil;
 end;
 
-function TFirebaseCommerceStorage.StrField(Fields: TJSONObject;
+class function TFirebaseFieldCodec.StrField(Fields: TJSONObject;
   const AKey: string): string;
 var
   Fld: TJSONObject;
@@ -270,7 +278,7 @@ begin
   Result := '';
 end;
 
-function TFirebaseCommerceStorage.Int64Field(Fields: TJSONObject;
+class function TFirebaseFieldCodec.Int64Field(Fields: TJSONObject;
   const AKey: string): Int64;
 var
   Fld: TJSONObject;
@@ -284,7 +292,7 @@ begin
   Result := 0;
 end;
 
-function TFirebaseCommerceStorage.IntField(Fields: TJSONObject;
+class function TFirebaseFieldCodec.IntField(Fields: TJSONObject;
   const AKey: string): Integer;
 var
   Fld: TJSONObject;
@@ -298,39 +306,47 @@ begin
   Result := 0;
 end;
 
-function TFirebaseCommerceStorage.BoolField(Fields: TJSONObject;
+class function TFirebaseFieldCodec.BoolField(Fields: TJSONObject;
   const AKey: string): Boolean;
 var
   Fld: TJSONObject;
-  S: string;
+  LVal: TJSONValue;
 begin
-  if Fields.TryGetValue<TJSONObject>(AKey, Fld) then
-  begin
-    if Fld.TryGetValue<string>('booleanValue', S) then
-      Exit(SameText(S, 'true'));
-  end;
   Result := False;
+  if not Fields.TryGetValue<TJSONObject>(AKey, Fld) then
+    Exit;
+  // 布尔只认 TJSONBool 类型通道。旧实现走 TryGetValue<string>('booleanValue')：
+  // RTL 的 TJSONBool.AsTValue 对字符串型请求会回 'true'/'false' 文本，因此正常文档碰巧能读对，
+  // 但 {"booleanValue":"true"} 这类错型文档也被照单收下、损坏数据静默降级（WO §〇-8 禁止）。
+  LVal := Fld.GetValue('booleanValue');
+  if LVal = nil then
+    Exit; // 文档没写这个字段 = 未设置，按默认 False
+  if LVal is TJSONBool then
+    Exit(TJSONBool(LVal).AsBoolean);
+  // 类型不符是数据损坏，静默返回 False 会把同一个缺陷再藏一遍
+  raise EDeepBaseCommerceError.CreateFmt('字段 %s 的 booleanValue 不是 JSON 布尔（实际: %s）',
+    [AKey, LVal.ClassName]);
 end;
 
-function TFirebaseCommerceStorage.WrapValue(const AValue: string): TJSONObject;
+class function TFirebaseFieldCodec.WrapValue(const AValue: string): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('stringValue', AValue);
 end;
 
-function TFirebaseCommerceStorage.WrapValue(AValue: Int64): TJSONObject;
+class function TFirebaseFieldCodec.WrapValue(AValue: Int64): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('integerValue', IntToStr(AValue));
 end;
 
-function TFirebaseCommerceStorage.WrapValue(AValue: Integer): TJSONObject;
+class function TFirebaseFieldCodec.WrapValue(AValue: Integer): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('integerValue', IntToStr(AValue));
 end;
 
-function TFirebaseCommerceStorage.WrapValue(AValue: Boolean): TJSONObject;
+class function TFirebaseFieldCodec.WrapValue(AValue: Boolean): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('booleanValue', TJSONBool.Create(AValue));
@@ -338,7 +354,7 @@ end;
 
 { Firestore field filters }
 
-function TFirebaseCommerceStorage.MakeFieldFilter(
+class function TFirebaseFieldCodec.MakeFieldFilter(
   const AField, AOp, AValue: string): TJSONObject;
 var
   Filter: TJSONObject;
@@ -353,7 +369,7 @@ end;
 
 { Record parsers }
 
-function TFirebaseCommerceStorage.ParseUser(Fields: TJSONObject): TCommerceUserData;
+class function TFirebaseFieldCodec.ParseUser(Fields: TJSONObject): TCommerceUserData;
 begin
   Result.UserId := StrField(Fields, 'user_id');
   Result.DisplayName := StrField(Fields, 'display_name');
@@ -364,7 +380,7 @@ begin
   Result.UpdatedAtISO := StrField(Fields, 'updated_at');
 end;
 
-function TFirebaseCommerceStorage.ParseOrder(Fields: TJSONObject): TCommerceOrderData;
+class function TFirebaseFieldCodec.ParseOrder(Fields: TJSONObject): TCommerceOrderData;
 begin
   Result.OrderId := StrField(Fields, 'order_id');
   Result.UserId := StrField(Fields, 'user_id');
@@ -378,7 +394,7 @@ begin
   Result.PaidAtISO := StrField(Fields, 'paid_at');
 end;
 
-function TFirebaseCommerceStorage.ParsePayment(Fields: TJSONObject): TCommercePaymentData;
+class function TFirebaseFieldCodec.ParsePayment(Fields: TJSONObject): TCommercePaymentData;
 begin
   Result.PaymentId := StrField(Fields, 'payment_id');
   Result.OrderId := StrField(Fields, 'order_id');
@@ -392,7 +408,7 @@ begin
   Result.PaidAtISO := StrField(Fields, 'paid_at');
 end;
 
-function TFirebaseCommerceStorage.ParseProduct(Fields: TJSONObject): TCommerceProductData;
+class function TFirebaseFieldCodec.ParseProduct(Fields: TJSONObject): TCommerceProductData;
 begin
   Result.ProductId := StrField(Fields, 'product_id');
   Result.AppId := StrField(Fields, 'app_id');
@@ -409,7 +425,7 @@ begin
   Result.IsActive := BoolField(Fields, 'is_active');
 end;
 
-function TFirebaseCommerceStorage.ParseEntitlement(Fields: TJSONObject): TCommerceEntitlementData;
+class function TFirebaseFieldCodec.ParseEntitlement(Fields: TJSONObject): TCommerceEntitlementData;
 begin
   Result.EntitlementId := StrField(Fields, 'entitlement_id');
   Result.UserId := StrField(Fields, 'user_id');
@@ -425,7 +441,7 @@ end;
 
 { Record serializers }
 
-function TFirebaseCommerceStorage.UserToFields(const AUser: TCommerceUserData): TJSONObject;
+class function TFirebaseFieldCodec.UserToFields(const AUser: TCommerceUserData): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('user_id', WrapValue(AUser.UserId));
@@ -437,7 +453,7 @@ begin
   Result.AddPair('updated_at', WrapValue(AUser.UpdatedAtISO));
 end;
 
-function TFirebaseCommerceStorage.OrderToFields(const AOrder: TCommerceOrderData): TJSONObject;
+class function TFirebaseFieldCodec.OrderToFields(const AOrder: TCommerceOrderData): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('order_id', WrapValue(AOrder.OrderId));
@@ -453,7 +469,7 @@ begin
   Result.AddPair('paid_at', WrapValue(AOrder.PaidAtISO));
 end;
 
-function TFirebaseCommerceStorage.PaymentToFields(
+class function TFirebaseFieldCodec.PaymentToFields(
   const APayment: TCommercePaymentData): TJSONObject;
 begin
   Result := TJSONObject.Create;
@@ -469,7 +485,7 @@ begin
   Result.AddPair('paid_at', WrapValue(APayment.PaidAtISO));
 end;
 
-function TFirebaseCommerceStorage.ProductToFields(
+class function TFirebaseFieldCodec.ProductToFields(
   const AProduct: TCommerceProductData): TJSONObject;
 begin
   Result := TJSONObject.Create;
@@ -488,7 +504,7 @@ begin
   Result.AddPair('is_active', WrapValue(AProduct.IsActive));
 end;
 
-function TFirebaseCommerceStorage.EntitlementToFields(
+class function TFirebaseFieldCodec.EntitlementToFields(
   const AEntitlement: TCommerceEntitlementData): TJSONObject;
 begin
   Result := TJSONObject.Create;
@@ -516,9 +532,9 @@ begin
   Result := Assigned(Doc);
   if Result then
   try
-    Fields := ExtractFields(Doc);
+    Fields := TFirebaseFieldCodec.ExtractFields(Doc);
     if Assigned(Fields) then
-      AUser := ParseUser(Fields);
+      AUser := TFirebaseFieldCodec.ParseUser(Fields);
   finally
     Doc.Free;
   end;
@@ -541,9 +557,9 @@ begin
   Where.AddPair('compositeFilter', TJSONObject.Create
     .AddPair('op', 'AND')
     .AddPair('filters', TJSONArray.Create
-      .Add(MakeFieldFilter('provider', 'EQUAL', CommerceAuthProviderToStr(AProvider)))
-      .Add(MakeFieldFilter('provider_user_id', 'EQUAL', AProviderUserId))
-      .Add(MakeFieldFilter('app_id', 'EQUAL', AAppId))));
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('provider', 'EQUAL', CommerceAuthProviderToStr(AProvider)))
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('provider_user_id', 'EQUAL', AProviderUserId))
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('app_id', 'EQUAL', AAppId))));
 
   Query := TJSONObject.Create;
   Query.AddPair('from', TJSONArray.Create.Add(From));
@@ -555,10 +571,10 @@ begin
     for I := 0 to Results.Count - 1 do
     begin
       Doc := Results.Items[I] as TJSONObject;
-      Fields := ExtractFields(Doc);
+      Fields := TFirebaseFieldCodec.ExtractFields(Doc);
       if Assigned(Fields) then
       begin
-        AUser.UserId := StrField(Fields, 'user_id');
+        AUser.UserId := TFirebaseFieldCodec.StrField(Fields, 'user_id');
         Exit(FindUserById(AUser.UserId, AUser));
       end;
     end;
@@ -572,7 +588,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', UserToFields(AUser));
+  Body.AddPair('fields', TFirebaseFieldCodec.UserToFields(AUser));
   try
     FirestorePatch(DocUrl('users', AUser.UserId), Body);
   finally
@@ -586,12 +602,12 @@ var
   DocId: string;
 begin
   Fields := TJSONObject.Create;
-  Fields.AddPair('user_id', WrapValue(AIdentity.UserId));
-  Fields.AddPair('provider', WrapValue(CommerceAuthProviderToStr(AIdentity.Provider)));
-  Fields.AddPair('provider_user_id', WrapValue(AIdentity.ProviderUserId));
-  Fields.AddPair('app_id', WrapValue(AIdentity.AppId));
-  Fields.AddPair('union_id', WrapValue(AIdentity.UnionId));
-  Fields.AddPair('created_at', WrapValue(AIdentity.CreatedAtISO));
+  Fields.AddPair('user_id', TFirebaseFieldCodec.WrapValue(AIdentity.UserId));
+  Fields.AddPair('provider', TFirebaseFieldCodec.WrapValue(CommerceAuthProviderToStr(AIdentity.Provider)));
+  Fields.AddPair('provider_user_id', TFirebaseFieldCodec.WrapValue(AIdentity.ProviderUserId));
+  Fields.AddPair('app_id', TFirebaseFieldCodec.WrapValue(AIdentity.AppId));
+  Fields.AddPair('union_id', TFirebaseFieldCodec.WrapValue(AIdentity.UnionId));
+  Fields.AddPair('created_at', TFirebaseFieldCodec.WrapValue(AIdentity.CreatedAtISO));
 
   DocId := AIdentity.UserId + '_' + CommerceAuthProviderToStr(AIdentity.Provider);
   Body := TJSONObject.Create;
@@ -613,9 +629,9 @@ begin
   Result := Assigned(Doc);
   if Result then
   try
-    Fields := ExtractFields(Doc);
+    Fields := TFirebaseFieldCodec.ExtractFields(Doc);
     if Assigned(Fields) then
-      AProduct := ParseProduct(Fields);
+      AProduct := TFirebaseFieldCodec.ParseProduct(Fields);
   finally
     Doc.Free;
   end;
@@ -626,7 +642,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', ProductToFields(AProduct));
+  Body.AddPair('fields', TFirebaseFieldCodec.ProductToFields(AProduct));
   try
     FirestorePatch(DocUrl('products', AProduct.AppId + '_' + AProduct.ProductId), Body);
   finally
@@ -639,7 +655,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', OrderToFields(AOrder));
+  Body.AddPair('fields', TFirebaseFieldCodec.OrderToFields(AOrder));
   try
     FirestorePatch(DocUrl('orders', AOrder.OrderId), Body);
   finally
@@ -657,9 +673,9 @@ begin
   Result := Assigned(Doc);
   if Result then
   try
-    Fields := ExtractFields(Doc);
+    Fields := TFirebaseFieldCodec.ExtractFields(Doc);
     if Assigned(Fields) then
-      AOrder := ParseOrder(Fields);
+      AOrder := TFirebaseFieldCodec.ParseOrder(Fields);
   finally
     Doc.Free;
   end;
@@ -680,7 +696,7 @@ begin
 
   Query := TJSONObject.Create;
   Query.AddPair('from', TJSONArray.Create.Add(From));
-  Query.AddPair('where', MakeFieldFilter('out_trade_no', 'EQUAL', AOutTradeNo));
+  Query.AddPair('where', TFirebaseFieldCodec.MakeFieldFilter('out_trade_no', 'EQUAL', AOutTradeNo));
 
   Results := FirestoreQuery('orders', Query);
   if Assigned(Results) then
@@ -688,10 +704,10 @@ begin
     for I := 0 to Results.Count - 1 do
     begin
       Doc := Results.Items[I] as TJSONObject;
-      Fields := ExtractFields(Doc);
+      Fields := TFirebaseFieldCodec.ExtractFields(Doc);
       if Assigned(Fields) then
       begin
-        AOrder := ParseOrder(Fields);
+        AOrder := TFirebaseFieldCodec.ParseOrder(Fields);
         Exit(True);
       end;
     end;
@@ -705,7 +721,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', OrderToFields(AOrder));
+  Body.AddPair('fields', TFirebaseFieldCodec.OrderToFields(AOrder));
   try
     FirestorePatch(DocUrl('orders', AOrder.OrderId), Body);
   finally
@@ -718,7 +734,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', PaymentToFields(APayment));
+  Body.AddPair('fields', TFirebaseFieldCodec.PaymentToFields(APayment));
   try
     FirestorePatch(DocUrl('payments', APayment.PaymentId), Body);
   finally
@@ -741,7 +757,7 @@ begin
 
   Query := TJSONObject.Create;
   Query.AddPair('from', TJSONArray.Create.Add(From));
-  Query.AddPair('where', MakeFieldFilter('order_id', 'EQUAL', AOrderId));
+  Query.AddPair('where', TFirebaseFieldCodec.MakeFieldFilter('order_id', 'EQUAL', AOrderId));
 
   Results := FirestoreQuery('payments', Query);
   if Assigned(Results) then
@@ -749,10 +765,10 @@ begin
     for I := 0 to Results.Count - 1 do
     begin
       Doc := Results.Items[I] as TJSONObject;
-      Fields := ExtractFields(Doc);
+      Fields := TFirebaseFieldCodec.ExtractFields(Doc);
       if Assigned(Fields) then
       begin
-        APayment := ParsePayment(Fields);
+        APayment := TFirebaseFieldCodec.ParsePayment(Fields);
         Exit(True);
       end;
     end;
@@ -766,7 +782,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', PaymentToFields(APayment));
+  Body.AddPair('fields', TFirebaseFieldCodec.PaymentToFields(APayment));
   try
     FirestorePatch(DocUrl('payments', APayment.PaymentId), Body);
   finally
@@ -780,7 +796,7 @@ var
   Body: TJSONObject;
 begin
   Body := TJSONObject.Create;
-  Body.AddPair('fields', EntitlementToFields(AEntitlement));
+  Body.AddPair('fields', TFirebaseFieldCodec.EntitlementToFields(AEntitlement));
   try
     FirestorePatch(DocUrl('entitlements', AEntitlement.EntitlementId), Body);
   finally
@@ -805,8 +821,8 @@ begin
   Where.AddPair('compositeFilter', TJSONObject.Create
     .AddPair('op', 'AND')
     .AddPair('filters', TJSONArray.Create
-      .Add(MakeFieldFilter('user_id', 'EQUAL', AUserId))
-      .Add(MakeFieldFilter('app_id', 'EQUAL', AAppId))));
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('user_id', 'EQUAL', AUserId))
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('app_id', 'EQUAL', AAppId))));
 
   Query := TJSONObject.Create;
   Query.AddPair('from', TJSONArray.Create.Add(From));
@@ -819,9 +835,9 @@ begin
       for I := 0 to Results.Count - 1 do
       begin
         Doc := Results.Items[I] as TJSONObject;
-        Fields := ExtractFields(Doc);
+        Fields := TFirebaseFieldCodec.ExtractFields(Doc);
         if Assigned(Fields) then
-          List.Add(ParseEntitlement(Fields));
+          List.Add(TFirebaseFieldCodec.ParseEntitlement(Fields));
       end;
     Result := List.ToArray;
   finally
@@ -846,9 +862,9 @@ begin
   Where.AddPair('compositeFilter', TJSONObject.Create
     .AddPair('op', 'AND')
     .AddPair('filters', TJSONArray.Create
-      .Add(MakeFieldFilter('user_id', 'EQUAL', AUserId))
-      .Add(MakeFieldFilter('app_id', 'EQUAL', AAppId))
-      .Add(MakeFieldFilter('code', 'EQUAL', ACode))));
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('user_id', 'EQUAL', AUserId))
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('app_id', 'EQUAL', AAppId))
+      .Add(TFirebaseFieldCodec.MakeFieldFilter('code', 'EQUAL', ACode))));
 
   Query := TJSONObject.Create;
   Query.AddPair('from', TJSONArray.Create.Add(From));
@@ -860,10 +876,10 @@ begin
     for I := 0 to Results.Count - 1 do
     begin
       Doc := Results.Items[I] as TJSONObject;
-      Fields := ExtractFields(Doc);
+      Fields := TFirebaseFieldCodec.ExtractFields(Doc);
       if Assigned(Fields) then
       begin
-        AEntitlement := ParseEntitlement(Fields);
+        AEntitlement := TFirebaseFieldCodec.ParseEntitlement(Fields);
         Exit(True);
       end;
     end;
@@ -888,11 +904,11 @@ begin
   if not Assigned(Doc) then
     Exit(False);
   try
-    Fields := ExtractFields(Doc);
+    Fields := TFirebaseFieldCodec.ExtractFields(Doc);
     if not Assigned(Fields) then
       Exit(False);
 
-    AEntitlement := ParseEntitlement(Fields);
+    AEntitlement := TFirebaseFieldCodec.ParseEntitlement(Fields);
     if AEntitlement.Status <> cesActive then
       Exit(False);
 
@@ -910,7 +926,7 @@ begin
 
   Body := TJSONObject.Create;
   Body.AddPair('fields', TJSONObject.Create
-    .AddPair('remaining_quota', WrapValue(NewQuota)));
+    .AddPair('remaining_quota', TFirebaseFieldCodec.WrapValue(NewQuota)));
   try
     FirestorePatch(DocUrl('entitlements', AEntitlementId), Body);
   finally
@@ -922,7 +938,7 @@ begin
     AEntitlement.Status := cesConsumed;
     Body := TJSONObject.Create;
     Body.AddPair('fields', TJSONObject.Create
-      .AddPair('status', WrapValue('consumed')));
+      .AddPair('status', TFirebaseFieldCodec.WrapValue('consumed')));
     try
       FirestorePatch(DocUrl('entitlements', AEntitlementId), Body);
     finally

@@ -1,0 +1,78 @@
+# B2-01 修前取证：工单前提实测（布尔读写错位是否成立）
+
+== 1) 工单原文（docs/ui/work-orders/WO-20260925-AUDIT-乙-B2-功能与集成层缺陷修复.md:22-27）==
+### B2-01 [Critical] Firebase 适配器布尔读写类型错位
+
+- 文件：`Features/DeepBase.Commerce.Adapter.Firebase.pas:301-337`
+- 代码事实：写路径 `WrapValue(Boolean)` 落 `TJSONBool`，读路径用 `TryGetValue<string>('booleanValue')` 取——**`is_active` 恒读成 False**，商户激活状态永远失效。
+- 期望：读写类型对称（读走布尔字段的正确取值方式）。
+- 判定：写入 `true` 后读回 `true` 的用例（须覆盖 `is_active` 字段）；既有解析测试不回归。
+
+== 2) 开工基准 HEAD 上的读写路径原样 ==
+基准 HEAD: 74c5e52  文件: Features/DeepBase.Commerce.Adapter.Firebase.pas
+301:function TFirebaseCommerceStorage.BoolField(Fields: TJSONObject;
+302-  const AKey: string): Boolean;
+303-var
+304-  Fld: TJSONObject;
+305-  S: string;
+306-begin
+307-  if Fields.TryGetValue<TJSONObject>(AKey, Fld) then
+308-  begin
+309-    if Fld.TryGetValue<string>('booleanValue', S) then
+310-      Exit(SameText(S, 'true'));
+311-  end;
+312-  Result := False;
+313-end;
+写路径（同一 HEAD）:
+333:function TFirebaseCommerceStorage.WrapValue(AValue: Boolean): TJSONObject;
+334-begin
+335-  Result := TJSONObject.Create;
+336-  Result.AddPair('booleanValue', TJSONBool.Create(AValue));
+337-end;
+
+== 3) 逐字节照搬老读路径的真值探针 ==
+源码: CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2-01-premise-probe.dpr
+  OLDBoolField = HEAD 版 BoolField 逐行照搬；NewBoolField = 收紧后的类型通道版；
+  两版喂同一份 Firestore REST 回读文档形状，取机器真值。
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+87 lines, 0.16 seconds, 1480692 bytes code, 202896 bytes data.
+[bool-true ] OLD=True  NEW=True
+[bool-false] OLD=False  NEW=False
+[missing   ] OLD=False  NEW=False
+[as-string ] OLD=True  NEW=RAISE(type mismatch: TJSONString)
+[as-number ] OLD=False  NEW=RAISE(type mismatch: TJSONNumber)
+PROBE_EXIT=0
+
+== 4) 机器判定 ==
+OLD 通道对 {"booleanValue":true} 读出 True、对 false 读出 False
+  ⇒「is_active 恒读成 False」这条代码事实不成立（工单前提需修正）。
+机理（RTL 实测，D:/Program Files (x86)/Embarcadero/Studio/37.0/source/rtl/common/System.JSON.pas）：
+  :3812  TJSONBool.AsTValue 对 tkString/tkLString/tkWString/tkUString 走 AValue := Value
+  :3865  TJSONBool.Value 返回 TrueString/FalseString，即 'true'/'false'
+  ⇒ TryGetValue<string>('booleanValue') 在 TJSONBool 上恰好成功，老实现的
+    SameText(S,'true') 因此对得上——字符串通道在布尔上是「意外可用」，不是恒失败。
+真正成立且必须修的缺陷是另一条：老读侧对错型静默降级——
+  {"booleanValue":"true"}（数据损坏）照读成 True，{"booleanValue":1} 静默读成 False，
+  与本单 §〇-8「资金相关一律失败 ⇒ 拒绝」的 fail-closed 口径相反。
+  探针 as-string / as-number 两行即该差分的实证（OLD 吞下，NEW 抛 EDeepBaseCommerceError）。
+
+结论：B2-01 按「读写类型通道对称 + 错型 fail-closed」落地，不按「恒 False」落地；
+      前提修正随本单回执登记，交主控更新工单表述。
+
+== 5) 修探针时顺带撞见的同文件缺陷（本单不修，登记报主控派单）==
+现象：订单 status 只写不读——OrderToFields 落 status，ParseOrder 无对应读回，
+      TCommerceOrderData.Status 经 Firestore 往返后恒为默认值 cosCreated。
+证据（HEAD 74c5e52 同文件）：
+390:  Result.Status := StrToCommercePaymentStatus(StrField(Fields, 'status'));
+419:  Result.Status := StrToCommerceEntitlementStatus(StrField(Fields, 'status'));
+451:  Result.AddPair('status', WrapValue(CommerceOrderStatusToStr(AOrder.Status)));
+466:  Result.AddPair('status', WrapValue(CommercePaymentStatusToStr(APayment.Status)));
+500:  Result.AddPair('status', WrapValue(CommerceEntitlementStatusToStr(AEntitlement.Status)));
+925:      .AddPair('status', WrapValue('consumed')));
+      （451 行写订单 status；390/419 只有 payment 与 entitlement 读回，order 无）
+同型面在 Supabase 适配器也存在（写 395，读侧只有 payment/entitlement）：
+334:  Result.Status := StrToCommercePaymentStatus(Str(Obj, 'status'));
+363:  Result.Status := StrToCommerceEntitlementStatus(Str(Obj, 'status'));
+395:  Result.AddPair('status', CommerceOrderStatusToStr(AOrder.Status));
+全仓无 CommerceOrderStatusToStr 的逆映射（不存在 StrToCommerceOrderStatus）:
+（命中 0 处 ⇒ 逆映射从未写过，属 Types 层缺口，跨两个适配器，需单独派单裁决）

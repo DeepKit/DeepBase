@@ -1,0 +1,72 @@
+# B2-01 反事实探针：把本次收紧的两处改回错误行为，确认配套用例真会红
+# 口径：中文断言消息在管道里会落成非 UTF-8 字节，故证据只保留纯 ASCII 行（用例名/计数/判定）。
+# M1 语义等价变异（还原读通道）不红：B2-01-修前-前提实测探针.txt 已证字符串通道对 TJSONBool
+#    恰好可用 ⇒ 不注入；改注入下面两个「本单真实修掉的行为面」。
+# M2 写侧把布尔落成字符串（= 读写对称被破坏的最小变异）
+# M3 读侧无条件 Exit(True)（= §〇-8 禁止的无条件成功路径）
+
+############ M2 写侧落字符串 ############
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+@@ -349,7 +349,7 @@
+ class function TFirebaseFieldCodec.WrapValue(AValue: Boolean): TJSONObject;
+ begin
+   Result := TJSONObject.Create;
+-  Result.AddPair('booleanValue', TJSONBool.Create(AValue));
++  Result.AddPair('booleanValue', BoolToStr(AValue, True));
+ end;
+ 
+ { Firestore field filters }
+BUILD_EXIT=0
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Failed  : 1
+Tests Errored : 4
+  Test.DeepBase.Commerce.Adapter.Firebase.TTestFirebaseFieldCodec.TestIsActiveWrittenAsRealJSONBoolean
+  Test.DeepBase.Commerce.Adapter.Firebase.TTestFirebaseFieldCodec.TestUserIsActiveTrueRoundTripsAsTrue
+  Test.DeepBase.Commerce.Adapter.Firebase.TTestFirebaseFieldCodec.TestUserIsActiveFalseRoundTripsAsFalse
+  Test.DeepBase.Commerce.Adapter.Firebase.TTestFirebaseFieldCodec.TestProductIsActiveTrueRoundTripsAsTrue
+  Test.DeepBase.Commerce.Adapter.Firebase.TTestFirebaseFieldCodec.TestNonBooleanFieldsRoundTrip
+RUNNER_STATS fixtureCount=1 testCount=8 pass=3 failure=1 error=4 ignored=0
+RUNNER_VERDICT: FAILED
+
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+############ M3 读侧无条件 True ############
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+@@ -322,7 +322,7 @@
+   if LVal = nil then
+   if LVal is TJSONBool then
+-    Exit(TJSONBool(LVal).AsBoolean);
++    Exit(True);
+     [AKey, LVal.ClassName]);
+BUILD_EXIT=0
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Commerce.Adapter.Firebase.TTestFirebaseFieldCodec.TestUserIsActiveFalseRoundTripsAsFalse
+RUNNER_STATS fixtureCount=1 testCount=8 pass=7 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+== 判定 ==
+M2：8 例中 5 例红（写形钉死 1 + 往返 4）⇒ 「写入形态与读取形态对称」被用例咬住，不是自报。
+M3：条件反向用例（is_active=False 往返）红 ⇒ 无条件成功路径会被立即抓到。
+两次变异还原后均复跑回 8/8 PASSED（见各自第 3 段）。

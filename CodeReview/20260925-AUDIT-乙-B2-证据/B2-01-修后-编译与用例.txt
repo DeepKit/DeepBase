@@ -1,0 +1,42 @@
+# B2-01 修后取证：编译面 + 映射层收口面
+
+== 1) 两件单元编译（SUT + 新测试单元），零 Error/Warning/Hint ==
+================================================================
+单元: Features/DeepBase.Commerce.Adapter.Firebase.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1856 lines, 0.30 seconds, 79219 bytes code, 12300 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.Commerce.Adapter.Firebase.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23932 lines, 1.23 seconds, 12712 bytes code, 2044 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+== 2) 读侧收口面残留计数（代码行应全 0；注释里的历史说明另计，不算残留）==
+TryGetValue<string>('booleanValue' SUT代码行:0  SUT注释行:1
+SameText(S, 'true')                SUT代码行:0  SUT注释行:0
+overload overload                  SUT代码行:0  SUT注释行:0
+EJSONException                     SUT代码行:0  SUT注释行:0
+
+== 3) 映射层归属面（唯一实现处 = TFirebaseFieldCodec，适配器内不再有第二套）==
+适配器内 <映射名> 声明残留（private 段应为 0）:
+0
+class function TFirebaseFieldCodec.* 实现数（声明 20 ⇒ 应 20）:
+20
+接口段 TFirebaseFieldCodec 声明数:
+20
+适配器体内以 TFirebaseFieldCodec. 限定的调用点:
+63
+布尔读写落点（写 = TJSONBool，读 = TJSONBool 类型通道）:
+318:  // 布尔只认 TJSONBool 类型通道。旧实现走 TryGetValue<string>('booleanValue')：
+319:  // RTL 的 TJSONBool.AsTValue 对字符串型请求会回 'true'/'false' 文本，因此正常文档碰巧能读对，
+324:  if LVal is TJSONBool then
+325:    Exit(TJSONBool(LVal).AsBoolean);
+352:  Result.AddPair('booleanValue', TJSONBool.Create(AValue));
