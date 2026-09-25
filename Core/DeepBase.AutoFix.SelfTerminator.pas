@@ -1,10 +1,13 @@
 ﻿{ ============================================================================
   DeepBase.AutoFix.SelfTerminator
 
-  Handles fatal exceptions in AutoFix mode:
+  Handles fatal exceptions in AutoFix mode. The --autofix-mode command-line
+  switch alone only arms RECORDING; process self-termination additionally
+  requires explicit host-code confirmation via ConfirmTermination (A2-03).
+  When both conditions hold:
   1. Marks current scenario as fatal
   2. Writes exit-reason.json (with stack array, total_errors, scenario)
-  3. Halts with exit code 2
+  3. Flushes/closes the error log, then Halts with exit code 2
 
   See: design v2.0 §3.2
   ============================================================================ }
@@ -18,7 +21,14 @@ uses
 
 type
   TAutoFixSelfTerminator = class
+  private
+    class var FTerminationSource: string;
   public
+    /// <summary>Host-code opt-in for the Halt path. The source string names
+    /// the confirming component (audit trail). Without it HandleFatal only
+    /// records; a command-line flag can never trigger self-termination.</summary>
+    class procedure ConfirmTermination(const ASource: string);
+    class function TerminationConfirmed: Boolean;
     class procedure HandleFatal(E: Exception; AExceptAddr: Pointer);
     class function IsFatal(E: Exception): Boolean;
   end;
@@ -84,6 +94,19 @@ begin
   {$WARN SYMBOL_DEPRECATED DEFAULT}
 end;
 
+class procedure TAutoFixSelfTerminator.ConfirmTermination(const ASource: string);
+begin
+  if ASource.Trim = '' then
+    raise EArgumentException.Create(
+      'TAutoFixSelfTerminator.ConfirmTermination requires a non-empty source');
+  FTerminationSource := ASource;
+end;
+
+class function TAutoFixSelfTerminator.TerminationConfirmed: Boolean;
+begin
+  Result := FTerminationSource <> '';
+end;
+
 class procedure TAutoFixSelfTerminator.HandleFatal(E: Exception;
   AExceptAddr: Pointer);
 var
@@ -94,6 +117,14 @@ var
   LClassName, LMsg, LScenario, LStackJson, LJson, LPath: string;
 begin
   if not TAutoFixErrorRecorder.Active then Exit;
+
+  // 命令行开关外部可控，单凭它不得触发自杀：终止须宿主代码显式确认二次条件。
+  if FTerminationSource = '' then
+  begin
+    OutputDebugString(PChar('AutoFix.SelfTerminator: fatal exception but '
+      + 'self-termination not confirmed by host; process continues.'));
+    Exit;
+  end;
 
   try
     LClassName := E.ClassName;
@@ -179,6 +210,9 @@ begin
   except
     OutputDebugString(PChar('AutoFix.SelfTerminator: write failed'));
   end;
+
+  // 终止前完整清理：等待在途写入者并关闭 runtime-errors.jsonl
+  TAutoFixErrorRecorder.CloseLogFile;
 
   Halt(2);
 end;

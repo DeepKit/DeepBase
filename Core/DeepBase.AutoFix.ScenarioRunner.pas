@@ -167,8 +167,9 @@ begin
 
           if TAutoFixSelfTerminator.IsFatal(E) then
           begin
-            // HandleFatal writes exit-reason.json and calls Halt(2).
-            // If it returns (e.g. not active), bail out of the loop.
+            // HandleFatal writes exit-reason.json and calls Halt(2) only when
+            // the host confirmed self-termination. If it returns (recorder not
+            // active, or termination not confirmed), bail out of the loop.
             TAutoFixSelfTerminator.HandleFatal(E, ExceptAddr);
             Break;
           end;

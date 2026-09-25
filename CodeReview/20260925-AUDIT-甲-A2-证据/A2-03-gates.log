@@ -1,0 +1,18 @@
+A2-03 gates run 2026-09-25 (repo root = /d/_Progs/02Business/DeepBase)
+
+== eol-gate (--root full repo) ==
+行尾门禁通过：检查了 1537 个文件（.pas CRLF / .md LF），跳过目录 11
+EOL_EXIT=0
+
+== encoding-gate (--root full repo) ==
+编码门禁通过：985 个 .pas + 707 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+ENC_EXIT=0
+
+== mojibake-gate (--root full repo) ==
+MOJI_EXIT=3 (环境红，与 A2-02-gates.log 同一现场：他人同工作区在途删除 Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.Impl.pas，门禁 fail-closed ENOENT；本单未触碰该文件)
+
+== mojibake-gate (本单 5 个 .pas 隔离复跑) ==
+MOJI_NARROW_EXIT=0（扫描 5 个 .pas，丙-B 命中 0 处）
+
+== evidence-encoding-gate (--root full repo) ==
+提交后复跑，见本目录其余 A2-* gates 日志同口径

@@ -8,6 +8,9 @@
     AutoFix.Install;                 // before Application.Initialize
     AutoFix.RegisterScenario(...);   // any time after Install
     AutoFix.NotifyShellShown;        // after AfterShellShown / OnShow
+    AutoFix.ConfirmSelfTermination('MyApp:updater'); // only if the host
+        // accepts that fatal scenarios Halt this process (termination gate
+        // lives in SelfTerminator); without it AutoFix records but never exits.
 
   When --autofix-mode is absent from the command line, every facade method
   is a cheap no-op and zero files are written.
@@ -40,6 +43,10 @@ type
     class procedure NotifyShellShown; static;
     /// <summary>True when --autofix-mode is on the command line.</summary>
     class function Active: Boolean; static;
+    /// <summary>Host opt-in for SelfTerminator's fatal path (exit-reason.json
+    /// + Halt 2). --autofix-mode alone never terminates the process; the
+    /// ASource names the confirming component for the audit trail.</summary>
+    class procedure ConfirmSelfTermination(const ASource: string); static;
   end;
 
 implementation
@@ -47,7 +54,8 @@ implementation
 uses
   System.SysUtils,
   DeepBase.AutoFix.ErrorRecorder,
-  DeepBase.AutoFix.HealthSignal;
+  DeepBase.AutoFix.HealthSignal,
+  DeepBase.AutoFix.SelfTerminator;
 
 { AutoFix }
 
@@ -83,6 +91,11 @@ end;
 class function AutoFix.Active: Boolean;
 begin
   Result := TAutoFixErrorRecorder.Active;
+end;
+
+class procedure AutoFix.ConfirmSelfTermination(const ASource: string);
+begin
+  TAutoFixSelfTerminator.ConfirmTermination(ASource);
 end;
 
 end.

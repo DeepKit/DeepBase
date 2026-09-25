@@ -7,7 +7,11 @@
     pass    : success (TotalErrors == 0, exit code 0)
     error   : non-fatal exception recorded via L3 path
               (TotalErrors > 0, exit code 1)
-    fatal   : fatal path through SelfTerminator (exit code 2 + exit-reason.json)
+    fatal   : fatal path through SelfTerminator with host confirmation
+              (exit code 2 + exit-reason.json)
+    fatal-unconfirmed : same fatal drive WITHOUT ConfirmTermination --
+              the command-line flag alone must not kill the process
+              (scenario completes, exit code 0, no exit-reason.json)
 
   Console subsystem deliberate: TThread.ForceQueue from
   AutoFix.NotifyShellShown does not pump in a no-message-loop process,
@@ -64,11 +68,29 @@ begin
   AutoFix.RegisterScenario('fatal',
     procedure
     begin
-      // Drive the SelfTerminator path explicitly. HandleFatal writes
-      // exit-reason.json (exit_code=2), marks the current scenario fatal
-      // in scenario-results.jsonl, and calls Halt(2) -- so the Exception
-      // instance leak below is unreachable in the fatal branch.
+      // Drive the SelfTerminator path explicitly WITH the host-side
+      // confirmation (the second condition -- without it HandleFatal only
+      // records). HandleFatal then writes exit-reason.json (exit_code=2),
+      // marks the current scenario fatal in scenario-results.jsonl,
+      // closes the error log and calls Halt(2) -- so the Exception instance
+      // leak below is unreachable in the fatal branch.
+      TAutoFixSelfTerminator.ConfirmTermination('AutoFixHarness:fatal');
       var LFault := EAccessViolation.Create('fixture fatal');
+      try
+        TAutoFixSelfTerminator.HandleFatal(LFault, nil);
+      finally
+        LFault.Free;
+      end;
+    end);
+
+  AutoFix.RegisterScenario('fatal-unconfirmed',
+    procedure
+    begin
+      // Same fatal drive, but WITHOUT ConfirmTermination: --autofix-mode
+      // alone must not trigger self-termination. HandleFatal returns, the
+      // scenario completes, and ScenarioRunner exits 0 with no
+      // exit-reason.json written.
+      var LFault := EAccessViolation.Create('fixture fatal-unconfirmed');
       try
         TAutoFixSelfTerminator.HandleFatal(LFault, nil);
       finally

@@ -48,7 +48,6 @@ type
   private
     class procedure ParseCommandLine;
     class procedure OpenLogFile;
-    class procedure CloseLogFile;
     class function BuildDedupKey(const AClass, AModuleName: string;
       ARva: NativeUInt; const AScenario: string): string;
     class function EscapeJson(const S: string): string;
@@ -85,6 +84,10 @@ type
     class property TotalErrors: Integer read FTotalErrors;
     /// <summary>Set the currently executing scenario under the recorder lock.</summary>
     class procedure SetCurrentScenario(const AName: string);
+    /// <summary>Wait for in-flight writers and close runtime-errors.jsonl.
+    /// Called by SelfTerminator on the confirmed termination path so the
+    /// log is complete before Halt.</summary>
+    class procedure CloseLogFile;
     /// <summary>Name of the currently executing scenario. Thread-safe snapshot.</summary>
     class property CurrentScenario: string read GetCurrentScenarioSafe;
     /// <summary>Test scaffold: forces autofix mode active with the supplied
@@ -128,7 +131,8 @@ begin
       TAutoFixSelfTerminator.HandleFatal(Exception(ExceptObject), ExceptAddr);
   end;
 
-  // Chain old handler (only reached for non-fatal; HandleFatal calls Halt(2))
+  // Chain old handler (reached for non-fatal, or fatal while the host has
+  // not confirmed self-termination -- HandleFatal then records and returns)
   if Assigned(TAutoFixErrorRecorder.OldExceptProc) then
     TAutoFixErrorRecorder.OldExceptProc(ExceptObject, ExceptAddr);
 end;
