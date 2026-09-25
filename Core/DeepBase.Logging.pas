@@ -61,6 +61,9 @@ type
     FStopEvent: TEvent;
     FLogEvent: TEvent;
     FShuttingDown: Boolean;  // CR-278: 置位后 Log 快速返回，析构窗口不再入队
+    FMaxQueueCapacity: Integer; // A2-12: 异步队列容量上限
+    FDroppedEntries: Int64;     // A2-12: 满队列时被拒的条目累计数（丢失可观测）
+    FDroppedReported: Int64;    // A2-12: 写入线程已播报到的丢弃数（仅写线程读写）
     
     FStorageMode: TLogStorageMode;
     FMinLevel: TLogLevel;
@@ -80,6 +83,10 @@ type
     class var FStorageFactory: TFunc<string, ILogStorage>;
     
     procedure WriteLogThread;
+    procedure EnqueueEntry(const Entry: TLogEntry); // A2-12: 唯一入队点（容量守卫）
+    function GetMaxQueueCapacity: Integer;
+    procedure SetMaxQueueCapacity(const Value: Integer);
+    function GetDroppedEntryCount: Int64;
     procedure WriteToDB(const Entry: TLogEntry);
     procedure WriteToFile(const Entry: TLogEntry);
     procedure WriteToAggregator(const Entry: TLogEntry);
@@ -97,6 +104,19 @@ type
     
     /// <summary>Max log file size in MB (default 10)</summary>
     property MaxLogFileSizeMB: Integer read GetMaxLogFileSizeMB write SetMaxLogFileSizeMB;
+
+    /// <summary>
+    /// A2-12: 异步日志队列容量上限（默认 DEFAULT_LOG_QUEUE_CAPACITY）。
+    /// 队列满时新条目被拒并计数，队列内存有界，不许无上限增长。
+    /// 置为非正数抛 EArgumentOutOfRangeException（fail-closed，不设无限档）。
+    /// </summary>
+    property MaxQueueCapacity: Integer read GetMaxQueueCapacity write SetMaxQueueCapacity;
+
+    /// <summary>
+    /// A2-12: 因队列满而被丢弃的日志条目累计数（丢失可观测）。
+    /// 写入线程同时会在日志产物中播报背压告警行。
+    /// </summary>
+    property DroppedEntryCount: Int64 read GetDroppedEntryCount;
     
     /// <summary>
     /// Log message
@@ -318,6 +338,9 @@ begin
   FHostname := GetEnvironmentVariable('COMPUTERNAME');
   
   FLogQueue := TThreadList<TLogEntry>.Create;
+  FMaxQueueCapacity := DEFAULT_LOG_QUEUE_CAPACITY;
+  FDroppedEntries := 0;
+  FDroppedReported := 0;
   FStopEvent := TEvent.Create;
   FLogEvent := TEvent.Create;
   
@@ -349,6 +372,7 @@ var
   LocalBatch: TArray<TLogEntry>;
   Entry: TLogEntry;
   I, BatchCount, RemainingCount: Integer;
+  DroppedDelta, DroppedTotal: Int64;
   WaitResult: DWORD;
   Events: array[0..1] of THandle;
   LHasMore: Boolean;
@@ -358,7 +382,10 @@ begin
   Events[0] := FStopEvent.Handle;
   Events[1] := FLogEvent.Handle;
   
-  while FStopEvent.WaitFor(0) = wrTimeout do
+  // A2-12: 外层不得以 Stop 信号短路——CR-278 的“停线程前排干残余队列”
+  // 只在 WAIT_OBJECT_0 分支内部实现；旧写法在 Stop 置位后立刻退出 while，
+  // 队列里剩余的整批条目被静默丢弃（压测下 written+dropped != offered）。
+  while True do
   begin
     WaitResult := WaitForMultipleObjects(2, @Events, False, INFINITE);
     
@@ -381,6 +408,8 @@ begin
     
     // R-003: 单次锁定即完成批量提取和剩余计数
     RemainingCount := 0;
+    DroppedDelta := 0;
+    DroppedTotal := 0;
     SetLength(LocalBatch, 0);
     List := FLogQueue.LockList;
     try
@@ -401,6 +430,13 @@ begin
         // 计算剩余条目数（在同一次锁定中）
         RemainingCount := List.Count;
       end;
+      // A2-12: 同一把锁内快照背压丢弃增量，FDroppedReported 仅写线程触碰
+      DroppedDelta := FDroppedEntries - FDroppedReported;
+      if DroppedDelta > 0 then
+      begin
+        DroppedTotal := FDroppedEntries;
+        FDroppedReported := FDroppedEntries;
+      end;
     finally
       FLogQueue.UnlockList;
     end;
@@ -417,6 +453,26 @@ begin
         WriteToFile(Entry);
       
       // Push to aggregator if enabled
+      if FAggregatorEnabled then
+        WriteToAggregator(Entry);
+    end;
+
+    // A2-12: 丢失可观测——本窗口有新丢弃时向同样的存储目标播报背压告警，
+    // 直接在日志产物里可见，而不仅是内存计数器
+    if DroppedDelta > 0 then
+    begin
+      Entry := Default(TLogEntry);
+      Entry.Level := llWarn;
+      Entry.Msg := Format(
+        '[backpressure] log queue full (capacity=%d), %d entries dropped this window; cumulative dropped=%d',
+        [FMaxQueueCapacity, DroppedDelta, DroppedTotal]);
+      Entry.Source := 'Logger';
+      Entry.Timestamp := Now;
+      Entry.ThreadId := TThread.CurrentThread.ThreadID;
+      if (FStorageMode in [lsmDatabase, lsmBoth]) then
+        WriteToDB(Entry);
+      if (FStorageMode in [lsmFile, lsmBoth]) then
+        WriteToFile(Entry);
       if FAggregatorEnabled then
         WriteToAggregator(Entry);
     end;
@@ -684,7 +740,6 @@ end;
 procedure TDeepBaseLogger.Log(const Msg: string; Level: TLogLevel; const Source: string);
 var
   Entry: TLogEntry;
-  List: TList<TLogEntry>;
   SafeMsg: string;
 begin
   // CR-278: 析构窗口内拒绝新条目（避免入队后无人消费）
@@ -701,15 +756,72 @@ begin
   Entry.ThreadId := TThread.CurrentThread.ThreadID;
   Entry.StackTrace := '';
   Entry.Extra := '';
-  
+
+  EnqueueEntry(Entry);
+end;
+
+procedure TDeepBaseLogger.EnqueueEntry(const Entry: TLogEntry);
+var
+  List: TList<TLogEntry>;
+begin
+  // A2-12: 唯一入队点。容量满即拒收新条目并计数——丢新不丢旧，
+  // 保证已入队条目的 FIFO 顺序不被破坏；丢失经 DroppedEntryCount
+  // 与写线程背压告警行双重可观测。
   List := FLogQueue.LockList;
   try
+    if List.Count >= FMaxQueueCapacity then
+    begin
+      Inc(FDroppedEntries);
+      Exit;
+    end;
     List.Add(Entry);
   finally
     FLogQueue.UnlockList;
   end;
-  
+
   FLogEvent.SetEvent;
+end;
+
+function TDeepBaseLogger.GetMaxQueueCapacity: Integer;
+var
+  List: TList<TLogEntry>;
+begin
+  // 与入队判定同锁读取，避免看到撕裂/过期容量
+  List := FLogQueue.LockList;
+  try
+    Result := FMaxQueueCapacity;
+  finally
+    FLogQueue.UnlockList;
+  end;
+end;
+
+procedure TDeepBaseLogger.SetMaxQueueCapacity(const Value: Integer);
+var
+  List: TList<TLogEntry>;
+begin
+  if Value <= 0 then
+    raise EArgumentOutOfRangeException.CreateFmt(
+      'TDeepBaseLogger.MaxQueueCapacity must be positive (got %d)', [Value]);
+  List := FLogQueue.LockList;
+  try
+    FMaxQueueCapacity := Value;
+  finally
+    FLogQueue.UnlockList;
+  end;
+  // 调小后若积压已低于新上限，唤醒写线程继续排干
+  FLogEvent.SetEvent;
+end;
+
+function TDeepBaseLogger.GetDroppedEntryCount: Int64;
+var
+  List: TList<TLogEntry>;
+begin
+  List := FLogQueue.LockList;
+  try
+    Result := FDroppedEntries;
+  finally
+    FLogQueue.UnlockList;
+  end;
 end;
 
 procedure TDeepBaseLogger.Log(const Msg: string; const Args: array of const; Level: TLogLevel);
@@ -720,7 +832,6 @@ end;
 procedure TDeepBaseLogger.LogException(E: Exception; const Msg: string; Level: TLogLevel);
 var
   Entry: TLogEntry;
-  List: TList<TLogEntry>;
   FinalMsg: string;
 begin
   // CR-278: 队列已随析构释放后到达的异常日志直接丢弃，防 nil.LockList AV
@@ -744,15 +855,8 @@ begin
   Entry.StackTrace :=
     {$IF CompilerVersion >= 36.0} E.StackTrace {$ELSE} '' {$ENDIF};
   Entry.Extra := '';
-  
-  List := FLogQueue.LockList;
-  try
-    List.Add(Entry);
-  finally
-    FLogQueue.UnlockList;
-  end;
-  
-  FLogEvent.SetEvent;
+
+  EnqueueEntry(Entry);
 end;
 
 procedure TDeepBaseLogger.Debug(const Msg, Source: string);

@@ -26,7 +26,9 @@ const
   // æ¥å¿éç½®å¸¸é
   DEFAULT_LOG_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   DEFAULT_LOG_MAX_FILES = 5;
-  DEFAULT_LOG_FLUSH_INTERVAL_MS = 5000; // 5ç§?
+  DEFAULT_LOG_FLUSH_INTERVAL_MS = 5000; // 5
+  // A2-12: bounded async log queue; entries over capacity are dropped and counted
+  DEFAULT_LOG_QUEUE_CAPACITY = 50000;
   
   // ç½ç»éç½®å¸¸é
   DEFAULT_MAX_CONNECTIONS = 100;
