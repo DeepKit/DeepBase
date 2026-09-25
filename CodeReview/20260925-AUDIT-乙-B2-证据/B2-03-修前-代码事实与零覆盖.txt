@@ -1,0 +1,210 @@
+# B2-03 修前代码事实与零覆盖证明
+# 基准 HEAD: 882fd96（B2-02 落笔后；本条取证在改动落地前完成，见 §〇-1 逐件独立提交流程）
+# 判据（工单原文）：录制回放用例后读 Parameters 内容正确；ASan/FullDebug 下无 UAF 投诉（或等效重复释放检测）
+# 缺陷定位指针：WO-20260925-AUDIT-乙-B2 §B2-03；开工取证见同目录《B2-段0-开工取证.md》
+
+## 〇) 首要事实：该单元在 HEAD 上根本不可编译，工单点名的 UAF 从未有可运行载体
+
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas > .tmp/b2/b03_head/DeepBase.Browser.Recorder.pas
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh .tmp/b2/b03_head/DeepBase.Browser.Recorder.pas
+（完整原始输出见本文件 §6；此处摘录 fail-closed 计数）
+
+  Error 行数          : 51
+  BUILD_EXIT          : 1
+  典型红项（逐条可回源码核对）：
+    (80)  E2023 Function needs result type            ← SaveToFile 声明无结果类型
+    (83)  E2168 Field or method identifier expected   ← property ActionsCount read Length(FActions)
+    (89)  E2204 Improper GUID syntax                  ← ['{ABCD5678-90EF-GHIJ-KLMN-OPQRSTUVWXYZ}']
+    (131)(161) E2250 no overloaded version of StringOfChar
+    (135)(165) E2003 Undeclared identifier: 'fmt'     ← Format 占位符写成 {0} 风格
+    (150)(180) E2003 Undeclared identifier: 'AsInteger'
+    (194)(206) E2003 Undeclared identifier: 'GetTickCount64'   ← uses 无 Winapi.Windows
+    (224)(249)(275)(276)(328) TStringValue.Create      ← RTL 无此类型（应为 TJSONString）
+    (262)  W1011 Text after final 'END.' - ignored by compiler
+    (61)(72)…(117) E2065 Unsatisfied forward or external declaration ×17
+
+即：`AddActionInternal`、`RecordTypeText/RecordScroll/RecordWait/RecordScript`、
+`GeneratePascalScript`、`GenerateJavaScriptScript`、`SaveToFile`、整个
+`TBrowserRecorderManager`、`InitializeBrowserRecorder`、`CurrentBrowserRecorder` 全部
+只有声明没有实现体 —— 实现在 :386 处被一句注释截断：
+
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas | sed -n '384,388p'
+  end;
+
+// ... Remaining methods continue (GenerateJavaScriptScript, SaveToFile, etc.)
+
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas | grep -n "GenerateJavaScriptScript\|function SaveToFile"
+79:    function GenerateJavaScriptScript(ScriptName: string): string;
+80:    function SaveToFile(const FileName: string; Format: string);
+（正文零命中 ⇒ 声明-实现断裂）
+
+## 1) 缺陷本体：Params 存入 Action 后调用方 Free，AddActionInternal 直接存引用
+
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas | sed -n '214,237p'
+214  procedure TRecordingSession.RecordNavigate(URL: string; TimestampMs: Int64);
+...
+222      Params := TJSONObject.Create;
+223      try
+224        Params.AddPair('url', TStringValue.Create(URL));
+226        Action := (
+227          ActionID: InterlockedIncrement(GLastActionID),
+228          ActionType: actNavigate,
+229          TimestampMs: TimestampMs,
+230          Parameters: Params
+231        );
+233        AddActionInternal(Action);
+234      finally
+235        Params.Free;            ← 调用方释放
+236      end;
+
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas | sed -n '343,350p'
+343  procedure TRecordingSession.AddActionInternal(const Action: TBrowserAction);
+344  var
+345    NewActions: TArray<TBrowserAction>;
+346  begin
+347    SetLength(NewActions, Length(FActions) + 1);
+348    FActions := NewActions;      ← 未拷贝的局部新数组整体盖回：旧动作全丢
+349    FActions[High(FActions)] := Action;   ← 存的是已在 235 被 Free 的引用
+350  end;
+
+同一 `finally Params.Free` 形态的写点共 5 处（RecordScroll 见 §3 是空壳）：
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas | grep -n "Params.Free"
+235:    Params.Free;   # RecordNavigate
+260:    Params.Free;   # RecordClick
+287:    Params.Free;   # RecordTypeText
+317:    Params.Free;   # RecordWait
+339:    Params.Free;   # RecordScript
+
+⇒ 会话里留下的每一条动作都指向已释放对象；工单点名的「后续读取 Parameters」正是
+GeneratePascalScript/GenerateJavaScriptScript/SaveToFile 这条导出路径。
+
+## 2) 同入口的第二处同源缺陷：追加即清空
+
+:347-348 先把 `FActions` 赋成一个只在新位置有值、其余全零的数组 ⇒ 无论克隆与否，
+历史动作每次追加都整批丢失（Length 恒为 1）。修后必须同时收口，否则 §1 的所有权
+修复只作用在“最后一条”上。
+
+## 3) 同一函数族内另外两处“声明了但没做”的点（不另立单，同一入口收口）
+
+3.1 `RecordScroll` 是 TODO 空壳，参数一个不用：
+$ git show HEAD:Features/DeepBase.Browser.Recorder.pas | sed -n '291,298p'
+291  procedure TRecordingSession.RecordScroll(X, Y: Integer; TimestampMs: Int64);
+292  var
+293    Action: TBrowserAction;
+294    Params: TJSONObject;
+295  begin
+296    // TODO: Implement scroll recording
+297  end;
+
+3.2 六个 Record* 里只有 3 个判 FIsRecording（:219 Navigate / :244 Click / :270 TypeText），
+RecordWait(:299) 与 RecordScript(:321) 无守卫 ⇒ 停止录制后仍继续入队，"已停"与"仍在记"并存。
+
+3.3 `property ActionsCount: Integer read Length(FActions);` 不可编译（见 §0），
+外部无法读取会话动作数 ⇒ 修后改为真实计数 getter。
+
+## 4) 零覆盖：既无构建路径，也无调用方，也无测试
+
+$ git grep -n "DeepBase.Browser.Recorder" HEAD -- '*.dpr' '*.dpk' '*.dproj' '*.inc'
+EXIT=1（无输出）
+
+$ git grep -n "DeepBase.Browser.Recorder" HEAD -- Tests/
+EXIT=1（无输出）
+
+$ git grep -n "DeepBase.Browser.Recorder" HEAD | grep -v "^HEAD:Features/DeepBase.Browser.Recorder.pas"
+（生产/测试代码零引用；命中的全部是治理与审计文档，摘 3 条）
+HEAD:09_工程脚本/build-ownership/build_ownership_baseline.json:44:  "Features/DeepBase.Browser.Recorder.pas": {
+HEAD:CodeReview/20260919-全库审计-构建归属清单.md:49:| Features/DeepBase.Browser.Recorder.pas | DeepBase.Browser.Recorder | 0 | 显式标记为非构建资产 | 全仓构建文件与生产单元源码均零引用 |
+HEAD:CodeReview/20260925-AUDIT-乙-B2-证据/B2-段0-开工取证.md:50
+
+⇒ 「非构建资产」是仓内既有登记结论（build-ownership 基线），与 §0 的实测红一致：
+本单元的 UAF 从来没有可执行载体，缺陷得以长期存在的根因是“它压根没进过编译器”。
+（与 B2-04/05/06 同族：断裂面远超工单点名的一条，登记见《B2-03-修后-编译与用例.txt》§3）
+
+## 5) 判定口径前置说明：本仓无 ASan，等价检测怎么选
+
+工单判定给的是「ASan/FullDebug 下无 UAF 投诉（或等效重复释放检测）」。本仓 dcc64 构建面
+无 ASan 开关，FullDebug 的 RangeCheck/IOChecks 也不覆盖 record 内对象引用失效读取。修后采用
+的等效口径（见修后件 §2）：
+
+  ①「录制 → 释放 Params → 导出脚本」整链跑通，导出文本必须含三条 Payload 原值。
+     旧实现下这三次读取全部落在已释放的 TJSONObject 上（修前不可编译，修后先在修前源码
+     形态上验证过：把 §6 的红项逐个补到能编译、但保留 `FActions[High(FActions)] := Action;`
+     的存引用写法 ⇒ 该用例即红，见反事实 M1）。
+  ②重复释放侧：Destroy 释放会话自持的克隆 ⇒ 若仍存调用方引用，同一对象被 Free 两次
+     （Params.Free + Destroy），由 ①/② 组合覆盖，不引入第二套内存检测工具。
+
+## 6) 修前编译原始输出（全文）
+
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh .tmp/b2/b03_head/DeepBase.Browser.Recorder.pas
+================================================================
+单元: .tmp/b2/b03_head/DeepBase.Browser.Recorder.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(80) Error: E2023 Function needs result type
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(83) Error: E2168 Field or method identifier expected
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(89) Error: E2204 Improper GUID syntax
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(131) Error: E2250 There is no overloaded version of 'StringOfChar' that can be called with these arguments
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(135) Error: E2003 Undeclared identifier: 'fmt'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(136) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(136) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(140) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(140) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(144) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(145) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(146) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(150) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(150) Error: E2003 Undeclared identifier: 'AsInteger'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(161) Error: E2250 There is no overloaded version of 'StringOfChar' that can be called with these arguments
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(165) Error: E2003 Undeclared identifier: 'fmt'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(166) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(166) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(170) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(170) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(174) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(175) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(176) Error: E2010 Incompatible types: 'Integer' and 'string'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(180) Error: E2001 Ordinal type required
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(180) Error: E2003 Undeclared identifier: 'AsInteger'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(192) Error: E2008 Incompatible types
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(194) Error: E2003 Undeclared identifier: 'GetTickCount64'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(206) Error: E2003 Undeclared identifier: 'GetTickCount64'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(224) Error: E2003 Undeclared identifier: 'TStringValue'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(224) Error: E2029 ')' expected but identifier 'Create' found
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(224) Error: E2125 EXCEPT or FINALLY expected
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(237) Error: E2029 '.' expected but ';' found
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(249) Error: E2003 Undeclared identifier: 'TStringValue'
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(249) Error: E2029 ')' expected but identifier 'Create' found
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(249) Error: E2125 EXCEPT or FINALLY expected
+.tmp\b2\b03_head\DeepBase.Browser.Recorder.pas(262) Warning: W1011 Text after final 'END.' - ignored by compiler
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(61) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.AddActionInternal'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(72) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.RecordTypeText'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(73) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.RecordScroll'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(74) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.RecordWait'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(75) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.RecordScript'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(78) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.GeneratePascalScript'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(79) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.GenerateJavaScriptScript'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(80) Error: E2065 Unsatisfied forward or external declaration: 'TRecordingSession.SaveToFile'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(105) Error: E2065 Unsatisfied forward or external declaration: 'TBrowserRecorderManager.Create'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(106) Error: E2065 Unsatisfied forward or external declaration: 'TBrowserRecorderManager.Destroy'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(109) Error: E2065 Unsatisfied forward or external declaration: 'TBrowserRecorderManager.StartNewSession'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(110) Error: E2065 Unsatisfied forward or external declaration: 'TBrowserRecorderManager.GetCurrentSession'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(111) Error: E2065 Unsatisfied forward or external declaration: 'TBrowserRecorderManager.EndCurrentSession'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(112) Error: E2065 Unsatisfied forward or external declaration: 'TBrowserRecorderManager.ExportAllSessionsToDirectory'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(116) Error: E2065 Unsatisfied forward or external declaration: 'InitializeBrowserRecorder'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(117) Error: E2065 Unsatisfied forward or external declaration: 'CurrentBrowserRecorder'
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(56) Hint: H2219 Private symbol 'FActions' declared but never used
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(61) Hint: H2219 Private symbol 'AddActionInternal' declared but never used
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(102) Hint: H2219 Private symbol 'FCurrentSession' declared but never used
+.tmp\b2\b03_head\.tmp/b2/b03_head/DeepBase.Browser.Recorder.pas(103) Hint: H2219 Private symbol 'FRecordedSessions' declared but never used
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+EXIT=1

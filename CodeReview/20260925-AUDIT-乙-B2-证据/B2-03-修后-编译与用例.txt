@@ -1,0 +1,66 @@
+# B2-03 修后：改动面、判定落点与登记项
+# 基准 HEAD: 882fd96 ；SUT=Features/DeepBase.Browser.Recorder.pas（469 → 521 行）；新增 Tests/Test.DeepBase.Browser.RecorderOwnership.pas
+# 工单：WO-20260925-AUDIT-乙-B2 §B2-03 [Critical] 录制器 Params 双重释放
+# 真跑原始输出见《B2-03-用例真跑.txt》，变异见《B2-03-反事实探针.txt》，修前事实见《B2-03-修前-代码事实与零覆盖.txt》
+
+## 1) 改动清单（只登记与本条缺陷同入口的面，逐条可回源码核对）
+
+| # | 位置（修后行号） | 改动 | 对应修前事实 |
+|---|-----------------|------|-------------|
+| a | `AddActionInternal` :345-361 | 唯一入口做深拷贝 `Action.Parameters.Clone as TJSONObject`，会话成为自己那份的所有者 | §1 存引用 ⇒ UAF |
+| b | `Destroy` :206-215 | 出口统一释放会话自持的克隆，与 a 配对构成单一所有权闭环 | §1（释放点此前不存在） |
+| c | `AddActionInternal` :359-360 | `SetLength(FActions, Length+1)` 后就地写入，不再用未赋值的局部新数组整体盖回 | §2 追加即清空 |
+| d | `MakeAction` :222-231 | 六个 Record* 共用的装配点（ActionID 单一来源），所有权仍在调用方 | 修前 record 字面量赋值在 dcc64 37.0 不可编译（E2003/E2125），且六处各写一遍 GLastActionID 递增 |
+| e | `RecordScroll` :294-309 | 实现 x/y 录制（原为 TODO 空壳，参数一个不用） | §3.1 |
+| f | `RecordWait`/`RecordScript` :317/:333 | 补 `if not FIsRecording then Exit` ⇒ 六个 Record* 守卫一致 | §3.2 |
+| g | `GetActionsCount` :217-220 + `property ActionsCount :88` | `read Length(FActions)`（不可编译）改为真实 getter | §3.3 |
+| h | `GenerateJavaScriptScript` :397-421、`SaveToFile` :423-438 | 补上只有声明没有实现体的两个导出方法；`SaveToFile` 结果类型补全，未知格式 `raise EArgumentException` fail-closed | §0 声明-实现断裂（:386 注释截断） |
+| i | 两生成器 else 分支 :157-162 / :190-193 | 未支持的动作类型显式写成 `// UNSUPPORTED RECORDED ACTION: <枚举名> (ActionID=n)`，不再静默返回空串 | 修前该分支返回 `''`（导出少动作却看着像完整录制） |
+| j | uses :23-31、GUID :94、`TJSONString` 替换 `TStringValue`、`Format` 占位符、`StringOfChar`、`GetTickCount64`、`E2204` | 使单元首次进入编译器：这些都是 §0 那 51 个 Error 的直接原因 | §0 |
+| k | 头注释 Features 段 | 删除不存在的「Export to JSON/JSONL」「Playback speed adjustment」宣称 | 文档与代码不得两套信息 |
+| l | :516-519 | 空 `initialization` 段保留并写明为什么不能删（Delphi 里 `finalization` 必须挂在 `initialization` 之后）；曾按「截断残留」试删，实测 E2029 编译不过，负向样本原始输出见《B2-03-用例真跑.txt》§4 | §0 |
+
+## 2) 判定落点（工单：录制回放后读 Parameters 正确 + 无 UAF/重复释放）
+
+- 正确性：`Test_PascalExport_ReadsLiveParametersOfEveryAction` —— 三条动作的 Params 已在各自
+  `finally` 被 Free，导出文本仍必须含 url/selector/text 三个原值。
+- 重复释放：`Destroy` 释放自持克隆；变异 M1（改回存引用）下 7 条用例全部 error，
+  红因即「同一 TJSONObject 被 Free 两次」。等效口径与边界如实登记在
+  《B2-03-修前-代码事实与零覆盖.txt》§5 与《B2-03-反事实探针.txt》结论段：
+  本机 FastMM 下「读已释放对象」不必然立刻报错，本单真实咬合点是重复释放 + 所有权语义，
+  不夸大为 UAF 读取必被捕获。
+- 回归面：同依赖链既有 `Test.DeepBase.Browser.Session` 15/15 绿（原始输出 §3）。
+
+## 3) 登记项（报主控，本单不自决）
+
+- R1 本单元在修前是完全不可编译的孤立单元（51 Error），仓内既有结论一致：
+  `09_工程脚本/build-ownership/build_ownership_baseline.json` 与
+  《20260919-全库审计-构建归属清单.md:49》把它标为「非构建资产 / 全仓构建文件与生产单元
+  源码均零引用」。修后它进了 dcc64 但仍未进任何 .dpr/.dpk ⇒ 需主控决定是否纳入 CI 编译矩阵
+  （与工单 §〇-7 对 Screen.Click 三件的上报要求同族，本单一并上报）。
+- R2 生成的 Pascal 宏不可编译：导出文本里 `Session.NavigateTo('...')` 少一个实参 ——
+  `IBrowserSession.NavigateTo(URL: string; Options: TNavigationOptions)`
+  （Features/DeepBase.Browser.Session.pas:30）。其余 `CreateBrowserSession`(:110)、
+  `FindElementByCSS`(:43)、`TWebWebElement.Click/TypeText`(:50-51)、`Close`(:26) 均存在且签名匹配，
+  所以这是单点 arity 分叉，不是整片 API 不存在。生成文本属导出契约，改动会连带下游脚本预期，
+  本单不动，登记待派。
+- R3 `FStartTime` 只写不读（时间戳一律由调用方传入），是修前遗留的死状态；
+  `actScroll`/`actScript` 的生成器仍是显式 UNSUPPORTED 标记（不静默丢，但也不产出代码）。
+  两者都不构成本条缺陷，登记不扩面。
+- R4 `InitializeBrowserRecorder`/`CurrentBrowserRecorder`/`GRecorder` + `finalization` 置 nil
+  的全局单例面随本单首次可编译而进入视野；20260919 审计已按「与 T3-③ 锁/单例在 finalization
+  释放而无 DCLP 屏障同族」登记（CodeReview/_audit_recheck/b2-supplement-fragment.md:17），
+  不属本单改造点。
+- R5 新测试单元 `Tests/Test.DeepBase.Browser.RecorderOwnership.pas` 按 §〇-4 不改
+  `Tests/DeepBaseTests.dpr/.dproj`，待主控注册收口。
+- R6 `IBrowserRecorder` 的 GUID 从无意义占位串 `['{ABCD5678-90EF-GHIJ-KLMN-OPQRSTUVWXYZ}']`
+  （E2204 不可编译）换成合法 GUID。该单元零消费者、修前从未编译，不存在兼容面；
+  若主控另有 GUID 分配规则请覆写。
+
+## 4) 自查（AGENTS.md 开发后条款）
+
+- 无单一调用点的私有 Helper：`MakeAction` 六个调用点，`GetActionsCount` 是属性读函数。
+- 所有权写入口唯一：克隆只发生在 `AddActionInternal`，释放只在 `Destroy`；
+  六个 Record* 只负责自己创建的 Params（`finally Params.Free`），无第二套读法。
+- 未引入兜底：未知格式/未支持动作都改成显式失败或显式标记，不是静默成功。
+- 单文件 519 行 < 2000 行审查线，无新增架构分叉。

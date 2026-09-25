@@ -9,8 +9,7 @@
   Features:
     - Record user interactions with timestamps
     - Generate Pascal/Delphi script files
-    - Export to JSON/JSONL for programmatic execution
-    - Playback speed adjustment support
+    - Save generated scripts to disk by format
     
   Performance:
     - Async event capture without blocking main thread
@@ -24,8 +23,11 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.JSON,
+  System.TypInfo,
   System.Generics.Collections,
+  Winapi.Windows,
   DeepBase.Browser.Session;
 
 type
@@ -53,19 +55,22 @@ type
   // Recording session state
   TRecordingSession = class(TObject)
   private
+    // Parameters 由会话拥有（见 AddActionInternal 入口克隆），出口在 Destroy 统一释放
     FActions: TArray<TBrowserAction>;
-    FNextActionID: Integer;
     FStartTime: Int64;
     FIsRecording: Boolean;
-    
+
     procedure AddActionInternal(const Action: TBrowserAction);
+    function GetActionsCount: Integer;
+    function MakeAction(AType: TActionType; ATimestampMs: Int64;
+      AParams: TJSONObject): TBrowserAction;
   public
     constructor Create;
     destructor Destroy; override;
-    
+
     procedure StartRecording;
     procedure StopRecording;
-    
+
     // Action capture methods
     procedure RecordNavigate(URL: string; TimestampMs: Int64);
     procedure RecordClick(Selector: string; TimestampMs: Int64);
@@ -73,20 +78,20 @@ type
     procedure RecordScroll(X, Y: Integer; TimestampMs: Int64);
     procedure RecordWait(Milliseconds: Int64; TimestampMs: Int64);
     procedure RecordScript(Code: string; TimestampMs: Int64);
-    
+
     // Export methods
     function GeneratePascalScript(ScriptName: string): string;
     function GenerateJavaScriptScript(ScriptName: string): string;
-    function SaveToFile(const FileName: string; Format: string);
-    
+    function SaveToFile(const FileName: string; const AFormat: string): string;
+
     // Properties
-    property ActionsCount: Integer read Length(FActions);
+    property ActionsCount: Integer read GetActionsCount;
     property IsRecording: Boolean read FIsRecording;
   end;
 
   // Recorder manager singleton
   IBrowserRecorder = interface
-    ['{ABCD5678-90EF-GHIJ-KLMN-OPQRSTUVWXYZ}']
+    ['{4A2E5C31-7B64-4B0E-9E2D-5F0A8C61D937}']
     
     // Session management
     function StartNewSession: TRecordingSession;
@@ -128,29 +133,32 @@ function TBrowserAction.ToPascalCode(IndentLevel: Integer): string;
 var
   Indent: string;
 begin
-  Indent := StringOfChar('  ', IndentLevel);
-  
+  Indent := StringOfChar(' ', IndentLevel);
+
   case ActionType of
     actNavigate:
-      Result := fmt('%sSession.NavigateTo(%s);\n',
+      Result := Format('%sSession.NavigateTo(%s);' + sLineBreak,
                     [Indent, QuotedStr(Parameters.GetValue('url').Value)]);
-                    
+
     actClick:
-      Result := fmt('%sSession.FindElementByCSS(%s).Click;\n',
+      Result := Format('%sSession.FindElementByCSS(%s).Click;' + sLineBreak,
                     [Indent, QuotedStr(Parameters.GetValue('selector').Value)]);
-                    
+
     actType:
-      Result := fmt('%sSession.FindElementByCSS(%s).TypeText(%s);\n',
-                    [Indent, 
+      Result := Format('%sSession.FindElementByCSS(%s).TypeText(%s);' + sLineBreak,
+                    [Indent,
                      QuotedStr(Parameters.GetValue('selector').Value),
                      QuotedStr(Parameters.GetValue('text').Value)]);
-                     
+
     actWait:
-      Result := fmt('%sSleep(%d);\n',
-                    [Indent, Parameters.GetValue('milliseconds').AsInteger]);
-                    
+      Result := Format('%sSleep(%d);' + sLineBreak,
+                    [Indent, Parameters.GetValue<Int64>('milliseconds')]);
+
     else
-      Result := '';
+      // 录到了但生成器没有对应写法（actScroll/actScript）：显式留在导出文本里，
+      // 静默返回空串会让导出的宏悄悄少动作，看起来却像"完整录制"。
+      Result := Format('%s// UNSUPPORTED RECORDED ACTION: %s (ActionID=%d)' + sLineBreak,
+                    [Indent, GetEnumName(TypeInfo(TActionType), Ord(ActionType)), ActionID]);
   end;
 end;
 
@@ -158,29 +166,30 @@ function TBrowserAction.ToJavaScriptCode(IndentLevel: Integer): string;
 var
   Indent: string;
 begin
-  Indent := StringOfChar('  ', IndentLevel);
-  
+  Indent := StringOfChar(' ', IndentLevel);
+
   case ActionType of
     actNavigate:
-      Result := fmt('%sawait session.navigate(%s);\n',
+      Result := Format('%sawait session.navigate(%s);' + sLineBreak,
                     [Indent, QuotedStr(Parameters.GetValue('url').Value)]);
-                    
+
     actClick:
-      Result := fmt('%sawait session.click(%s);\n',
+      Result := Format('%sawait session.click(%s);' + sLineBreak,
                     [Indent, QuotedStr(Parameters.GetValue('selector').Value)]);
-                    
+
     actType:
-      Result := fmt('%sawait session.type(%s, %s);\n',
+      Result := Format('%sawait session.type(%s, %s);' + sLineBreak,
                     [Indent,
                      QuotedStr(Parameters.GetValue('selector').Value),
                      QuotedStr(Parameters.GetValue('text').Value)]);
-                     
+
     actWait:
-      Result := fmt('%sawait new Promise(r => setTimeout(r, %d));\n',
-                    [Indent, Parameters.GetValue('milliseconds').AsInteger]);
-                    
+      Result := Format('%sawait new Promise(r => setTimeout(r, %d));' + sLineBreak,
+                    [Indent, Parameters.GetValue<Int64>('milliseconds')]);
+
     else
-      Result := '';
+      Result := Format('%s// UNSUPPORTED RECORDED ACTION: %s (ActionID=%d)' + sLineBreak,
+                    [Indent, GetEnumName(TypeInfo(TActionType), Ord(ActionType)), ActionID]);
   end;
 end;
 
@@ -190,14 +199,35 @@ constructor TRecordingSession.Create;
 begin
   inherited Create;
   SetLength(FActions, 0);
-  FNextActionID := 1;
   FStartTime := GetTickCount64;
   FIsRecording := False;
 end;
 
 destructor TRecordingSession.Destroy;
+var
+  I: Integer;
 begin
+  // 与 AddActionInternal 的入口克隆配对：会话是 Parameters 的唯一所有者，出口只在这里
+  for I := Low(FActions) to High(FActions) do
+    FActions[I].Parameters.Free;
+  SetLength(FActions, 0);
   inherited Destroy;
+end;
+
+function TRecordingSession.GetActionsCount: Integer;
+begin
+  Result := Length(FActions);
+end;
+
+function TRecordingSession.MakeAction(AType: TActionType; ATimestampMs: Int64;
+  AParams: TJSONObject): TBrowserAction;
+begin
+  // 六个 Record* 共用一个装配点：ActionID 只有一个来源（GLastActionID），
+  // Parameters 的所有权仍留在调用方（本函数只拷引用，克隆发生在 AddActionInternal）。
+  Result.ActionID := InterlockedIncrement(GLastActionID);
+  Result.ActionType := AType;
+  Result.TimestampMs := ATimestampMs;
+  Result.Parameters := AParams;
 end;
 
 procedure TRecordingSession.StartRecording;
@@ -213,24 +243,15 @@ end;
 
 procedure TRecordingSession.RecordNavigate(URL: string; TimestampMs: Int64);
 var
-  Action: TBrowserAction;
   Params: TJSONObject;
 begin
   if not FIsRecording then
     Exit;
-    
+
   Params := TJSONObject.Create;
   try
-    Params.AddPair('url', TStringValue.Create(URL));
-    
-    Action := (
-      ActionID: InterlockedIncrement(GLastActionID),
-      ActionType: actNavigate,
-      TimestampMs: TimestampMs,
-      Parameters: Params
-    );
-    
-    AddActionInternal(Action);
+    Params.AddPair('url', TJSONString.Create(URL));
+    AddActionInternal(MakeAction(actNavigate, TimestampMs, Params));
   finally
     Params.Free;
   end;
@@ -238,51 +259,33 @@ end;
 
 procedure TRecordingSession.RecordClick(Selector: string; TimestampMs: Int64);
 var
-  Action: TBrowserAction;
   Params: TJSONObject;
 begin
   if not FIsRecording then
     Exit;
-    
+
   Params := TJSONObject.Create;
   try
-    Params.AddPair('selector', TStringValue.Create(Selector));
-    
-    Action := (
-      ActionID: InterlockedIncrement(GLastActionID),
-      ActionType: actClick,
-      TimestampMs: TimestampMs,
-      Parameters: Params
-    );
-    
-    AddActionInternal(Action);
+    Params.AddPair('selector', TJSONString.Create(Selector));
+    AddActionInternal(MakeAction(actClick, TimestampMs, Params));
   finally
     Params.Free;
   end;
 end;
 
-procedure TRecordingSession.RecordTypeText(Selector: string; Text: string; 
+procedure TRecordingSession.RecordTypeText(Selector: string; Text: string;
   TimestampMs: Int64);
 var
-  Action: TBrowserAction;
   Params: TJSONObject;
 begin
   if not FIsRecording then
     Exit;
-    
+
   Params := TJSONObject.Create;
   try
-    Params.AddPair('selector', TStringValue.Create(Selector));
-    Params.AddPair('text', TStringValue.Create(Text));
-    
-    Action := (
-      ActionID: InterlockedIncrement(GLastActionID),
-      ActionType: actType,
-      TimestampMs: TimestampMs,
-      Parameters: Params
-    );
-    
-    AddActionInternal(Action);
+    Params.AddPair('selector', TJSONString.Create(Selector));
+    Params.AddPair('text', TJSONString.Create(Text));
+    AddActionInternal(MakeAction(actType, TimestampMs, Params));
   finally
     Params.Free;
   end;
@@ -290,29 +293,34 @@ end;
 
 procedure TRecordingSession.RecordScroll(X, Y: Integer; TimestampMs: Int64);
 var
-  Action: TBrowserAction;
   Params: TJSONObject;
 begin
-  // TODO: Implement scroll recording
+  if not FIsRecording then
+    Exit;
+
+  Params := TJSONObject.Create;
+  try
+    Params.AddPair('x', TJSONNumber.Create(X));
+    Params.AddPair('y', TJSONNumber.Create(Y));
+    AddActionInternal(MakeAction(actScroll, TimestampMs, Params));
+  finally
+    Params.Free;
+  end;
 end;
 
 procedure TRecordingSession.RecordWait(Milliseconds: Int64; TimestampMs: Int64);
 var
-  Action: TBrowserAction;
   Params: TJSONObject;
 begin
+  // 六个 Record* 一律先判 FIsRecording：停止录制后仍继续入队会让"已停"与"仍在记"
+  // 两个状态并存（旧实现里 Wait/Script 两条漏了这道门）。
+  if not FIsRecording then
+    Exit;
+
   Params := TJSONObject.Create;
   try
     Params.AddPair('milliseconds', TJSONNumber.Create(Milliseconds));
-    
-    Action := (
-      ActionID: InterlockedIncrement(GLastActionID),
-      ActionType: actWait,
-      TimestampMs: TimestampMs,
-      Parameters: Params
-    );
-    
-    AddActionInternal(Action);
+    AddActionInternal(MakeAction(actWait, TimestampMs, Params));
   finally
     Params.Free;
   end;
@@ -320,21 +328,15 @@ end;
 
 procedure TRecordingSession.RecordScript(Code: string; TimestampMs: Int64);
 var
-  Action: TBrowserAction;
   Params: TJSONObject;
 begin
+  if not FIsRecording then
+    Exit;
+
   Params := TJSONObject.Create;
   try
-    Params.AddPair('code', TStringValue.Create(Code));
-    
-    Action := (
-      ActionID: InterlockedIncrement(GLastActionID),
-      ActionType: actScript,
-      TimestampMs: TimestampMs,
-      Parameters: Params
-    );
-    
-    AddActionInternal(Action);
+    Params.AddPair('code', TJSONString.Create(Code));
+    AddActionInternal(MakeAction(actScript, TimestampMs, Params));
   finally
     Params.Free;
   end;
@@ -342,11 +344,20 @@ end;
 
 procedure TRecordingSession.AddActionInternal(const Action: TBrowserAction);
 var
-  NewActions: TArray<TBrowserAction>;
+  Stored: TBrowserAction;
 begin
-  SetLength(NewActions, Length(FActions) + 1);
-  FActions := NewActions;
-  FActions[High(FActions)] := Action;
+  // B2-03 所有权单一化：入参的 Parameters 归调用方（各 Record* 在 finally 里 Free），
+  // 旧实现直接存引用 ⇒ 会话里留下的每一条动作都指向已释放对象，回放/导出阶段读取
+  // Parameters 即 UAF。这里在唯一入口做深拷贝，会话成为自己那份的唯一所有者
+  // （释放点见 Destroy）。
+  Stored := Action;
+  if Action.Parameters <> nil then
+    Stored.Parameters := Action.Parameters.Clone as TJSONObject
+  else
+    Stored.Parameters := nil;
+  // 旧写法把未赋值的局部新数组整体盖回 FActions ⇒ 每次追加都丢掉之前的所有动作
+  SetLength(FActions, Length(FActions) + 1);
+  FActions[High(FActions)] := Stored;
 end;
 
 function TRecordingSession.GeneratePascalScript(ScriptName: string): string;
@@ -356,7 +367,7 @@ var
 begin
   ScriptLines := TStringList.Create;
   try
-    ScriptLines.Add(fmt('program %s;', [ScriptName]));
+    ScriptLines.Add(Format('program %s;', [ScriptName]));
     ScriptLines.Add('');
     ScriptLines.Add('uses');
     ScriptLines.Add('  System.SysUtils,');
@@ -383,7 +394,48 @@ begin
   end;
 end;
 
-// ... Remaining methods continue (GenerateJavaScriptScript, SaveToFile, etc.)
+function TRecordingSession.GenerateJavaScriptScript(ScriptName: string): string;
+var
+  I: Integer;
+  ScriptLines: TStringList;
+begin
+  ScriptLines := TStringList.Create;
+  try
+    ScriptLines.Add('// Auto-generated by DeepBase.Browser.Recorder');
+    ScriptLines.Add(Format('// Script: %s', [ScriptName]));
+    ScriptLines.Add('''use strict'';');
+    ScriptLines.Add('');
+    ScriptLines.Add('async function run(session) {');
+
+    for I := Low(FActions) to High(FActions) do
+      ScriptLines.Add(FActions[I].ToJavaScriptCode(2));
+
+    ScriptLines.Add('}');
+    ScriptLines.Add('');
+    ScriptLines.Add('module.exports = { run };');
+
+    Result := ScriptLines.Text;
+  finally
+    ScriptLines.Free;
+  end;
+end;
+
+function TRecordingSession.SaveToFile(const FileName: string;
+  const AFormat: string): string;
+var
+  Script: string;
+begin
+  // 格式分派保持单一入口；未知格式直接报错，不静默写成 Pascal（导出内容错了比导不出来更难查）
+  if SameText(AFormat, 'pas') or SameText(AFormat, 'pascal') then
+    Script := GeneratePascalScript(TPath.GetFileNameWithoutExtension(FileName))
+  else if SameText(AFormat, 'js') or SameText(AFormat, 'javascript') then
+    Script := GenerateJavaScriptScript(TPath.GetFileNameWithoutExtension(FileName))
+  else
+    raise EArgumentException.Create('Unsupported recording format: ' + AFormat);
+
+  TFile.WriteAllText(FileName, Script, TEncoding.UTF8);
+  Result := FileName;
+end;
 
 { TBrowserRecorderManager }
 
@@ -433,17 +485,16 @@ procedure TBrowserRecorderManager.ExportAllSessionsToDirectory(
   const OutputDir: string);
 var
   Session: TRecordingSession;
-  i: Integer;
   Counter: Integer;
 begin
-  EnsureDirExists(OutputDir);
-  
+  ForceDirectories(OutputDir);
+
   Counter := 0;
   for Session in FRecordedSessions do
   begin
     Inc(Counter);
-    Session.SaveToFile(IncludeTrailingPathDelimiter(OutputDir) + 
-                       fmt('recording_%d.pas', [Counter]), 'pas');
+    Session.SaveToFile(IncludeTrailingPathDelimiter(OutputDir) +
+                       Format('recording_%d.pas', [Counter]), 'pas');
   end;
 end;
 
@@ -463,6 +514,7 @@ begin
 end;
 
 initialization
+  // 空段是语法要求：finalization 必须挂在 initialization 之后，删掉这行就编不过
 finalization
   GRecorder := nil;
 

@@ -1,0 +1,191 @@
+# B2-03 反事实（变异）探针
+# 基准 HEAD: 882fd96 ；SUT=Features/DeepBase.Browser.Recorder.pas ；测试单元=Tests/Test.DeepBase.Browser.RecorderOwnership.pas
+# 探针: CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh（基线→注入→真跑→还原→复跑）
+# 纪律：每条变异都必须让配套用例变红；「还原复跑」必须回绿，否则该条探针不作数。
+# 判据（工单原文）：录制回放用例后读 Parameters 内容正确；无 UAF/重复释放（本仓无 ASan，等效口径见《B2-03-修前-代码事实与零覆盖.txt》§5）
+
+## 结论速览
+
+| # | 回退的行为 | 注入方式 | 变异后 | 命中的用例 |
+|---|-----------|---------|--------|-----------|
+| M1 | AddActionInternal 存调用方引用（不克隆）→ UAF + 重复释放 | 单点替换 `Action.Parameters.Clone as TJSONObject` → `Action.Parameters` | 7 error / 0 pass | 全部 7 条（Session.Free 时对已被 Params.Free 的对象二次 Free） |
+| M2 | 追加时用新数组整体盖回 FActions → 历史动作丢失 | `SetLength(FActions, Length(FActions)+1)` → `SetLength(FActions, 1)`（等价形态：数组长度恒 1，旧动作全丢） | 6 failed / 1 pass | 除 ActionID 唯一性外的全部计数/内容断言 |
+| M3 | RecordWait 不判 FIsRecording → 停止录制后仍入队 | 仅第 317 行（RecordWait 的守卫）`if not FIsRecording then` → `if False then` | 1 failed / 6 pass | Test_RecordAfterStop_AddsNothing |
+| M4 | SaveToFile 未知格式静默按 Pascal 写出 | `raise EArgumentException.Create(...)` → `Script := GeneratePascalScript(...)` | 1 failed / 6 pass | Test_SaveToFileWritesAndRejectsUnknownFormat |
+
+M1 值得单说：它红在「error」而不是「failure」，红因是重复释放本身
+（`TJSONObject.Destroy` 对同一对象跑第二次），这正是工单判定里「等效重复释放检测」
+想要的那一口。需要如实记下的一半是：「读已释放 Parameters」在同一形态下并不必然立刻报错
+（本机 FastMM 释放后内存未即时复用，旧实现里导出文本可能读到残留的旧值），所以本条探针
+的真实咬合点是重复释放 + 「会话必须持有自己那份」的所有权语义；导出内容断言负责的是
+M2 那类「动作根本没留下来」的回退。两者合起来才是 §5 声明的等效口径，不夸大成
+「UAF 读取必被捕获」。
+M3/M4 用行号定位与整行替换，避免命中同形的其它 5 个守卫/分派点，
+变异 diff 均非空（探针里 `---- 变异 diff ----` 段可见实际被改的那一行，空 diff 即探针失效）。
+
+## M1 —— 存引用不克隆（工单点名的 UAF 本体）
+
+
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Stored\.Parameters := Action\.Parameters\.Clone as TJSONObject/Stored.Parameters := Action.Parameters/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -352,7 +352,7 @@
+   // （释放点见 Destroy）。
+   Stored := Action;
+   if Action.Parameters <> nil then
+-    Stored.Parameters := Action.Parameters.Clone as TJSONObject
++    Stored.Parameters := Action.Parameters
+   else
+     Stored.Parameters := nil;
+   // 旧写法把未赋值的局部新数组整体盖回 FActions ⇒ 每次追加都丢掉之前的所有动作
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Failed  : 0
+Tests Errored : 7
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_EveryRecordedActionIsKept
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_PascalExport_ReadsLiveParametersOfEveryAction
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_JavaScriptExport_MarksUnsupportedWithoutDropping
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_RecordAfterStop_AddsNothing
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_ActionIDsAreUniquePerRecordedAction
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_SaveToFileWritesAndRejectsUnknownFormat
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_ManagerExportWritesOneFilePerSession
+RUNNER_STATS fixtureCount=1 testCount=7 pass=0 failure=0 error=7 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+
+## M2 —— 追加时盖回历史动作
+
+
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/SetLength\(FActions, Length\(FActions\) \+ 1\);/SetLength(FActions, 1);/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -356,7 +356,7 @@
+   else
+     Stored.Parameters := nil;
+   // 旧写法把未赋值的局部新数组整体盖回 FActions ⇒ 每次追加都丢掉之前的所有动作
+-  SetLength(FActions, Length(FActions) + 1);
++  SetLength(FActions, 1);
+   FActions[High(FActions)] := Stored;
+ end;
+ 
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 1
+Tests Failed  : 6
+Tests Errored : 0
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_EveryRecordedActionIsKept
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_PascalExport_ReadsLiveParametersOfEveryAction
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_JavaScriptExport_MarksUnsupportedWithoutDropping
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_RecordAfterStop_AddsNothing
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_ActionIDsAreUniquePerRecordedAction
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_SaveToFileWritesAndRejectsUnknownFormat
+RUNNER_STATS fixtureCount=1 testCount=7 pass=1 failure=6 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+
+## M3 —— RecordWait 丢失 IsRecording 守卫
+
+
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if not FIsRecording then/if False then/ if $. == 317; ====
+---- 变异 diff（相对还原基线） ----
+@@ -314,7 +314,7 @@
+ begin
+   // 六个 Record* 一律先判 FIsRecording：停止录制后仍继续入队会让"已停"与"仍在记"
+   // 两个状态并存（旧实现里 Wait/Script 两条漏了这道门）。
+-  if not FIsRecording then
++  if False then
+     Exit;
+ 
+   Params := TJSONObject.Create;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_RecordAfterStop_AddsNothing
+RUNNER_STATS fixtureCount=1 testCount=7 pass=6 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+
+## M4 —— SaveToFile 未知格式静默降级
+
+
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/raise EArgumentException\.Create\('Unsupported recording format: ' \+ AFormat\);/Script := GeneratePascalScript(TPath.GetFileNameWithoutExtension(FileName));/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -431,7 +431,7 @@
+   else if SameText(AFormat, 'js') or SameText(AFormat, 'javascript') then
+     Script := GenerateJavaScriptScript(TPath.GetFileNameWithoutExtension(FileName))
+   else
+-    raise EArgumentException.Create('Unsupported recording format: ' + AFormat);
++    Script := GeneratePascalScript(TPath.GetFileNameWithoutExtension(FileName));
+ 
+   TFile.WriteAllText(FileName, Script, TEncoding.UTF8);
+   Result := FileName;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Browser.RecorderOwnership.TTestRecorderOwnership.Test_SaveToFileWritesAndRejectsUnknownFormat
+RUNNER_STATS fixtureCount=1 testCount=7 pass=6 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Browser.Recorder.pas ==

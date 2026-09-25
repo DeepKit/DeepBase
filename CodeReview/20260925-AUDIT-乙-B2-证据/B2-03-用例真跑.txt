@@ -1,0 +1,146 @@
+# B2-03 用例真跑（原始输出）
+# 基准 HEAD: 882fd96 ；工作树：修后、未提交（本文件三条输出均出自最终交付树，含 §4 反事实同一棵树）
+# 探针：b2_unit_compile.sh（孤立单件喂 dcc64）+ b2_run_fixture.sh（一次性 DUnitX runner，三道 fail-closed：编译非 0⇒3 / testCount=0⇒2 / 任一红⇒1）
+# 为什么自建 runner：工单 §〇-4 明写新建测试单元不改 Tests/DeepBaseTests.dpr/.dproj 注册（归主控收口），
+# 而「用例绿」必须是真跑出来的原始输出，不接受自报 PASS。
+
+
+## 1) 修后单件编译（SUT + 新测试单元）
+
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.Browser.Recorder.pas Tests/Test.DeepBase.Browser.RecorderOwnership.pas
+
+================================================================
+单元: Features/DeepBase.Browser.Recorder.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+1414 lines, 0.17 seconds, 38701 bytes code, 6572 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.Browser.RecorderOwnership.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+23500 lines, 1.09 seconds, 9757 bytes code, 1324 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+TOTAL_EXIT=0
+
+## 2) 新测试单元真跑（7 条）
+
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.Browser.RecorderOwnership.pas
+
+== 编译一次性 runner（单元: Test.DeepBase.Browser.RecorderOwnership） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+24738 lines, 1.30 seconds, 3561540 bytes code, 456176 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Browser.RecorderOwnership） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+EXIT=0
+
+## 3) 同依赖链既有 fixture 回归（Recorder 的 uses 面 DeepBase.Browser.Session）
+
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.Browser.Session.pas
+
+== 编译一次性 runner（单元: Test.DeepBase.Browser.Session） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+24182 lines, 1.23 seconds, 3550592 bytes code, 455712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Browser.Session） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............................
+
+Tests Found   : 15
+Tests Ignored : 0
+Tests Passed  : 15
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=15 pass=15 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+EXIT=0
+
+## 4) 负向样本：删掉空 initialization 段 ⇒ 编译必须红（防「顺手清理」把单元弄回不可编译）
+
+$ python 删除 :516 的 `initialization` 行与紧随的 why 注释
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.Browser.Recorder.pas
+（红后已还原 SUT，还原复跑见 §1 与本文件头部计数）
+
+================================================================
+单元: Features/DeepBase.Browser.Recorder.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+Features\DeepBase.Browser.Recorder.pas(516) Error: E2029 Declaration expected but 'FINALIZATION' found
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+TOTAL_EXIT=1
+

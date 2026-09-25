@@ -1,0 +1,24 @@
+# B2-03 交付树四门复跑（基准 HEAD: 882fd96；6 件 payload 已在 index，本件在第 3 门之后落盘并同笔提交）
+# 复跑位置：仓根（四门脚本以仓根为 cwd 取 git ls-files 口径）
+# 全量原始输出（含 E3 存量清单逐行）留在 .tmp/b2/b03_gates.txt（gitignored）；此处只留判定行与退出码。
+# 计数对照 B2-02 交付时：.pas 997→998（新增本件测试单元）、eol 1550→1551、mojibake 995→996、证据 701→706。
+# 证据门按 git ls-files 取面 ⇒ 本文件自身入 index 后复跑一次，见文末第五段（706→707）。
+
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js
+编码门禁通过：998 个 .pas + 709 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+$ node 09_工程脚本/eol-gate/check_eol.js
+行尾门禁通过：检查了 1551 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+$ node 09_工程脚本/mojibake-gate/check_mojibake.js
+丙类损坏门禁通过：扫描 996 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+证据编码门禁通过：扫描 706 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+
+## 复跑：本门禁证据文件入 index 之后（证据门扫描面含它自己）
+
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+证据编码门禁通过：扫描 707 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
