@@ -1,0 +1,161 @@
+B2 收尾复验（隔离 --detach 工作树）
+=====================================
+
+工单：`docs/ui/work-orders/WO-20260925-AUDIT-乙-B2-功能与集成层缺陷修复.md`
+依据判据：§〇-3（四门交付树全 EXIT=0）、§〇-5（编译判据 = 隔离 `--detach` 工作树 @ 目标 commit；主树红项逐件点名归属）、
+§〇-7（B2-05/06 修完报主控纳入 CI 编译矩阵）、§七（乙自报不作验收依据）。
+本件只登记实测原始值，原始输出件同目录（`.tmp/b2close/`，gitignored，故关键行全部抄录在此）。
+
+## 〇、复验面身份
+
+| 项 | 值 |
+|---|---|
+| 交付树 | 隔离工作树 `D:/_Progs/02Business/DeepBase-wt-b2close` @ `09db3c8`（detached，本单末笔） |
+| 归因树 A | `DeepBase-wt-b2noise-base` @ `92c14d1`（工单声明基准 = tag `v1.1.0`） |
+| 归因树 B | `DeepBase-wt-b2noise-mid` @ `347b126`（甲 A2 验收 + 主控测试并网注册笔） |
+| 主树状态 | `09db3c8`，已跟踪件仅 1 件 ` M`（本件的证据件），无暂存内容 |
+| 跑门方式 | `run-isolated.sh` / `run-noise-attribution.sh`（本目录在册，换机可复算） |
+| 净跑时长 | 四门 + T0×3 + `--all`×2，全部 EXIT 落档见下 |
+
+三棵工作树复验完即 `git worktree remove`，不留残留（D9 §3 工作树治理口径）。
+
+## 一、四道门禁 @09db3c8（全部 EXIT=0）
+
+| 门 | EXIT | 摘要行（原文） |
+|---|---|---|
+| encoding-gate | 0 | 编码门禁通过：1001 个 .pas + 691 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 2） |
+| eol-gate | 0 | 行尾门禁通过：检查了 1536 个文件（.pas CRLF / .md LF），跳过目录 2 |
+| mojibake-gate | 0 | 丙类损坏门禁通过：扫描 1001 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供 |
+| evidence-encoding-gate | 0 | 证据编码门禁通过：扫描 769 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内 |
+
+walk 面与索引面口径分叉（沿 B2-13/B2-14 各笔「门禁四门」件登记，此处只补实测差值，不另立第二套说法）：
+主树 dirty 时编码门报 1003 .pas、行尾门报 1559 件；隔离干净树报 1001 / 1536。差值全部来自干净检出不存在的文件：
+`.ai/subset/Core/b.pas` + `.ai/subset/Features/a.pas`（2 件，被 .gitignore 排除但 walk 会走），
+以及主树 31 件未跟踪 `.md`（其中 23 件在 `CodeReview/20260919-AUDIT-甲-证据/`）。
+⇒ 差值与本单代码无关；「walk 门（编码/行尾）与 index 门（丙类/证据）在同一棵树给出不同分母」这一口径分叉本身
+属门禁治理面既有问题，登记在 B2-13 件里，本单不越权改。
+
+本笔（收尾 4 件）`git add` 之后在主树按 §〇-3 复跑一遍四门，与上表并列登记（差值就是上一段那批树外文件 + 本笔新增 2 件证据）：
+
+| 门 | EXIT | 摘要行计数 | 与 @09db3c8 隔离树之差 |
+|---|---|---|---|
+| encoding-gate | 0 | 1003 .pas + 713 扩展面 | +2 .pas（`.ai/subset` gitignored）、+22 扩展面 |
+| eol-gate | 0 | 1560 个文件 | +24 |
+| mojibake-gate | 0 | 1001 .pas、丙-B 命中 0 件 / 存量 17 件 343 处封顶内 | 0（index 门，本笔不含 .pas） |
+| evidence-encoding-gate | 0 | 771 件、E3 240 行 / 21 件封顶内 | +2 = 本笔 `交付回执.md` + 本件 |
+
+## 二、编译门 T0（生产契约面）@09db3c8
+
+```
+判定面=26 已跟踪=93 清单来源=manifest:T0-生产契约面.txt .res生成=2 编译器=dcc64.exe 陈旧DCU清理=0
+DPR总数=1 成功=1 失败=0 被跳过=0
+DPK总数=25 成功=25 失败=0 被跳过=0
+GATE_EXIT=1
+```
+
+26 个工程 `BUILD_EXIT` 全为 0 ⇒ **T0 编译面零红**。EXIT=1 的唯一来源是编译噪声门（不是编译失败）：
+
+```
+编译门禁失败：编译噪声相对基线增长（段4 口径=不增长，非清零；下降须来自真实修复）:
+  H2077: 当前 409 > 基线 401
+  H2443: 当前 122 > 基线 118
+```
+
+## 三、噪声门增长逐工程归因（不停在整面聚合数字）
+
+同一份 T0 清单、同一个噪声基线（`noise-baseline.json` emittedAt `2026-09-24T04:44:21.719Z`，来自 `79670b9`），
+在三棵树上各跑一遍，逐工程比对 `HINT`/`WARN`：
+
+| 工程 | `92c14d1`（工单基准） | `347b126`（甲 A2 并网笔） | `09db3c8`（本单末笔） |
+|---|---|---|---|
+| `Tests/DeepBaseTests.dpr` | HINT 226 | HINT 233 | HINT 233 |
+| `DeepBaseCore.dpk` | HINT 15 | HINT 19 | HINT 19 |
+| 其余 24 个工程 | — | 与基准逐位相同 | 与 `347b126` 逐位相同 |
+| 整面 Hint / H2077 / H2443 | 710 / 401 / 119 | 721 / 409 / 122 | 721 / 409 / 122 |
+
+三条结论（每条都有上表行号可回查）：
+
+1. **`92c14d1..347b126` 的全部噪声增长 = Hint +11**，逐工程只落在两件：`Tests/DeepBaseTests.dpr` +7、`DeepBaseCore.dpk` +4。
+   归属实测：`git log 92c14d1..HEAD -- Tests/DeepBaseTests.dpr` 唯一命中 `347b126`（主控「甲-A2 验收 + 测试并网注册」笔）；
+   `-- Core/` 命中 14 笔全部是甲 A2（`99363a8`…`ca73889`）。两文件均不在本单 32 件非证据面清单里。
+2. **`347b126..09db3c8` 逐工程零差异** ⇒ 本单 13 项对 T0 噪声门贡献 **0**。
+   对照：本单触及的包 `DeepBaseFeatures.dpk` 35→35、`DeepBaseVCL.dpk` 51→51、`DeepBaseCommerce.dpk` 8→8、
+   `DeepBaseBrowser.dpk` 18→18、`DeepBaseLLM.dpk` 21→21、`DeepBasePersistence.dpk` 23→23（全 26 工程同法逐位核对）。
+3. **H2443 在工单基准 `92c14d1` 上就已经红**（119 > 基线 118）⇒ 噪声门红不是本单造成的，也不是甲 A2 造成的，
+   而是基线本身落后于树。这条属门禁治理面（重生成基线按 check_build.js §段4 注释是人工动作），本单不自行刷基线。
+
+## 四、`--all` 全量面红集合差集（判据：零新增编译红）
+
+| 树 | DPR 总数/成功/失败 | DPK | 被跳过 | GATE_EXIT |
+|---|---|---|---|---|
+| `92c14d1` | 65 / 59 / 6 | 25 / 25 / 0 | 0 | 1 |
+| `09db3c8` | 68 / 61 / 7 | 25 / 25 / 0 | 0 | 1 |
+
+红集合差集（`comm` 逐行比对，两个方向都算）：
+
+- 消失的红：**0 件**。
+- 新增的红：**1 件** = `CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr`，
+  报错 `B2FixtureRunner.dpr(13) Fatal: F2613 Unit '__UNIT__' not found.`
+
+同一区间 `git diff --name-status --diff-filter=A 92c14d1..HEAD -- '*.dpr'` 只有 3 件新增，全部是本单证据附件：
+`B2FixtureRunner.dpr`、`B2Seg0Probe.dpr`、`B2-01-premise-probe.dpr` ⇒ DPR 分母 65→68 的 +3 全部是本单带来；
+后两件编译绿（61 = 59 + 2），第一件是模板（含 `__UNIT__` 占位符，按设计永远编译不过）。
+
+**这一条是本单唯一的编译面回归，如实登记，不当作「门禁误报」放过：**
+本仓此前 `CodeReview/**` 下没有任何 `.dpr`（`git ls-tree -r 92c14d1 -- CodeReview | grep -c '\.dpr$'` = 0），
+所以 check_build.js 的 walk 面扫到证据目录这件事是本单第一次暴露的。
+
+处置边界：不自行改名、不自行给门禁加 SKIP。理由——
+① `b2_run_fixture.sh` 是把模板 `sed` 复制到 `.tmp` 后再编译，证据目录里那份本体从来不是工程；
+② 把它改成 `.dpr.template`（=从 CI 编译面摘掉一项）与给门禁加 `CodeReview/**` 跳过，都属编译面变更，
+  按 §〇-7 与甲 A2 台账同口径归主控裁定（甲 A2 结论 §移交项 ② 已把「`B2FixtureRunner.dpr` 模板红」点名给本单验收）；
+③ 改名会让 25 件在册证据里当时真实的路径名与树不一致，得不偿失。
+⇒ 本件把两个候选口径摆给主控：**(a)** 门禁侧把 `CodeReview/**` 排除出 walk 编译面（一次性根治，且解释「证据目录不是源码树」）；
+**(b)** 模板件改后缀为 `.dpr.template` 并同步 `b2_run_fixture.sh`（2 件），历史证据原文不动、只留本件记录改名。
+乙的建议 = (a)：证据目录该不该进编译面是门禁语义问题，用改名绕过去等于给下一份证据附件留同一个坑。
+
+## 五、禁动区机械核验
+
+本单 18 笔提交（`4d21fc4`…`09db3c8`，逐笔 `git show --name-only` 去重）共触及 108 件，
+其中非 `CodeReview/**` 的树内文件 **32 件**（`Features/` 11、`Tests/` 13 新建 + 2 改、`VCL/` 1、`DeepFlow/` 2、`doQry/` 1、`09_工程脚本/` 1、删除 3 件旧 `*.Impl.pas` 夹具）。
+对这 32 件按 §〇-2 逐项 grep：
+
+| 禁动项 | 命中 |
+|---|---|
+| `TestResults/**` | 0 |
+| `Core/DeepBase.PluginManager.pas`（旧轨，归甲 A2-06） | 0 |
+| `DeepBase.Plugins.*`（新轨） | 0 |
+| `Features/DeepBase.Commerce.Adapter.Supabase.pas`（§六 不派单） | 0 |
+| `Tests/DeepBaseTests.dpr` / `.dproj`（§〇-4 注册归主控；§四 争用禁区甲独占） | 0 |
+| `09_工程脚本/eol-gate/eol_baseline.json` 用 `--emit-baseline` **新增**条目 | 0（见下） |
+| `.workbuddy/**` | 0 |
+| `v1.1.0` / `audit/ehai-downstream-001-closed` 标签 | 未动（`git for-each-ref` 前后 sha 一致） |
+| push | 未做（`git rev-parse @{u}` 无 upstream，树内亦无远端跟踪引用） |
+
+`eol_baseline.json` 只在 B2-04/05/06 三笔里被写入，累计 **净 -7 条、+0 条**（逐笔 numstat `0 2` / `0 3` / `0 2`），
+删掉的 7 条全是本单自己修好的 `Features/DeepBase.Desktop.Screen.Click.*` 文件；
+写入走乙-B1 落地的 `gate-emit-guard.js` 守卫二「只减放行」通道，不是旧单时代的 `--force-shrink`。
+基线余下 660 条逐条对树复算：陈旧 0 条、缺失 0 条 ⇒ 本单没有顺手清理别人的条目。
+
+## 六、CI 编译矩阵缺口（§〇-7 点名上报）
+
+| 面 | 现状实测 | 请求 |
+|---|---|---|
+| `Features/DeepBase.Desktop.Screen.Click.{DPIMapper,RegionLocator,SmartExecutor}.pas`（B2-04/05/06） | 全仓无任何 `.dpk`/`.dpr` 引用这三个单元（`git grep` 单元名，排除自身与测试） ⇒ **不在任何编译面**，工单「该单元编译 EXIT=0」只能靠 `b2_unit_compile.sh` 单件面自证 | 纳入 T0（新建包或挂 `DeepBaseFeatures.dpk`）；RegionLocator 需先定 Graphics32 依赖口径（改引 `GR32` + 外部库路径，或 vendored 进 `ThirdParty/`，见 B2-段0-开工取证 §三 B2-05） |
+| `Tests/Test.DeepBase.{Desktop.Screen.Click.*,Commerce.Adapter.Firebase,CloudBackup.EncryptedVerify,UIA.ElementWindow,Browser.RecorderOwnership,LLM.HTTP.Stream,DeepFlow.ContextResolve,DeepFlow.RoleGuid,DoQry.Literal,VCL.CommandBinding,Updater.Install}.pas`（13 件新建回归） | 未注册进 `Tests/DeepBaseTests.dpr`（§〇-4 归主控） ⇒ 13 项目的运行网当前不在 CI 面上 | 按甲 A2 同法并网注册；注册后请复跑本单各件的 fixture 名单（见交付回执表） |
+| `doQry/uDoQryLegacy.pas`（B2-13） | 仅 `doQry/prjDoQry.dpr` 引用；`DoQryDemo.dpr` 在 `contracts/T1-观测面.txt` 登记为「保持红，未移面」，但实测 `09db3c8` 树 `--all` 面里 **DoQryDemo 不在红集合** ⇒ 已绿，T1 那条登记已过期 | 更正 T1 登记；本单不动 contracts |
+| `VCL/DeepBase.VCL.MVVMControls.pas`（B2-14 SUT） | **在 T0 面上**（`all-dpk` 整面选择子 + `DeepBaseVCL.dpk:43` contains 该单元）；只有它的新测试件不在面上 | 与上一行合并处理即可，SUT 侧无缺口（本条更正 B2-14 证据件 R2 的原口径） |
+
+## 七、超过 2000 行审查线的 SUT（AGENTS.md 开发中纪律）
+
+B2-07/B2-08 分别落在 `Features/DeepBase.CloudBackup.pas`（现 2664 行）与 `Features/DeepBase.Updater.pas`
+（现 2063 行，改前 2010）。两者都已在 2000 行线之上且本单是「按缺陷点手术刀修正」，未做结构性拆分——
+拆分属独立重构单（涉及 `InternalRestore`/`CreateBackup` 职责分层），登记不自行扩面。
+
+## 八、本件未做的事（防主控按「应该都有」误读）
+
+- 没有跑全量测试套件当判据（§〇-4：全量 run 有 216 崩溃问题）⇒ 一切用例判定为 fixture 子集真跑，原始输出在各件 `B2-XX-用例真跑*.txt`。
+- 没有为 B2-04/05/06 单独跑四门（无 `B2-0{4,5,6}-门禁四门.txt`）：那三笔落在「连编译都不过」的单元上，
+  四门在段0/其他各笔已复跑，最终判定统一以本件 §一 的交付树整面复跑为准。
+- 没有改任何门禁脚本、contracts、baseline（除 §五 记的 eol 只减 7 条）。
+- 没有 push，没有动标签，没有动 `CodeReview/**` 下别人的证据目录。

@@ -77,13 +77,15 @@ R1 框架侧写点无运行用例：TMVVMFrameBase.BindCommand 需要 TFrame 后
    环境下不可构造（实测 EResNotFound；且 TFrame 无 CreateNew，编译期 E2003），
    探针原文在 B2-14-用例真跑-原始输出.txt §四。本单以「两条 BindCommand 收敛到同一构造函数、
    构造体逐字相同」做结构覆盖，运行网缺口如实登记，不写假用例冒充。
-R2 新测试单元未注册（§〇-4 归主控），且 VCL/DeepBase.VCL.MVVMControls.pas 所在包
-   DeepBaseVCL.dpk 不在 09_工程脚本/build-gate/contracts/ 任何清单里（grep 无命中）
-   ⇒ 本单元与其测试当前都不在任何 CI 编译/测试面上 ⇒ 随 B2-05/06 一并请求纳入。
-R3 DeepBaseVCL.dpk 主树编译红：`Core\DeepBase.Security.DPAPI.pas(554) E2251 Ambiguous
-   overloaded call to 'SecureZeroMemory'`。归属实测（A/B 同面复跑）：把 SUT 换回 HEAD 面 blob
-   b6b70551 后同一命令同样红、hint 计数一致（H2077=6）⇒ 与本单无关，属 DPAPI 件；
-   另注：DPAPI 单件用 b2_unit_compile.sh 编是绿的（BUILD_EXIT=0），红只在该 dpk 的搜索面里出现
-   ⇒ 该红是「包面 vs 单件面」口径差异，登记给门禁治理面，本单不越权改。
+R2 新测试单元 Tests/Test.DeepBase.VCL.CommandBinding.pas 未注册进 Tests/DeepBaseTests.dpr
+   （§〇-4 归主控收口）⇒ 运行网缺口成立。被测单元本身不在缺口内：T0 生产契约面用整面选择子
+   all-dpk（不逐条点名路径），DeepBaseVCL.dpk:43 的 contains 面含
+   `DeepBase.VCL.MVVMControls in 'VCL\DeepBase.VCL.MVVMControls.pas'` ⇒ 该单元一直在 T0 编译面上；
+   收尾隔离树 @09db3c8 复跑 T0 整面 26/26 BUILD_EXIT=0 为直接证据。
+R3 DeepBaseVCL.dpk 在主树直跑时报 `Core\DeepBase.Security.DPAPI.pas(554) E2251 Ambiguous
+   overloaded call to 'SecureZeroMemory'`。收尾复验：隔离 `--detach` 工作树 @09db3c8 跑同一
+   T0 面时该包 `BUILD_EXIT=0 HINT=51 WARN=11` ⇒ 该红只在脏主树出现，属未提交在途件污染，
+   与本单无关（同型反例见甲 A2 收尾的 A2-final-build-gate.log：主树直跑 24 件 dpk 同报此红）。
+   判据口径按 §〇-5 走隔离树，主树直跑结果不作判定。
 R4 同族未扫：本单只收了 MVVM 这一处「模块级登记列表只增不减」。全仓是否还有同类可变全局列表
    属另立扫描项（需要枚举 initialization 建表 + 无配对注销的写法），不在 B2-14 范围内，登记待定。
