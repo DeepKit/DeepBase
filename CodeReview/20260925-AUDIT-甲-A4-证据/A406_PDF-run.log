@@ -1,0 +1,7 @@
+COMMAND: A406_PDF.exe
+EXIT=0
+A4-06 PDF export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a4\
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A406_case1.pdf size=957
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A406_case2_cjk.pdf size=925
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A406_case3_twopage.pdf size=1651
+A4-06 PROBE DONE

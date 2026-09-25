@@ -1,0 +1,75 @@
+program A407_DOCX;
+{ WO-20260925-AUDIT-甲-A4 / A4-07 : DeepBase.Export.DOCX XML escaping probe.
+  Produces real DOCX packages; extraction / XML validation / round-trip check
+  is done by the companion script A407_docx_verify.ps1. }
+{$APPTYPE CONSOLE}
+uses
+  System.SysUtils,
+  System.Classes,
+  DeepBase.Export.DOCX;
+
+const
+  SPECIAL_TEXT = 'Special: & < > " '' ]]> | CJK: ' + #20013#25991#27979#35797;
+
+procedure BuildFile(const APath: string; AMode: Integer);
+var
+  D: TDOCXDocument;
+begin
+  D := TDOCXDocument.Create;
+  try
+    case AMode of
+      0: begin
+           D.SetDefaultFont('SimSun', 12);
+           D.AddParagraph(SPECIAL_TEXT);
+         end;
+      1: begin
+           { raw " inside an unescaped XML attribute value }
+           D.SetDefaultFont('Bad"Font', 12);
+           D.AddParagraph('font-attribute-quote-probe');
+         end;
+      2: begin
+           { attribute + element injection attempt through the font name }
+           D.SetDefaultFont('x"/><w:ins w:id="9"/><w:rFonts w:ascii="y', 12);
+           D.AddParagraph('font-attribute-injection-probe');
+         end;
+      3: begin
+           D.SetDefaultFont('SimSun', 11);
+           D.AddTable(
+             ['h&<>"', 'hdr2'],
+             [['c&<>"', 'c2'], [SPECIAL_TEXT, 'row2col2']]);
+         end;
+    end;
+    D.SaveToFile(APath);
+    Writeln('EXPORT ' + APath);
+  finally
+    D.Free;
+  end;
+end;
+
+function FileSize(const APath: string): Int64;
+var
+  F: TFileStream;
+begin
+  F := TFileStream.Create(APath, fmOpenRead or fmShareDenyNone);
+  try
+    Result := F.Size;
+  finally
+    F.Free;
+  end;
+end;
+
+var
+  OutDir: string;
+begin
+  OutDir := ExtractFilePath(ParamStr(0));
+  Writeln('A4-07 DOCX export probe, outdir=' + OutDir);
+  BuildFile(OutDir + 'A407_case1_text.docx', 0);
+  Writeln('  case1 size=' + IntToStr(FileSize(OutDir + 'A407_case1_text.docx')));
+  BuildFile(OutDir + 'A407_case2_fontquote.docx', 1);
+  Writeln('  case2 size=' + IntToStr(FileSize(OutDir + 'A407_case2_fontquote.docx')));
+  BuildFile(OutDir + 'A407_case3_fontinject.docx', 2);
+  Writeln('  case3 size=' + IntToStr(FileSize(OutDir + 'A407_case3_fontinject.docx')));
+  BuildFile(OutDir + 'A407_case4_table.docx', 3);
+  Writeln('  case4 size=' + IntToStr(FileSize(OutDir + 'A407_case4_table.docx')));
+  Writeln('A4-07 PROBE DONE');
+end.

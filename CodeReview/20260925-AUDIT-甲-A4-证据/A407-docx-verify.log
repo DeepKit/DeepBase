@@ -1,0 +1,38 @@
+FILE A407_case1_text.docx size=1716
+  PASS zip-readable :: entries=5
+  PASS required-parts :: has word/document.xml + [Content_Types].xml
+  PASS document-part-present :: document.xml bytes=684
+  PASS document-xml-well-formed :: parsed as XML
+  w:t count=1 rFonts-ascii=SimSun w:ins elements=0
+  PASS text-escaping-round-trip :: joined w:t contains the full special+CJK source text
+  PASS raw-ampersand-not-broken :: no bare & outside an entity in document.xml
+FILE A407_case2_fontquote.docx size=1668
+  PASS zip-readable :: entries=5
+  PASS required-parts :: has word/document.xml + [Content_Types].xml
+  PASS document-part-present :: document.xml bytes=659
+  FAIL document-xml-well-formed :: PARSE FAILED: Cannot convert value "<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" 
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" 
+  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" 
+  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" 
+  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<w:body>
+<w:p><w:pPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Bad"Font" w:eastAsia="Bad"Font" w:hAnsi="Bad"Font"/></w:rPr><w:t xml:space="preserve">font-attribute-quote-probe</w:t></w:r></w:p>
+</w:body>
+</w:document>" to type "System.Xml.XmlDocument". Error: "'Font' is an unexpected token. Expecting whitespace. Line 8, position 56."
+FILE A407_case3_fontinject.docx size=1684
+  PASS zip-readable :: entries=5
+  PASS required-parts :: has word/document.xml + [Content_Types].xml
+  PASS document-part-present :: document.xml bytes=762
+  PASS document-xml-well-formed :: parsed as XML
+  w:t count=1 rFonts-ascii=x | y | y | y w:ins elements=3
+  FAIL font-attribute-injection-blocked :: font value='x' injected w:ins elements=3
+FILE A407_case4_table.docx size=1897
+  PASS zip-readable :: entries=5
+  PASS required-parts :: has word/document.xml + [Content_Types].xml
+  PASS document-part-present :: document.xml bytes=1878
+  PASS document-xml-well-formed :: parsed as XML
+  w:t count=6 rFonts-ascii= w:ins elements=0
+  PASS table-cell-escaping-round-trip :: all 6 cell strings round-trip
+
+TOTAL files=4 failed-checks=2

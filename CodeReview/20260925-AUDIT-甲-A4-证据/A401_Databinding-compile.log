@@ -1,0 +1,11 @@
+COMMAND: dcc64 -B -Q -NU".\dcu" -E"." -U".;..\..\Core;..\..\Features;..\..\Persistence;..\..\VCL;..\..\Governance" -NS"System;System.Win;Winapi;Vcl;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap" A401_Databinding.dpr
+EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+A401_Databinding.dpr(108) Warning: W1036 Variable 'S' might not have been initialized
+A401_Databinding.dpr(110) Warning: W1036 Variable 'T2' might not have been initialized
+A401_Databinding.dpr(109) Warning: W1036 Variable 'T1' might not have been initialized
+A401_Databinding.dpr(163) Warning: W1036 Variable 'S' might not have been initialized
+A401_Databinding.dpr(200) Warning: W1036 Variable 'T1' might not have been initialized
+A401_Databinding.dpr(201) Warning: W1036 Variable 'D' might not have been initialized
+846 lines, 0.19 seconds, 1379748 bytes code, 191736 bytes data.

@@ -1,0 +1,31 @@
+COMMAND: dcc64 -B -Q -NU".\dcu" -E"." -U".;..\..\Core;..\..\Features;..\..\Persistence;..\..\VCL;..\..\Governance" -NS"System;System.Win;Winapi;Vcl;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap" A402_Manager.dpr
+EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Manager.pas(566) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+16375 lines, 0.91 seconds, 5246028 bytes code, 592864 bytes data.

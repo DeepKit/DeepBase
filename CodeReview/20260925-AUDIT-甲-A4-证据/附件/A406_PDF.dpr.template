@@ -1,0 +1,58 @@
+program A406_PDF;
+{ WO-20260925-AUDIT-甲-A4 / A4-06 : DeepBase.Export.PDF real export probe.
+  Produces real PDF files; xref/object verification is done by the companion
+  script A406_xref_verify.ps1 against these files. }
+{$APPTYPE CONSOLE}
+uses
+  System.SysUtils,
+  System.Classes,
+  DeepBase.Export.PDF;
+
+function FileSize(const APath: string): Int64;
+var
+  F: TFileStream;
+begin
+  F := TFileStream.Create(APath, fmOpenRead or fmShareDenyNone);
+  try
+    Result := F.Size;
+  finally
+    F.Free;
+  end;
+end;
+
+procedure BuildFile(const APath: string; AMode: Integer);
+var
+  P: TPDFDocument;
+begin
+  P := TPDFDocument.Create;
+  try
+    P.SetPageSize(595, 842);
+    P.AddPage;
+    P.SetFont('SimSun', 14);
+    case AMode of
+      0: P.DrawText(50, 780, 'A4-06 plain ascii export');
+      1: P.DrawText(50, 780, #20320#22909#19990#30028' - hello 123');
+      2: begin
+           P.DrawText(50, 780, 'page-1 with font');
+           P.AddPage;
+           P.SetFont('Helvetica', 11);
+           P.DrawText(50, 780, 'page-2 with another font');
+         end;
+    end;
+    P.SaveToFile(APath);
+    Writeln('EXPORT ' + APath + ' size=' + IntToStr(FileSize(APath)));
+  finally
+    P.Free;
+  end;
+end;
+
+var
+  OutDir: string;
+begin
+  OutDir := ExtractFilePath(ParamStr(0));
+  Writeln('A4-06 PDF export probe, outdir=' + OutDir);
+  BuildFile(OutDir + 'A406_case1.pdf', 0);
+  BuildFile(OutDir + 'A406_case2_cjk.pdf', 1);
+  BuildFile(OutDir + 'A406_case3_twopage.pdf', 2);
+  Writeln('A4-06 PROBE DONE');
+end.

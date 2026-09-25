@@ -1,0 +1,19 @@
+COMMAND: A404_IoC.exe
+EXIT=0
+--- S1 object path first (RegisterSingleton<T,I>) --- | 
+S1-detail | objPath1=000001625F102100(id=1) ifacePath=000001625F102160(id=2) objPath2=000001625F102140(id=2)
+False A4-04-single-instance | one singleton registration must construct exactly 1 instance, got 2
+False A4-04-singleton-identity | object-path and interface-path resolve to the same instance: id 1 vs 2
+S1-lifetime | created=2 destroyed=1 leaked-after-container-free=1
+--- S2 interface path first (control) --- | 
+S2-detail | ifacePath id=3 objPath1=000001625F101FC0(id=3) objPath2=000001625F101FC0(id=3)
+True A4-04-a-first-single-instance | one singleton registration must construct exactly 1 instance, got 1
+True A4-04-a-first-identity | all three resolves return the same instance: id 3 / 3 / 3
+S2-lifetime | created=1 destroyed=1 leaked-after-container-free=0
+--- S3 RegisterSingleton(instance) then both resolve paths --- | 
+S3-detail | registered id=4 ifaceResolve id=4 instances-created=1
+True A4-04-registered-instance-reused | registered instance returned by interface resolve: id 4 vs 4 (instances-created=1)
+S3-EXCEPTION-at-resolve-object | EAccessViolation: Access violation at address 00007FF791F9C4FD in module 'A404_IoC.exe' (offset C4FD). Read of address 0000000000000001
+S3-lifetime | created=1 destroyed=0 leaked-after-container-free=1
+
+A4-04 PROBE DONE, failed-assertions=3

@@ -1,0 +1,252 @@
+program A402_Manager;
+
+{ A4-02 probe: TDeepBaseManager.InitializeEx/InitializeWithDB failure path.
+  S0 baseline            : normal init + free.
+  S1 CreateConfigStorage : IManagerStorage.CreateConfigStorage raises -> is it swallowed?
+  S2 config ReadValue    : storage read raises inside InitializeModules (Manager:996
+                           FConfig.GetConfig, unguarded) -> half-init + leak on Free.
+  Leak signal: global logger installed by InitializeModules (SetGlobalLogger) is only
+  released in FinalizeModules, which Finalize skips when FIsInitialized = False. }
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  FireDAC.Stan.Def,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  DeepBase.Storage.Interfaces,
+  DeepBase.Logging,
+  DeepBase.Manager,
+  DeepBase.Persistence.Manager.FireDAC,
+  DeepBase.Persistence.Config.FireDAC,
+  DeepBase.Persistence.I18n.FireDAC,
+  DeepBase.Persistence.Theme.FireDAC,
+  DeepBase.Persistence.Security.FireDAC,
+  DeepBase.Persistence.FormState.FireDAC,
+  DeepBase.Persistence.MRU.FireDAC,
+  DeepBase.Persistence.Hotkeys.FireDAC;
+
+type
+  EProbeInjected = class(Exception);
+
+  { Config storage that fails on LoadAll (guarded by PreloadCache) and on
+    ReadValue (unguarded at Manager line 996 FConfig.GetConfig). }
+  TProbeConfigStorage = class(TInterfacedObject, IConfigStorage)
+  public
+    function ReadValue(const Key: string; const Default: string = ''): string;
+    procedure WriteValue(const Key, Value, Category, ValueType, Description: string);
+    procedure LoadAll(AValues: TDictionary<string, string>);
+    procedure LoadByCategory(const Category: string; AValues: TDictionary<string, string>);
+    procedure DeleteValue(const Key: string);
+    function ValueExists(const Key: string): Boolean;
+  end;
+
+  { Manager storage delegating every schema op to the real FireDAC storage;
+    only the config-storage creation point is instrumented. }
+  TProbeManagerStorage = class(TInterfacedObject, IManagerStorage)
+  private
+    FInner: IManagerStorage;
+  public
+    constructor Create(const AInner: IManagerStorage);
+    function CountCoreTables(const TableNames: array of string): Integer;
+    function TableExists(const TableName: string): Boolean;
+    function ColumnExists(const TableName, ColumnName: string): Boolean;
+    procedure ExecuteStatement(const SQL: string);
+    procedure AddColumn(const TableName, ColumnName, ColumnDef: string);
+    function ReadSchemaVersion: string;
+    procedure UpdateSchemaInfo(const SchemaVersion, LastUpgradeIso8601: string);
+    function ReadProjectInfo(const Key: string): string;
+    procedure UpsertProjectInfo(const Key, Value: string);
+    function CreateConfigStorage: IConfigStorage;
+    function CreateI18nStorage: II18nStorage;
+    function CreateThemeStorage: IThemeStorage;
+    function CreateSecuritySecretStorage: ISecuritySecretStorage;
+    function CreateFormStateStorage: IFormStateStorage;
+    function CreateMRUStorage: IMRUStorage;
+    function CreateHotkeyStorage: IHotkeyStorage;
+  end;
+
+var
+  GMode: Integer = 0;
+
+{ TProbeConfigStorage }
+
+function TProbeConfigStorage.ReadValue(const Key: string; const Default: string): string;
+begin
+  raise EProbeInjected.Create('INJECTED-ReadValue');
+end;
+
+procedure TProbeConfigStorage.WriteValue(const Key, Value, Category, ValueType, Description: string);
+begin
+  raise EProbeInjected.Create('INJECTED-WriteValue');
+end;
+
+procedure TProbeConfigStorage.LoadAll(AValues: TDictionary<string, string>);
+begin
+  raise EProbeInjected.Create('INJECTED-LoadAll');
+end;
+
+procedure TProbeConfigStorage.LoadByCategory(const Category: string; AValues: TDictionary<string, string>);
+begin
+  raise EProbeInjected.Create('INJECTED-LoadByCategory');
+end;
+
+procedure TProbeConfigStorage.DeleteValue(const Key: string);
+begin
+end;
+
+function TProbeConfigStorage.ValueExists(const Key: string): Boolean;
+begin
+  Result := False;
+end;
+
+{ TProbeManagerStorage }
+
+constructor TProbeManagerStorage.Create(const AInner: IManagerStorage);
+begin
+  inherited Create;
+  FInner := AInner;
+end;
+
+function TProbeManagerStorage.CountCoreTables(const TableNames: array of string): Integer;
+begin
+  Result := FInner.CountCoreTables(TableNames);
+end;
+
+function TProbeManagerStorage.TableExists(const TableName: string): Boolean;
+begin
+  Result := FInner.TableExists(TableName);
+end;
+
+function TProbeManagerStorage.ColumnExists(const TableName, ColumnName: string): Boolean;
+begin
+  Result := FInner.ColumnExists(TableName, ColumnName);
+end;
+
+procedure TProbeManagerStorage.ExecuteStatement(const SQL: string);
+begin
+  FInner.ExecuteStatement(SQL);
+end;
+
+procedure TProbeManagerStorage.AddColumn(const TableName, ColumnName, ColumnDef: string);
+begin
+  FInner.AddColumn(TableName, ColumnName, ColumnDef);
+end;
+
+function TProbeManagerStorage.ReadSchemaVersion: string;
+begin
+  Result := FInner.ReadSchemaVersion;
+end;
+
+procedure TProbeManagerStorage.UpdateSchemaInfo(const SchemaVersion, LastUpgradeIso8601: string);
+begin
+  FInner.UpdateSchemaInfo(SchemaVersion, LastUpgradeIso8601);
+end;
+
+function TProbeManagerStorage.ReadProjectInfo(const Key: string): string;
+begin
+  Result := FInner.ReadProjectInfo(Key);
+end;
+
+procedure TProbeManagerStorage.UpsertProjectInfo(const Key, Value: string);
+begin
+  FInner.UpsertProjectInfo(Key, Value);
+end;
+
+function TProbeManagerStorage.CreateConfigStorage: IConfigStorage;
+begin
+  case GMode of
+    1: raise EProbeInjected.Create('INJECTED-CreateConfigStorage');
+    2: Result := TProbeConfigStorage.Create;
+  else
+    Result := FInner.CreateConfigStorage;
+  end;
+end;
+
+function TProbeManagerStorage.CreateI18nStorage: II18nStorage;
+begin
+  Result := FInner.CreateI18nStorage;
+end;
+
+function TProbeManagerStorage.CreateThemeStorage: IThemeStorage;
+begin
+  Result := FInner.CreateThemeStorage;
+end;
+
+function TProbeManagerStorage.CreateSecuritySecretStorage: ISecuritySecretStorage;
+begin
+  Result := FInner.CreateSecuritySecretStorage;
+end;
+
+function TProbeManagerStorage.CreateFormStateStorage: IFormStateStorage;
+begin
+  Result := FInner.CreateFormStateStorage;
+end;
+
+function TProbeManagerStorage.CreateMRUStorage: IMRUStorage;
+begin
+  Result := FInner.CreateMRUStorage;
+end;
+
+function TProbeManagerStorage.CreateHotkeyStorage: IHotkeyStorage;
+begin
+  Result := FInner.CreateHotkeyStorage;
+end;
+
+procedure InstallFactory;
+begin
+  TDeepBaseManager.SetStorageFactory(
+    function(AConnection: TObject): IManagerStorage
+    begin
+      if GMode = 0 then
+        Result := CreateManagerStorage(TFDConnection(AConnection))
+      else
+        Result := TProbeManagerStorage.Create(CreateManagerStorage(TFDConnection(AConnection)));
+    end);
+end;
+
+procedure RunScenario(AMode: Integer; const ATag: string);
+var
+  M: TDeepBaseManager;
+  InitOK: Boolean;
+  IsInitBeforeFree: Boolean;
+  LoggerBefore: NativeUInt;
+  LoggerAfter: NativeUInt;
+begin
+  GMode := AMode;
+  InstallFactory;
+
+  M := TDeepBaseManager.Create(nil);
+  try
+    InitOK := M.InitializeWithDB(':memory:');
+    IsInitBeforeFree := M.IsInitialized;
+    LoggerBefore := NativeUInt(M.Logger);
+    WriteLn(Format('%s init=%d isInit=%d loggerInstalled=%d lastError=%s',
+      [ATag, Ord(InitOK), Ord(IsInitBeforeFree), Ord(IsLoggerInitialized),
+       M.LastError]));
+  finally
+    M.Free;
+  end;
+
+  LoggerAfter := NativeUInt(Logger());
+  WriteLn(Format('%s after_free loggerInstalled=%d loggerPtrBefore=%s loggerPtrAfter=%s samePtr=%d',
+    [ATag, Ord(IsLoggerInitialized), IntToHex(LoggerBefore, 16),
+     IntToHex(LoggerAfter, 16), Ord(LoggerBefore = LoggerAfter)]));
+  GMode := 0;
+end;
+
+begin
+  try
+    WriteLn('A402 begin');
+    RunScenario(0, 'S0-baseline');
+    RunScenario(1, 'S1-CreateConfigStorageRaises');
+    RunScenario(2, 'S2-ConfigReadValueRaises');
+    WriteLn('A402 end');
+  except
+    on E: Exception do
+      WriteLn('A402 FATAL ' + E.ClassName + ': ' + E.Message);
+  end;
+end.

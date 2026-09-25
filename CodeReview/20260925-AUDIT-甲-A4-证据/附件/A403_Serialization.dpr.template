@@ -1,0 +1,156 @@
+program A403_Serialization;
+{ WO-20260925-AUDIT-甲-A4 / A4-03 : DeepBase.Serialization hard-cast + whitelist probe
+  Every case states the EXPECTED outcome; anything else is counted as unexpected. }
+
+{$APPTYPE CONSOLE}
+{$M+}
+
+uses
+  System.SysUtils,
+  DeepBase.Serialization;
+
+type
+  { class name deliberately starts with "TObject" so the serializer type
+    whitelist (ALLOWED_TYPES + StartsWith) accepts it without attributes }
+  TObjectProbeRec = class(TObject)
+  private
+    FAge: Integer;
+    FName: string;
+    FPrice: Double;
+    FFlag: Boolean;
+  published
+    property Age: Integer read FAge write FAge;
+    property Name: string read FName write FName;
+    property Price: Double read FPrice write FPrice;
+    property Flag: Boolean read FFlag write FFlag;
+  end;
+
+  { identical shape, name NOT in the whitelist -> must be rejected }
+  PlainProbeRec = class(TObject)
+  private
+    FAge: Integer;
+    FName: string;
+    FPrice: Double;
+    FFlag: Boolean;
+  published
+    property Age: Integer read FAge write FAge;
+    property Name: string read FName write FName;
+    property Price: Double read FPrice write FPrice;
+    property Flag: Boolean read FFlag write FFlag;
+  end;
+
+var
+  GUnexpected: Integer = 0;
+
+procedure Emit(const ATag, AText: string);
+begin
+  Writeln(ATag + ' | ' + AText);
+end;
+
+{ keep the evidence log ASCII-only: exception messages built from wrong-type
+  hard casts contain raw heap bytes, expand them instead of printing them }
+function San(const S: string): string;
+var
+  I: Integer;
+  C: Char;
+begin
+  Result := '';
+  for I := 1 to Length(S) do
+  begin
+    C := S[I];
+    if (Ord(C) >= 32) and (Ord(C) <= 126) then
+      Result := Result + C
+    else
+      Result := Result + Format('\u%.4x', [Ord(C)]);
+  end;
+end;
+
+{ AExpect: 'valid' | 'rejected' | 'typed-error' }
+procedure RunCase(const ACase, AJson, AExpect: string);
+var
+  O: TObject;
+  Outcome: string;
+  Ok: Boolean;
+begin
+  O := nil;
+  try
+    O := TSerializer.FromJson<TObjectProbeRec>(AJson);
+    if O = nil then
+      Outcome := 'nil result'
+    else
+      try
+        with TObjectProbeRec(O) do
+          Outcome := Format('NO_ERROR Age=%d Name=%s Price=%g Flag=%s',
+            [Age, Name, Price, BoolToStr(Flag, True)]);
+      except
+        on E: Exception do
+          Outcome := 'READBACK ' + E.ClassName + ': ' + E.Message;
+      end;
+  except
+    on E: Exception do
+      Outcome := E.ClassName + ': ' + E.Message;
+  end;
+  O.Free;
+
+  if AExpect = 'typed-error' then
+    Ok := (Pos('NO_ERROR', Outcome) = 0) and (Pos('nil result', Outcome) = 0)
+  else if AExpect = 'rejected' then
+    Ok := Pos('Unauthorized type', Outcome) > 0
+  else
+    Ok := (Pos('NO_ERROR', Outcome) > 0) and (Pos('Age=30', Outcome) > 0);
+
+  if not Ok then
+    Inc(GUnexpected);
+  Emit(ACase, 'expect=' + AExpect + ' outcome=' + San(Outcome) +
+    ' -> ' + BoolToStr(Ok, True));
+end;
+
+procedure RunPlain(const ACase, AJson: string);
+var
+  O: PlainProbeRec;
+  Outcome: string;
+  Ok: Boolean;
+begin
+  O := nil;
+  try
+    O := TSerializer.FromJson<PlainProbeRec>(AJson);
+    if O = nil then
+      Outcome := 'nil result'
+    else
+      Outcome := Format('NO_ERROR Age=%d Name=%s', [O.Age, O.Name]);
+  except
+    on E: Exception do
+      Outcome := E.ClassName + ': ' + E.Message;
+  end;
+  O.Free;
+  Ok := Pos('Unauthorized type', Outcome) > 0;
+  if not Ok then
+    Inc(GUnexpected);
+  Emit(ACase, 'expect=rejected outcome=' + San(Outcome) + ' -> ' + BoolToStr(Ok, True));
+end;
+
+begin
+  GUnexpected := 0;
+  Emit('A4-03 serialization type-cast probe', 'start');
+
+  { whitelist controls }
+  RunCase('WL-01 TObject-prefixed class', '{"Age":30,"Name":"bob","Price":1.5,"Flag":true}', 'valid');
+  RunPlain('WL-02 plain class name', '{"Age":30,"Name":"bob","Price":1.5,"Flag":true}');
+
+  { wrong types fed into the unchecked TJSONNumber()/TJSONString() casts }
+  RunCase('INT-02 Age=string', '{"Age":"not-a-number"}', 'typed-error');
+  RunCase('INT-03 Age=bool', '{"Age":true}', 'typed-error');
+  RunCase('INT-04 Age=object', '{"Age":{"x":1}}', 'typed-error');
+  RunCase('INT-05 Age=array', '{"Age":[1,2]}', 'typed-error');
+  RunCase('INT-06 Age=null', '{"Age":null}', 'typed-error');
+  RunCase('STR-07 Name=int', '{"Name":123}', 'typed-error');
+  RunCase('STR-08 Name=bool', '{"Name":true}', 'typed-error');
+  RunCase('STR-09 Name=object', '{"Name":{"x":1}}', 'typed-error');
+  RunCase('FLT-10 Price=string', '{"Price":"abc"}', 'typed-error');
+  RunCase('FLT-11 Price=bool', '{"Price":true}', 'typed-error');
+  RunCase('BOOL-12 Flag=int', '{"Flag":1}', 'typed-error');
+  RunCase('BOOL-13 Flag=string', '{"Flag":"yes"}', 'typed-error');
+
+  Writeln('');
+  Writeln('A4-03 PROBE DONE, unexpected-outcome-count=' + IntToStr(GUnexpected));
+end.

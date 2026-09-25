@@ -1,0 +1,5 @@
+COMMAND: dcc64 -B -Q -NU".\dcu" -E"." -U".;..\..\Core;..\..\Features;..\..\Persistence;..\..\VCL;..\..\Governance" -NS"System;System.Win;Winapi;Vcl;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap" A404_IoC.dpr
+EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1566 lines, 0.23 seconds, 1449980 bytes code, 198988 bytes data.

@@ -1,0 +1,220 @@
+program A405_LogQuery;
+{ WO-20260925-AUDIT-甲-A4 / A4-05 : DeepBase.LogQuery TopExceptions data source lifetime probe }
+{$APPTYPE CONSOLE}
+uses
+  System.SysUtils,
+  System.Generics.Collections,
+  DeepBase.Types,
+  DeepBase.LogAggregator,
+  DeepBase.LogQuery;
+
+var
+  GDestroyed: Integer = 0;
+
+type
+  TTrackedList = class(TList<TAggregatedLog>)
+  public
+    destructor Destroy; override;
+  end;
+
+destructor TTrackedList.Destroy;
+begin
+  Inc(GDestroyed);
+  Writeln('  [detector] tracked data source destroyed inside analyzer call');
+  inherited;
+end;
+
+function MkLog(const AMsg: string; ALevel: TLogLevel;
+  const AStack: string): TAggregatedLog;
+begin
+  Result := Default(TAggregatedLog);
+  Result.Timestamp := Now;
+  Result.Level := ALevel;
+  Result.Message := AMsg;
+  Result.Source := 'probe';
+  Result.StackTrace := AStack;
+end;
+
+var
+  GFail: Integer = 0;
+
+procedure Emit(const ATag, AText: string);
+begin
+  Writeln(ATag + ' | ' + AText);
+end;
+
+procedure Expect(const ATag: string; ACond: Boolean; const AText: string);
+begin
+  if not ACond then
+    Inc(GFail);
+  Emit(BoolToStr(ACond, True) + ' ' + ATag, AText);
+end;
+
+function StatsTotal(var A: TLogAnalyzer): Int64;
+var
+  S: TLogStats;
+begin
+  Result := -1;
+  try
+    S := A.GetStats;
+    Result := S.TotalCount;
+  except
+    on E: Exception do
+      Emit('stats-exception', E.ClassName + ': ' + E.Message);
+  end;
+end;
+
+function TopMessages(var A: TLogAnalyzer; AN: Integer): string;
+var
+  R: TArray<TTopError>;
+  I: Integer;
+begin
+  Result := '';
+  try
+    R := A.TopErrors(AN);
+    for I := 0 to High(R) do
+    begin
+      if I > 0 then
+        Result := Result + ',';
+      Result := Result + R[I].Message + '(' + IntToStr(R[I].Count) + ')';
+    end;
+    if Result = '' then
+      Result := '<none>';
+  except
+    on E: Exception do
+      Result := 'EXCEPTION ' + E.ClassName + ': ' + E.Message;
+  end;
+end;
+
+{ Case A: analyzer OWNS the data source (SetDataSource(..., True)) }
+procedure CaseA_Owned;
+var
+  Src: TTrackedList;
+  A: TLogAnalyzer;
+  Top: TArray<TTopError>;
+  Decoy: TList<TAggregatedLog>;
+  Total: Int64;
+begin
+  Emit('--- case A: analyzer owns data source ---', '');
+  Src := TTrackedList.Create;
+  Src.Add(MkLog('plain-1', llInfo, ''));
+  Src.Add(MkLog('plain-2', llInfo, ''));
+  Src.Add(MkLog('ERR-alpha', llError, 'stack-alpha'));
+  Src.Add(MkLog('ERR-beta', llError, 'stack-beta'));
+  A := TLogAnalyzer.Create;
+  GDestroyed := 0;
+  try
+    A.SetDataSource(Src, True);
+    Emit('caseA-before', 'source-count=' + IntToStr(Src.Count) +
+      ' stats-total=' + IntToStr(StatsTotal(A)));
+    try
+      Top := A.TopExceptions(5);
+      Emit('caseA-TopExceptions', 'returned ' + IntToStr(Length(Top)) + ' row(s)');
+    except
+      on E: Exception do
+        Emit('caseA-TopExceptions', 'EXCEPTION ' + E.ClassName + ': ' + E.Message);
+    end;
+    Expect('A4-05-owned-source-freed-mid-query', GDestroyed = 0,
+      'owned data source destroy count during/after TopExceptions = ' +
+      IntToStr(GDestroyed));
+    { after the call the analyzer must still point at the original source }
+    Total := StatsTotal(A);
+    Expect('A4-05-restore-after-query', Total = 4,
+      'GetStats.TotalCount right after TopExceptions = ' + IntToStr(Total) +
+      ' (expected 4)');
+    { probe whether FDataSource now aliases freshly allocated memory }
+    Decoy := TList<TAggregatedLog>.Create;
+    try
+      Decoy.Add(MkLog('DECOY-SENTINEL', llError, 'decoy-stack'));
+      Emit('caseA-after-decoy', 'stats-total=' + IntToStr(StatsTotal(A)) +
+        ' top=' + TopMessages(A, 5));
+    finally
+      Decoy.Free;
+    end;
+  finally
+    try
+      A.Free;
+      Emit('caseA-teardown', 'analyzer freed without incident');
+    except
+      on E: Exception do
+        Emit('caseA-teardown', 'CRASH ' + E.ClassName + ': ' + E.Message);
+    end;
+    { ownership of Src was handed to the analyzer and it was already destroyed
+      inside TopExceptions (GDestroyed > 0); freeing it here would be a double
+      free performed by the probe itself. }
+    if GDestroyed = 0 then
+      Src.Free
+    else
+      Emit('caseA-teardown', 'probe skipped Src.Free, destroyed-count=' +
+        IntToStr(GDestroyed));
+  end;
+end;
+
+{ Case B: caller keeps ownership (SetDataSource(..., False)) }
+procedure CaseB_Borrowed;
+var
+  Src: TList<TAggregatedLog>;
+  A: TLogAnalyzer;
+  Top: TArray<TTopError>;
+  Total: Int64;
+begin
+  Emit('--- case B: caller owns data source ---', '');
+  Src := TList<TAggregatedLog>.Create;
+  Src.Add(MkLog('plain-1', llInfo, ''));
+  Src.Add(MkLog('ERR-alpha', llError, 'stack-alpha'));
+  Src.Add(MkLog('ERR-beta', llError, 'stack-beta'));
+  Src.Add(MkLog('plain-2', llInfo, ''));
+  A := TLogAnalyzer.Create;
+  try
+    A.SetDataSource(Src, False);
+    Emit('caseB-before', 'source-count=' + IntToStr(Src.Count) +
+      ' stats-total=' + IntToStr(StatsTotal(A)));
+    try
+      Top := A.TopExceptions(5);
+      Emit('caseB-TopExceptions', 'returned ' + IntToStr(Length(Top)) + ' row(s)');
+    except
+      on E: Exception do
+        Emit('caseB-TopExceptions', 'EXCEPTION ' + E.ClassName + ': ' + E.Message);
+    end;
+    Expect('A4-05-borrowed-source-alive', StatsTotal(A) = 4,
+      'GetStats.TotalCount right after TopExceptions = ' + IntToStr(StatsTotal(A)) +
+      ' (expected 4, source still alive with 4 rows)');
+    { mutate the still-live source; a healthy analyzer would see the new row }
+    Src.Add(MkLog('POST-QUERY-ADD', llWarn, ''));
+    Total := StatsTotal(A);
+    Expect('A4-05-source-still-linked', Total = 5,
+      'GetStats.TotalCount after appending to the live source = ' +
+      IntToStr(Total) + ' (expected 5)');
+    Emit('caseB-after-append', 'top=' + TopMessages(A, 5));
+  finally
+    try
+      A.Free;
+      Emit('caseB-teardown', 'analyzer freed without incident');
+    except
+      on E: Exception do
+        Emit('caseB-teardown', 'CRASH ' + E.ClassName + ': ' + E.Message);
+    end;
+    try
+      Src.Free;
+    except
+      on E: Exception do
+        Emit('caseB-teardown', 'CRASH on Src.Free ' + E.ClassName + ': ' + E.Message);
+    end;
+  end;
+end;
+
+begin
+  GFail := 0;
+  try
+    CaseA_Owned;
+    CaseB_Borrowed;
+  except
+    on E: Exception do
+    begin
+      Inc(GFail);
+      Emit('FATAL', E.ClassName + ': ' + E.Message);
+    end;
+  end;
+  Writeln('');
+  Writeln('A4-05 PROBE DONE, failed-assertions=' + IntToStr(GFail));
+end.

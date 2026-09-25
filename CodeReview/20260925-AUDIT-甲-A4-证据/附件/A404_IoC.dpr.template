@@ -1,0 +1,254 @@
+program A404_IoC;
+{ WO-20260925-AUDIT-甲-A4 / A4-04 : DeepBase.IoC singleton identity probe.
+  Path A = Resolve<T>        -> ResolveInterfaceInternal (FHasSingletonInterface / FSingletonInterface)
+  Path B = Resolve(PTypeInfo) -> ResolveInternal          (FSingletonInstance)
+  Both are public overloads of the same Resolve API.
+  Primary metric = instances constructed per registration (class var counters);
+  identity is read back through IProbeSvc.Id, never by comparing the raw
+  interface pointer (the interface path may return a wrapper). }
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  System.TypInfo,
+  DeepBase.IoC;
+
+type
+  IProbeSvc = interface
+    ['{5B0C6C7C-2A64-4F5E-9E0E-1C1D2E3F4A01}']
+    function Id: Integer;
+  end;
+
+  TProbeSvc = class(TInterfacedObject, IProbeSvc)
+  private
+    FId: Integer;
+  public
+    class var GCreated: Integer;
+    class var GDestroyed: Integer;
+    constructor Create; reintroduce;
+    destructor Destroy; override;
+    function Id: Integer;
+  end;
+
+constructor TProbeSvc.Create;
+begin
+  inherited Create;
+  Inc(GCreated);
+  FId := GCreated;
+end;
+
+destructor TProbeSvc.Destroy;
+begin
+  Inc(GDestroyed);
+  inherited;
+end;
+
+function TProbeSvc.Id: Integer;
+begin
+  Result := FId;
+end;
+
+var
+  GFail: Integer = 0;
+
+procedure Emit(const ATag, AText: string);
+begin
+  Writeln(ATag + ' | ' + AText);
+end;
+
+procedure Expect(const ATag: string; ACond: Boolean; const AText: string);
+begin
+  if not ACond then
+    Inc(GFail);
+  Emit(BoolToStr(ACond, True) + ' ' + ATag, AText);
+end;
+
+function PtrStr(P: Pointer): string;
+begin
+  Result := IntToHex(NativeUInt(P), 16);
+end;
+
+{ Safe identity read-back: never takes an interface reference on the object
+  path (a _AddRef/_Release pair on a refcount-0 singleton would destroy it). }
+function IdOfObject(AObj: TObject): Integer;
+begin
+  Result := -1;
+  if (AObj <> nil) and (AObj.ClassType = TProbeSvc) then
+    Result := TProbeSvc(AObj).Id;
+end;
+
+function IdOfIntf(const AIntf: IProbeSvc): Integer;
+begin
+  if AIntf = nil then
+    Result := -1
+  else
+    Result := AIntf.Id;
+end;
+
+procedure ReportLifetime(const ATag: string; AC0, AD0: Integer);
+var
+  Created, Destroyed, Leaked: Integer;
+begin
+  Created := TProbeSvc.GCreated - AC0;
+  Destroyed := TProbeSvc.GDestroyed - AD0;
+  Leaked := Created - Destroyed;
+  Emit(ATag + '-lifetime', 'created=' + IntToStr(Created) +
+    ' destroyed=' + IntToStr(Destroyed) +
+    ' leaked-after-container-free=' + IntToStr(Leaked));
+end;
+
+{ Registration before any resolve, first resolve through the OBJECT path. }
+procedure S1_ObjectPathFirst;
+var
+  C: TIoCContainer;
+  C0, D0: Integer;
+  P1, P2: Pointer;
+  I1: IProbeSvc;
+  Created: Integer;
+begin
+  Emit('--- S1 object path first (RegisterSingleton<T,I>) ---', '');
+  C := TIoCContainer.Create;
+  C0 := TProbeSvc.GCreated;
+  D0 := TProbeSvc.GDestroyed;
+  try
+    try
+      C.RegisterSingleton<IProbeSvc, TProbeSvc>;
+      P1 := C.Resolve(TypeInfo(IProbeSvc));
+      I1 := C.Resolve<IProbeSvc>;
+      P2 := C.Resolve(TypeInfo(IProbeSvc));
+      Created := TProbeSvc.GCreated - C0;
+      Emit('S1-detail', 'objPath1=' + PtrStr(P1) + '(id=' +
+        IntToStr(IdOfObject(P1)) + ') ifacePath=' + PtrStr(Pointer(I1)) +
+        '(id=' + IntToStr(IdOfIntf(I1)) + ') objPath2=' + PtrStr(P2) +
+        '(id=' + IntToStr(IdOfObject(P2)) + ')');
+      Expect('A4-04-single-instance', Created = 1,
+        'one singleton registration must construct exactly 1 instance, got ' +
+        IntToStr(Created));
+      Expect('A4-04-singleton-identity',
+        IdOfObject(P1) = IdOfIntf(I1),
+        'object-path and interface-path resolve to the same instance: id ' +
+        IntToStr(IdOfObject(P1)) + ' vs ' + IntToStr(IdOfIntf(I1)));
+      I1 := nil;
+    except
+      on E: Exception do
+      begin
+        Inc(GFail);
+        Emit('S1-FATAL', E.ClassName + ': ' + E.Message);
+      end;
+    end;
+  finally
+    C.Free;
+    ReportLifetime('S1', C0, D0);
+  end;
+end;
+
+{ First resolve through the INTERFACE path (control). }
+procedure S2_InterfacePathFirst;
+var
+  C: TIoCContainer;
+  C0, D0: Integer;
+  P1, P2: Pointer;
+  I1: IProbeSvc;
+  Created: Integer;
+begin
+  Emit('--- S2 interface path first (control) ---', '');
+  C := TIoCContainer.Create;
+  C0 := TProbeSvc.GCreated;
+  D0 := TProbeSvc.GDestroyed;
+  try
+    try
+      C.RegisterSingleton<IProbeSvc, TProbeSvc>;
+      I1 := C.Resolve<IProbeSvc>;
+      P1 := C.Resolve(TypeInfo(IProbeSvc));
+      P2 := C.Resolve(TypeInfo(IProbeSvc));
+      Created := TProbeSvc.GCreated - C0;
+      Emit('S2-detail', 'ifacePath id=' + IntToStr(IdOfIntf(I1)) +
+        ' objPath1=' + PtrStr(P1) + '(id=' + IntToStr(IdOfObject(P1)) +
+        ') objPath2=' + PtrStr(P2) + '(id=' + IntToStr(IdOfObject(P2)) + ')');
+      Expect('A4-04-a-first-single-instance', Created = 1,
+        'one singleton registration must construct exactly 1 instance, got ' +
+        IntToStr(Created));
+      Expect('A4-04-a-first-identity',
+        (IdOfIntf(I1) = IdOfObject(P1)) and (IdOfObject(P1) = IdOfObject(P2)),
+        'all three resolves return the same instance: id ' +
+        IntToStr(IdOfIntf(I1)) + ' / ' + IntToStr(IdOfObject(P1)) + ' / ' +
+        IntToStr(IdOfObject(P2)));
+      I1 := nil;
+    except
+      on E: Exception do
+      begin
+        Inc(GFail);
+        Emit('S2-FATAL', E.ClassName + ': ' + E.Message);
+      end;
+    end;
+  finally
+    C.Free;
+    ReportLifetime('S2', C0, D0);
+  end;
+end;
+
+{ Instance registration API: each step isolated so a failure localises. }
+procedure S3_RegisteredInstance;
+var
+  C: TIoCContainer;
+  C0, D0: Integer;
+  I0, I1: IProbeSvc;
+  P1: TObject;
+  Step: string;
+begin
+  Emit('--- S3 RegisterSingleton(instance) then both resolve paths ---', '');
+  C := TIoCContainer.Create;
+  C0 := TProbeSvc.GCreated;
+  D0 := TProbeSvc.GDestroyed;
+  try
+    Step := 'register';
+    try
+      I0 := TProbeSvc.Create;
+      try
+        C.RegisterSingleton<IProbeSvc>(I0);
+        Step := 'resolve-interface';
+        I1 := C.Resolve<IProbeSvc>;
+        Emit('S3-detail', 'registered id=' + IntToStr(IdOfIntf(I0)) +
+          ' ifaceResolve id=' + IntToStr(IdOfIntf(I1)) +
+          ' instances-created=' + IntToStr(TProbeSvc.GCreated - C0));
+        Expect('A4-04-registered-instance-reused',
+          IdOfIntf(I0) = IdOfIntf(I1),
+          'registered instance returned by interface resolve: id ' +
+          IntToStr(IdOfIntf(I0)) + ' vs ' + IntToStr(IdOfIntf(I1)) +
+          ' (instances-created=' + IntToStr(TProbeSvc.GCreated - C0) + ')');
+        Step := 'resolve-object';
+        P1 := C.Resolve(TypeInfo(IProbeSvc));
+        Emit('S3-detail', 'objResolve=' + PtrStr(P1) + '(id=' +
+          IntToStr(IdOfObject(P1)) + ') instances-created=' +
+          IntToStr(TProbeSvc.GCreated - C0));
+        Expect('A4-04-registered-instance-object-path',
+          IdOfObject(P1) = IdOfIntf(I0),
+          'registered instance returned by object resolve: id ' +
+          IntToStr(IdOfObject(P1)) + ' vs registered ' + IntToStr(IdOfIntf(I0)) +
+          ' (instances-created=' + IntToStr(TProbeSvc.GCreated - C0) + ')');
+        I1 := nil;
+      finally
+        I0 := nil;
+      end;
+    except
+      on E: Exception do
+      begin
+        Inc(GFail);
+        Emit('S3-EXCEPTION-at-' + Step, E.ClassName + ': ' + E.Message);
+      end;
+    end;
+  finally
+    C.Free;
+    ReportLifetime('S3', C0, D0);
+  end;
+end;
+
+begin
+  GFail := 0;
+  S1_ObjectPathFirst;
+  S2_InterfacePathFirst;
+  S3_RegisteredInstance;
+  Writeln('');
+  Writeln('A4-04 PROBE DONE, failed-assertions=' + IntToStr(GFail));
+end.

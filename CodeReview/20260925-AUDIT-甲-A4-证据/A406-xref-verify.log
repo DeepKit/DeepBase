@@ -1,0 +1,59 @@
+FILE A406_case1.pdf size=957
+  PASS header :: starts with %PDF-1.4
+  PASS eof-marker :: file ends with %%EOF
+  PASS startxref-present :: startxref token found, value=754
+  PASS startxref-target :: offset 754 -> 'xref.0 7.000'
+  xref entries: used=5 free=2
+  PASS xref-entry-points-to-own-object :: 5 in-use entries checked, 0 mismatched
+    object 4 bodies: @197='4 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @705='4 0 obj.<< /Type /Catalog /Pages 5 0 R >>.endobj' ; xref maps object 4 to offset 705
+  FAIL no-duplicate-object-numbers :: duplicated object numbers: 4
+    orphaned body: object 4 at offset 197 is not the body the xref selects (xref selects 705)
+  FAIL no-orphaned-object-bodies :: 1 object bodies unreachable through the xref
+  PASS all-references-resolve :: 5 distinct indirect refs, unresolved: none
+  PASS no-ref-to-free-xref-entry :: references landing on free/offset-0 xref entries: none
+  PASS catalog-pages-type :: catalog->/Pages target subtype checked, 0 bad
+  PASS pages-kids-type :: 1 kid refs checked, 0 bad
+    Type0 font 3 -> descendant 4 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+  FAIL type0-descendant-is-cidfont :: 1 descendant refs checked, 1 bad
+  PASS page-font-resource-type :: 1 page font refs checked, 0 bad
+FILE A406_case2_cjk.pdf size=925
+  PASS header :: starts with %PDF-1.4
+  PASS eof-marker :: file ends with %%EOF
+  PASS startxref-present :: startxref token found, value=722
+  PASS startxref-target :: offset 722 -> 'xref.0 7.000'
+  xref entries: used=5 free=2
+  PASS xref-entry-points-to-own-object :: 5 in-use entries checked, 0 mismatched
+    object 4 bodies: @197='4 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @673='4 0 obj.<< /Type /Catalog /Pages 5 0 R >>.endobj' ; xref maps object 4 to offset 673
+  FAIL no-duplicate-object-numbers :: duplicated object numbers: 4
+    orphaned body: object 4 at offset 197 is not the body the xref selects (xref selects 673)
+  FAIL no-orphaned-object-bodies :: 1 object bodies unreachable through the xref
+  PASS all-references-resolve :: 5 distinct indirect refs, unresolved: none
+  PASS no-ref-to-free-xref-entry :: references landing on free/offset-0 xref entries: none
+  PASS catalog-pages-type :: catalog->/Pages target subtype checked, 0 bad
+  PASS pages-kids-type :: 1 kid refs checked, 0 bad
+    Type0 font 3 -> descendant 4 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+  FAIL type0-descendant-is-cidfont :: 1 descendant refs checked, 1 bad
+  PASS page-font-resource-type :: 1 page font refs checked, 0 bad
+FILE A406_case3_twopage.pdf size=1651
+  PASS header :: starts with %PDF-1.4
+  PASS eof-marker :: file ends with %%EOF
+  PASS startxref-present :: startxref token found, value=1365
+  PASS startxref-target :: offset 1365 -> 'xref.0 11.00'
+  xref entries: used=8 free=3
+  PASS xref-entry-points-to-own-object :: 8 in-use entries checked, 0 mismatched
+    object 7 bodies: @483='7 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @1316='7 0 obj.<< /Type /Catalog /Pages 8 0 R >>.endobj' ; xref maps object 7 to offset 1316
+    object 4 bodies: @203='4 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @1172='4 0 obj.<< /Type /Page.   /Parent 8 0 R.   /Medi' ; xref maps object 4 to offset 1172
+  FAIL no-duplicate-object-numbers :: duplicated object numbers: 7,4
+    orphaned body: object 7 at offset 483 is not the body the xref selects (xref selects 1316)
+    orphaned body: object 4 at offset 203 is not the body the xref selects (xref selects 1172)
+  FAIL no-orphaned-object-bodies :: 2 object bodies unreachable through the xref
+  PASS all-references-resolve :: 8 distinct indirect refs, unresolved: none
+  PASS no-ref-to-free-xref-entry :: references landing on free/offset-0 xref entries: none
+  PASS catalog-pages-type :: catalog->/Pages target subtype checked, 0 bad
+  PASS pages-kids-type :: 2 kid refs checked, 0 bad
+    Type0 font 6 -> descendant 7 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+    Type0 font 3 -> descendant 4 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+  FAIL type0-descendant-is-cidfont :: 2 descendant refs checked, 2 bad
+  PASS page-font-resource-type :: 2 page font refs checked, 0 bad
+
+TOTAL files=3 failed-checks=9

@@ -1,0 +1,12 @@
+COMMAND: A407_DOCX.exe
+EXIT=0
+A4-07 DOCX export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a4\
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A407_case1_text.docx
+  case1 size=1716
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A407_case2_fontquote.docx
+  case2 size=1668
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A407_case3_fontinject.docx
+  case3 size=1684
+EXPORT D:\_Progs\02Business\DeepBase\.tmp\a4\A407_case4_table.docx
+  case4 size=1897
+A4-07 PROBE DONE

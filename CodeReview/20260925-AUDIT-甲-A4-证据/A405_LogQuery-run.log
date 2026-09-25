@@ -1,0 +1,21 @@
+COMMAND: A405_LogQuery.exe
+EXIT=0
+--- case A: analyzer owns data source --- | 
+caseA-before | source-count=4 stats-total=4
+  [detector] tracked data source destroyed inside analyzer call
+caseA-TopExceptions | returned 2 row(s)
+False A4-05-owned-source-freed-mid-query | owned data source destroy count during/after TopExceptions = 1
+False A4-05-restore-after-query | GetStats.TotalCount right after TopExceptions = 0 (expected 4)
+caseA-after-decoy | stats-total=1 top=DECOY-SENTINEL(1)
+caseA-teardown | analyzer freed without incident
+caseA-teardown | probe skipped Src.Free, destroyed-count=1
+--- case B: caller owns data source --- | 
+caseB-before | source-count=4 stats-total=4
+caseB-TopExceptions | returned 2 row(s)
+False A4-05-borrowed-source-alive | GetStats.TotalCount right after TopExceptions = 0 (expected 4, source still alive with 4 rows)
+stats-exception | EAccessViolation: Access violation at address 00007FF698909A84 in module 'A405_LogQuery.exe' (offset 9A84). Read of address 0000002100000000
+False A4-05-source-still-linked | GetStats.TotalCount after appending to the live source = -1 (expected 5)
+caseB-after-append | top=<none>
+caseB-teardown | analyzer freed without incident
+
+A4-05 PROBE DONE, failed-assertions=4

@@ -1,0 +1,230 @@
+A4-01 / A4-02 trace, repo=D:\_Progs\02Business\DeepBase
+generated=2026-09-26 02:09:30
+
+########## A4-01 Core/DeepBase.DataBinding.pas ##########
+
+=== A401-1 does the unit have any DataSource concept? (empty result = no) ===
+$ rg -n DataSource Core\DeepBase.DataBinding.pas
+[rg exit=1]  (1 = no match)
+
+=== A401-2 Unbind removes the entry (what the storage actually does) ===
+$ rg -n -A 20 TBindingManager\.Unbind\(Source Core\DeepBase.DataBinding.pas
+533:procedure TBindingManager.Unbind(Source, Target: TObject);
+534-var
+535-  i: Integer;
+536-  Entry: TBindingEntry;
+537-  Observable: INotifyPropertyChanged;
+538-begin
+539-  for i := FBindings.Count - 1 downto 0 do
+540-  begin
+541-    Entry := FBindings[i];
+542-    if (Entry.Source = Source) and (Entry.Target = Target) then
+543-    begin
+544-      // Unsubscribe from source
+545-      if Supports(Entry.Source, INotifyPropertyChanged, Observable) then
+546-        Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
+547-      
+548-      FBindings.Delete(i);
+549-    end;
+550-  end;
+551-end;
+552-
+553-procedure TBindingManager.UnbindObject(Obj: TObject);
+
+=== A401-3 handler add de-dupes, handler remove deletes ===
+$ rg -n -A 7 TObservableObject\.(Add|Remove)PropertyChangedHandler Core\DeepBase.DataBinding.pas
+257:procedure TObservableObject.AddPropertyChangedHandler(Handler: TPropertyChangedEvent);
+258-begin
+259-  if not FPropertyChangedHandlers.Contains(Handler) then
+260-    FPropertyChangedHandlers.Add(Handler);
+261-end;
+262-
+263:procedure TObservableObject.RemovePropertyChangedHandler(Handler: TPropertyChangedEvent);
+264-begin
+265-  FPropertyChangedHandlers.Remove(Handler);
+266-end;
+267-
+268-procedure TObservableObject.NotifyPropertyChanged(const PropertyName: string);
+269-var
+270-  Handler: TPropertyChangedEvent;
+
+=== A401-4 binding entry holds raw Source/Target pointers ===
+$ rg -n -A 16 FBindings: TList Core\DeepBase.DataBinding.pas
+184:    FBindings: TList<TBindingEntry>;
+185-    FRttiContext: TRttiContext;
+186-    FUpdating: Boolean;
+187-    
+188-    procedure HandleSourcePropertyChanged(const Args: TPropertyChangedEventArgs);
+189-    procedure UpdateTarget(const Entry: TBindingEntry);
+190-    procedure UpdateSource(const Entry: TBindingEntry);
+191-    
+192-    function GetPropertyValue(Obj: TObject; const PropName: string): TValue;
+193-    procedure SetPropertyValue(Obj: TObject; const PropName: string; const Value: TValue);
+194-    
+195-  public
+196-    constructor Create;
+197-    destructor Destroy; override;
+198-    
+199-    /// <summary>
+200-    /// Create a binding between source and target properties
+
+=== A401-5 notification path dereferences those raw pointers ===
+$ rg -n -A 12 procedure TBindingManager\.UpdateAllTargets Core\DeepBase.DataBinding.pas
+588:procedure TBindingManager.UpdateAllTargets;
+589-var
+590-  i: Integer;
+591-begin
+592-  for i := 0 to FBindings.Count - 1 do
+593-    UpdateTarget(FBindings[i]);
+594-end;
+595-
+596-procedure TBindingManager.NotifyTargetChanged(Target: TObject; const PropName: string);
+597-var
+598-  i: Integer;
+599-  Entry: TBindingEntry;
+600-begin
+
+########## A4-02 Core/DeepBase.Manager.pas ##########
+
+=== A402-1 Create*Storage call sites are wrapped in try/except ===
+$ rg -n -B 3 -A 3 Create(Config|I18n|Theme|SecuritySecret|FormState|MRU|Hotkey)Storage failed Core\DeepBase.Manager.pas
+916-      ConfigStorage := FStorage.CreateConfigStorage;
+917-    except
+918-      on E: Exception do
+919:        FLogger.Warn('CreateConfigStorage failed: ' + E.Message, 'DeepBase.Manager');
+920-    end;
+921-  end;
+922-  if Assigned(ConfigStorage) then
+--
+943-      I18nStorage := FStorage.CreateI18nStorage;
+944-    except
+945-      on E: Exception do
+946:        FLogger.Warn('CreateI18nStorage failed: ' + E.Message, 'DeepBase.Manager');
+947-    end;
+948-  end;
+949-  if Assigned(I18nStorage) then
+--
+967-      ThemeStorage := FStorage.CreateThemeStorage;
+968-    except
+969-      on E: Exception do
+970:        FLogger.Warn('CreateThemeStorage failed: ' + E.Message, 'DeepBase.Manager');
+971-    end;
+972-  end;
+973-  if Assigned(ThemeStorage) then
+--
+984-      SecurityStorage := FStorage.CreateSecuritySecretStorage;
+985-    except
+986-      on E: Exception do
+987:        FLogger.Warn('CreateSecuritySecretStorage failed: ' + E.Message, 'DeepBase.Manager');
+988-    end;
+989-  end;
+990-  if Assigned(SecurityStorage) then
+--
+1018-      FormStateStorage := FStorage.CreateFormStateStorage;
+1019-    except
+1020-      on E: Exception do
+1021:        FLogger.Warn('CreateFormStateStorage failed: ' + E.Message, 'DeepBase.Manager');
+1022-    end;
+1023-  end;
+1024-  if Assigned(FormStateStorage) then
+--
+1034-      MRUStorage := FStorage.CreateMRUStorage;
+1035-    except
+1036-      on E: Exception do
+1037:        FLogger.Warn('CreateMRUStorage failed: ' + E.Message, 'DeepBase.Manager');
+1038-    end;
+1039-  end;
+1040-  if Assigned(MRUStorage) then
+--
+1050-      HotkeyStorage := FStorage.CreateHotkeyStorage;
+1051-    except
+1052-      on E: Exception do
+1053:        FLogger.Warn('CreateHotkeyStorage failed: ' + E.Message, 'DeepBase.Manager');
+1054-    end;
+1055-  end;
+1056-  if Assigned(HotkeyStorage) then
+
+=== A402-2 InitializeEx: exception handler leaves FIsInitialized untouched ===
+$ rg -n -A 18 function TDeepBaseManager\.InitializeEx Core\DeepBase.Manager.pas
+655:function TDeepBaseManager.InitializeEx(out ErrorMsg: string): Boolean;
+656-begin
+657-  Result := False;
+658-  ErrorMsg := '';
+659-  
+660-  // BASIC-018 fix: protect against concurrent initialization. Finalize
+661-  // already uses FLock; initialization must use the same lock so a
+662-  // racing second thread sees FIsInitialized = True after the first
+663-  // thread completes, rather than duplicating module creation.
+664-  TMonitor.Enter(FLock);
+665-  try
+666-    if FIsInitialized then
+667-    begin
+668-      Result := True;
+669-      Exit;
+670-    end;
+671-    
+672-    try
+673-      // 1. Find and verify root directory
+
+=== A402-3 Finalize: early exit when FIsInitialized = False ===
+$ rg -n -A 16 procedure TDeepBaseManager\.Finalize; Core\DeepBase.Manager.pas
+791:procedure TDeepBaseManager.Finalize;
+792-begin
+793-  // CR-289 fix: FIsInitialized check moved inside lock to prevent race with
+794-  // concurrent Initialize; also WaitForPendingReadyTasks no longer holds
+795-  // the main lock during its 5-second wait, preventing potential deadlock
+796-  TMonitor.Enter(FLock);
+797-  try
+798-    if not FIsInitialized then
+799-      Exit;
+800-
+801-    // Release the lock while waiting for async callbacks so they can
+802-    // acquire it if needed (prevents deadlock), then re-acquire.
+803-    TMonitor.Exit(FLock);
+804-    try
+805-      WaitForPendingReadyTasks;
+806-    finally
+807-      TMonitor.Enter(FLock);
+
+=== A402-4 FinalizeModules: the only place modules are freed ===
+$ rg -n -A 26 procedure TDeepBaseManager\.FinalizeModules; Core\DeepBase.Manager.pas
+1145:procedure TDeepBaseManager.FinalizeModules;
+1146-begin
+1147-  // BASIC-020 fix: clear global translate callback BEFORE releasing FI18n,
+1148-  // so any late T('...') call after finalize does not access freed memory.
+1149-  SetGlobalTranslateCallback(nil);
+1150-
+1151-  // Unload plugins first (reverse order of initialization)
+1152-  if Assigned(FPluginManager) then FreeAndNil(FPluginManager);
+1153-  if Assigned(FHotkeys) then FreeAndNil(FHotkeys);
+1154-  if Assigned(FMRU) then FreeAndNil(FMRU);
+1155-  if Assigned(FFormState) then FreeAndNil(FFormState);
+1156-  if Assigned(FSecurity) then FreeAndNil(FSecurity);
+1157-  if Assigned(FTheme) then FreeAndNil(FTheme);
+1158-  if Assigned(FI18n) then FreeAndNil(FI18n);
+1159-  if Assigned(FConfig) then FreeAndNil(FConfig);
+1160-  if Assigned(FLogger) then
+1161-  begin
+1162-    SetGlobalLogger(nil);
+1163-    FreeAndNil(FLogger);
+1164-  end;
+1165-end;
+1166-
+1167-function TDeepBaseManager.FindRootPath: string;
+1168-var
+1169-  ExeDir, AppDataDir: string;
+1170-  RootTxtPath, ReadPath: string;
+1171-begin
+
+=== A402-5 unguarded module/storage consumption inside InitializeModules ===
+$ rg -n FConfig\.GetConfig|FTheme\.ApplyTheme|FI18n\.CurrentLanguage|RunOperationalRetention|LoadAllPlugins Core\DeepBase.Manager.pas
+121:    procedure RunOperationalRetention;
+996:  FCurrentLanguage := FConfig.GetConfig(SConfigKeyLanguage, SDefaultLanguage);
+997:  FI18n.CurrentLanguage := FCurrentLanguage;
+999:  FCurrentTheme := FConfig.GetConfig(SConfigKeyTheme, SDefaultTheme);
+1003:    FTheme.ApplyTheme(FCurrentTheme);
+1008:    var LogLevelStr := FConfig.GetConfig(SConfigKeyLogLevel, 'INFO');
+1011:  RunOperationalRetention;
+1066:  FPluginManager.LoadAllPlugins;
+1383:procedure TDeepBaseManager.RunOperationalRetention;
+

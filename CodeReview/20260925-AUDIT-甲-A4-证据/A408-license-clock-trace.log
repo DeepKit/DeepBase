@@ -1,0 +1,164 @@
+A4-08 trace, repo=D:\_Progs\02Business\DeepBase
+generated=2026-09-26 02:08:09
+
+=== T1 Core/DeepBase.License.pas: time source / expiry decision / guard symbols ===
+$ rg -n IsExpired|ExpiresAt|LastSeen|LastCheck|Rewind|Monotonic|TimeGuard|GetCorrectedNow Core\DeepBase.License.pas
+61:    ExpiresAt: TDateTime;
+67:    function IsExpired: Boolean;
+130:      ExpiresAt: TDateTime;
+179:  Result.ExpiresAt := 0;
+190:function TLicenseInfo.IsExpired: Boolean;
+192:  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+197:  if ExpiresAt <= 0 then
+199:  else if Now > ExpiresAt then
+202:    Result := DaysBetween(Now, ExpiresAt);
+349:  ExpiresAt: TDateTime;
+365:    JsonObj.AddPair('e', TJSONNumber.Create(DateTimeToUnix(ExpiresAt)));
+445:      Result.ExpiresAt := UnixToDateTime(JsonObj.GetValue<Int64>('e', 0));
+467:  if Result.IsExpired then
+
+=== T1b TLicenseInfo.IsExpired body ===
+$ rg -n -A 14 function TLicenseInfo.IsExpired Core\DeepBase.License.pas
+190:function TLicenseInfo.IsExpired: Boolean;
+191-begin
+192-  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+193-end;
+194-
+195-function TLicenseInfo.DaysRemaining: Integer;
+196-begin
+197-  if ExpiresAt <= 0 then
+198-    Result := MaxInt  // Perpetual
+199-  else if Now > ExpiresAt then
+200-    Result := 0
+201-  else
+202-    Result := DaysBetween(Now, ExpiresAt);
+203-end;
+204-
+
+=== T1c raw Now/Date usage inside Core/DeepBase.License.pas ===
+$ rg -n \bNow\b|\bDate\b|DateTime Core\DeepBase.License.pas
+60:    IssuedAt: TDateTime;
+61:    ExpiresAt: TDateTime;
+130:      ExpiresAt: TDateTime;
+192:  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+199:  else if Now > ExpiresAt then
+202:    Result := DaysBetween(Now, ExpiresAt);
+349:  ExpiresAt: TDateTime;
+365:    JsonObj.AddPair('e', TJSONNumber.Create(DateTimeToUnix(ExpiresAt)));
+366:    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(Now)));
+445:      Result.ExpiresAt := UnixToDateTime(JsonObj.GetValue<Int64>('e', 0));
+446:      Result.IssuedAt := UnixToDateTime(JsonObj.GetValue<Int64>('i', 0));
+
+=== T2 Features/DeepBase.TimeGuard.pas: guard API that exists in the repo ===
+$ rg -n tg[A-Z][A-Za-z]*|function |procedure |class function|class procedure Features\DeepBase.TimeGuard.pas
+29:    if R = tgClockRewound then
+48:    tgOk,             // Local time matches server time within tolerance
+49:    tgSkewMinor,      // Deviation <= MaxDriftMinutes (NTP sync normal range)
+50:    tgSkewMajor,      // Deviation > MaxDriftMinutes but < 24 hours (suspicious)
+51:    tgClockRewound,   // Local time < last known good time (clock was set back)
+52:    tgOffline         // Cannot reach server — using cached data
+65:    function FetchServerTime(const AUrl: string): TDateTime;
+77:    function FetchServerTime(const AUrl: string): TDateTime;
+86:    procedure SaveSecret(const AKey, AValue: string);
+87:    function LoadSecret(const AKey: string): string;
+112:    function GetHttpTransport: ITimeGuardHttpTransport;
+113:    function GetSecretStore: ITimeGuardSecretStore;
+114:    procedure SaveLastKnownGoodTime(ATime: TDateTime);
+115:    function LoadLastKnownGoodTime: TDateTime;
+126:    procedure SetServerUrl(const AUrl: string);
+129:    procedure SetHttpTransport(const ATransport: ITimeGuardHttpTransport);
+132:    procedure SetSecretStore(const AStore: ITimeGuardSecretStore);
+146:    function Verify: TTimeGuardResult;
+152:    function GetCorrectedNow: TDateTime;
+156:    /// True for tgOk and tgSkewMinor (within NTP tolerance).
+158:    function IsTimeTrusted: Boolean;
+174:function TimeGuardResultToStr(AResult: TTimeGuardResult): string;
+183:function ParseRfc822Date(const S: string): TDateTime;
+278:function TNetTimeGuardHttp.FetchServerTime(const AUrl: string): TDateTime;
+325:  FLastVerifyResult := tgOffline;
+329:procedure TTimeGuard.SetServerUrl(const AUrl: string);
+337:procedure TTimeGuard.SetHttpTransport(const ATransport: ITimeGuardHttpTransport);
+342:procedure TTimeGuard.SetSecretStore(const AStore: ITimeGuardSecretStore);
+347:function TTimeGuard.GetHttpTransport: ITimeGuardHttpTransport;
+354:function TTimeGuard.GetSecretStore: ITimeGuardSecretStore;
+359:procedure TTimeGuard.SaveLastKnownGoodTime(ATime: TDateTime);
+375:function TTimeGuard.LoadLastKnownGoodTime: TDateTime;
+393:function TTimeGuard.Verify: TTimeGuardResult;
+423:      Result := tgClockRewound;
+427:      Result := tgOffline;
+441:    Result := tgClockRewound;
+453:    Result := tgOk
+455:    Result := tgSkewMinor
+457:    Result := tgSkewMajor;  // Suspicious deviation
+462:function TTimeGuard.GetCorrectedNow: TDateTime;
+470:function TTimeGuard.IsTimeTrusted: Boolean;
+472:  Result := FLastVerifyResult in [tgOk, tgSkewMinor, tgOffline];
+475:function TimeGuardResultToStr(AResult: TTimeGuardResult): string;
+478:    tgOk:           Result := 'OK';
+479:    tgSkewMinor:    Result := 'MinorSkew';
+480:    tgSkewMajor:    Result := 'MajorSkew';
+481:    tgClockRewound: Result := 'ClockRewound';
+482:    tgOffline:      Result := 'Offline';
+
+=== T3 every unit that references DeepBase.TimeGuard ===
+$ rg -ln DeepBase\.TimeGuard -g *.pas
+Features\DeepBase.Licensing.pas
+Features\DeepBase.TimeGuard.pas
+
+=== T4 Features/DeepBase.Licensing.pas: TimeGuard wiring ===
+$ rg -n TimeGuard|VerifyTime|GetCorrectedNow|tgClock Features\DeepBase.Licensing.pas
+52:  DeepBase.TimeGuard;
+115:    FTimeGuard: TTimeGuard;
+231:    function VerifyTime: TTimeGuardResult;
+237:    function GetCorrectedNow: TDateTime;
+310:    property TimeGuard: TTimeGuard read FTimeGuard;
+394:  FTimeGuard.Free;
+821:function TDeepLicensing.VerifyTime: TTimeGuardResult;
+824:  if FTimeGuard = nil then
+826:    FTimeGuard := TTimeGuard.Create(FConfig.AppID + '.timeguard');
+827:    FTimeGuard.SetServerUrl(FConfig.ServerBaseURL);
+829:  Result := FTimeGuard.Verify;
+832:function TDeepLicensing.GetCorrectedNow: TDateTime;
+834:  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+835:    Result := FTimeGuard.GetCorrectedNow
+842:  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+843:    Result := FTimeGuard.IsTimeTrusted
+
+=== T4b Features/DeepBase.Licensing.pas: raw Now / expiry decision ===
+$ rg -n \bNow\b|IsExpired|ExpiresAt Features\DeepBase.Licensing.pas
+325:  CFG_TRIAL_EXPIRES        = 'Licensing.TrialExpiresAt';
+328:  CFG_LAST_SNAPSHOT_EXPIRES = 'Licensing.LastSnapshotExpiresAt';
+685:  var ExpiresAt: TDateTime;
+686:  if not TryISO8601ToDate(ExpiresStr, ExpiresAt, False) then
+689:  var NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+690:  if ExpiresAt <= NowUtc then
+693:  Result := DaysBetween(NowUtc, ExpiresAt);
+837:    Result := Now;
+968:  var StartTime := Now;
+974:    if SecondsBetween(StartTime, Now) >= TimeoutSec then
+1000:      SetConfigStr(CFG_LAST_SNAPSHOT_EXPIRES, Snapshot.ExpiresAtISO);
+
+=== T5 units consuming Core/DeepBase.License (potential unprotected consumers) ===
+$ rg -ln DeepBase\.License -g *.pas
+Core\DeepBase.License.pas
+FMX\DeepBase.FMX.LicenseStatusPanel.pas
+VCL\DeepBase.VCL.LicenseStatusPanel.pas
+VCL\DeepBase.VCL.LicenseAuthDialog.pas
+Persistence\DeepBase.Persistence.License.FireDAC.pas
+Tools\Studio\Forms\Studio.LicenseForm.pas
+Examples\FullDemo\FullDemo.MainForm.pas
+Tests\Test.DeepBase.License.pas
+Tests\Test.DeepBase.LicenseSecret.pas
+Features\DeepBase.Unlock.pas
+
+=== T6 VCL/FMX license UI references ===
+$ rg -n DeepBase\.(TimeGuard|Licensing|License) VCL\DeepBase.VCL.LicenseAuthDialog.pas VCL\DeepBase.VCL.LicenseStatusPanel.pas FMX\DeepBase.FMX.LicenseStatusPanel.pas
+VCL\DeepBase.VCL.LicenseAuthDialog.pas:22:  DeepBase.License;
+VCL\DeepBase.VCL.LicenseStatusPanel.pas:20:  DeepBase.License;
+FMX\DeepBase.FMX.LicenseStatusPanel.pas:29:  DeepBase.License;
+
+=== T7 files touching the rollback guard (incl. tests) ===
+$ rg -ln TimeGuard|ClockRewind|Rewind|tgClock -g *.pas
+Features\DeepBase.Licensing.pas
+Features\DeepBase.TimeGuard.pas
+

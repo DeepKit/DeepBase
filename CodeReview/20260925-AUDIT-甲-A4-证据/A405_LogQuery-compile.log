@@ -1,0 +1,9 @@
+COMMAND: dcc64 -B -Q -NU".\dcu" -E"." -U".;..\..\Core;..\..\Features;..\..\Persistence;..\..\VCL;..\..\Governance" -NS"System;System.Win;Winapi;Vcl;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap" A405_LogQuery.dpr
+EXIT=0
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+5448 lines, 0.62 seconds, 3085644 bytes code, 398376 bytes data.

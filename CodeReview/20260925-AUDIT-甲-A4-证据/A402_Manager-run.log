@@ -1,0 +1,10 @@
+COMMAND: A402_Manager.exe
+EXIT=0
+A402 begin
+S0-baseline init=1 isInit=1 loggerInstalled=1 lastError=
+S0-baseline after_free loggerInstalled=0 loggerPtrBefore=0000028BDC2A03D0 loggerPtrAfter=0000028BDC29F560 samePtr=0
+S1-CreateConfigStorageRaises init=1 isInit=1 loggerInstalled=1 lastError=
+S1-CreateConfigStorageRaises after_free loggerInstalled=0 loggerPtrBefore=0000028BDC2A0530 loggerPtrAfter=0000028BDC2A03D0 samePtr=0
+S2-ConfigReadValueRaises init=0 isInit=0 loggerInstalled=1 lastError=INJECTED-ReadValue
+S2-ConfigReadValueRaises after_free loggerInstalled=1 loggerPtrBefore=0000028BDC29FFB0 loggerPtrAfter=0000028BDC29FFB0 samePtr=1
+A402 end
