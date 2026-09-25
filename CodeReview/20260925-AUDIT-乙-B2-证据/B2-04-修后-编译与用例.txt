@@ -1,0 +1,59 @@
+# B2-04 修后取证：编译面 + 虚假/恒真面清零
+
+== 1) 两件单元编译（SUT + 测试单元），零 Error/Warning/Hint ==
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1227 lines, 0.30 seconds, 5138 bytes code, 1052 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23530 lines, 1.44 seconds, 16838 bytes code, 2140 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+== 2) 旧虚假面在两件里残留计数（应全 0）==
+SimulateMouseClick SUT: 0 测试: 0 
+SuccessCount       SUT: 0 测试: 0 
+TotalAttempts      SUT: 0 测试: 0 
+TBitmap32          SUT: 0 测试: 0 
+Graphics32         SUT: 0 测试: 0 
+Assert.Pass        SUT: 0 测试: 0 
+Placeholder        SUT: 0 测试: 0 
+ = default         SUT: 0 测试: 0 
+
+== 3) 假分叉测试单元删除确认（.Impl 已不在工作树）==
+0 件（0 = 已删）
+D  Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.Impl.pas
+
+== 4) 新 SUT 的 uses 面 ==
+interface
+
+uses
+  System.Types,
+  Winapi.Windows,
+  DeepBase.Desktop.Perception.ColorMatch,
+  DeepBase.Desktop.Screen.Click.RegionLocator,
+  DeepBase.Desktop.Screen.Click.DPIMapper;
+
+type
+
+== 5) 判定/派发分段落点（判定只取帧+定位，派发只经 IMouseDevice 一次）==
+32:    function MoveCursor(X, Y: Integer): Boolean;
+33:    // 在当前光标位置按下并释放左键（调用前必须已 MoveCursor 成功）。
+39:    function MoveCursor(X, Y: Integer): Boolean;
+141:function TWinMouseDevice.MoveCursor(X, Y: Integer): Boolean;
+186:  if not FMouse.MoveCursor(X, Y) then
+188:  FMouse.Click;
+207:    FLocator.CaptureScreen;
+208:    LHittest := FLocator.FindTemplate(ATemplate);
+225:  Result := False;
+255:    FLocator.CaptureScreen;
+256:    Result := FLocator.FindTemplate(ATemplate);

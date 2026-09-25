@@ -1,0 +1,102 @@
+# B2-04 修前基线取证（SmartExecutor：容差网格真实派发 + 恒真判定）
+# 取法：现网 SUT 直接编译取真实红；错误清单用「只替换两个不存在依赖名」的等行号副本编译取得，
+#       行号与原文件一一对应（副本只改 uses 面，不动任何语句）。
+
+================================================================
+[1] 工单点名缺陷（HEAD 原文 Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas:141-157）
+================================================================
+  for DeltaX := -Tolerance to +Tolerance do
+    for DeltaY := -Tolerance to +Tolerance do
+    begin
+      Inc(TotalAttempts);
+      var TestX := X + DeltaX;
+      var TestY := Y + DeltaY;
+
+      // Execute click at this offset
+      SimulateMouseClick(TestX, TestY);          <- 判定阶段就发真实输入，一轮 (2T+1)^2 次（T=5 即 121 次）
+
+      // In real implementation, would check result here
+      // For now, assume success after first attempt
+      if DeltaX = 0 then
+        Inc(SuccessCount);                        <- 网格必然经过 DeltaX=0
+    end;
+
+  Result := SuccessCount > 0;                     <- 由上一行保证恒真：失败也报成功
+
+[2] 现网 SUT 直接编译（原样，搜索面不含 graphics32）
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(27) Fatal: F2613 Unit 'Graphics32' not found.
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+
+[3] 同一件加 graphics32 源码目录仍 F2613 —— 本机该库真单元名是 GR32，'Graphics32' 这个单元名不存在
+单元: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas   (graphics32 搜索面: 1)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(27) Fatal: F2613 Unit 'Graphics32' not found.
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+
+[4] 第二个不存在依赖：uses DeepBase.Automation.ActionEngine.Core
+--- 全仓查找该单元文件（0 命中）与引用面 ---
+find . -iname '*ActionEngine*'  =>  无结果（仅本件 uses 引用它，见下）
+
+[5] 等行号副本（Graphics32→GR32、删掉不存在的 ActionEngine.Core 引用）编译错误清单
+================================================================
+单元: .tmp/b2/b4pre/DeepBase.Desktop.Screen.Click.SmartExecutor.pas   (graphics32 搜索面: 1)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(53) Error: E2204 Improper GUID syntax
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(57) Error: E2268 Parameters of this type cannot have default values
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(61) Error: E2268 Parameters of this type cannot have default values
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(65) Error: E2268 Parameters of this type cannot have default values
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(122) Error: E2003 Undeclared identifier: 'SetCursorPosition'
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(197) Error: E2064 Left side cannot be assigned to
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(200) Error: E2064 Left side cannot be assigned to
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(203) Error: E2010 Incompatible types: 'DeepBase.Desktop.Perception.ColorMatch.TPixelBuffer' and 'GR32.TBitmap32'
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(261) Error: E2003 Undeclared identifier: 'Default'
+.tmp\b2\b4pre\DeepBase.Desktop.Screen.Click.SmartExecutor.pas(270) Error: E2010 Incompatible types: 'DeepBase.Desktop.Perception.ColorMatch.TPixelBuffer' and 'GR32.TBitmap32'
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+
+错误归类（副本共 10 项，行号对应 HEAD 原文件）：
+  :53  E2204 接口 GUID {ABCD9012-34EF-GHIJ-KLMN-OPQRSTUVWXYA} 非十六进制（GHIJ/KLMN 不是合法 hex 段）
+  :57/:61/:65 E2268 record 型参数不能带默认值 —— 三处 `const Options: TClickOptions = default`
+  :122 E2003 SetCursorPosition 不存在（Win32 口径是 SetCursorPos，返回 Boolean；旧码忽略其结果）
+  :197/:200 E2064 左侧不可赋值 —— 在 const 参数 Options 上写 Options.Tolerance.MinConfidence := 0.7
+  :203/:270 E2010 TPixelBuffer 与 GR32.TBitmap32 类型不兼容 —— B2-05 已把定位层像素口径收敛到
+             ColorMatch.TPixelBuffer，本件仍按 TBitmap32 传参，接口两侧不对称
+  :261 E2003 TMatchResult.Default 不存在 —— B2-05 收口为 TMatchResult.NotFound
+
+[6] 既有测试面：两件测试单元都不能真跑，也不构成回归
+--- Tests/Test…SmartExecutor.pas（HEAD 原文尾段）：注册的是从未赋值的 global ---
+var
+  Implementation : TTestSmartClickExecutor;
+
+initialization
+  TDUnitX.RegisterTestFixture(Implementation);
+
+--- 全仓 'Implementation :=' 赋值点计数（0 ⇒ fixture 注册的是 nil，真跑必 0 命中或崩溃）---
+2 处
+--- Tests/Test…SmartExecutor.Impl.pas 假断言面（本机 RTL/DUnitX 无这些 API）---
+95:  Assert.Pass('ClickByTemplate executed without exception');
+133:  Assert.GreaterOrEqual(Elapsed, 200, 'Retry delays applied correctly');
+181:  Assert.GreaterOrEqual(Elapsed, 500, 'Timeout respected');
+192:  Assert.Pass('WaitForTargetToAppear executed without exception');
+--- 该件引用的 TBitmap32 面（GR32 无 Allocate/RandomFill 等被调用成员）---
+30:    FTestBitmap: TBitmap32;
+63:  FTestBitmap := TBitmap32.Create;
+64:  FTestBitmap.Allocate(50, 50);
+100:  NoiseBitmap: TBitmap32;
+103:  NoiseBitmap := TBitmap32.Create;
+105:    NoiseBitmap.Allocate(50, 50);
+106:    NoiseBitmap.RandomFill;  // Random noise won't match anything

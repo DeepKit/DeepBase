@@ -441,8 +441,6 @@
     "Tests/Test.DeepBase.Desktop.Perception.FrameCache.pas",
     "Tests/Test.DeepBase.Desktop.Perception.FrameDiffer.pas",
     "Tests/Test.DeepBase.Desktop.Perception.pas",
-    "Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.Impl.pas",
-    "Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas",
     "Tests/Test.DeepBase.Diagnose.pas",
     "Tests/Test.DeepBase.DiagnosticLogger.pas",
     "Tests/Test.DeepBase.Diff.pas",

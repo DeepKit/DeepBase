@@ -1,0 +1,81 @@
+# B2-04 反事实探针原件：两次变异各自把一处修好的行为改回缺陷形态，用例必须变红
+# 判据来自 SPW A0031 反事实检查；变异只动工作树副本，脚本 trap 还原后再复跑确认回绿
+
+==== 变异一：把「判定不通过一律返回 False」改回恒真（原缺陷 Result := SuccessCount > 0 的等价形态） ====
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas 's/^  Result := False;/  Result := True;/'
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=15 pass=15 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/^  Result := False;/  Result := True;/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -222,7 +222,7 @@
+     if LAttempt < LTolerance.MaxRetries then
+       Sleep(LTolerance.RetryDelayMs);
+   end;
+-  Result := False;
++  Result := True;
+ end;
+ 
+ function TSmartClickExecutor.ClickByTemplate(const ATemplate: TPixelBuffer): Boolean;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 15
+Tests Ignored : 0
+Tests Passed  : 12
+Tests Failed  : 3
+Tests Errored : 0
+  Test.DeepBase.Desktop.Screen.Click.SmartExecutor.TTestSmartClickExecutor.TestUnconfirmedTargetNeverClicksAndReturnsFalse
+  Test.DeepBase.Desktop.Screen.Click.SmartExecutor.TTestSmartClickExecutor.TestNonPositiveRetriesStillProbesOnce
+  Test.DeepBase.Desktop.Screen.Click.SmartExecutor.TTestSmartClickExecutor.TestAnchorBeyondToleranceRejected
+RUNNER_STATS fixtureCount=1 testCount=15 pass=12 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=15 pass=15 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas ==
+
+==== 变异二：去掉主锚点的命中区校验（等价于旧实现「不判定就派发」） ====
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas 's/LHittest\.Rect\.Contains\(LAnchor\)/True/'
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=15 pass=15 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/LHittest\.Rect\.Contains\(LAnchor\)/True/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -210,7 +210,7 @@
+     begin
+       LAnchor := AnchorPoint(LHittest, AOptions);
+       // 主锚点优先，再按行扫描容差邻域；候选点必须仍落在本帧命中区内才算确认。
+-      if LHittest.Rect.Contains(LAnchor) then
++      if True then
+         Exit(DispatchClick(LAnchor.X, LAnchor.Y));
+       for LDeltaY := -LTolerance.TolerancePixels to LTolerance.TolerancePixels do
+         for LDeltaX := -LTolerance.TolerancePixels to LTolerance.TolerancePixels do
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 15
+Tests Ignored : 0
+Tests Passed  : 13
+Tests Failed  : 2
+Tests Errored : 0
+  Test.DeepBase.Desktop.Screen.Click.SmartExecutor.TTestSmartClickExecutor.TestAnchorBeyondToleranceRejected
+  Test.DeepBase.Desktop.Screen.Click.SmartExecutor.TTestSmartClickExecutor.TestToleranceGridRecoversNearMissAnchor
+RUNNER_STATS fixtureCount=1 testCount=15 pass=13 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=15 pass=15 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas ==

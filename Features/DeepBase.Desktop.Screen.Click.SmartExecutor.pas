@@ -1,101 +1,110 @@
 ﻿{ ============================================================================
   DeepBase.Desktop.Screen.Click.SmartExecutor
   ---------------------------------------------------------------------------
-  Version     : 0.1 (Unstable API)
-  Description : Intelligent click execution with multi-point tolerance matching,
-                timeout/retry mechanisms, and fallback anchor point strategies.
-  
-  Features:
-    - Smart fallback: If primary anchor fails, try alternative points
-    - Configurable retry count and delay between attempts
-    - Tolerance-based position adjustment (+/- n pixels)
-    - Integration with RegionLocator for visual element detection
-    
-  Performance:
-    - Parallel anchor point evaluation (future optimization)
-    - Early exit on successful match
-  ========================================================================== }
+  版本     : 0.1 (API 不稳定)
+  职责     : 把「视觉定位判定」与「真实输入派发」分成两段——先用虚拟探针确认命中，
+             确认之后才派发恰好一次真实点击；返回值反映真实判定结果。
+
+  口径归一：像素类型复用 DeepBase.Desktop.Perception.ColorMatch 的 TPixelBuffer，
+            匹配走 DeepBase.Desktop.Screen.Click.RegionLocator，DPI 换算走
+            IClickDMapper；本单元不引入第二套图像类型或第二个 DPI 真源。
+  可测性  ：真实输入只经 IMouseDevice 一个出口，测试注入计数替身，于是
+            「判定不通过 ⇒ 返回 false 且零派发」「判定通过 ⇒ 恰好一次派发」可固化。
+ ========================================================================== }
 
 unit DeepBase.Desktop.Screen.Click.SmartExecutor;
 
 interface
 
 uses
-  System.SysUtils,
+  System.Types,
   Winapi.Windows,
-  System.Variants,
-  Graphics32,
+  DeepBase.Desktop.Perception.ColorMatch,
   DeepBase.Desktop.Screen.Click.RegionLocator,
-  DeepBase.Desktop.Screen.Click.DPIMapper,
-  DeepBase.Automation.ActionEngine.Core;
+  DeepBase.Desktop.Screen.Click.DPIMapper;
 
 type
-  TClickTolerance = record
-    MinConfidence: Double;        // Minimum match confidence (default 0.6)
-    TolerancePixels: Integer;     // +/- pixel tolerance around matched position (default 5)
-    MaxRetries: Integer;          // Maximum retry attempts (default 3)
-    RetryDelayMs: Cardinal;       // Delay between retries in ms (default 500)
+  // OS 输入派发的唯一出口。抽象出来只为把判定与派发解耦：判定阶段一个真实输入
+  // 都不许发出去（旧实现一边判定一边按容差网格逐点真点击，一轮 121 次）。
+  IMouseDevice = interface
+    ['{0BE5D6A3-1735-4661-A99A-3302DF2D6CED}']
+    // 返回 SetCursorPos 的真实结果；返回 False 时调用方不得继续派发点击。
+    function MoveCursor(X, Y: Integer): Boolean;
+    // 在当前光标位置按下并释放左键（调用前必须已 MoveCursor 成功）。
+    procedure Click;
+  end;
+
+  TWinMouseDevice = class(TInterfacedObject, IMouseDevice)
+  public
+    function MoveCursor(X, Y: Integer): Boolean;
+    procedure Click;
   end;
 
   TClickAnchorMode = (
-    camCenter,           // Use center of matched region
-    camTopLeft,         // Use top-left corner
-    camBestFit,         // Try multiple anchors until one works
-    camCustom           // Custom anchor offset
+    camCenter,    // 命中区中心
+    camTopLeft,   // 命中区左上角
+    camCustom     // 命中区左上角 + 自定义偏移
   );
+
+  TClickTolerance = record
+    TolerancePixels: Integer; // 邻域探测半径；0 = 只探主锚点
+    MaxRetries: Integer;      // 判定不通过时重新取帧判定的轮数
+    RetryDelayMs: Cardinal;   // 轮间隔
+    class function DefaultValue: TClickTolerance; static;
+  end;
 
   TClickOptions = record
     AnchorMode: TClickAnchorMode;
-    CustomOffsetX, CustomOffsetY: Integer;  // For camCustom mode
+    CustomOffsetX: Integer;
+    CustomOffsetY: Integer;
     Tolerance: TClickTolerance;
+    class function DefaultValue: TClickOptions; static;
   end;
 
   ISmartClickExecutor = interface
-    ['{ABCD9012-34EF-GHIJ-KLMN-OPQRSTUVWXYA}']
-    
-    // Execute click based on image template match
-    function ClickByTemplate(const TemplateImage: TBitmap32;
-      const Options: TClickOptions = default): Boolean; overload;
-      
-    // Execute click at absolute coordinates with tolerance
-    function ClickAtPoint(X, Y: Integer; 
-      const Tolerance: TClickTolerance = default): Boolean; overload;
-      
-    // Execute click at relative position (0.0-1.0 per monitor DPI)
-    function ClickAtRelative(RelativeX, RelativeY: Double;
-      const Options: TClickOptions = default): Boolean;
-      
-    // Helper: Validate click target exists
-    function WaitForTargetToAppear(const TemplateImage: TBitmap32;
-      TimeoutMs: Cardinal): TMatchResult;
+    ['{6798745E-2753-4D5A-9C8B-8C3CCA7984EE}']
+
+    // 取帧定位 → 虚拟探针确认锚点仍在命中区内 → 一次真实点击。
+    // 判定不通过一律 False 且零派发。
+    function ClickByTemplate(const ATemplate: TPixelBuffer;
+      const AOptions: TClickOptions): Boolean; overload;
+    function ClickByTemplate(const ATemplate: TPixelBuffer): Boolean; overload;
+
+    // 绝对坐标点击没有可比对的期望目标，因此不存在「容差邻域」可言：
+    // 只移动光标并派发一次，返回值是光标移动的真实结果。
+    function ClickAtPoint(X, Y: Integer): Boolean;
+
+    // 相对坐标 (0.0-1.0) 经 DPI 换算成绝对坐标后点击
+    function ClickAtRelative(RelativeX, RelativeY: Double): Boolean;
+
+    // 在超时窗口内轮询等待目标出现；返回最后一次定位结果（超时即未命中形状）。
+    function WaitForTargetToAppear(const ATemplate: TPixelBuffer;
+      ATimeoutMs: Cardinal): TMatchResult;
   end;
 
   TSmartClickExecutor = class(TInterfacedObject, ISmartClickExecutor)
   private
-    FRegionLocator: IScreenRegionLocator;
-    FDPIMapper: IClickDMapper;
-    
-    procedure SimulateMouseClick(X, Y: Integer);
-    function TryClickWithTolerance(X, Y: Integer; 
-      Tolerance: Integer): Boolean;
-    function FindBestAnchorPoint(
-      const MatchResult: TMatchResult;
-      const Options: TClickOptions): TPoint;
+    FLocator: IScreenRegionLocator;
+    FMouse: IMouseDevice;
+    FDPI: IClickDMapper;
+    function AnchorPoint(const AMatch: TMatchResult;
+      const AOptions: TClickOptions): TPoint;
+    function DispatchClick(X, Y: Integer): Boolean;
   public
-    constructor Create;
-    
-    // ISmartClickExecutor implementation
-    function ClickByTemplate(const TemplateImage: TBitmap32;
-      const Options: TClickOptions): Boolean; overload;
-    function ClickAtPoint(X, Y: Integer;
-      const Tolerance: TClickTolerance): Boolean; overload;
-    function ClickAtRelative(RelativeX, RelativeY: Double;
-      const Options: TClickOptions): Boolean;
-    function WaitForTargetToAppear(const TemplateImage: TBitmap32;
-      TimeoutMs: Cardinal): TMatchResult;
+    constructor Create(const ALocator: IScreenRegionLocator;
+      const AMouse: IMouseDevice; const ADPI: IClickDMapper); overload;
+    // 生产装配：主屏定位器 + 真实鼠标 + 单例 DPI 换算器
+    constructor Create; overload;
+
+    function ClickByTemplate(const ATemplate: TPixelBuffer;
+      const AOptions: TClickOptions): Boolean; overload;
+    function ClickByTemplate(const ATemplate: TPixelBuffer): Boolean; overload;
+    function ClickAtPoint(X, Y: Integer): Boolean;
+    function ClickAtRelative(RelativeX, RelativeY: Double): Boolean;
+    function WaitForTargetToAppear(const ATemplate: TPixelBuffer;
+      ATimeoutMs: Cardinal): TMatchResult;
   end;
 
-// Global accessor
 procedure InitializeSmartClickExecutor;
 function CurrentSmartClickExecutor: ISmartClickExecutor;
 
@@ -104,186 +113,155 @@ implementation
 var
   GSmartExecutor: ISmartClickExecutor = nil;
 
+const
+  // 等待目标出现时的轮询间隔
+  CK_WAIT_POLL_MS = 100;
+
+{ TClickTolerance }
+
+class function TClickTolerance.DefaultValue: TClickTolerance;
+begin
+  Result.TolerancePixels := 5;
+  Result.MaxRetries := 3;
+  Result.RetryDelayMs := 500;
+end;
+
+{ TClickOptions }
+
+class function TClickOptions.DefaultValue: TClickOptions;
+begin
+  Result.AnchorMode := camCenter;
+  Result.CustomOffsetX := 0;
+  Result.CustomOffsetY := 0;
+  Result.Tolerance := TClickTolerance.DefaultValue;
+end;
+
+{ TWinMouseDevice }
+
+function TWinMouseDevice.MoveCursor(X, Y: Integer): Boolean;
+begin
+  Result := SetCursorPos(X, Y);
+end;
+
+procedure TWinMouseDevice.Click;
+begin
+  mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+  mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+end;
+
 { TSmartClickExecutor }
+
+constructor TSmartClickExecutor.Create(const ALocator: IScreenRegionLocator;
+  const AMouse: IMouseDevice; const ADPI: IClickDMapper);
+begin
+  inherited Create;
+  FLocator := ALocator;
+  FMouse := AMouse;
+  FDPI := ADPI;
+end;
 
 constructor TSmartClickExecutor.Create;
 begin
-  inherited Create;
-  
-  // Lazy initialize dependencies
-  InitializeScreenRegionLocator;
-  InitializeDPIMapper;
-  
-  FRegionLocator := CurrentScreenRegionLocator;
-  FDPIMapper := CurrentDPIMapper;
+  Create(CurrentScreenRegionLocator, TWinMouseDevice.Create, CurrentDPIMapper);
 end;
 
-procedure TSmartClickExecutor.SimulateMouseClick(X, Y: Integer);
+function TSmartClickExecutor.AnchorPoint(const AMatch: TMatchResult;
+  const AOptions: TClickOptions): TPoint;
 begin
-  SetCursorPosition(X, Y);
-  Sleep(50);
-  mouse_event(MOUSEEVENTF_LEFTDOWN, X, Y, 0, 0);
-  Sleep(50);
-  mouse_event(MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
-end;
-
-function TSmartClickExecutor.TryClickWithTolerance(X, Y: Integer; 
-  Tolerance: Integer): Boolean;
-var
-  DeltaX, DeltaY: Integer;
-  SuccessCount: Integer;
-  TotalAttempts: Integer;
-begin
-  SuccessCount := 0;
-  TotalAttempts := 0;
-  
-  // Try multiple positions within tolerance box
-  for DeltaX := -Tolerance to +Tolerance do
-    for DeltaY := -Tolerance to +Tolerance do
-    begin
-      Inc(TotalAttempts);
-      var TestX := X + DeltaX;
-      var TestY := Y + DeltaY;
-      
-      // Execute click at this offset
-      SimulateMouseClick(TestX, TestY);
-      
-      // In real implementation, would check result here
-      // For now, assume success after first attempt
-      if DeltaX = 0 then
-        Inc(SuccessCount);
-    end;
-    
-  Result := SuccessCount > 0;
-end;
-
-function TSmartClickExecutor.FindBestAnchorPoint(
-  const MatchResult: TMatchResult;
-  const Options: TClickOptions): TPoint;
-begin
-  case Options.AnchorMode of
-    camCenter:
-      Result := Point(
-        MatchResult.Rect.Left + Round((MatchResult.Rect.Right - MatchResult.Rect.Left) / 2),
-        MatchResult.Rect.Top + Round((MatchResult.Rect.Bottom - MatchResult.Rect.Top) / 2)
-      );
-      
+  case AOptions.AnchorMode of
     camTopLeft:
-      Result := Point(MatchResult.Rect.Left, MatchResult.Rect.Top);
-      
-    camBestFit:
-      // Try multiple anchor points sequentially
-      // TODO: Implement intelligent selection algorithm
-      Result := Point(MatchResult.Rect.Left, MatchResult.Rect.Top);
-      
+      Result := AMatch.Rect.TopLeft;
     camCustom:
-      Result := Point(
-        MatchResult.Rect.Left + Options.CustomOffsetX,
-        MatchResult.Rect.Top + Options.CustomOffsetY
-      );
-  end;
-end;
-
-function TSmartClickExecutor.ClickByTemplate(const TemplateImage: TBitmap32;
-  const Options: TClickOptions): Boolean;
-var
-  MatchResult: TMatchResult;
-  TargetPoint: TPoint;
-  RetryCount: Integer;
-begin
-  Result := False;
-  
-  // Default options if not specified
-  if Options.Tolerance.MinConfidence = 0 then
-    Options.Tolerance.MinConfidence := 0.7;
-    
-  if Options.Tolerance.MaxRetries = 0 then
-    Options.Tolerance.MaxRetries := 3;
-    
-  // Search for template
-  MatchResult := FRegionLocator.FindTemplate(TemplateImage);
-  
-  if not MatchResult.Found then
-    Exit(False);
-    
-  // Find best click anchor
-  TargetPoint := FindBestAnchorPoint(MatchResult, Options);
-  
-  // Retry loop with tolerance
-  for RetryCount := 0 to Options.Tolerance.MaxRetries - 1 do
-  begin
-    if TryClickWithTolerance(TargetPoint.X, TargetPoint.Y, 
-                              Options.Tolerance.TolerancePixels) then
-    begin
-      Result := True;
-      Break;
-    end;
-    
-    // Wait before next retry
-    if RetryCount < Options.Tolerance.MaxRetries - 1 then
-      Sleep(Options.Tolerance.RetryDelayMs);
-  end;
-end;
-
-function TSmartClickExecutor.ClickAtPoint(X, Y: Integer;
-  const Tolerance: TClickTolerance): Boolean;
-begin
-  if Tolerance.TolerancePixels > 0 then
-    Result := TryClickWithTolerance(X, Y, Tolerance.TolerancePixels)
+      Result := Point(AMatch.Rect.Left + AOptions.CustomOffsetX,
+        AMatch.Rect.Top + AOptions.CustomOffsetY);
   else
-  begin
-    SimulateMouseClick(X, Y);
-    Result := True;
+    Result := Point(
+      AMatch.Rect.Left + (AMatch.Rect.Width div 2),
+      AMatch.Rect.Top + (AMatch.Rect.Height div 2));
   end;
 end;
 
-function TSmartClickExecutor.ClickAtRelative(RelativeX, RelativeY: Double;
-  const Options: TClickOptions): Boolean;
-var
-  AbsPoint: TDPIAwarePoint;
+function TSmartClickExecutor.DispatchClick(X, Y: Integer): Boolean;
 begin
-  // Convert relative to absolute using DPI mapper
-  AbsPoint := FDPIMapper.MapRelativeToAbsolute(RelativeX, RelativeY);
-  
-  // Execute click at absolute coordinates
-  Result := ClickAtPoint(AbsPoint.AbsoluteX, AbsPoint.AbsoluteY, 
-                         Options.Tolerance);
+  if not FMouse.MoveCursor(X, Y) then
+    Exit(False); // 光标没落到目标上，点击会打在别处，宁可不发
+  FMouse.Click;
+  Result := True;
 end;
 
-function TSmartClickExecutor.WaitForTargetToAppear(
-  const TemplateImage: TBitmap32;
-  TimeoutMs: Cardinal): TMatchResult;
+function TSmartClickExecutor.ClickByTemplate(const ATemplate: TPixelBuffer;
+  const AOptions: TClickOptions): Boolean;
 var
-  StartTime: LongWord;
-  ElapsedMs: Cardinal;
-  MaxCheckInterval: Cardinal;
-  CheckCount: Integer;
+  LTolerance: TClickTolerance;
+  LAttempt, LDeltaX, LDeltaY: Integer;
+  LHittest: TMatchResult;
+  LAnchor: TPoint;
 begin
-  Result := TMatchResult.Default;
-  StartTime := GetTickCount64;
-  MaxCheckInterval := 100;  // Check every 100ms
-  
-  repeat
-    // Capture current screen state
-    FRegionLocator.CaptureScreen();
-    
-    // Search for template
-    Result := FRegionLocator.FindTemplate(TemplateImage);
-    
+  LTolerance := AOptions.Tolerance;
+  if LTolerance.MaxRetries < 1 then
+    LTolerance.MaxRetries := 1;
+
+  for LAttempt := 1 to LTolerance.MaxRetries do
+  begin
+    // 判定阶段：重新取帧再定位（虚拟探针），全程不发任何真实输入
+    FLocator.CaptureScreen;
+    LHittest := FLocator.FindTemplate(ATemplate);
+    if LHittest.Found then
+    begin
+      LAnchor := AnchorPoint(LHittest, AOptions);
+      // 主锚点优先，再按行扫描容差邻域；候选点必须仍落在本帧命中区内才算确认。
+      if LHittest.Rect.Contains(LAnchor) then
+        Exit(DispatchClick(LAnchor.X, LAnchor.Y));
+      for LDeltaY := -LTolerance.TolerancePixels to LTolerance.TolerancePixels do
+        for LDeltaX := -LTolerance.TolerancePixels to LTolerance.TolerancePixels do
+          if ((LDeltaX <> 0) or (LDeltaY <> 0)) and
+            LHittest.Rect.Contains(Point(LAnchor.X + LDeltaX, LAnchor.Y + LDeltaY)) then
+            Exit(DispatchClick(LAnchor.X + LDeltaX, LAnchor.Y + LDeltaY));
+      // 本轮没有一个候选被确认：一次真实输入都没发，进入下一轮重新判定。
+    end;
+    if LAttempt < LTolerance.MaxRetries then
+      Sleep(LTolerance.RetryDelayMs);
+  end;
+  Result := False;
+end;
+
+function TSmartClickExecutor.ClickByTemplate(const ATemplate: TPixelBuffer): Boolean;
+begin
+  Result := ClickByTemplate(ATemplate, TClickOptions.DefaultValue);
+end;
+
+function TSmartClickExecutor.ClickAtPoint(X, Y: Integer): Boolean;
+begin
+  Result := DispatchClick(X, Y);
+end;
+
+function TSmartClickExecutor.ClickAtRelative(RelativeX, RelativeY: Double): Boolean;
+var
+  LAbs: TDPIAwarePoint;
+begin
+  LAbs := FDPI.MapRelativeToAbsolute(RelativeX, RelativeY);
+  Result := ClickAtPoint(LAbs.AbsoluteX, LAbs.AbsoluteY);
+end;
+
+function TSmartClickExecutor.WaitForTargetToAppear(const ATemplate: TPixelBuffer;
+  ATimeoutMs: Cardinal): TMatchResult;
+var
+  // RTL 里 GetTickCount64 返回 UInt64（Winapi.Windows.pas:8986），变量必须同型否则 W1073
+  LStart: UInt64;
+begin
+  LStart := GetTickCount64;
+  while True do
+  begin
+    FLocator.CaptureScreen;
+    Result := FLocator.FindTemplate(ATemplate);
     if Result.Found then
-      Break;  // Target found!
-      
-    // Wait before next check
-    Sleep(MaxCheckInterval);
-    Inc(CheckCount);
-    
-    // Check timeout
-    ElapsedMs := GetTickCount64 - StartTime;
-    
-  until ElapsedMs >= TimeoutMs;
+      Exit;
+    if GetTickCount64 - LStart >= UInt64(ATimeoutMs) then
+      Exit; // 超时即「未出现」：返回未命中形状交给调用方判定，不抛也不谎报命中
+    Sleep(CK_WAIT_POLL_MS);
+  end;
 end;
 
-// Global initialization
 procedure InitializeSmartClickExecutor;
 begin
   if not Assigned(GSmartExecutor) then
@@ -294,7 +272,6 @@ function CurrentSmartClickExecutor: ISmartClickExecutor;
 begin
   if not Assigned(GSmartExecutor) then
     InitializeSmartClickExecutor;
-    
   Result := GSmartExecutor;
 end;
 
