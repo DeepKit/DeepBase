@@ -46,6 +46,10 @@ const
   KEYSTORE_FORMAT_VERSION = 2;
   /// <summary>Version byte prefixing a wrapped DEK: AES-256-GCM.</summary>
   DEK_WRAP_VERSION_GCM = $01;
+  /// <summary>Explicit cipher-suite marker for the TKeyManager payload envelope
+  /// (distinct from the DEK-wrap layer above). Decrypt only accepts this value and
+  /// rejects any other leading byte instead of silently downgrading (A2-04).</summary>
+  KEYMGR_FMT_AES256_GCM = $02;
 
 type
   TKeyPurpose = (
@@ -1041,31 +1045,33 @@ begin
   try
     AES.SetKey(KeyData);
     GCMData := AES.Encrypt(AData);  // Nonce(12) + Cipher + Tag(16)
-    // Prepend version byte $02 so Decrypt can distinguish from legacy CBC
+    // Prepend the explicit format marker so Decrypt can validate it (A2-04).
     SetLength(Result, 1 + Length(GCMData));
-    Result[0] := $02;  // v2 = AES-256-GCM
+    Result[0] := KEYMGR_FMT_AES256_GCM;
     Move(GCMData[0], Result[1], Length(GCMData));
   finally
     AES.Free;
   end;
 end;
 
-{ TKeyManager.Decrypt — format-detecting decryption.
+{ TKeyManager.Decrypt — explicit version-header decryption (A2-04 fail-closed).
 
-  Recognized formats:
-    v2 (first byte = $02): AES-256-GCM authenticated decryption.
-         Payload after version byte: Nonce(12) + CipherText + Tag(16).
-    Legacy (any other leading byte): AES-256-CBC, IV(16) + CipherText.
-         Retained so data encrypted by earlier versions remains readable.
+  The cipher suite MUST NOT be selected by an unprotected data byte that an
+  attacker can flip: the previous "first byte = $02 => GCM, anything else =>
+  legacy CBC" rule let a one-byte flip silently downgrade authenticated GCM
+  ciphertext into tamperable CBC decryption.
 
-  Callers do NOT need to know which format the data is in — detection is
-  automatic. Re-encrypting the decrypted plaintext with Encrypt will
-  upgrade it to GCM. }
+  Recognized formats (explicit enum in KEYMGR_FMT_*):
+    $02 : AES-256-GCM authenticated decryption (Nonce(12)+Cipher+Tag(16)).
+  Anything else — including the old unmarked legacy CBC blobs — is rejected
+  rather than downgraded. Legacy plaintext must be re-provisioned (Encrypt
+  always emits $02), which is the accepted, boss-authorized breaking change
+  for this security defect (WO-20260925-A2 §0.8). }
 function TKeyManager.Decrypt(const AData: TBytes; APurpose: TKeyPurpose): TBytes;
 var
   AES: TAESCrypto;
   KeyData: TBytes;
-  IV, Cipher, GCMData: TBytes;
+  GCMData: TBytes;
 begin
   if Length(AData) = 0 then
   begin
@@ -1073,36 +1079,23 @@ begin
     Exit;
   end;
 
+  if AData[0] <> KEYMGR_FMT_AES256_GCM then
+    raise EKeyManagerException.CreateFmt(
+      'Unsupported or tampered ciphertext: unknown format marker $%.2x. ' +
+      'Refusing to downgrade authenticated decryption.', [AData[0]]);
+
+  if Length(AData) < 1 + AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE then
+    raise EKeyManagerException.Create('Invalid GCM payload: truncated');
+
   KeyData := GetActiveKeyForPurpose(APurpose);
-
-  if (AData[0] = $02) and (Length(AData) >= 1 + AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE) then
-  begin
-    // v2 — AES-256-GCM authenticated decryption
-    GCMData := Copy(AData, 1, Length(AData) - 1); // Nonce(12) + Cipher + Tag(16)
-    AES := TAESCrypto.Create(aes256, aesGCM);
-    try
-      AES.SetKey(KeyData);
-      Result := AES.Decrypt(GCMData);
-    finally
-      AES.Free;
-    end;
-  end
-  else
-  begin
-    // Legacy — AES-256-CBC (IV(16) + CipherText)
-    if Length(AData) <= 16 then
-      raise EKeyManagerException.Create('Invalid encrypted payload');
-
-    AES := TAESCrypto.Create(aes256, aesCBC);
-    try
-      AES.SetKey(KeyData);
-      IV := Copy(AData, 0, 16);
-      Cipher := Copy(AData, 16, Length(AData) - 16);
-      AES.SetIV(IV);
-      Result := AES.Decrypt(Cipher);
-    finally
-      AES.Free;
-    end;
+  // v2 — AES-256-GCM authenticated decryption
+  GCMData := Copy(AData, 1, Length(AData) - 1); // Nonce(12) + Cipher + Tag(16)
+  AES := TAESCrypto.Create(aes256, aesGCM);
+  try
+    AES.SetKey(KeyData);
+    Result := AES.Decrypt(GCMData);
+  finally
+    AES.Free;
   end;
 end;
 
