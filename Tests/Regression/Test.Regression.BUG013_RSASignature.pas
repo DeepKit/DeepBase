@@ -49,7 +49,7 @@ type
     procedure Test_RSASign_DifferentContent_DifferentSignature;
     
     [Test]
-    [Description('验证缺少私钥时抛出明确错?)]
+    [Description('验证缺少私钥时抛出明确错误')]
     procedure Test_RSASign_WithoutPrivateKey_ThrowsError;
   end;
 
@@ -69,7 +69,7 @@ end;
 
 function TBug013_RSASignatureTest.GetBugDescription: string;
 begin
-  Result := '支付模块RSA签名未实?;
+  Result := '支付模块RSA签名未实现';
 end;
 
 function TBug013_RSASignatureTest.GetFixDate: string;
@@ -102,7 +102,7 @@ begin
   
   // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符）
   Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),
-    'SHA256+Base64 应该产生 44 字符的结?);
+    'SHA256+Base64 应该产生 44 字符的结果');
   
   // RSA-2048 签名应该产生 256 字节，Base64 编码后约 344 字符
   // 这里我们只验证概念，实际签名霢要私?  

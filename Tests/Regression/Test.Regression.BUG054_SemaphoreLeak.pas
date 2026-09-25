@@ -38,7 +38,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证信号量释放标志存?)]
+    [Description('验证信号量释放标志存在')]
     procedure Test_SemaphoreReleaseFlag_Exists;
     
     [Test]
@@ -136,7 +136,7 @@ begin
     
     // 验证信号量已释放（可以再次获取）
     Assert.IsTrue(Semaphore.WaitFor(100) = wrSignaled,
-      '异常后信号量应该被正确释?);
+      '异常后信号量应该被正确释放');
     Semaphore.Release;
   finally
     Semaphore.Free;

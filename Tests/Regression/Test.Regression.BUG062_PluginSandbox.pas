@@ -55,11 +55,11 @@ type
     procedure Test_PathTraversal_WithDotDot_ShouldBeBlocked;
     
     [Test]
-    [Description('验证绝对路径攻击被阻?)]
+    [Description('验证绝对路径攻击被阻止')]
     procedure Test_AbsolutePath_OutsidePluginsDir_ShouldBeBlocked;
     
     [Test]
-    [Description('验证合法插件路径被允?)]
+    [Description('验证合法插件路径被允许')]
     procedure Test_ValidPluginPath_ShouldBeAllowed;
     
     [Test]
@@ -67,7 +67,7 @@ type
     procedure Test_NonBPLFile_ShouldBeRejected;
     
     [Test]
-    [Description('验证插件配置访问控制 - 只能修改 Plugin. 前缀的配?)]
+    [Description('验证插件配置访问控制 - 只能修改 Plugin. 前缀的配置')]
     procedure Test_PluginConfigAccess_ShouldBeLimited;
   end;
 
@@ -179,7 +179,7 @@ begin
     
     LoadResult := PluginManager.LoadPlugin(MaliciousPath);
     
-    Assert.IsFalse(LoadResult, '插件目录外的绝对路径应该被阻?);
+    Assert.IsFalse(LoadResult, '插件目录外的绝对路径应该被阻止');
   finally
     PluginManager.Free;
   end;
@@ -214,7 +214,7 @@ begin
     
     if FErrorFired then
       Assert.IsFalse(FLastErrorMessage.Contains('Invalid plugin path'),
-        '合法路径不应该触发路径验证错?);
+        '合法路径不应该触发路径验证错误');
     
     // 如果到达这里，说明路径验证通过
     Assert.Pass('合法插件路径验证通过');
@@ -280,7 +280,7 @@ begin
       on E: EArgumentException do
         ExceptionRaised := True;
     end;
-    Assert.IsTrue(ExceptionRaised, '设置?Plugin. 前缀的配置应该抛出异?);
+    Assert.IsTrue(ExceptionRaised, '设置不带 Plugin. 前缀的配置应该抛出异常');
     
     // 测试 2: 尝试设置安全相关配置应该失败
     ExceptionRaised := False;

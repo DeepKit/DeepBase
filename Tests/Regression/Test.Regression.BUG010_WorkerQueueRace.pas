@@ -38,7 +38,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('楠岃瘉鐘舵€佸彉鏇存搷浣滄湁閿佷繚鎶?)]
+    [Description('验证状态变更操作有锁保护')]
     procedure Test_StateChange_HasLockProtection;
     
     [Test]
@@ -61,7 +61,7 @@ end;
 
 function TBug010_WorkerQueueRaceTest.GetBugDescription: string;
 begin
-  Result := '宸ヤ綔闃熷垪鐘舵€佺珵浜?;
+  Result := '工作队列状态竞争';
 end;
 
 function TBug010_WorkerQueueRaceTest.GetFixDate: string;
@@ -105,7 +105,7 @@ begin
     SourceCode.Contains('TMonitor.Enter') or 
     SourceCode.Contains('Lock') or
     SourceCode.Contains('TCriticalSection'),
-    '代码应该包含锁保护机?);
+    '代码应该包含锁保护机制');
   
   LogTestEnd('Test_StateChange_HasLockProtection', True);
 end;
@@ -156,7 +156,7 @@ begin
     end;
     
     // 验证计数器值正确
-    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正?);
+    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正确');
   finally
     Lock.Free;
   end;

@@ -39,7 +39,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 TWeChatPayConfig 包含 WeChatPublicKey 灞炴€?)]
+    [Description('验证 TWeChatPayConfig 包含 WeChatPublicKey 属性')]
     procedure Test_Config_HasWeChatPublicKeyProperty;
     
     [Test]
@@ -118,10 +118,10 @@ begin
     Assert.AreEqual('test_public_key', Config.WeChatPublicKey,
       'WeChatPublicKey 属性应该可以正确读取');
     
-    // 验证初始值为?
+    // 验证初始值为空
     Config.WeChatPublicKey := '';
     Assert.AreEqual('', Config.WeChatPublicKey,
-      'WeChatPublicKey 初始值应该为?);
+      'WeChatPublicKey 初始值应该为空');
   finally
     Config.Free;
   end;
@@ -197,11 +197,11 @@ begin
       PaymentResult := Client.CreateOrder(Order);
       ErrorMessage := PaymentResult.ErrorMessage;
 
-      Assert.IsFalse(PaymentResult.Success, '缺少私钥时创建订单应该失?);
+      Assert.IsFalse(PaymentResult.Success, '缺少私钥时创建订单应该失败');
       Assert.IsTrue(ErrorMessage.Contains('private key') or
                     ErrorMessage.Contains('PrivateKey') or
                     ErrorMessage.Contains('not configured'),
-        '失败消息应该指示私钥未配?);
+        '失败消息应该指示私钥未配置');
     finally
       Client.Free;
     end;

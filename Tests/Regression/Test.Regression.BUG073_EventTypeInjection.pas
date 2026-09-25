@@ -36,11 +36,11 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证事件类型白名单验证存?)]
+    [Description('验证事件类型白名单验证存在')]
     procedure Test_EventTypeWhitelist_Exists;
     
     [Test]
-    [Description('验证恶意事件类型被拒?)]
+    [Description('验证恶意事件类型被拒绝')]
     procedure Test_MaliciousEventType_IsRejected;
   end;
 
@@ -103,7 +103,7 @@ begin
     SourceCode.Contains('AllowedEvents') or
     SourceCode.Contains('ValidateEventType') or
     SourceCode.Contains('IsValidEventType'),
-    '代码应该包含事件类型白名单验证机?);
+    '代码应该包含事件类型白名单验证机制');
   
   LogTestEnd('Test_EventTypeWhitelist_Exists', True);
 end;

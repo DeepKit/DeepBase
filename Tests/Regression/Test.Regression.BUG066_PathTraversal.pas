@@ -44,15 +44,15 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('验证 ../ 路径遍历被阻?)]
+    [Description('验证 ../ 路径遍历被阻止')]
     procedure Test_DotDotSlash_IsBlocked;
     
     [Test]
-    [Description('验证绝对路径外部访问被阻?)]
+    [Description('验证绝对路径外部访问被阻止')]
     procedure Test_AbsolutePathOutside_IsBlocked;
     
     [Test]
-    [Description('验证路径规范化函数存?)]
+    [Description('验证路径规范化函数存在')]
     procedure Test_PathNormalization_Exists;
   end;
 
@@ -127,7 +127,7 @@ begin
   
   // 验证外部绝对路径不在监控目录?
   Assert.IsFalse(ExternalPath.StartsWith(FTempDir),
-    '外部绝对路径应该被识别为不在监控范围?);
+    '外部绝对路径应该被识别为不在监控范围内');
   
   LogTestEnd('Test_AbsolutePathOutside_IsBlocked', True);
 end;

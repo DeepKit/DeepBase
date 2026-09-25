@@ -40,7 +40,7 @@ type
     procedure Test_DefaultMaxDepth_IsReasonable;
     
     [Test]
-    [Description('验证深度嵌套被拒?)]
+    [Description('验证深度嵌套被拒绝')]
     procedure Test_DeepNesting_IsRejected;
   end;
 
@@ -58,7 +58,7 @@ end;
 
 function TBug060_SerializationDepthTest.GetBugDescription: string;
 begin
-  Result := '序列化深度限制过?;
+  Result := '序列化深度限制过深';
 end;
 
 function TBug060_SerializationDepthTest.GetFixDate: string;

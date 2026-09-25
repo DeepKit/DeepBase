@@ -50,7 +50,7 @@ type
     procedure Test_MissingKey_ThrowsClearError;
     
     [Test]
-    [Description('验证密钥配置后功能正?)]
+    [Description('验证密钥配置后功能正常')]
     procedure Test_ConfiguredKey_WorksCorrectly;
   end;
 
@@ -78,7 +78,7 @@ end;
 
 function TBug034_HardcodedKeysTest.GetBugDescription: string;
 begin
-  Result := '硬编码密钥漏?;
+  Result := '硬编码密钥漏洞';
 end;
 
 function TBug034_HardcodedKeysTest.GetFixDate: string;
@@ -218,7 +218,7 @@ begin
     Decrypted := AES.DecryptString(Encrypted);
     
     Assert.AreEqual(PlainText, Decrypted,
-      '使用用户配置的密钥应该能正确加密和解?);
+      '使用用户配置的密钥应该能正确加密和解密');
   finally
     AES.Free;
   end;

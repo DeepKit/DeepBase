@@ -37,7 +37,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证类型白名单验证机制存?)]
+    [Description('验证类型白名单验证机制存在')]
     procedure Test_TypeWhitelist_Exists;
     
     [Test]
@@ -45,7 +45,7 @@ type
     procedure Test_UnauthorizedType_IsRejected;
     
     [Test]
-    [Description('验证基础类型被允?)]
+    [Description('验证基础类型被允许')]
     procedure Test_BasicTypes_AreAllowed;
   end;
 
@@ -109,7 +109,7 @@ begin
     SourceCode.Contains('AllowedTypes') or
     SourceCode.Contains('IsTypeAllowed') or
     SourceCode.Contains('ValidateType'),
-    '代码应该包含类型白名单验证机?);
+    '代码应该包含类型白名单验证机制');
   
   LogTestEnd('Test_TypeWhitelist_Exists', True);
 end;

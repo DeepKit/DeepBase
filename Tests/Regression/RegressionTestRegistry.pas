@@ -149,7 +149,7 @@ const
     (BugNumber: 'BUG-060'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG060_SerializationDepth';
      SourceFile: 'Core/DeepBase.Serialization.pas';
-     Description: '序列化深度限制过?;
+     Description: '序列化深度限制过深';
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-018'; Priority: bpP1; Category: bcSecurity;
@@ -193,7 +193,7 @@ const
     (BugNumber: 'BUG-039'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG039_HTTPHeaderInjection';
      SourceFile: 'Core/DeepBase.Net.pas';
-     Description: 'HTTP请求头注入风?;
+     Description: 'HTTP请求头注入风险';
      FixDate: '2025-01-27'),
 
     // 密码学相关
@@ -213,7 +213,7 @@ const
     (BugNumber: 'BUG-010'; Priority: bpP1; Category: bcConcurrency;
      TestUnit: 'Test.Regression.BUG010_WorkerQueueRace';
      SourceFile: 'Core/DeepBase.WorkerQueue.pas';
-     Description: '宸ヤ綔闃熷垪鐘舵€佺珵浜?;
+     Description: '工作队列状态竞争';
      FixDate: '2025-12-16'),
 
     (BugNumber: 'BUG-054'; Priority: bpP1; Category: bcConcurrency;

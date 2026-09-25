@@ -36,7 +36,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 WaitForm 创建和销毁不会泄漏内?)]
+    [Description('验证 WaitForm 创建和销毁不会泄漏内存')]
     procedure Test_WaitForm_NoMemoryLeak;
     
     [Test]
@@ -126,7 +126,7 @@ begin
   
   // 验证使用 FreeAndNil 而不是简单的 Free
   Assert.IsTrue(SourceCode.Contains('FreeAndNil'),
-    '析构函数应该使用 FreeAndNil 释放定时器对?);
+    '析构函数应该使用 FreeAndNil 释放定时器对象');
   
   LogTestEnd('Test_SourceCode_UsesFreeAndNil', True);
 end;

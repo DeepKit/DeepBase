@@ -345,7 +345,7 @@ begin
   FBtnRefreshPreview.Height := 24;
   FBtnRefreshPreview.Top := 4;
   FBtnRefreshPreview.Flat := True;
-  FBtnRefreshPreview.Caption := '鈫?;
+  FBtnRefreshPreview.Caption := '↻';
   FBtnRefreshPreview.Font.Size := 12;
   FBtnRefreshPreview.OnClick := BtnRefreshPreviewClick;
   FBtnRefreshPreview.Hint := 'Refresh preview';

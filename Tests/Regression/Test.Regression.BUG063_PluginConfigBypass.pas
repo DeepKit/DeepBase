@@ -46,7 +46,7 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('验证插件无法修改系统级配?)]
+    [Description('验证插件无法修改系统级配置')]
     procedure Test_PluginCannotModifySystemConfig;
     
     [Test]
@@ -290,7 +290,7 @@ begin
     Context.SetConfig('Plugin.MyPlugin.DisplayName', 'Test Plugin');
     
     Assert.IsTrue(ConfigSet, '合法的插件配置应该被设置');
-    Assert.AreEqual('Test Plugin', SetValue, '配置值应该正确传?);
+    Assert.AreEqual('Test Plugin', SetValue, '配置值应该正确传递');
   finally
     Context.Free;
   end;
@@ -317,7 +317,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '小写 plugin. 前缀应该被拒绝（要求 Plugin.?);
+      '小写 plugin. 前缀应该被拒绝（要求 Plugin. 前缀）');
   finally
     Context.Free;
   end;

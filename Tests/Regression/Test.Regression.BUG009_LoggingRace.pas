@@ -40,7 +40,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('楠岃瘉鍙岄噸妫€鏌ラ攣瀹氭ā寮忓瓨鍦?)]
+    [Description('验证双重检查锁定模式存在')]
     procedure Test_DoubleCheckedLocking_Exists;
     
     [Test]
@@ -68,7 +68,7 @@ end;
 
 function TBug009_LoggingRaceTest.GetBugDescription: string;
 begin
-  Result := '鏃ュ織绯荤粺绔炴€佹潯浠?;
+  Result := '日志系统竞争条件';
 end;
 
 function TBug009_LoggingRaceTest.GetFixDate: string;
@@ -111,7 +111,7 @@ begin
   Assert.IsTrue(
     SourceCode.Contains('TInterlocked.CompareExchange') or 
     SourceCode.Contains('CompareExchange'),
-    '代码应该使用 TInterlocked.CompareExchange 实现双重棢查锁?);
+    '代码应该使用 TInterlocked.CompareExchange 实现双重检查锁');
   
   Assert.IsTrue(
     SourceCode.Contains('TMonitor') or 
@@ -197,7 +197,7 @@ begin
     SourceCode.Contains('TThreadList') or 
     SourceCode.Contains('LockList') or
     SourceCode.Contains('UnlockList'),
-    '代码应该使用 TThreadList 进行线程安全的队列访?);
+    '代码应该使用 TThreadList 进行线程安全的队列访问');
   
   LogTestEnd('Test_ThreadList_UsedForQueue', True);
 end;

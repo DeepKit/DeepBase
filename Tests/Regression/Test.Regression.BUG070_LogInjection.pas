@@ -44,7 +44,7 @@ type
     procedure Test_NewlineChars_AreEscaped;
     
     [Test]
-    [Description('验证控制字符被过?)]
+    [Description('验证控制字符被过滤')]
     procedure Test_ControlChars_AreFiltered;
   end;
 
