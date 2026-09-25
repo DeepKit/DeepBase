@@ -1554,38 +1554,34 @@ end;
 
 function TTemplateRenderer.RenderIf(const ANode: TTemplateNode; const AContext: ITemplateContext): string;
 var
-  LConditionMet: Boolean;
   LElseNode: TTemplateNode;
+  LMatched: Boolean;
 begin
-  LConditionMet := EvaluateCondition(ANode.Condition, AContext);
-  
-  if LConditionMet then
-    Result := RenderNodes(ANode.Children, AContext)
-  else if ANode.ElseBranch.Count > 0 then
+  if EvaluateCondition(ANode.Condition, AContext) then
+    Exit(RenderNodes(ANode.Children, AContext));
+
+  // A2-09: accumulate every plain else-content node (the old code assigned
+  // Result per node, so only the last one survived); the first matching
+  // elseif wins and excludes later content; when nothing matches or the else
+  // renders empty the branch is NOT re-rendered (the old trailing
+  // "if Result = ''" pass leaked unmatched elseif subtrees into the output).
+  Result := '';
+  LMatched := False;
+  for LElseNode in ANode.ElseBranch do
   begin
-    // Check for elseif nodes
-    for LElseNode in ANode.ElseBranch do
+    if LMatched then
+      Break;
+    if LElseNode.NodeType = ntElseIf then
     begin
-      if LElseNode.NodeType = ntElseIf then
+      if EvaluateCondition(LElseNode.Condition, AContext) then
       begin
-        if EvaluateCondition(LElseNode.Condition, AContext) then
-        begin
-          Result := RenderNodes(LElseNode.Children, AContext);
-          Exit;
-        end;
-      end
-      else
-      begin
-        // Regular else content
-        Result := RenderNode(LElseNode, AContext);
+        Result := RenderNodes(LElseNode.Children, AContext);
+        LMatched := True;
       end;
-    end;
-    // If no elseif matched, render else branch
-    if Result = '' then
-      Result := RenderNodes(ANode.ElseBranch, AContext);
-  end
-  else
-    Result := '';
+    end
+    else
+      Result := Result + RenderNode(LElseNode, AContext);
+  end;
 end;
 
 function TTemplateRenderer.RenderForeach(const ANode: TTemplateNode; const AContext: ITemplateContext): string;
