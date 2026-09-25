@@ -19,24 +19,9 @@ const CJK_RE = new RegExp('[' + IDEOGRAPH_RANGES.map(([lo, hi]) =>
   '\\u' + lo.toString(16).padStart(4, '0') + '-\\u' + hi.toString(16).padStart(4, '0')).join('') + ']');
 
 // ── GB18030 反表（Unicode 字符 → GB18030 双字节），供丙-C 可逆性试探 ──
-// 用 gb18030 而非 gbk：主控实测 encode('gbk') 在本仓头号样本（含 U+E6E6 GB18030 PUA 区）直接抛异常 ⇒ 漏检。
-// 反表按双字节面全枚举 GB18030 解码结果构建；解码为 U+FFFD 的非法双字节不入表（否则表外字符会被"编"回去造出假可逆）。
-let GB_REV = null;
-function gbkReverseTable() {
-  if (GB_REV) return GB_REV;
-  let dec;
-  try { dec = new TextDecoder('gb18030'); } catch (e) { return null; } // 调用方按 fail-closed 处理
-  GB_REV = new Map();
-  for (let b0 = 0x81; b0 <= 0xFE; b0++) {
-    for (let b1 = 0x40; b1 <= 0xFE; b1++) {
-      if (b1 === 0x7F) continue;
-      const s = dec.decode(Uint8Array.of(b0, b1));
-      if (s === '\uFFFD') continue;
-      if (s.length === 1 && !GB_REV.has(s)) GB_REV.set(s, [b0, b1]);
-    }
-  }
-  return GB_REV;
-}
+// 唯一实现收编于 gb18030-reverse-table（WO-20260925 总控 §B1-2 三处合一），本处不再内置副本；
+// 解码器不可用时返回 null，调用方按 fail-closed 处理（语义不变）。
+const { gbkReverseTable } = require('./gb18030-reverse-table');
 
 // 丙-C 阈值（沿用乙 D8 在证据面标定出的同一组常量，语义一致，非本门另拍）：
 const MIN_RESTORED_UNITS = 4;

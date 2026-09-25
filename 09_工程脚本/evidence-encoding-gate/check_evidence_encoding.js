@@ -23,6 +23,7 @@ const { execFileSync } = require('child_process');
 const { gateSkipSet } = require('../gate-skip');
 const { loadGateBaseline } = require('../gate-baseline');
 const { parseGateArgs } = require('../gate-args');
+const { gbkReverseTable: gbkReverseTableShared } = require('../gb18030-reverse-table');
 
 // 参数一律走共享解析器（乙 D7 §一-3 同族口径）：本门旧用 --repo，与其余四道门的 --root 不同名，
 // 且私有 arg() 会把 --REPO / 未知参数静默回落到默认根——「校验接受的取值侧不认」型假绿的入口。
@@ -110,25 +111,15 @@ function isIdeographic(cp) {
 const CJK_RE = new RegExp('[' + IDEOGRAPH_RANGES.map(([lo, hi]) =>
   '\\u' + lo.toString(16).padStart(4, '0') + '-\\u' + hi.toString(16).padStart(4, '0')).join('') + ']');
 
-let GB_REV = null;
+// 反表唯一实现收编于 gb18030-reverse-table（WO-20260925 总控 §B1-2 三处合一），本处不再内置副本；
+// E3 判据为 gb18030 口径（乙 D8 立法），解码器不可用时 fail-closed：EXIT=3，不静默跳过 E3。
 function gbkReverseTable() {
-  if (GB_REV) return GB_REV;
-  let dec;
-  try { dec = new TextDecoder('gb18030'); } catch (e) {
-    // 环境无 ICU GB18030 支持 ⇒ 无法判定。fail-closed：EXIT=3，不静默跳过 E3。
+  const table = gbkReverseTableShared();
+  if (!table) {
     console.error('证据编码门禁失败：本机 Node 无 GB18030 解码支持（缺 ICU），E3 无法评估。已按 fail-closed 拒绝放行。');
     process.exit(3);
   }
-  GB_REV = new Map();
-  for (let b0 = 0x81; b0 <= 0xFE; b0++) {
-    for (let b1 = 0x40; b1 <= 0xFE; b1++) {
-      if (b1 === 0x7F) continue;
-      const s = dec.decode(Uint8Array.of(b0, b1));
-      if (s === '\uFFFD') continue; // 非法双字节的占位解码不能进表（否则表外字符会被「编」回去）
-      if (s.length === 1 && !GB_REV.has(s)) GB_REV.set(s, [b0, b1]);
-    }
-  }
-  return GB_REV;
+  return table;
 }
 // 「替换符」一律以标准 UTF-8 解码器的 U+FFFD 个数为准（= 主控 Python 参考实现
 // `line.encode('gb18030').decode('utf-8', errors='replace')` 的计数口径，实测逐行相等）：

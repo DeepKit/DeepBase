@@ -285,6 +285,40 @@ note('B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSO
   fs.rmSync(cg, { recursive: true, force: true });
 }
 
+// ── D GB18030 反表三处合一（WO-20260925 总控 §B1-2）：SSOT 静态守卫 + 数据件防漂移 ──
+{
+  const sharedPath = path.join(HERE, 'gb18030-reverse-table.js');
+  if (!fs.existsSync(sharedPath)) fail('D0 共享反表模块缺失: ' + sharedPath);
+  else {
+    const consumers = [
+      ['mojibake-core', path.join(HERE, 'mojibake-core.js'), "require('./gb18030-reverse-table')"],
+      ['encoding-gate', path.join(HERE, 'encoding-gate/check_pas_encoding.js'), "require('../gb18030-reverse-table')"],
+      ['evidence-encoding-gate', path.join(HERE, 'evidence-encoding-gate/check_evidence_encoding.js'), "require('../gb18030-reverse-table')"],
+    ];
+    for (const [name, file, needle] of consumers) {
+      const src = fs.readFileSync(file, 'utf8');
+      if (!src.includes(needle)) fail(`D1 ${name} 未引用共享反表（SSOT 破裂，副本必然再漂移）: ${needle}`);
+      if (/for \(let b0 = 0x81/.test(src)) fail(`D1 ${name} 仍内置反表构建循环（副本未收编）`);
+    }
+    const encSrc = fs.readFileSync(path.join(HERE, 'encoding-gate/check_pas_encoding.js'), 'utf8');
+    if (!/buildReverseTable\(\s*'gbk'\s*\)/.test(encSrc)) {
+      fail("D2 encoding-gate 未按 G6 立法口径传 encoding='gbk'（判据被静默换口径，须先过全仓等价校验并改判据文档）");
+    }
+    const shared = require(sharedPath);
+    const table = shared.gbkReverseTable();
+    if (!table) fail('D3 本机无 GB18030 支持，无法校验数据件');
+    else {
+      const data = JSON.parse(fs.readFileSync(path.join(HERE, 'gb18030-reverse-table.json'), 'utf8'));
+      let bad = 0;
+      for (const [ch, pair] of table) { const v = data[ch]; if (!v || v[0] !== Buffer.from(pair).toString('hex')) bad++; }
+      for (let b = 0; b < 0x80; b++) { const v = data[String.fromCharCode(b)]; if (!v || v[0] !== b.toString(16).padStart(2, '0')) bad++; }
+      if (bad || Object.keys(data).length !== table.size + 0x80) {
+        fail(`D3 数据件 gb18030-reverse-table.json 与重建表不一致（bad=${bad}）——node 09_工程脚本/gb18030-reverse-table.js --write 再生`);
+      } else note('D3 通过：数据件与算法重建表逐键一致（23939 + ASCII128）');
+    }
+  }
+}
+
 fs.rmSync(clean, { recursive: true, force: true });
 console.log(failed ? 'SHARED-GUARD-TEST: FAIL' : 'SHARED-GUARD-TEST: PASS');
 process.exit(failed ? 1 : 0);

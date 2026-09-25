@@ -1,0 +1,32 @@
+== 1. 鏃ц〃锛坓it HEAD 鐪熷疄瀹炵幇锛塿s 鏂板叡浜ā鍧?==
+  PASS mojibake-core 鏃ц〃 == 鏂拌〃(gb18030)
+  PASS evidence-encoding 鏃ц〃 == 鏂拌〃(gb18030)
+  PASS encoding-gate 鏃ц〃(gbk) == 鏂拌〃(gbk 鍙傛暟)
+== 2. gb18030 vs gbk 涓ゅ彛寰勫樊寮傦紙鍐冲畾 encoding-gate 鏄惁鍙崲鍙ｅ緞锛?=
+  宸紓閿? oldOnly=100 newOnly=101
+  digest gb18030: {"n":23939,"sha256":"980a3123954a2c80ffb884ae02ae03c4e9c0c18d2a5a5a8617fdd358a58d2ff1","hasFFFD":false}
+  digest gbk:     {"n":23940,"sha256":"a4814bd61198f3fce318aaaafdaaffd5fe0fb6e4ceb9881d99d2f99e19c3101f","hasFFFD":false}
+== 3. 鍏ㄤ粨椋庨櫓琛屾壂鎻忥紙鍚换涓€宸紓閿殑琛岋紱瑕嗙洊 .pas 鍏ㄩ泦 + 闂ㄧ鍙︽壂鐨勮瘉鎹潰鏂囦欢锛?=
+  鎵弿 2359 涓窡韪枃浠讹紙鍏朵腑 .pas 978 涓?/ 520167 琛岋級锛涢闄╄ 419 琛岋紙.pas 鍐?77 琛岋級
+    CodeReview/20260919-AUDIT-鐢?璇佹嵁/A2-1-excerpt-ManifestVerifier-245-327.txt:1 { out 鐠囶厺绠熼懛顏勫З濞撳懐鈹栭幍妯碱吀鐎涙顔岄敍娑欐￥闂団偓 ZeroMemory }
+    CodeReview/20260919-鍏ㄥ簱瀹¤-缂栫爜鎹熷潖-姘镐箙涓㈠け鐧昏.md:19 | 7 | ~~`Tests/Test.DeepBase.Browser.Selectors.pas`~~ | ~~L1 `<FFFD>夂穘 i t 鈥~~ 
+    CodeReview/20260920-AUDIT-涔?R4-浜や粯鍥炴墽.md:27 - 鏃犳崯楠岃瘉锛欻EAD blob = 10 瀛楄妭鎹熷潖澶达紙BOM+U+FFFD+夂?NUL锛? UTF-16LE 姝ｆ枃锛沗'u' + blob[10:].utf1
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:48 琛ュ洖鍓?    |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN'
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:111 琛ュ洖鍓?    |     UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP'
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:118 琛ュ洖鍓?    |     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d 閵堚偓鍋嗛妷鍡愬劕');
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:125 琛ュ洖鍓?    |     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d 閵堚偓鍋嗛妷鍡愬劕');
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:191 琛ュ洖鍓?    |   T.Description := '濡偓閺?README.md 閸栧懎鎯堢€瑰顥婇妴渚€鍘ょ純顔衡偓浣告彥闁喎绱戞慨?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:205 琛ュ洖鍓?    |   T.Description := '濡偓閺?CHANGELOG.md 鐠佹澘缍嶉悧鍫熸拱閸欐ɑ娲?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:212 琛ュ洖鍓?    |   T.ID := 'P1-003'; T.Name := '濡€虫健娓氭繆绂嗗Λ鈧弻?; T.Phase := 1;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:219 琛ュ洖鍓?    |   T.Description := '濡偓閺屻儲妫ゅ顏嗗箚娓氭繆绂?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:226 琛ュ洖鍓?    |   // ========== 缁楊兛绨╅梼鑸殿唽: 闂堟瑦鈧椒鍞惍浣稿瀻閺?==========
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:268 琛ュ洖鍓?    |   T.Description := '濡偓閺屻儰鍞惍浣疯厬閺冪姵婀€瑰本鍨氶惃?TODO/FIXME';
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:282 琛ュ洖鍓?    |   T.Description := '濡偓閺屻儲妫ょ涵顒傜椽閻胶娈戠€靛棝鎸滈幋鏍х槕閻?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:303 琛ュ洖鍓?    |   T.Description := '鏉╂劘顢戦幍鈧張澶婂礋閸忓啯绁寸拠?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:317 琛ュ洖鍓?    |   T.Description := '濡偓閺屻儲绁寸拠鏇☆洬閻╂牜宸?>= 80%';
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:338 琛ュ洖鍓?    |   T.Description := '鏉╂劘顢戦幍鈧張澶愭肠閹存劖绁寸拠?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:352 琛ュ洖鍓?    |   T.Description := '鏉╂劘顢戦崢瀣濞村鐦敍宀勭崣鐠囦胶菙鐎规碍鈧?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:457 琛ュ洖鍓?    |   T.Description := '缂傛牞鐦ч幍鈧張澶屻仛娓氬銆嶉惄?;
+    CodeReview/20260923-AUDIT-涔?D6-璇佹嵁/2.1-2.2-涓冧欢閲嶈窇-淇墠鏍慸ry-run.txt:478 琛ュ洖鍓?    |   // ========== 缁楊剙鍙撻梼鑸殿唽: 閺堚偓缂佸牓鐛欓弨?==========
+  PASS encoding-gate 淇濇寔 gbk 鍘嗗彶鍙ｅ緞 鈬?涓庢棫瀹炵幇閫愰敭涓€鑷达紙搂1 宸茶瘉锛夛紝椋庨櫓琛屼粎渚涙崲鍙ｅ緞鍐崇瓥鍙傝€?== 4. 鏁版嵁浠?== gb18030-reverse-table.json 涓庨噸寤鸿〃涓€鑷达紙闃叉紓绉伙級==
+  PASS JSON 鏁版嵁浠朵笌绠楁硶閲嶅缓琛ㄩ€愰敭涓€鑷?EQUIV: PASS

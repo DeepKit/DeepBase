@@ -82,7 +82,7 @@ function capture(fn) {
 // 「修前」副本落在 tmp 内时 require('../gate-*') 会 MODULE_NOT_FOUND（同编码门禁 G6 对照），
 // 且 MODULE_NOT_FOUND 会让所有「未拦住」的断言变成假通过 ⇒ 共享依赖一律改写为绝对路径。
 function portal(src) {
-  for (const m of ['gate-skip', 'gate-baseline', 'gate-args']) {
+  for (const m of ['gate-skip', 'gate-baseline', 'gate-args', 'gb18030-reverse-table']) {
     src = src.replace("require('../" + m + "')", 'require(' + JSON.stringify(path.resolve(HERE, '../' + m + '.js')) + ')');
   }
   return src;

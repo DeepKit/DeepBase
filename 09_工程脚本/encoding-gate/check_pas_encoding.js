@@ -27,6 +27,7 @@ const path = require('path');
 const { parseGateArgs } = require('../gate-args');
 const { gateSkipSet } = require('../gate-skip');
 const { loadGateBaseline } = require('../gate-baseline');
+const { buildReverseTable } = require('../gb18030-reverse-table');
 
 // 参数解析收敛到 09_工程脚本/gate-args.js 单一实现（WO-20260922-AUDIT-乙-P2 §七）。
 // 此前本文件与 eol 门禁各写一份内联校验，且裂成「校验侧归一放行 / 取值侧大小写敏感取空」
@@ -114,29 +115,18 @@ function hasNonAscii(buf) {
 //      （日志导出）漏掉，因其不含任何标记字。故③改为**冗余确认**而非必要条件，
 //      以①+②为主体判据，避免把真缺陷写成假绿。偏离已在请求审核报告留痕。
 //
-// 零依赖实现：Node 24 内置 ICU TextDecoder('gbk') 提供 GBK→Unicode 解码；
-// 反向的 Unicode→GBK 编码表由 0x81–0xFE / 0x40–0xFE 全枚举 GBK 解码结果构建（23940 条）。
+// 反表唯一实现收编于 gb18030-reverse-table（WO-20260925 总控 §B1-2 三处合一），本处不再内置副本。
+// G6 立法判据为 GBK 口径（WO-20260922 乙-P2 §3.1），故显式传 encoding='gbk' 保持历史语义；
+// gb18030/gbk 两口径 ~200 键差异与全仓风险行扫描见 CodeReview/20260925-AUDIT-乙-B1-证据/02-表等价校验.js。
 // 不引入 iconv-lite 等三方依赖（门禁须保持 fs/path 最小依赖面）。
-let GBK_REV = null;
 function buildGbkReverseTable() {
-  if (GBK_REV) return GBK_REV;
-  let dec;
-  try { dec = new TextDecoder('gbk'); } catch (e) {
+  const table = buildReverseTable('gbk');
+  if (!table) {
     // 环境无 ICU GBK 支持 ⇒ 无法判定。fail-closed：退出码 3，不静默跳过 G6。
     console.error('编码门禁失败：本机 Node 无 GBK 解码支持（缺 ICU），G6 无法评估。已按 fail-closed 拒绝放行。');
     process.exit(3);
   }
-  GBK_REV = new Map();
-  for (let b0 = 0x81; b0 <= 0xFE; b0++) {
-    for (let b1 = 0x40; b1 <= 0xFE; b1++) {
-      if (b1 === 0x7F) continue;
-      try {
-        const s = dec.decode(Uint8Array.of(b0, b1));
-        if (s.length === 1 && !GBK_REV.has(s)) GBK_REV.set(s, [b0, b1]);
-      } catch (e) { /* 非 GBK 合法双字节 */ }
-    }
-  }
-  return GBK_REV;
+  return table;
 }
 function toGbkBytes(s) {
   const rev = buildGbkReverseTable();
