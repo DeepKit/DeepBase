@@ -276,24 +276,34 @@ uses
 // ============================================================================
 
 type
-  TCommandButtonBinding = class
+  /// <summary>B2-14：按钮与命令之间的绑定，Owner 是登记它的宿主（窗体/框架）。
+  /// 旧实现把绑定登记进模块级列表、只在单元 finalization 释放，宿主销毁后按钮成野指针
+  /// 而绑定仍订阅在命令上，命令一触发通知即解引用已释放按钮。</summary>
+  TCommandButtonBinding = class(TComponent)
   private
     FButton: TButton;
     FCommand: ICommand;
     FParameter: TValue;
     FOriginalOnClick: TNotifyEvent;
     
+    procedure Detach;
     procedure HandleClick(Sender: TObject);
     procedure HandleCanExecuteChanged(Sender: TObject);
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
-    constructor Create(AButton: TButton; ACommand: ICommand; const AParameter: TValue);
+    // reintroduce：不开放 TComponent 的单参 Create——少了按钮和命令的绑定是半个对象，
+    // 让这种调用在编译期就不存在，比运行时判空兜底干净
+    constructor Create(AHost: TComponent; AButton: TButton; ACommand: ICommand;
+      const AParameter: TValue); reintroduce;
     destructor Destroy; override;
   end;
 
-constructor TCommandButtonBinding.Create(AButton: TButton; ACommand: ICommand;
-  const AParameter: TValue);
+constructor TCommandButtonBinding.Create(AHost: TComponent; AButton: TButton;
+  ACommand: ICommand; const AParameter: TValue);
 begin
-  inherited Create;
+  // 所有权交给宿主而不是全局登记表：宿主销毁时组件树会把绑定一起带走，注销路径只剩这一条
+  inherited Create(AHost);
   FButton := AButton;
   FCommand := ACommand;
   FParameter := AParameter;
@@ -301,6 +311,8 @@ begin
   // Store original click handler
   FOriginalOnClick := FButton.OnClick;
   FButton.OnClick := HandleClick;
+  // 按钮与宿主不同 Owner 时按钮可以活得比登记动作短，按 VCL 口径取一份销毁通知
+  FButton.FreeNotification(Self);
   
   // Subscribe to CanExecuteChanged
   FCommand.AddCanExecuteChangedHandler(HandleCanExecuteChanged);
@@ -311,14 +323,29 @@ end;
 
 destructor TCommandButtonBinding.Destroy;
 begin
+  Detach;
+  inherited;
+end;
+
+procedure TCommandButtonBinding.Detach;
+begin
   if FCommand <> nil then
     FCommand.RemoveCanExecuteChangedHandler(HandleCanExecuteChanged);
   
   // Restore original click handler
   if FButton <> nil then
+  begin
     FButton.OnClick := FOriginalOnClick;
-    
+    FButton := nil;
+  end;
+end;
+
+procedure TCommandButtonBinding.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
   inherited;
+  if (Operation = opRemove) and (AComponent = FButton) then
+    Detach;
 end;
 
 procedure TCommandButtonBinding.HandleClick(Sender: TObject);
@@ -335,23 +362,6 @@ procedure TCommandButtonBinding.HandleCanExecuteChanged(Sender: TObject);
 begin
   if FButton <> nil then
     FButton.Enabled := FCommand.CanExecute(FParameter);
-end;
-
-// Global list to track command bindings (prevent premature destruction)
-var
-  GCommandBindings: TList;
-
-procedure RegisterCommandBinding(Binding: TCommandButtonBinding);
-begin
-  if GCommandBindings = nil then
-    GCommandBindings := TList.Create;
-  GCommandBindings.Add(Binding);
-end;
-
-procedure UnregisterCommandBinding(Binding: TCommandButtonBinding);
-begin
-  if GCommandBindings <> nil then
-    GCommandBindings.Remove(Binding);
 end;
 
 // ============================================================================
@@ -449,11 +459,8 @@ end;
 
 procedure TMVVMFormBase.BindCommand(Button: TButton; Command: ICommand;
   const Parameter: TValue);
-var
-  Binding: TCommandButtonBinding;
 begin
-  Binding := TCommandButtonBinding.Create(Button, Command, Parameter);
-  RegisterCommandBinding(Binding);
+  TCommandButtonBinding.Create(Self, Button, Command, Parameter);
 end;
 
 procedure TMVVMFormBase.BindCommand(Button: TButton; Command: ICommand);
@@ -575,11 +582,8 @@ end;
 
 procedure TMVVMFrameBase.BindCommand(Button: TButton; Command: ICommand;
   const Parameter: TValue);
-var
-  Binding: TCommandButtonBinding;
 begin
-  Binding := TCommandButtonBinding.Create(Button, Command, Parameter);
-  RegisterCommandBinding(Binding);
+  TCommandButtonBinding.Create(Self, Button, Command, Parameter);
 end;
 
 procedure TMVVMFrameBase.BindCommand(Button: TButton; Command: ICommand);
@@ -863,23 +867,5 @@ procedure TBusyIndicatorPanel.BindToViewModel(AViewModel: TViewModelBase);
 begin
   SetViewModel(AViewModel);
 end;
-
-// ============================================================================
-// Finalization
-// ============================================================================
-
-initialization
-
-finalization
-  if GCommandBindings <> nil then
-  begin
-    // Free all command bindings
-    while GCommandBindings.Count > 0 do
-    begin
-      TCommandButtonBinding(GCommandBindings[0]).Free;
-      GCommandBindings.Delete(0);
-    end;
-    GCommandBindings.Free;
-  end;
 
 end.
