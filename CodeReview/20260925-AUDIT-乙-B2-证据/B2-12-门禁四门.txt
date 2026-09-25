@@ -1,0 +1,71 @@
+B2-12 门禁四门：修后复跑原始输出与计数对照
+================================================================================
+执行时机：本笔 payload 全部 git add 之后（丙类/证据两门以 git ls-files 为准，
+          未入索引的文件不在扫描面内 ⇒ 先 add 再跑，才是交付树真相）。
+执行目录：仓库根 D:/_Progs/02Business/DeepBase
+基准：HEAD = 02875e4（B2-11 落笔），本笔尚未提交 ⇒ 「索引 = HEAD + 本笔 10 件」
+
+一、四门退出码
+--------------------------------------------------------------------------------
+  node 09_工程脚本/encoding-gate/check_pas_encoding.js          => EXIT=0
+  node 09_工程脚本/eol-gate/check_eol.js                       => EXIT=0
+  node 09_工程脚本/mojibake-gate/check_mojibake.js             => EXIT=0
+  node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js => EXIT=0
+
+二、四门汇总行（原始输出末行，未删减）
+--------------------------------------------------------------------------------
+[编码门]
+编码门禁通过：1001 个 .pas + 710 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+[行尾门]
+行尾门禁通过：检查了 1555 个文件（.pas CRLF / .md LF），跳过目录 11
+[丙类损坏门]
+丙类损坏门禁通过：扫描 999 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+[证据编码门]
+证据编码门禁通过：扫描 729 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+
+三、计数对照与归属（B2-11 落笔时登记值 ⇒ 本笔值）
+--------------------------------------------------------------------------------
+门            B2-11 登记   本笔实测   差   归属
+编码门 .pas        1000       1001     +1   本单新增 Tests/Test.DeepBase.DeepFlow.RoleGuid.pas
+行尾门 文件        1553       1555     +2   +1 = 本单同一新 .pas；
+                                            +1 = 他人未跟踪 .md 流入工作树扫描面（本单不认领，
+                                                 现值实测：未跟踪 .md 31 件）
+丙类损坏门 .pas     998        999     +1   本单同一新 .pas（入门禁面与否取决于是否入索引）
+证据门 文件         717        729    +12   +7 = 本单新增（6 件 B2-12-*.txt + 1 件取证脚本
+                                                 b2_guid_duplicate_scan.py；另 2 件 .sh 是改存量，不改计数）
+                                            +5 = B2-11 自己登记值 717 与其落笔提交树实测 722 的历史差
+                                                 （git ls-tree -r HEAD -- CodeReview = 722）
+                                                 ⇒ 属「登记值不等于落笔值」的流程缺陷，见 §五 R4
+    自指处理：本文件先入索引再跑终轮，729 已含本文件自身 ⇒ 计数与内容同轮成立
+              （改内容不改文件数，故不存在「写下数字的那一刻数字变了」的漂移）。
+
+四、本笔字面量与新文件的字节事实
+--------------------------------------------------------------------------------
+DeepFlow/Source/Core/DeepFlow.Role.pas        322 行  10224 B  UTF-8 BOM=Y  CRLF=0（纯 LF）
+  ⇒ 行尾未改动的理由：HEAD 版即纯 LF，且该路径已登记在
+    09_工程脚本/eol-gate/eol_baseline.json:97 的 pas_lf_exceptions 存量里。
+    本单若顺手 renormalize 成 CRLF，会产生 315 行整文件 diff，把两行 GUID 修复埋掉，
+    并与 §〇-1「每条缺陷独立提交」冲突 ⇒ 留给 eol 基线只减不增的批量收口笔（登记项 R3）。
+Tests/Test.DeepBase.DeepFlow.RoleGuid.pas     204 行   7090 B  UTF-8 BOM=Y  CRLF=Y
+  ⇒ 新 .pas 按 .gitattributes（*.pas text eol=crlf）与仓内约定落 CRLF + BOM（含中文字面量）。
+sha256（与 B2-12-反事实与探针自检.txt §3 同一对值，交叉印证变异已还原）：
+  ba916b43ee7c899e4f716747e8dd659941c632e829a265005d8a385950bbd54a  DeepFlow/Source/Core/DeepFlow.Role.pas
+  f436e1cecee1b1357d26bd96ab62355ce4f9c2f9d29a6f5fb192da142978f896  Tests/Test.DeepBase.DeepFlow.RoleGuid.pas
+证据文件字节自检（5 件 .txt + 2 件脚本 + 1 件 .py）：全部 UTF-8 可解码、无 BOM、无 CR、无 NUL
+  ⇒ 证据编码门 §二 的 728 件全通过即为机器证明。
+
+五、本单登记项（报主控，不属本单自决范围）
+--------------------------------------------------------------------------------
+R1  新测试单元待注册：Tests/Test.DeepBase.DeepFlow.RoleGuid.pas（自带 RegisterTestFixture，
+    .dpr 只需加一行 uses）——与 B2-11 及之前各单同一收口面。
+R2  假 fixture 同族 +1 件，且形态与 B2-11 不同：DeepFlow/Tests/Test.DeepFlow.Engine.pas
+    「在构建面（Tests/DeepBaseTests.dpr:337）、不在注册面」⇒ 4 个用例被编译但从未执行，
+    全量统计里表现为「编译绿 + 0 贡献」，比不在构建面更隐蔽。修法只差一行注册。
+R3  eol 基线存量 DeepFlow/Source/Core/DeepFlow.Role.pas（纯 LF）可随批量收口笔转 CRLF。
+R4  门禁登记流程缺陷：B2-11 登记的 evidence=717 与其落笔提交树实测 722 不一致（见 §三），
+    说明「四门计数」目前是人工抄录而非落笔后自动复算；主控收口时建议把复算点定在
+    「commit 之后的提交树」，否则每单都会带一个说不清的 ±N。
+R5  同族缺陷整表（16 个跨文件重复 GUID / A 级 12 个在生产接口之间）不在本单范围，
+    修复要跨 Core/Features/Governance/ThirdParty 四模块重排 ⇒ 报主控裁定是否另立工单。
+    明细与可复跑取证器：B2-12-同族登记-全库跨文件重复GUID.txt
+    + CodeReview/20260925-AUDIT-乙-B2-证据/b2_guid_duplicate_scan.py

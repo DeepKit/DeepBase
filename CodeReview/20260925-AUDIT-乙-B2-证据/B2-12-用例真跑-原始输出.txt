@@ -1,0 +1,392 @@
+B2-12 用例真跑：原始输出（未删减，非自报 PASS）
+================================================================================
+执行环境：Delphi 12 / dcc64 37.0（D:/Program Files (x86)/Embarcadero/Studio/37.0）
+          DUnitX（D:/ProgramData/delphi/DUnitX/Source）/ Win64
+探针：CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh
+      CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh（一次性 runner，产物落 .tmp）
+runner 语义：TDUnitX.CreateRunner + FailsOnNoAsserts=True + ConsoleLogger
+退出码口径：0=全绿 1=有红 2=0 用例或异常 3=编译未过（三道 fail-closed，缺一不拦即误报）
+
+§1 新测试单元单件编译（Tests/Test.DeepBase.DeepFlow.RoleGuid.pas）
+------------------------------------------------------------------------------
+$ bash CodeReview/.../b2_unit_compile.sh Tests/Test.DeepBase.DeepFlow.RoleGuid.pas
+================================================================
+单元: Tests/Test.DeepBase.DeepFlow.RoleGuid.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23072 lines, 1.12 seconds, 6924 bytes code, 1132 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+§2.1 fixture 真跑（第 1 次，同一命令、同一 exe 不复用：探针每次都清空重编）
+      --run:Test.DeepBase.DeepFlow.RoleGuid.TTestDeepFlowRoleGuid
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.RoleGuid） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24310 lines, 1.22 seconds, 2706980 bytes code, 376152 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.RoleGuid）--run:Test.DeepBase.DeepFlow.RoleGuid.TTestDeepFlowRoleGuid --hidebanner --consolemode:Quiet ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+§2.2 fixture 真跑（第 2 次，同一命令、同一 exe 不复用：探针每次都清空重编）
+      --run:Test.DeepBase.DeepFlow.RoleGuid.TTestDeepFlowRoleGuid
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.RoleGuid） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24310 lines, 1.36 seconds, 2706980 bytes code, 376152 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.RoleGuid）--run:Test.DeepBase.DeepFlow.RoleGuid.TTestDeepFlowRoleGuid --hidebanner --consolemode:Quiet ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+§2.3 fixture 真跑（第 3 次，同一命令、同一 exe 不复用：探针每次都清空重编）
+      --run:Test.DeepBase.DeepFlow.RoleGuid.TTestDeepFlowRoleGuid
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DeepFlow.RoleGuid） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24310 lines, 1.47 seconds, 2706980 bytes code, 376152 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DeepFlow.RoleGuid）--run:Test.DeepBase.DeepFlow.RoleGuid.TTestDeepFlowRoleGuid --hidebanner --consolemode:Quiet ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+§3 判定汇总
+--------------------------------------------------------------------------------
+§2 三次：RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+         RUNNER_VERDICT: PASSED / RUN_EXIT=0
+派单判据「唯一性测试 EXIT=0」⇒ 由 §2 的 RUN_EXIT=0 兑现（脚本退出码修复见 §6）。
+4 条用例：Test_All_Role_Interface_GUIDs_Are_Unique
+          Test_All_Role_Interface_GUIDs_Share_Family_Prefix
+          Test_Stub_Supports_Own_Role_Interfaces
+          Test_Stub_Not_Supports_L0_Role_Interfaces
+
+§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-§4 邻件回归：既有角色解析测试（DeepFlow/Tests/Test.DeepFlow.Engine.pas）
+-
+4.1 直接挂进一次性 runner（不补注册）⇒ 0 用例，探针按 fail-closed 拦成 EXIT=2：
+    这一条同时是「该 fixture 从未在任何地方真正执行过」的实测证据。
+
+== 编译一次性 runner（单元: Test.DeepFlow.Engine） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+DeepFlow\Source\Core\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'
+25528 lines, 1.36 seconds, 2548416 bytes code, 360456 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepFlow.Engine）--hidebanner --consolemode:Quiet ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2
+
+4.2 显式注册探针（注册语句写在 .tmp 的一次性 .dpr 里，不改被测单元）——修前基线：
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [SibRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+SIB_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0
+
+4.3 同一探针、同一 .dpr，只把被测源码换成修后版：编译 + 真跑：
+
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+DeepFlow\Source\Core\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'
+25492 lines, 1.44 seconds, 2813560 bytes code, 385816 bytes data.
+DUnitX - [SibRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+SIB_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0
+
+4.4 结论：sib_before 与 sib_after 的 SIB_STATS 逐字段一致
+      （fixtureCount=1 testCount=4 pass=4 failure=0 error=0）
+      ⇒ 派单判据「既有角色解析测试不回归」成立，且基线不是「0 用例假绿」。
+
+§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-§5 受影响面单件编译（声明单元 + 5 个实现者，全部含改后 GUID）
+-
+================================================================
+单元: DeepFlow/Source/Core/DeepFlow.Role.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1036 lines, 0.11 seconds, 4828 bytes code, 684 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: DeepFlow/Source/Core/DeepFlow.Engine.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+DeepFlow\Source\Core\DeepFlow/Source/Core/DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used
+2310 lines, 0.22 seconds, 102706 bytes code, 17672 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: DeepFlow/Source/Roles/DeepFlow.Chronicler.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1980 lines, 0.23 seconds, 84951 bytes code, 13932 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: DeepFlow/Source/Roles/DeepFlow.Commander.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1483 lines, 0.17 seconds, 66097 bytes code, 11064 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: DeepFlow/Source/Roles/DeepFlow.Executor.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1695 lines, 0.20 seconds, 11417 bytes code, 1928 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: DeepFlow/Source/Roles/DeepFlow.Guard.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1799 lines, 0.27 seconds, 100272 bytes code, 17548 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+§6 本单对探针自身的一处 fail-open 修复（否则上面这些 EXIT 数字不可信）
+--------------------------------------------------------------------------------
+b2_run_fixture.sh 原末两行：
+    ( cd "$DIR" && ./B2FixtureRunner.exe "$@" ); echo "RUN_EXIT=$?"
+    exit $?
+echo 之后 $? 已是 echo 自己的 0 ⇒ 脚本恒退 0，「有红 ⇒ 非 0」只印不拦。
+修复后（本笔一并落地）：先落 rc 变量再 echo 再 exit。
+本文 §2/§4.1 引用的 RUN_EXIT 是 runner 进程的真实退出码（在修复前后同值），
+SCRIPT_EXIT 则只有修复后才可信；§4.1 的 EXIT=2 是修复后重跑取到的。
+
+§7 未测项与限制（诚实登记）
+--------------------------------------------------------------------------------
+1) 未直接实例化 TChronicler/TDeepFlowEngine 来演示 Supports 跨命中：TChronicler 构造
+   需要配置与消息面装配，成本高且与结论无关（机制由实现者清单 + M1/M2 现场复现承担）。
+2) DeepFlow 全量套件（Tests/DeepBaseTests.dpr）未跑：§〇-4 已注明全量 run 有 216 崩溃
+   存量问题，禁止拿全量当判据；本单判据全部走 fixture 子集。
+3) 未验证 IDE 侧 .dproj 编译面（新单元尚未注册，注册收口归主控）。

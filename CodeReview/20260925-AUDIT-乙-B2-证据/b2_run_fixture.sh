@@ -39,6 +39,8 @@ U="$ROOT/Core;$ROOT/Features;$ROOT/Persistence;$ROOT/VCL;$ROOT/FMX;$ROOT/Governa
 U="$U;$ROOT/Tests;$ROOT/Tests/Regression;$ROOT/Tests/Integration;$ROOT/DeepFlow/Source"
 U="$U;$ROOT/DeepFlow/Source/Core;$ROOT/DeepFlow/Source/Workflow;$ROOT/doQry;$ROOT/ThirdParty"
 U="$U;$BDS/lib/Win64/release;$DUNITX"
+# 邻件回归要跑不在标准搜索面上的目录（如 DeepFlow/Tests）时用它追加，不另立一套口径
+[ -n "${DEEPBASE_EXTRA_U:-}" ] && U="$U;$DEEPBASE_EXTRA_U"
 NS="System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win"
 ( cd "$ROOT" && "$DCC" -B "$DIR/B2FixtureRunner.dpr" -NU"$DIR" -N0"$DIR" -E"$DIR" -U"$U" -NS"$NS" ) 2>&1
 rc=${PIPESTATUS[0]}
@@ -48,5 +50,8 @@ if [ "$rc" -ne 0 ]; then echo "== runner 编译未过 ⇒ 判据不成立 =="; e
 echo
 echo "== 真跑（$UNIT_NAME）$* =="
 # 必须在 .tmp 下跑：exe 的相对路径依赖 cwd，且避免测试产物写进工作树
-( cd "$DIR" && ./B2FixtureRunner.exe "$@" ); echo "RUN_EXIT=$?"
-exit $?
+# rc 必须先落到变量再打印：echo 之后 $? 就变成 echo 自己的 0，
+# 那是「门禁只报不拦」的 fail-open（同族缺陷见 WO-20260924-AUDIT-乙-D7）
+( cd "$DIR" && ./B2FixtureRunner.exe "$@" ); rc=$?
+echo "RUN_EXIT=$rc"
+exit $rc

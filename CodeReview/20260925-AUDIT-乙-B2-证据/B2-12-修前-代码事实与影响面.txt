@@ -1,0 +1,114 @@
+B2-12 修前取证：角色接口 GUID 撞车的代码事实、危害机制与兼容面
+================================================================================
+工单：docs/ui/work-orders/WO-20260925-AUDIT-乙-B2-功能与集成层缺陷修复.md（B2-12）
+代码基准：git HEAD = 02875e4（乙-B2-11 落笔后的主干）
+被测单元：DeepFlow/Source/Core/DeepFlow.Role.pas（HEAD 版 315 行，UTF-8 BOM + 纯 LF）
+
+
+一、派单原文（不转述，逐字引用）
+--------------------------------------------------------------------------------
+  代码事实：`IEngine` 与 `ILogistics` 同为 `{A1B2C3D4-0001-0000-0000-000000000010}`；
+  `IInspector` 与 `IChronicler` 同为 `{...011}` ⇒ `Supports/as` 互相命中，
+  两个语义不同的角色可被当同一个用。
+  期望：重新分配唯一 GUID；加 GUID 唯一性回归测试（遍历全部接口 GUID 断言无重复）。
+  判定：唯一性测试 EXIT=0；既有角色解析测试不回归。
+
+实测结论：派单点名的行号与两个撞车值全部与 HEAD 代码事实一致，本单无需修正派单前提。
+（对比 B2-10/B2-11：那两单的派单表述与实测有出入，已在各自证据里登记。）
+
+
+二、HEAD 版 12 个接口 GUID 全表（git show HEAD 原样，带原始行号）
+--------------------------------------------------------------------------------
+   68  IDeepFlowRole  = interface（根）        ['{A1B2C3D4-0001-0000-0000-000000000001}']
+  128  IEngine        = interface(IDeepFlowRole)      L0  ['{...000000000010}']  ┐ 撞车
+  137  IInspector     = interface(IDeepFlowRole)      L0  ['{...000000000011}']  │
+  144  ICommander     = interface(IDeepFlowRole)      L4  ['{...000000000040}']  │
+  152  IDispatcher    = interface(IDeepFlowRole)      L4  ['{...000000000041}']  │
+  160  IAdvisor       = interface(IDeepFlowRole)      L3  ['{...000000000030}']  │
+  167  IExecutor      = interface(IDeepFlowRole)      L2  ['{...000000000020}']  │
+  173  IGuard         = interface(IDeepFlowRole)      L2  ['{...000000000021}']  │
+  182  IQuartermaster = interface(IDeepFlowRole)      L2  ['{...000000000022}']  │
+  190  ILogistics     = interface(IDeepFlowRole)      L1  ['{...000000000010}']  ┘ = IEngine
+  198  IChronicler    = interface(IDeepFlowRole)      L1  ['{...000000000011}']  = IInspector
+  206  ISignalOfficer = interface(IDeepFlowRole)      L1  ['{...000000000012}']
+
+  （末字节列内层数值取自各自字面量最后两字节，层级取自单元抬头「角色层级」段。）
+
+
+三、编号规则还原：写错的是 L0 那两个，不是 L1 那两个
+--------------------------------------------------------------------------------
+末字节按「层级 << 4 | 层内序号」读（16 进制），全表自洽度：
+  L1 三角色 = 0x10/0x11/0x12   自洽（三个角色占满层内前三槽）
+  L2 三角色 = 0x20/0x21/0x22   自洽
+  L3 角色   = 0x30             自洽
+  L4 两角色 = 0x40/0x41         自洽
+  根接口    = 0x01             L0 块内的保留位
+  L0 两角色 = 0x10/0x11         ← 唯一不自洽：把「L0」写成了十进制观感的 10/11，
+                                  直接落进 L1 块，与 ILogistics/IChronicler 抢号
+所以本单把号还给 L0 块（0x02/0x03），保持 ILogistics/IChronicler/ISignalOfficer 的
+0x10/0x11/0x12 不动：改动面最小，且修完整张表重新自洽。
+反向选择（改 L1 那两个）会把 L1 角色推进 L4 块（0x42/0x43），读表的人会误以为
+后勤/记录员是决策层角色——那才是引入新的误导。
+
+
+四、危害机制（为什么这不是"洁癖"级问题）
+--------------------------------------------------------------------------------
+1) TInterfacedObject.QueryInterface 只按 GUID 匹配，不看类型名；两个接口共用一个
+   GUID 时，编译器与运行时都没有任何信号。
+2) 撞车不是纸面风险：11 个角色接口里有 5 个已有真实实现者（见下表），
+   其中 IEngine 与 IChronicler 分属两对撞车的两侧——
+     TChronicler（记录员，已有实现）在旧定义下会被 Supports(x, IInspector) 认成督察；
+     将来任何人写一个 ILogistics 实现，都会被 Supports(x, IEngine) 认成引擎本体，
+     并可 as IEngine 传进 RegisterRole/SubmitMessage 的调用位。
+   两条语义路径（记录/审计 vs 督察/健康度）在 DeepFlow 里恰好都是"看起来像"的邻居，
+   误命中不会被立刻的症状揭穿。
+3) 机制本身的可复现证明见 B2-12-反事实与探针自检.txt 的 M1/M2：
+   把任一旧值改回去，Test_Stub_Not_Supports_L0_Role_Interfaces 立即变红，
+   即 Supports 在撞车定义下确实返回 True（不是理论推断）。
+
+实现者对照（git grep "= class.*I<角色>" 全 DeepFlow）：
+  IEngine         TDeepFlowEngine        DeepFlow/Source/Core/DeepFlow.Engine.pas:61
+  IChronicler     TChronicler            DeepFlow/Source/Roles/DeepFlow.Chronicler.pas:67
+  ICommander      TCommander             DeepFlow/Source/Roles/DeepFlow.Commander.pas:61
+  IExecutor       TExecutor              DeepFlow/Source/Roles/DeepFlow.Executor.pas:39
+  IGuard          TGuard                 DeepFlow/Source/Roles/DeepFlow.Guard.pas:56
+  IInspector / ILogistics / IAdvisor / IDispatcher / IQuartermaster / ISignalOfficer
+                  无实现者（仅声明）
+
+
+五、兼容面扫描：换 GUID 的 breaking 半径 = 0
+--------------------------------------------------------------------------------
+1) GUID 字面量在本仓的引用点：`git grep -l "A1B2C3D4-0001" -- '*.pas'` 只命中声明单元
+   DeepFlow/Source/Core/DeepFlow.Role.pas 自己，其他 .pas 命中数 0。
+2) 非 .pas 资产（JSON/资源/SQL/脚本/配置）里 `A1B2C3D4-0001-0000-0000` 命中 1 处，
+   是本单段0取证文档里的散文描述（B2-段0-开工取证.md:126），不是消费者。
+3) 没有按 GUID 持久化或跨进程传接口的代码：DeepFlow/ 内 GUIDToString 只用于
+   消息 id / trace id / session id 生成（DeepFlow.Message.pas:139,147、
+   DeepFlow.Chronicler.pas:257、DeepFlow.Commander.pas:108），与接口 IID 无关；
+   DeepFlow/ 内 StringToGUID 命中 0。
+4) Delphi 的 IID 在编译期由声明生成，不做运行期解析；引用 DeepFlow.Role 的
+   7 个单元（Engine/Chronicler/Commander/Executor/Guard + Tests/Test.DeepFlow.Engine.pas
+   + Tests/DeepBaseTests.dpr）全部从源码重编，重编后自动取新值。
+⇒ 老板口径「质量优先于兼容，允许 breaking change」在此处的实际兑现是：无兼容代价。
+
+
+六、判据「既有角色解析测试不回归」的可测性核对
+--------------------------------------------------------------------------------
+DeepFlow 里唯一沾角色的既有测试是 DeepFlow/Tests/Test.DeepFlow.Engine.pas
+（fixture TDeepFlowEngineTests，4 个用例，含 Stop_FromWorkerThread_DoesNotDeadlock）。
+实测三件事实（原始输出见 B2-12-用例真跑-原始输出.txt §4）：
+  a) 该单元没有任何 TDUnitX.RegisterTestFixture 调用，只有 [TestFixture] 注解；
+     DUnitX 的 AutoDetect.Console 只负责选平台 console 单元，不做 fixture 发现
+     ⇒ 直接跑会得 ENoTestsRegistered，这 4 个用例在本地与 CI 都从未执行过（假 fixture）。
+  b) 该单元其实挂在构建面上——Tests/DeepBaseTests.dpr:337 有
+     `Test.DeepFlow.Engine in '..\DeepFlow\Tests\Test.DeepFlow.Engine.pas'`，
+     build-gate 编得到它；正因它被编进全量 runner 却不注册 fixture，
+     「编译通过 + 0 用例执行」在全量统计里完全隐身（统计只看红绿，不看该单元贡献了几条）。
+     ⇒ 与 B2-11 那件的「不在构建面」不同形态：这里是「在构建面、不在注册面」。
+  c) 为了不让「不回归」这条判据落空，本单用一次性显式注册探针跑它
+     （注册语句写在探针 .dpr 里，不改被测单元，注册收口仍归主控）：
+     修前 4/4 PASSED，修后 4/4 PASSED ⇒ 判据成立，且基线本身可信。
+⇒ 登记给主控：修法只差一行 `TDUnitX.RegisterTestFixture(...)`（属被测单元自己的 initialization，
+  不在本单派单范围，且 §〇-4 禁止本单动注册面文件），本单不越界改。
+  本单新单元 Tests/Test.DeepBase.DeepFlow.RoleGuid.pas 已自带 RegisterTestFixture，
+  主控收口时只需在 .dpr 加一行 uses，不需再写注册语句。

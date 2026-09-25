@@ -13,6 +13,13 @@
     L3 智能层：Advisor
     L2 能力层：Executor, Guard, Quartermaster
     L1 基础层：Logistics, Chronicler, SignalOfficer
+
+  接口 GUID 编号规则（TInterfacedObject.QueryInterface 按 GUID 匹配，两个接口共用
+  同一个 GUID 会让 Supports/as 在语义无关的角色间互相命中）：
+    末字节 = (层级 << 4) | 层内序号，层级 0..4 即 L0..L4；
+    如 L2 三角色 = 0x20/0x21/0x22，L4 两角色 = 0x40/0x41。
+    基础接口 IDeepFlowRole 占用 L0 块的 0x01，故 L0 的两个角色接口取 0x02/0x03。
+    唯一性由 Tests/Test.DeepBase.DeepFlow.RoleGuid.pas 断言，不在本文件另立清单。
     
   作者：鲁班（开发者）
   日期：2025-12-04
@@ -126,7 +133,7 @@ type
 
   /// <summary>引擎接口 (L0)</summary>
   IEngine = interface(IDeepFlowRole)
-    ['{A1B2C3D4-0001-0000-0000-000000000010}']
+    ['{A1B2C3D4-0001-0000-0000-000000000002}']
     procedure RegisterRole(const ARole: IDeepFlowRole);
     function GetRole(const ARoleName: string): IDeepFlowRole;
     procedure SubmitMessage(const AMessage: TDeepFlowMessage);
@@ -135,7 +142,7 @@ type
 
   /// <summary>督察接口 (L0)</summary>
   IInspector = interface(IDeepFlowRole)
-    ['{A1B2C3D4-0001-0000-0000-000000000011}']
+    ['{A1B2C3D4-0001-0000-0000-000000000003}']
     procedure Watch(const AComponent: string; const AMetrics: TJSONObject);
     function GetHealth(const AComponent: string): TJSONObject;
     procedure Audit(const AEvent: TJSONObject);

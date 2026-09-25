@@ -1,0 +1,154 @@
+B2-12 同族缺陷登记：全库跨文件重复的接口 GUID（乙不越单修，报主控裁定派单）
+================================================================================
+
+背景
+  工单 B2-12 只点名 DeepFlow/Source/Core/DeepFlow.Role.pas 内部的两对撞车 GUID。
+  修本单时顺手做了一次全库同类扫描（同一缺陷类：两个语义不同的接口共用一个 GUID ⇒
+  TInterfacedObject.QueryInterface 按 GUID 认人 ⇒ Supports/as 跨角色误命中），
+  结果不在本单范围内修复，按 §〇-2 禁动区与「不越单」纪律整表登记给主控。
+
+扫描口径（可复现）
+  输入：git ls-files 里的全部 *.pas，排除 *_TLB.pas（Delphi 类型库导入生成物，
+        同一个 GUID 在「接口声明 / IID 常量 / 注释」三处重复出现是生成器约定，不是缺陷）。
+  判定：把 {8-4-4-4-12} 形态的 GUID 字面量归一为大写后按「出现在几个不同文件」分组，
+        跨文件出现 ≥2 个即入表；同文件内重复不入表（那属 B2-12 本体形态）。
+  脚本（随本证据入库，可复跑）：
+    python CodeReview/20260925-AUDIT-乙-B2-证据/b2_guid_duplicate_scan.py
+  注：它是取证工具，不是门禁——要长期拦这类撞车应由主控在 09_工程脚本/ 立项，
+      本单不擅自加第五道门。
+
+结论：跨文件重复 GUID 共 16 个，涉及 26 个手写接口声明点（不含 TLB 生成物）。
+
+----- 明细（GUID | 声明点 文件:行 | 该 GUID 所属接口/常量名）-----
+----- 危害分级（按声明点所在侧分）-----
+
+A 级 12 个：两个及以上「生产单元的接口声明」共用同一 GUID。
+    与 B2-12 完全同形：任一侧的对象都可能被 Supports/as 认成另一侧角色，
+    且这些接口分布在 Core / Features / Governance / ThirdParty 四个顶层模块，跨模块耦合。
+  {A1B2C3D4-5678-9ABC-DEF0-111111111111}
+      Core/DeepBase.Configuration.pas:51  IConfigurationSource
+      Core/DeepBase.LogAggregator.pas:140  ILogBackend
+  {A1B2C3D4-5678-9ABC-DEF0-123456789ABC}
+      Core/DeepBase.Serialization.pas:109  IValueConverter
+      Core/DeepBase.WorkerQueue.pas:287  IJobStorage
+      Examples/Templates/RealtimeChatApp/Chat.Services.pas:31  IRealtimeTransport
+  {A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}
+      Core/DeepBase.DataBinding.pas:99  IValueConverter
+      Core/DeepBase.Services.Interfaces.pas:47  IHashService
+      Tests/Test.DeepBase.HB.Persistence.pas:863  const:GuidLegacy
+  {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+      Core/DeepBase.Memory.pas:81  IPoolable
+      Core/DeepBase.RateLimiter.pas:68  IRateLimiter
+      Features/DeepBase.Browser.Vision.pas:35  IVisionProvider
+      Governance/DeepBase.Governance.Interfaces.pas:19  IOCGSRuntime
+      Tests/Regression/Test.Regression.CR20260824_P0Batch1.pas:67  ?
+      Tests/Stress/Stress.Memory48h.pas:996  ITestInterface
+      ThirdParty/Payment/DeepBase.Payment.pas:215  IPaymentClient
+  {B1C2D3E4-5678-9ABC-DEF0-123456789ABC}
+      Core/DeepBase.Metrics.pas:42  IMetric
+      Core/DeepBase.Serialization.pas:168  ISerializer
+  {B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E}
+      Core/DeepBase.MVVM.pas:68  IValidatable
+      Tests/Test.DeepBase.IoC.pas:23  ITestServiceWithDep
+      Tools/CLI/DeepBase.CLI.SSH.pas:142  ISSHBackend
+  {B2C3D4E5-F6A7-5B6C-9D0E-1F2A3B4C5D6E}
+      Core/DeepBase.Interfaces.pas:78  IDeepBaseLogger
+      Core/DeepBase.Services.Interfaces.pas:92  IEncodingService
+  {B2C3D4E5-F6A7-8901-BCDE-F12345678901}
+      Features/DeepBase.TimeGuard.pas:60  ITimeGuardHttpTransport
+      Governance/DeepBase.Governance.Interfaces.pas:29  IActionGrid
+  {C3D4E5F6-A7B8-6C7D-0E1F-2A3B4C5D6E7F}
+      Core/DeepBase.Interfaces.pas:108  IDeepBaseI18n
+      Core/DeepBase.Services.Interfaces.pas:134  IPasswordService
+  {C3D4E5F6-A7B8-9012-CDEF-123456789012}
+      Features/DeepBase.TimeGuard.pas:85  ITimeGuardSecretStore
+      Governance/DeepBase.Governance.Interfaces.pas:44  IGateResolver
+  {D4E5F6A7-B8C9-7D8E-1F2A-3B4C5D6E7F8A}
+      Core/DeepBase.Interfaces.pas:134  IDeepBaseMRU
+      Core/DeepBase.Services.Interfaces.pas:164  IRandomService
+  {E5F6A7B8-C9D0-8E9F-2A3B-4C5D6E7F8A9B}
+      Core/DeepBase.Interfaces.pas:178  IDeepBaseManager
+      Core/DeepBase.Services.Interfaces.pas:199  ICryptoService
+
+B 级 4 个：一个生产接口声明 + 一个测试单元里的同值字面量。
+    直接后果是测试在拿别人的 IID 断言自己（假覆盖）；撞车的运行时危害与 A 级同源。
+  {7D4B6E20-8F31-4A5C-9E12-6B8F0A2C4D6E}
+      Core/DeepBase.HB.Touchpoint.Types.pas:82  IHbSnapshotProvider
+      Tests/Test.DeepBase.HB.Persistence.pas:861  const:GuidLegacy
+  {A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5E}
+      Core/DeepBase.Interfaces.pas:44  IDeepBaseConfig
+      Tests/Regression/Test.Regression.BUG058_XOREncryption.pas:155  const:ActualGUID
+      Tests/Regression/Test.Regression.BUG058_XOREncryption.pas:159  ?
+  {B7C1D8E4-9F2A-4C6D-8E1B-3A7F5D2C9E04}
+      Features/DeepBase.Desktop.Perception.Types.pas:67  IDesktopVisionProvider
+      Tests/Test.DeepBase.Desktop.Perception.pas:250  const:LGUID
+  {E3A1C590-7D82-4F6B-B415-9C0E2A4F8D17}
+      Core/DeepBase.HB.StateSlot.Types.pas:24  IHbStateSlotProvider
+      Tests/Test.DeepBase.HB.Persistence.pas:862  const:GuidLegacy
+
+----- 处置 -----
+本单只按派单修 DeepFlow.Role.pas 的两对撞车（改动清单见 B2-12-修后-改动清单与判定落点.txt）。
+上表 A/B 两级共 16 个 GUID 不在派单范围内，且修复要跨 Core/
+Features/Governance/ThirdParty 四个模块重排 GUID，属跨系统结构性改动
+⇒ 整表登记后报主控裁定是否另立工单，乙不越单动这些单元。
+
+----- 原始扫描输出（b2_guid_duplicate_scan.py 全量，未删减）-----
+
+扫描 .pas（排除 *_TLB.pas）：238 个不同 GUID，其中跨文件重复 16 个
+{7D4B6E20-8F31-4A5C-9E12-6B8F0A2C4D6E}
+    Core/DeepBase.HB.Touchpoint.Types.pas:82  IHbSnapshotProvider
+    Tests/Test.DeepBase.HB.Persistence.pas:861  const:GuidLegacy
+{A1B2C3D4-5678-9ABC-DEF0-111111111111}
+    Core/DeepBase.Configuration.pas:51  IConfigurationSource
+    Core/DeepBase.LogAggregator.pas:140  ILogBackend
+{A1B2C3D4-5678-9ABC-DEF0-123456789ABC}
+    Core/DeepBase.Serialization.pas:109  IValueConverter
+    Core/DeepBase.WorkerQueue.pas:287  IJobStorage
+    Examples/Templates/RealtimeChatApp/Chat.Services.pas:31  IRealtimeTransport
+{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}
+    Core/DeepBase.DataBinding.pas:99  IValueConverter
+    Core/DeepBase.Services.Interfaces.pas:47  IHashService
+    Tests/Test.DeepBase.HB.Persistence.pas:863  const:GuidLegacy
+{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5E}
+    Core/DeepBase.Interfaces.pas:44  IDeepBaseConfig
+    Tests/Regression/Test.Regression.BUG058_XOREncryption.pas:155  const:ActualGUID
+    Tests/Regression/Test.Regression.BUG058_XOREncryption.pas:159  ?
+{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+    Core/DeepBase.Memory.pas:81  IPoolable
+    Core/DeepBase.RateLimiter.pas:68  IRateLimiter
+    Features/DeepBase.Browser.Vision.pas:35  IVisionProvider
+    Governance/DeepBase.Governance.Interfaces.pas:19  IOCGSRuntime
+    Tests/Regression/Test.Regression.CR20260824_P0Batch1.pas:67  ?
+    Tests/Stress/Stress.Memory48h.pas:996  ITestInterface
+    ThirdParty/Payment/DeepBase.Payment.pas:215  IPaymentClient
+{B1C2D3E4-5678-9ABC-DEF0-123456789ABC}
+    Core/DeepBase.Metrics.pas:42  IMetric
+    Core/DeepBase.Serialization.pas:168  ISerializer
+{B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E}
+    Core/DeepBase.MVVM.pas:68  IValidatable
+    Tests/Test.DeepBase.IoC.pas:23  ITestServiceWithDep
+    Tools/CLI/DeepBase.CLI.SSH.pas:142  ISSHBackend
+{B2C3D4E5-F6A7-5B6C-9D0E-1F2A3B4C5D6E}
+    Core/DeepBase.Interfaces.pas:78  IDeepBaseLogger
+    Core/DeepBase.Services.Interfaces.pas:92  IEncodingService
+{B2C3D4E5-F6A7-8901-BCDE-F12345678901}
+    Features/DeepBase.TimeGuard.pas:60  ITimeGuardHttpTransport
+    Governance/DeepBase.Governance.Interfaces.pas:29  IActionGrid
+{B7C1D8E4-9F2A-4C6D-8E1B-3A7F5D2C9E04}
+    Features/DeepBase.Desktop.Perception.Types.pas:67  IDesktopVisionProvider
+    Tests/Test.DeepBase.Desktop.Perception.pas:250  const:LGUID
+{C3D4E5F6-A7B8-6C7D-0E1F-2A3B4C5D6E7F}
+    Core/DeepBase.Interfaces.pas:108  IDeepBaseI18n
+    Core/DeepBase.Services.Interfaces.pas:134  IPasswordService
+{C3D4E5F6-A7B8-9012-CDEF-123456789012}
+    Features/DeepBase.TimeGuard.pas:85  ITimeGuardSecretStore
+    Governance/DeepBase.Governance.Interfaces.pas:44  IGateResolver
+{D4E5F6A7-B8C9-7D8E-1F2A-3B4C5D6E7F8A}
+    Core/DeepBase.Interfaces.pas:134  IDeepBaseMRU
+    Core/DeepBase.Services.Interfaces.pas:164  IRandomService
+{E3A1C590-7D82-4F6B-B415-9C0E2A4F8D17}
+    Core/DeepBase.HB.StateSlot.Types.pas:24  IHbStateSlotProvider
+    Tests/Test.DeepBase.HB.Persistence.pas:862  const:GuidLegacy
+{E5F6A7B8-C9D0-8E9F-2A3B-4C5D6E7F8A9B}
+    Core/DeepBase.Interfaces.pas:178  IDeepBaseManager
+    Core/DeepBase.Services.Interfaces.pas:199  ICryptoService
