@@ -1,0 +1,80 @@
+# B1 §3 门禁矩阵原始输出（零级口径）
+# generated: 2026-09-25T09:52:13.002Z
+# 说明: evidence 门禁的 E3 命中明细（185 行存量乱码引用）不入本档——新证据件摘录存量乱码会自身触发 E3；本档存其判读行 + --list-mojibake 逐件计数表，全量明细复算: node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+
+===== encoding-gate EXIT=0 =====
+编码门禁通过：980 个 .pas + 703 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+
+===== eol-gate EXIT=0 =====
+行尾门禁通过：检查了 1530 个文件（.pas CRLF / .md LF），跳过目录 11
+
+===== mojibake-gate EXIT=0 =====
+丙类损坏门禁通过：扫描 978 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+
+===== contract-gate EXIT=0 =====
+契约门禁通过：18 单元（stable 18），单份核对无误，stable 公开签名与基线一致。
+
+===== managed-copy-gate EXIT=1 =====
+托管拷贝门禁失败，违规 6 项:
+  M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+  M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+  M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+  M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+
+===== build-ownership EXIT=1 =====
+构建归属门禁失败：生产单元 574，构建文件 126，违规 4 项:
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+  O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+  O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+
+===== evidence-encoding-gate EXIT=0 =====
+E3 双重编码命中 185 行 / 20 件（存量登记 20 件封顶，逐条 路径:行号: 原文 → 还原后；括号内「替换符 坏/总」= 还原串里的 U+FFFD 数 / 还原出的非 ASCII 字符总数，占比即 坏÷总）:
+44	CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt
+38	CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt
+21	CodeReview/_audit_recheck/乙-B5-取证/out1.txt
+20	CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt
+12	CodeReview/_audit_recheck/乙-B5-取证/out3.txt
+10	CodeReview/_audit_recheck/乙-B5-取证/out2.txt
+6	CodeReview/_audit_recheck/乙-B5-取证/out6.txt
+5	CodeReview/_audit_recheck/乙-B3-negative-test.txt
+5	CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt
+5	CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt
+4	CodeReview/_audit_recheck/乙-R3-gate-output.txt
+3	CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt
+2	CodeReview/_audit_recheck/乙-B1-negative-test.txt
+2	CodeReview/_audit_recheck/乙-B1-scan-fffd-after.txt
+2	CodeReview/_audit_recheck/乙-B1-scan-fffd-before.txt
+2	CodeReview/_audit_recheck/乙-R2-E2-scan-fffd-after-fix.txt
+1	CodeReview/_audit_recheck/乙-B2-scan-coverage2-rerun.txt
+1	CodeReview/20260921-AUDIT-甲-证据/A1/06-bypass-grep.txt
+1	CodeReview/20260923-AUDIT-乙-D6-证据/2.1-2.2-七件重跑-修前树dry-run.txt
+1	CodeReview/20260923-AUDIT-乙-D6-证据/2.2-落笔写入-apply运行输出.txt
+# 扫描 599 件 / 命中 185 行 / 20 件
+
+证据编码门禁通过：扫描 599 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 185 行，均在存量清单 20 件的封顶内
+
+===== build-gate (no args, fail-closed) EXIT=3 =====
+编译门禁失败：未指定编译范围。请给 --all（全量）、--dpr/--dpk <path>（点名）或 --manifest <file>（外部契约清单）。已按 fail-closed 拒绝放行。
+
+===== SHARED-GUARD-TEST EXIT=0 =====
+A2 通过：TestResults/StrayRunner.dpr 被跳过 ⇒ Core/FooOrphan.pas 如实报孤儿
+A2 修前对照通过：旧 11 项 SKIP 口径下 CI 产物把孤儿判成已引用（假绿实锤）
+B 五道门 × 4 种基线损坏形态（空对象/顶层数组/截断 JSON/跨门顶替/文件缺失）全部 EXIT=2 拒绝放行
+B 溯源判据生效：无溯源同形基线 EXIT=2
+B 正向对照通过：可信基线正常放行（未过度兜底）
+C0 通过：编译噪声基线（扁平计数映射）与各门共用同一份只减不增判据
+C1 通过：eol 窄根 emit 拒绝写入且未落盘
+C1 通过：托管拷贝 窄根 emit 拒绝写入且未落盘
+C2 eol 新增键 通过：EXIT=1，基线原样，原因已声明
+C2 托管拷贝 新增键 通过：EXIT=1，基线原样，原因已声明
+C2 构建归属 新增键（新孤儿） 通过：EXIT=1，基线原样，原因已声明
+C3 托管拷贝 抬升 通过：EXIT=1，基线原样，原因已声明
+C3 丙类损坏 抬升 通过：EXIT=1，基线原样，原因已声明
+C4 通过：eol 缩短放行 EXIT=0，条目收敛，.bak 为写入前原件
+C4 通过：托管拷贝 计数下调放行 EXIT=0，.bak 为写入前原件
+D3 通过：数据件与算法重建表逐键一致（23939 + ASCII128）
+SHARED-GUARD-TEST: PASS
+

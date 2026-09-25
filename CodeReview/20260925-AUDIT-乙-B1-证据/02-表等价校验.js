@@ -1,19 +1,20 @@
-// B1§2 GB18030 反表三处合一——新旧表逐字节等价校验（一次性，对照 git HEAD 的真实旧实现）
+// B1§2 GB18030 反表三处合一——新旧表逐字节等价校验（对照 §2 改造前提交的真实旧实现）
 // 判据（总单 §B1-2）：新旧表对全仓 .pas 扫描结果一致。
-// 用法: node 02-表等价校验.js   （从 git show HEAD:<file> 提取旧实现，与新共享模块比对）
+// 用法: node 02-表等价校验.js   （从 git show <OLD_REF>:<file> 提取旧实现，与新共享模块比对）
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const REPO = path.resolve(__dirname, '..', '..');
-const HERE = __dirname;
+// 旧实现锚定在 §2 重构前提交：三处内联表在此之后才换成共享模块，用 HEAD 会退化成新比新（空比对）
+const OLD_REF = '38bc087';
 let failed = false;
 function ok(cond, label, detail) {
   if (cond) console.log('  PASS ' + label);
   else { failed = true; console.error('  FAIL ' + label + (detail ? ' :: ' + detail : '')); }
 }
-function headSrc(rel) { return execFileSync('git', ['-C', REPO, 'show', 'HEAD:' + rel], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); }
+function headSrc(rel) { return execFileSync('git', ['-C', REPO, 'show', OLD_REF + ':' + rel], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); }
 // 括号配平提取 function <name>(...) { ... } 源码（对已知闭合格式的旧文件足够可靠，提取结果以 eval 成功 + 深比对为准）
 function extractFn(src, name) {
   const start = src.indexOf('function ' + name + '(');
@@ -89,7 +90,8 @@ for (const f of files) {
   text.split('\n').forEach((line, idx) => {
     if (isPas) lineCount++;
     for (const ch of line) if (riskChars.has(ch)) {
-      const rec = f + ':' + (idx + 1) + ' ' + line.trim().slice(0, 80);
+      // 只记 路径:行号，不摘录原文：存量证据件的行内容本身就是双重编码，摘进新证据会触发 E3
+      const rec = f + ':' + (idx + 1);
       riskLines.push(rec); if (isPas) riskPas.push(rec);
       break;
     }

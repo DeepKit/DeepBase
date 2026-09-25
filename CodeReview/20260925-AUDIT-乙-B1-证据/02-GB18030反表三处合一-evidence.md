@@ -7,7 +7,7 @@
 
 | 处 | 位置 | 归宿 |
 |---|---|---|
-| 数据 | `.tmp/gb18030_rev.json` | §3 移 `02-附件/gb18030_rev-旧数据件.json`（固化留证）；权威数据件改 `09_工程脚本/gb18030-reverse-table.json` |
+| 数据 | `.tmp/gb18030_rev.json` | §3 移 `03-附件/gb18030_rev-旧数据件.json`（固化留证）；权威数据件改 `09_工程脚本/gb18030-reverse-table.json` |
 | 生成器 | `.tmp/mb_table.py` | §3 删除（一次性 Python）；再生入口改 `node 09_工程脚本/gb18030-reverse-table.js --write` |
 | 检测器内置 | `mojibake-core.js` / `encoding-gate/check_pas_encoding.js` / `evidence-encoding-gate/check_evidence_encoding.js` 三份同构构建循环 | 全部改为 `require` 共享模块 `09_工程脚本/gb18030-reverse-table.js` |
 
@@ -20,7 +20,7 @@
 
 ## 等价校验（总单判据）
 
-校验脚本：`02-表等价校验.js`（从 `git show HEAD:` 提取**旧实现真身**做深比对，非复刻）
+校验脚本：`02-表等价校验.js`（旧实现锚定 §2 改造前提交 `38bc087`，`git show <ref>:` 提取**旧实现真身**做深比对，非复刻）
 运行输出：`02-表等价校验-运行输出.txt`，最终 `EQUIV: PASS (EXIT=0)`。
 
 | 比对 | 结果 |
@@ -34,10 +34,10 @@
 
 ### 口径决策申报（encoding-gate 为什么保留 `encoding='gbk'` 参数）
 
-gb18030 与 gbk 两口径差异实测 100/101 键，且全仓风险行扫描发现 **419 行（.pas 内 77 行）**
+gb18030 与 gbk 两口径差异实测 100/101 键，且全仓风险行扫描发现 **420 行（.pas 内 77 行）**
 含差异键字符——若把 G6 换成 gb18030 默认口径，扫描结果会真的变化。G6 立法判据是 GBK
 （WO-20260922 乙-P2 §3.1），故共享模块只暴露两个既有口径（gb18030 权威 / gbk 仅供 G6），
-D2 负样本强制该选择不被静默更改。风险行清单见运行输出第 3 节。
+D2 负样本强制该选择不被静默更改。风险行清单（路径:行号）见运行输出第 3 节。
 
 ## 测试与门禁
 

@@ -1,0 +1,782 @@
+{
+ "Core/DeepBase.Hotkeys.pas": [
+  [
+   139,
+   "    /// ��ȡ��ݼ�"
+  ],
+  [
+   144,
+   "    /// ���ÿ�ݼ�"
+  ],
+  [
+   149,
+   "    /// ע��Ĭ�Ͽ�ݼ���ֻ�ڲ�����ʱ���룩"
+  ],
+  [
+   158,
+   "    /// ���õ�����ݼ�ΪĬ��ֵ"
+  ],
+  [
+   163,
+   "    /// �������п�ݼ�ΪĬ��ֵ"
+  ],
+  [
+   172,
+   "    /// ����ݼ���ͻ"
+  ],
+  [
+   174,
+   "    /// <returns>��ͻ�� ActionName���޳�ͻ���ؿ��ַ���</returns>"
+  ],
+  [
+   195,
+   "    /// ��ȡ���п�ݼ���Ϣ"
+  ],
+  [
+   200,
+   "    /// ��ȡ��ݼ���ϸ��Ϣ (�������ý���)"
+  ],
+  [
+   205,
+   "    /// ����ݼ��Ƿ��޸Ĺ�"
+  ],
+  [
+   210,
+   "    /// ��ݼ�����"
+  ],
+  [
+   215,
+   "    /// ɾ����ݼ�"
+  ],
+  [
+   220,
+   "    /// ��ݼ�����¼�"
+  ]
+ ],
+ "Core/DeepBase.Resilience.CircuitBreaker.pas": [
+  [
+   178,
+   "  // BUG-119 FIX: 初始化HalfOpen状态跟踪变�?"
+  ],
+  [
+   180,
+   "  FMaxHalfOpenRequests := 1;  // 榛樿鍙厑璁?个探测请求"
+  ]
+ ],
+ "Examples/FullDemo/FullDemo.MainForm.pas": [
+  [
+   170,
+   "  // 鎭㈠绐椾綋鐘舵€?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);"
+  ]
+ ],
+ "Features/DeepBase.LLM.Client.pas": [
+  [
+   22,
+   "  /// 消费程序接口 �?极简调用"
+  ],
+  [
+   78,
+   "  /// 管理接口 �?配置 Providers �?Tiers"
+  ]
+ ],
+ "Features/DeepBase.LLM.HTTP.pas": [
+  [
+   3,
+   "{ DeepBase LLM HTTP Transport �� OpenAI/Anthropic format adapter }"
+  ]
+ ],
+ "FMX/DeepBase.FMX.AboutFrame.pas": [
+  [
+   7,
+   "  - 6 个标准Tab 项(公众号微信/鏀粯瀹?BTC/USDT/鍏充簬鎴?"
+  ],
+  [
+   11,
+   "  - 根据 enabled 瀛楁鍔ㄦ€佹樉绀?隐藏 Tab"
+  ]
+ ],
+ "FMX/DeepBase.FMX.AutoUpdater.pas": [
+  [
+   91,
+   "    /// <summary>鏄惁姝ｅ湪妫€鏌?/summary>"
+  ],
+  [
+   97,
+   "    /// <summary>涓婃妫€鏌ユ椂闂?/summary>"
+  ]
+ ],
+ "FMX/DeepBase.FMX.ConfigControls.pas": [
+  [
+   47,
+   "    /// 浠庨厤缃姞杞藉€?"
+  ],
+  [
+   63,
+   "    /// 榛樿鍊?"
+  ]
+ ],
+ "FMX/DeepBase.FMX.ConfigEdit.pas": [
+  [
+   8,
+   "    - TFMXConfigSpinBox: 鏁板€奸厤缃紪杈?"
+  ],
+  [
+   39,
+   "  /// FMX 配置编辑控件 - 瀛楃涓插€?"
+  ],
+  [
+   71,
+   "    /// 妫€鏌ュ€兼槸鍚﹀凡淇敼"
+  ],
+  [
+   76,
+   "    /// 鎭㈠鍘熷鍊?"
+  ]
+ ],
+ "FMX/DeepBase.FMX.FormStateHelper.pas": [
+  [
+   5,
+   "  说明: 拖放到FMX 绐椾綋涓婂嵆鍙嚜鍔ㄤ繚瀛?鎭㈠绐椾綋鐘舵€?"
+  ],
+  [
+   83,
+   "    /// 鎵嬪姩鎭㈠鐘舵€?"
+  ],
+  [
+   256,
+   "  Result := TRectF.Create(0, 0, 1920, 1080); // 榛樿鍊?"
+  ]
+ ],
+ "FMX/DeepBase.FMX.I18nControls.pas": [
+  [
+   7,
+   "    - TFMXi18nLabel: 鑷姩缈昏瘧鐨?Label"
+  ],
+  [
+   8,
+   "    - TFMXi18nButton: 鑷姩缈昏瘧鐨?Button"
+  ],
+  [
+   9,
+   "    - TFMXi18nCheckBox: 鑷姩缈昏瘧鐨?CheckBox"
+  ],
+  [
+   10,
+   "    - TFMXi18nGroupBox: 鑷姩缈昏瘧鐨?GroupBox"
+  ]
+ ],
+ "FMX/DeepBase.FMX.LLMConfigPanel.pas": [
+  [
+   2,
+   "  DeepBase.FMX.LLMConfigPanel - FMX LLM ����������"
+  ]
+ ],
+ "FMX/DeepBase.FMX.UpdateDialog.pas": [
+  [
+   4,
+   "  说明: 璺ㄥ钩鍙版洿鏂版彁绀哄璇濇锛屾敮鎸?Windows/macOS/iOS/Android"
+  ],
+  [
+   7,
+   "    - 鑷€傚簲甯冨眬锛堟墜鏈?平板/妗岄潰锛?    - 鏄剧ず鐗堟湰淇℃伅鍜屾洿鏂版棩蹇?    - 下载进度显示"
+  ]
+ ],
+ "Governance/DeepBase.Governance.ActionGrid.pas": [
+  [
+   291,
+   "  // 执行 Bridge 链——用锁内快���的引用数组，不再触碰 FBridges/LAction"
+  ]
+ ],
+ "Persistence/DeepBase.DB.DoQry.pas": [
+  [
+   6,
+   "  说明: 灏?DoQry 库集成到 DeepBase 妗嗘灦锛岀粺涓€鏃ュ織鍜岄敊璇鐞?"
+  ],
+  [
+   36,
+   "  DOQRY_ERR_NOT_FOUND        = 5001;  // 璁板綍鏈壘鍒?"
+  ],
+  [
+   47,
+   "  /// 鏌ヨ涓婁笅鏂?"
+  ],
+  [
+   175,
+   "/// 启用/绂佺敤棰勭紪璇戣鍙ュ鐢紙榛樿鍚敤锛?"
+  ],
+  [
+   411,
+   "/// 鏍规嵁寮傚父娑堟伅鎺ㄦ柇閿欒鐮侊紙鍏煎鍥為€€锛?"
+  ],
+  [
+   795,
+   "  // TFDMemTable 鍙互鐩存帴浠?TFDQuery 复制数据"
+  ],
+  [
+   1479,
+   "        // 复制数据�?TFDMemTable"
+  ]
+ ],
+ "Persistence/DeepBase.DB.Pool.pas": [
+  [
+   167,
+   "    /// <summary>鏍囪涓烘棤鏁?/summary>"
+  ],
+  [
+   263,
+   "    /// <summary>鑾峰彇涓€涓繛鎺?/summary>"
+  ],
+  [
+   301,
+   "    // 蹇嵎灞炴€?"
+  ]
+ ],
+ "Tests/Test.DeepBase.Crypto.OpenSSL.pas": [
+  [
+   19,
+   "  /// - 褰撹繍琛岀幆澧冩纭儴缃?libcrypto 鏃讹紝浼氳繘涓€姝ラ獙璇侀殢鏈烘暟闀垮害鍜?AES-256-GCM 鐨勫姞瑙ｅ瘑寰€杩斻€?"
+  ]
+ ],
+ "Tests/Test.DeepBase.DB.DoQry.pas": [
+  [
+   1112,
+   "    // 鎻掑叆绗竴鏉?"
+  ]
+ ],
+ "Tests/Test.DeepBase.EventBus.pas": [
+  [
+   624,
+   "        Sleep(50);  // BUG-027 FIX: 减少Sleep时间，主要用于验证异步特�?"
+  ],
+  [
+   635,
+   "    // BUG-027 FIX: 使用事件等待替代固定Sleep，超时设�?000ms以适应高负载系�?"
+  ]
+ ],
+ "Tests/Test.DeepBase.FormState.pas": [
+  [
+   285,
+   "  Assert.AreEqual(Ord(wsNormal), Ord(FTestForm.WindowState), string('WindowState 搴旇鎭㈠涓?Normal'));"
+  ],
+  [
+   297,
+   "  Assert.AreEqual(Ord(wsMaximized), Ord(FTestForm.WindowState), string('WindowState 搴旇鎭㈠涓?Maximized'));"
+  ]
+ ],
+ "Tests/Test.DeepBase.Hotkeys.pas": [
+  [
+   411,
+   "  // 修改快捷�?"
+  ],
+  [
+   461,
+   "  // Hotkeys 模块在初始化时可能已预置了一批默认快捷键�?"
+  ],
+  [
+   462,
+   "  // 因此这里不要假设 'Ctrl+F' 一定不会被占用�?"
+  ],
+  [
+   495,
+   "  Assert.AreEqual(Action, Conflict, '应该返回冲突�?Action 名称');"
+  ],
+  [
+   507,
+   "  Assert.IsTrue(Length(AllHotkeys) >= 2, '应该至少�?2 个快捷键');"
+  ]
+ ],
+ "Tests/Test.DeepBase.i18n.pas": [
+  [
+   208,
+   "  // 涓洪伩鍏嶅墠搴忕敤渚嬪垏鎹㈣瑷€/缂撳瓨褰卞搷鍚庣画鐢ㄤ緥锛岃繖閲岀粺涓€澶嶄綅銆?"
+  ],
+  [
+   315,
+   "  // 鑷冲皯搴旇鏈変竴涓瑷€锛堥粯璁よ瑷€锛?"
+  ],
+  [
+   341,
+   "  // 娴嬭瘯绠€鍖? 鍙獙璇佸垏鎹㈣瑷€涓嶆姤閿?"
+  ]
+ ],
+ "Tests/Test.DeepBase.Manager.pas": [
+  [
+   9,
+   "  - 閿欒鐮?"
+  ],
+  [
+   173,
+   "  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 搴旇涓?True');"
+  ],
+  [
+   222,
+   "  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 搴旇涓?True');"
+  ]
+ ],
+ "Tests/Test.DeepBase.MRU.pas": [
+  [
+   159,
+   "  Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 搴旇鑷冲皯涓?1'));"
+  ],
+  [
+   247,
+   "  // 鍒涘缓涓€涓复鏃舵枃浠?"
+  ]
+ ],
+ "Tests/Test.LogAnalyzer.pas": [
+  [
+   233,
+   "    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 涓笉鍚屾潵锟?"
+  ]
+ ],
+ "Tests/Test.SeedTool.pas": [
+  [
+   386,
+   "      // 濡傛灉娌℃湁鎶涘嚭寮傚父锛屾鏌ュ畬鏁存€ф爣蹇?      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');"
+  ]
+ ],
+ "Tests/Test.WebService.pas": [
+  [
+   6,
+   "    - DeepBase.WebAPI.Auth: 璁よ瘉涓棿浠?"
+  ]
+ ],
+ "Tests/Integration/Test.Integration.WebAPI.pas": [
+  [
+   8,
+   "    - JWT Bearer 璁よ瘉涓棿浠?(TAuthMiddleware + TJWTManager)"
+  ],
+  [
+   10,
+   "    - WebSocket 娑堟伅璺敱鍣?(TWebSocketMessageRouter)"
+  ],
+  [
+   105,
+   "  // 鍚姩鐙珛鐨?WebAPI 鏈嶅姟鍣?(监听 127.0.0.1:18080)"
+  ],
+  [
+   187,
+   "  // 鍚姩鏈嶅姟鍣?"
+  ],
+  [
+   359,
+   "      // username 榛樿涓?subject 成username 声明, 杩欓噷鍙獙璇佸瓨鍦ㄥ嵆鍙?"
+  ],
+  [
+   375,
+   "  // 鏈惡甯︿换浣曡璇佷俊鎭闂?/secure/profile"
+  ]
+ ],
+ "Tests/Regression/RegressionTestRegistry.pas": [
+  [
+   5,
+   "  1. 蹇€熸煡鎵剧壒瀹?Bug 的测试"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.Base.pas": [
+  [
+   36,
+   "    /// <summary>获取 Bug 绠€鐭弿杩?/summary>"
+  ],
+  [
+   66,
+   "    /// <summary>鑾峰彇瀹屾暣鐨?Bug 淇℃伅瀛楃涓?/summary>"
+  ],
+  [
+   79,
+   "    /// <summary>榛樿绾跨▼鏁?/summary>"
+  ],
+  [
+   141,
+   "  Result := 'P1'; // 榛樿浼樺厛绾?"
+  ],
+  [
+   251,
+   "    // 鍚姩鎵€鏈夌嚎绋?"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas": [
+  [
+   43,
+   "    [Description('楠岃瘉澶氭鍒涘缓閿€姣?WaitForm 内存稳定')]"
+  ],
+  [
+   90,
+   "  // 瀹為檯娴嬭瘯闇€瑕?VCL 鐜锛岃繖閲岄€氳繃浠ｇ爜瀹℃煡楠岃瘉"
+  ],
+  [
+   91,
+   "  Assert.Pass('鍐呭瓨娉勬紡娴嬭瘯闇€瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');"
+  ],
+  [
+   101,
+   "  Assert.Pass('閲嶅鍒涘缓閿€姣佹祴璇曢渶瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');"
+  ],
+  [
+   120,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas": [
+  [
+   6,
+   "  原问�? WhenReady方法中存在潜在死锁，回调函数中再次调用DeepBase功能�?"
+  ],
+  [
+   7,
+   "          可能因为嵌套锁定导致死锁�?"
+  ],
+  [
+   9,
+   "  修复方案: 使用TTask.Run异步执行回调，避免嵌套锁定导致死锁�?"
+  ],
+  [
+   13,
+   "  优先�? P0 (Critical)"
+  ],
+  [
+   43,
+   "    [Description('验证 WhenReady 回调中调�?DeepBase 功能不会死锁')]"
+  ],
+  [
+   55,
+   "    [Description('验证 WhenReady 回调异常不影响其他回�?)]"
+  ],
+  [
+   100,
+   "  // 检�?DeepBase 是否已初始化"
+  ],
+  [
+   120,
+   "          // 尝试读取配置（这会获取锁�?"
+  ],
+  [
+   134,
+   "          Assert.IsTrue(CallbackExecuted, '回调应该被执�?);"
+  ],
+  [
+   138,
+   "        Assert.Fail('检测到死锁：WhenReady 回调�?5 秒内未完�?);"
+  ],
+  [
+   140,
+   "      Assert.Fail('等待回调时发生错�?);"
+  ],
+  [
+   176,
+   "        Assert.IsTrue(CallbackExecuted, '回调应该被执�?);"
+  ],
+  [
+   178,
+   "        Assert.Fail('回调应该在初始化后快速执�?);"
+  ],
+  [
+   225,
+   "    // 等待所有回调完�?"
+  ],
+  [
+   229,
+   "          '所有回调都应该被执�?);"
+  ],
+  [
+   260,
+   "    // 注册一个会抛出异常的回�?"
+  ],
+  [
+   274,
+   "    // 等待第二个回调完�?"
+  ],
+  [
+   282,
+   "        Assert.Fail('第一个回调的异常不应该阻止其他回调执�?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG009_LoggingRace.pas": [
+  [
+   103,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ],
+  [
+   151,
+   "    // 鍚姩鎵€鏈夌嚎绋?"
+  ],
+  [
+   188,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas": [
+  [
+   6,
+   "  原问题 澶氫釜绾跨▼鍙兘鍚屾椂淇敼浣滀笟鐘舵€侊紝缂轰箯閫傚綋鍚屾"
+  ],
+  [
+   45,
+   "    [Description('楠岃瘉骞跺彂鐘舵€佸彉鏇翠笉浼氬鑷存暟鎹崯鍧?)]"
+  ],
+  [
+   96,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ],
+  [
+   147,
+   "    // 鍚姩鎵€鏈夌嚎绋?"
+  ],
+  [
+   158,
+   "    // 楠岃瘉璁℃暟鍣ㄥ€兼纭?"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG013_RSASignature.pas": [
+  [
+   5,
+   "  原问�? RSA2Sign方法只使用SHA256+Base64，未实现真正的RSA2-SHA256签名�?  "
+  ],
+  [
+   6,
+   "  修复方案: 使用Windows CryptoAPI实现真正的RSA2-SHA256签名�?  "
+  ],
+  [
+   103,
+   "  // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符�?  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),"
+  ],
+  [
+   108,
+   "  Assert.Pass('验证通过：RSA 签名长度应该远大于简�?SHA256+Base64');"
+  ],
+  [
+   117,
+   "  // RSA-2048 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?56 字节"
+  ],
+  [
+   120,
+   "  // RSA-4096 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?12 字节"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas": [
+  [
+   7,
+   "          Webhook楠岃瘉閫昏緫鏈畬鏁村疄鐜般€?"
+  ],
+  [
+   116,
+   "    // 验证 WeChatPublicKey 灞炴€у瓨鍦ㄤ笖鍙鍐?"
+  ],
+  [
+   119,
+   "      'WeChatPublicKey 灞炴€у簲璇ュ彲浠ユ纭鍐?);"
+  ],
+  [
+   143,
+   "    // 涓嶈缃叕閽?"
+  ],
+  [
+   225,
+   "  Assert.Pass('绛惧悕鍐呭鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);"
+  ],
+  [
+   240,
+   "  Assert.Pass('Authorization 澶撮儴鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas": [
+  [
+   6,
+   "  原问题 澶氫釜妯″潡瀛樺湪纭紪鐮佸瘑閽ワ紝濡?@2241114'銆?Default_AntiTamper_Key_2025'等，"
+  ],
+  [
+   7,
+   "          杩欎簺瀵嗛挜鍙互琚€嗗悜宸ョ▼鎻愬彇銆?"
+  ],
+  [
+   9,
+   "  修复方案: 绉婚櫎鎵€鏈夌‖缂栫爜榛樿瀵嗛挜锛岃姹傜敤鎴锋樉寮忛厤缃瘑閽ャ€?"
+  ],
+  [
+   115,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ],
+  [
+   146,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas": [
+  [
+   99,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas": [
+  [
+   98,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas": [
+  [
+   93,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas": [
+  [
+   2,
+   "  Test.Regression.BUG062_PluginSandbox - 鎻掍欢娌欑閫冮€搁闄╁洖褰掓祴璇?"
+  ],
+  [
+   4,
+   "  BUG-062: 鎻掍欢娌欑閫冮€搁闄?"
+  ],
+  [
+   6,
+   "  原问题 鎻掍欢鍔犺浇缂轰箯瀹夊叏楠岃瘉锛屽瓨鍦ㄨ矾寰勯亶鍘嗗拰浠ｇ爜瀹屾暣鎬ч闄┿€?"
+  ],
+  [
+   54,
+   "    [Description('楠岃瘉璺緞閬嶅巻鏀诲嚮琚樆姝?- 使用 ../ 灏濊瘯閫冮€?)]"
+  ],
+  [
+   66,
+   "    [Description('楠岃瘉闈?BPL 鏂囦欢琚嫆缁?)]"
+  ],
+  [
+   88,
+   "  Result := '鎻掍欢娌欑閫冮€搁闄?;"
+  ],
+  [
+   207,
+   "    // 浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛堥敊璇簲璇ユ槸 \"Failed to load BPL\" 而不是\"Invalid path\"锛?"
+  ],
+  [
+   212,
+   "    // 灏濊瘯鍔犺浇锛堜細鍥犱负涓嶆槸鐪熸鐨?BPL 鑰屽け璐ワ紝浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛?"
+  ],
+  [
+   219,
+   "    // 濡傛灉鍒拌揪杩欓噷锛岃鏄庤矾寰勯獙璇侀€氳繃浜?"
+  ],
+  [
+   244,
+   "    Assert.IsFalse(LoadResult, '闈?BPL 鏂囦欢搴旇琚嫆缁?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG066_PathTraversal.pas": [
+  [
+   149,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG070_LogInjection.pas": [
+  [
+   97,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas": [
+  [
+   93,
+   "      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);"
+  ]
+ ],
+ "ThirdParty/Payment/DeepBase.Payment.Alipay.pas": [
+  [
+   4,
+   "  DeepBase Alipay (鏀粯瀹? Payment Integration"
+  ],
+  [
+   289,
+   "  // 鍏煎浠呬紶鍏?Base64 主体的公钥配置  NormalizedKey := PublicKey;"
+  ]
+ ],
+ "ThirdParty/Payment/DeepBase.Payment.pas": [
+  [
+   7,
+   "    - Alipay (鏀粯瀹?"
+  ]
+ ],
+ "ThirdParty/Social/DeepBase.Social.WeChat.pas": [
+  [
+   7,
+   "    - 寰俊寮€鏀惧钩鍙扮櫥褰?(网站应用)"
+  ]
+ ],
+ "ThirdParty/Social/DeepBase.Social.Weibo.pas": [
+  [
+   98,
+   "      // Credential Manager 妯″紡涓嬩笉闇€瑕侀澶栧姞瀵?      Result := APlainKey;"
+  ]
+ ],
+ "Tools/LogAnalyzer/LogAnalyzer.Export.pas": [
+  [
+   74,
+   "  // CSV 瀛楁涓寘鍚€楀彿銆佸紩鍙锋垨鎹㈣绗︽椂闇€瑕佺敤寮曞彿鍖呭洿"
+  ],
+  [
+   110,
+   "    // 鏍囬琛?"
+  ]
+ ],
+ "Tools/SeedTool/uAntiTamperPackage.pas": [
+  [
+   117,
+   "  // KDF/HMAC 榛樿鍊?"
+  ],
+  [
+   243,
+   "// 娉ㄦ剰锛氳繖閲屽疄闄呰绠楃殑鏄?HMAC(SHA256(Data), Key)锛岃€岄潪鏍囧噯 HMAC(Data, Key)"
+  ],
+  [
+   249,
+   "  // 先计算Data 的SHA-256 鎽樿锛屽啀璁＄畻鍏?HMAC"
+  ],
+  [
+   455,
+   "      // 妫€鏌ヨ褰曟槸鍚﹀瓨鍦?"
+  ],
+  [
+   523,
+   "      WriteLog('Image鎺т欢鏈垎閰? ' + AImageKey);"
+  ],
+  [
+   642,
+   "      '妫€娴嬪埌绋嬪簭鏂囦欢鍙兘琚鏀癸紝涓轰簡鎮ㄧ殑瀹夊叏锛岀▼搴忓皢閫€鍑恒€�'#13#10 +"
+  ],
+  [
+   643,
+   "      '璇蜂粠瀹樻柟缃戠珯涓嬭浇鏈€鏂扮増鏈€�'#13#10#13#10 +"
+  ],
+  [
+   655,
+   "    WriteLog('绋嬪簭鍥犲畨鍏ㄨ繚瑙勯€€鍑�');"
+  ],
+  [
+   670,
+   "      WriteLog('宸叉竻绌洪槻绡℃敼鏁版嵁琛�');"
+  ]
+ ],
+ "Tools/SeedTool/uBasicProtection.pas": [
+  [
+   116,
+   "// 数据填充（PKCS7�?"
+  ],
+  [
+   147,
+   "  // 楠岃瘉濉厖鐨勬纭€?"
+  ],
+  [
+   212,
+   "        // 涓哄姞瀵嗛鐣欒冻澶熺┖闂?"
+  ],
+  [
+   533,
+   "// 计算HMAC瀛楃涓?"
+  ]
+ ],
+ "Tools/Studio/Studio.Resources.pas": [
+  [
+   113,
+   "    // 鏈墦寮€鏁版嵁搴?"
+  ]
+ ]
+}
