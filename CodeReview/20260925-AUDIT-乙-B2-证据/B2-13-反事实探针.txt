@@ -4,7 +4,7 @@ B2-13 反事实（变异）探针：证明用例真的咬得住这次修复
 驱动：.tmp/b2/b13/b13_cf_driver.sh（临时件不入库），逐个变异调用
       CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh
 SUT  交付面 sha256 8c4108fbcb178422cea0dacd2ce3362056ee7bada777019c29f9172f4a54d385（变异前=还原后，脚本内自检）
-测试面 blob eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc（四个变异共用同一张测试面）
+测试面 sha256 eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc（git blob 4e7bdfc45c8697dd20650bbfea5d57b3abddcf4f）（四个变异共用同一张测试面）
 运行前置：DEEPBASE_EXTRA_NS="Data.Win"（见「修前取证」§五，探针 NS 面窄于工程面会假红）
 
 ────────────────────────────────────────────────────────────────────

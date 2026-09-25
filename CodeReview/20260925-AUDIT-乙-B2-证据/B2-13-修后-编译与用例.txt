@@ -38,7 +38,7 @@ B2-13 修后：改动清单、判定落点与编译实测
    b. HandleParamValue 的 ptString 分支（:251）：去掉「先手工双倍单引号、再交 QuotedStr」的双重转义，
       与 QuoteValue 共用同一套引号规则（修前该文件里存在两套引号器）。
    公开接口未扩大：interface 仍只导出 QuoteValue（:27），未新增参数、未引入方言开关。
-2) Tests/Test.DeepBase.DoQry.Literal.pas（新建，204 行 / 7106 字节，blob eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc）
+2) Tests/Test.DeepBase.DoQry.Literal.pas（新建，204 行 / 7106 字节，sha256 eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc，git blob 4e7bdfc45c8697dd20650bbfea5d57b3abddcf4f）
    4 条用例：注释前缀族 / 数值字符集全空间穷举（780 值）/ 引号破坏族 / 置空约定契约。
    断言不比对期望字面量，而是用单引号状态机把语句解剖成 Balanced / Scaffold / Literal 三态，
    判据是「值不再改变 SQL 语义 + 值本身能被无损解回」，避免把方言引号形态抄进用例形成第二套真源。

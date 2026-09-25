@@ -73,8 +73,9 @@ QuoteValue 的调用面（全仓 grep，修前修后一致，只有 3 处拼接�
 ────────────────────────────────────────────────────────────────────
 六、修前真跑（红）
 ────────────────────────────────────────────────────────────────────
-测试单元 Tests/Test.DeepBase.DoQry.Literal.pas 最终面 blob = eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc
-（git hash-object，红/绿两次真跑与 4 个变异全部在同一张测试面上完成）
+测试单元 Tests/Test.DeepBase.DoQry.Literal.pas 最终面 sha256 = eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc
+      git blob（git hash-object）= 4e7bdfc45c8697dd20650bbfea5d57b3abddcf4f
+（红/绿两次真跑与 4 个变异全部在同一张测试面上完成）
 实测结果：Tests Found 4 / Passed 2 / Failed 2 ⇒ RUN_EXIT=1
   红项 1  Test_Comment_Prefix_Values_Do_Not_Change_SQL
           leaked-into-code-face[col = 1-- AND deleted = 0]

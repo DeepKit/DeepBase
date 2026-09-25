@@ -1,7 +1,7 @@
 B2-13 用例真跑：修前红 / 修后绿（原始输出，未删行）
 命令（两次同一张测试面，仅 SUT 面不同）：
   DEEPBASE_EXTRA_NS="Data.Win" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.DoQry.Literal.pas
-测试单元面（两次一致）blob = eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc
+测试单元面（两次一致）sha256 = eea24af50f488d9ca714b02136a8b9358c97c0177f1c88d0a2065b0c637b1bcc（git blob = 4e7bdfc45c8697dd20650bbfea5d57b3abddcf4f）
 基线 commit = c935e0f
 
 ════════════════════════════════════════════════════════════════════
