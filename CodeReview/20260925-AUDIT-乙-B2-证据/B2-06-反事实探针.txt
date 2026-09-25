@@ -1,0 +1,38 @@
+# B2-06 反事实探针原件：把夹取行为改回不夹取，用例必须变红（证明用例会咬人）
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas 's/Max\(0\.0, Min\(1\.0, RelativeX\)\)/RelativeX/'
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=9 pass=9 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Max\(0\.0, Min\(1\.0, RelativeX\)\)/RelativeX/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -129,7 +129,7 @@
+   RelX, RelY: Double;
+ begin
+   // 本机 System.Math 无 Clamp（实测 E2003），夹取用其 Max/Min Double 重载
+-  RelX := Max(0.0, Min(1.0, RelativeX));
++  RelX := RelativeX;
+   RelY := Max(0.0, Min(1.0, RelativeY));
+   Result := TDPIAwarePoint.Create(
+     Trunc(RelX * GetEffectiveScreenWidth),
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 9
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Failed  : 2
+Tests Errored : 0
+  Test.DeepBase.Desktop.Screen.Click.DPIMapper.TTestDPIMapper.TestNegativeRelativeClampedToOrigin
+  Test.DeepBase.Desktop.Screen.Click.DPIMapper.TTestDPIMapper.TestOverRangeRelativeClampedToScreenExtent
+RUNNER_STATS fixtureCount=1 testCount=9 pass=7 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=9 pass=9 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas ==

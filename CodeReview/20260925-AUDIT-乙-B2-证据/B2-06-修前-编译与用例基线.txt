@@ -1,0 +1,26 @@
+# B2-06 修前基线（HEAD=2b7c8c9 的 blob，逐条命令可复算）
+
+$ git show HEAD:Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas > .tmp/b2/baseline/Features/<同名>
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh .tmp/b2/baseline/Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas
+================================================================
+单元: .tmp/b2/baseline/Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b2\baseline\Features\DeepBase.Desktop.Screen.Click.DPIMapper.pas(29) Fatal: F2613 Unit 'Graphics32' not found.
+BUILD_EXIT=1
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 1 ==
+
+# 修前测试单元登记形态（假 fixture：登记的是从未赋值的变量）
+$ for u in Test.DeepBase.Desktop.Screen.Click.DPIMapper Test.DeepBase.Desktop.Screen.Click.DPIMapper.Impl; do git show HEAD:Tests/$u.pas | grep -n "Implementation\|RegisterTestFixture"; done
+--- HEAD:Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas ---
+47:  Implementation : TTestDPIMapper;
+50:  TDUnitX.RegisterTestFixture(Implementation);
+赋值给 Implementation 的次数 = 0（0 ⇒ 登记的永远是 nil）
+--- HEAD:Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.Impl.pas ---
+2:  Test.DeepBase.Desktop.Screen.Click.DPIMapper - Full Implementation
+57:  Implementation : TTestDPIMapperImpl;
+163:  Assert.IsTrue(IsAware or not IsAware, 'IsDPIAware returns valid boolean');
+193:  TDUnitX.RegisterTestFixture(Implementation);
+赋值给 Implementation 的次数 = 0（0 ⇒ 登记的永远是 nil）

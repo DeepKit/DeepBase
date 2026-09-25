@@ -442,8 +442,6 @@
     "Tests/Test.DeepBase.Desktop.Perception.FrameCache.pas",
     "Tests/Test.DeepBase.Desktop.Perception.FrameDiffer.pas",
     "Tests/Test.DeepBase.Desktop.Perception.pas",
-    "Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.Impl.pas",
-    "Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas",
     "Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.Impl.pas",
     "Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas",
     "Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.Impl.pas",

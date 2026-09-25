@@ -1,0 +1,19 @@
+# B2-06 修后：SUT 单元 + 测试单元编译（HEAD=2b7c8c9 工作树，判据复算命令见下）
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+173 lines, 0.22 seconds, 2982 bytes code, 780 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+22152 lines, 1.31 seconds, 4768 bytes code, 604 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==

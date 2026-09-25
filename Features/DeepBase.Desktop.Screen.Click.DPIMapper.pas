@@ -1,20 +1,14 @@
 ﻿{ ============================================================================
   DeepBase.Desktop.Screen.Click.DPIMapper
   ---------------------------------------------------------------------------
-  Version     : 0.1 (Unstable API)
-  Description : DPI-aware coordinate transformation utilities that map relative
-                positions (percentages, normalized coordinates) to absolute
-                screen pixels while respecting per-monitor DPI scaling.
-  
-  Features:
-    - Per-monitor DPI detection via GetDpiForMonitor (Win8.1+)
-    - Fallback to system DPI for older Windows versions
-    - Relative-to-absolute coordinate conversion
-    - Multi-monitor support with mixed DPI settings
-  
-  Performance:
-    - Single DPI query cached globally
-    - O(1) coordinate transformation operations
+  Description : DPI-aware mapping of relative positions (0.0-1.0 / percentage)
+                to absolute screen pixels.
+
+  DPI 真相源：逐监视器 DPI 一律取 VCL 的 TMonitor.PixelsPerInch，与
+  VCL/DeepBase.VCL.HB.Tray.pas、VCL/DeepBase.VCL.HB.Grid.pas 同一口径。
+  不用 GetDpiForMonitor：本机 Delphi 37.0 未随附 Winapi.Shcore（实测见
+  CodeReview/20260925-AUDIT-乙-B2-证据/B2-段0-DPI接口可用性探针.txt），
+  且 VCL 已消化 per-monitor awareness，再包一层就是第二套 DPI 真相源。
   ========================================================================== }
 
 unit DeepBase.Desktop.Screen.Click.DPIMapper;
@@ -23,86 +17,52 @@ interface
 
 uses
   System.SysUtils,
-  Winapi.Windows,
-  Winapi.Messages,
   System.Types,
-  Graphics32;
+  System.Math,
+  Winapi.Windows,
+  System.Win.HighDpi,
+  Vcl.Forms;
 
 type
-  // Type definitions
-  TMonitorHandle = type HMONITOR;  // Windows HMONITOR handle type
-
   TDPIAwarePoint = record
-    AbsoluteX, AbsoluteY: Integer;  // Actual pixel coordinates
-    ScaledX, ScaledY: Double;       // Original relative values (0.0-1.0)
-    
-    class function Create(AX, AY: Integer; RScaledX, RScaledY: Double): TDPIAwarePoint; static;
-    procedure ToScreen(var X, Y: Integer); overload;
-    function ToString: string; override;
-  end;
+    AbsoluteX, AbsoluteY: Integer;  // 实际像素坐标
+    ScaledX, ScaledY: Double;       // 换算前的相对值 (0.0-1.0)
 
-  TDPIMapperOptions = record
-    ForceSystemDPI: Boolean;         // Ignore per-monitor DPI settings
-    AutoDetectPrimaryMonitor: Boolean; // Use main monitor's DPI as default
+    class function Create(AX, AY: Integer; RScaledX, RScaledY: Double): TDPIAwarePoint; static;
+    procedure ToScreen(var X, Y: Integer);
+    function ToString: string;
   end;
-  
-// Utility function for range clamping
-function Clamp(Value, Min, Max: Double): Double;
-begin
-  if Value < Min then Result := Min
-  else if Value > Max then Result := Max
-  else Result := Value;
-end;
-  
-  TMonitorHandle = type HMONITOR;
 
   IClickDMapper = interface
-    ['{ABCD5678-90EF-GHIJ-KLMN-OPQRSTUVWXZY}']
-    
-    // Convert relative position (0.0-1.0) to absolute pixels
+    ['{8E726F2B-1AB9-4F2D-8EB6-A9E16DF383BE}']
+
+    // 相对坐标越界时夹到 [0,1]，返回夹后的相对值，便于调用方核对输入是否被改写
     function MapRelativeToAbsolute(RelativeX, RelativeY: Double): TDPIAwarePoint;
-    
-    // Map percentage-based click target
     function MapPercentage(PercentX, PercentY: Integer): TDPIAwarePoint;
-    
-    // Get current monitor's DPI
+
+    /// 当前（左上角所在）监视器 DPI；该点不在任何监视器内时退回 Screen.PixelsPerInch
     function GetCurrentDPI: Integer;
-    function GetMonitorDPI(MonitorHandle: TMonitorHandle): Integer;
-    
-    // Check if DPI aware
+    /// 指定监视器的 DPI；句柄不在当前监视器列表内时退回 GetCurrentDPI，不返回 0
+    function GetMonitorDPI(AMonitor: HMONITOR): Integer;
+
+    /// 进程是否处于 per-monitor DPI aware 状态（直接问 RTL，不做 GetModuleHandle 猜测）
     function IsDPIAware: Boolean;
-    
-    // Utility: Get effective screen size accounting for multi-monitor setup
+
     function GetEffectiveScreenWidth: Integer;
     function GetEffectiveScreenHeight: Integer;
   end;
 
   TDPIMapper = class(TInterfacedObject, IClickDMapper)
-  private
-    FCurrentDPI: Integer;
-    FOptions: TDPIMapperOptions;
-    FIsDPIAware: Boolean;
-    
-    function QueryPerMonitorDPISupport: Boolean;
-    function GetPrimaryMonitorDPI: Integer;
   public
-    constructor Create;
-    destructor Destroy; override;
-    
-    // IClickDMapper implementation
     function MapRelativeToAbsolute(RelativeX, RelativeY: Double): TDPIAwarePoint;
     function MapPercentage(PercentX, PercentY: Integer): TDPIAwarePoint;
     function GetCurrentDPI: Integer;
-    function GetMonitorDPI(MonitorHandle: TMonitorHandle): Integer;
+    function GetMonitorDPI(AMonitor: HMONITOR): Integer;
     function IsDPIAware: Boolean;
     function GetEffectiveScreenWidth: Integer;
     function GetEffectiveScreenHeight: Integer;
-    
-    // Properties
-    property Options: TDPIMapperOptions read FOptions write FOptions;
   end;
 
-// Global accessor
 procedure InitializeDPIMapper;
 function CurrentDPIMapper: IClickDMapper;
 
@@ -110,7 +70,6 @@ implementation
 
 var
   GDMapper: IClickDMapper = nil;
-  GSystemDPI: Integer = 96;  // Default fallback value
 
 { TDPIAwarePoint }
 
@@ -130,162 +89,78 @@ end;
 
 function TDPIAwarePoint.ToString: string;
 begin
-  Result := fmt('[%d,%d] (%.2f%%, %.2f%%)', 
-                [AbsoluteX, AbsoluteY, ScaledX * 100, ScaledY * 100]);
+  Result := Format('[%d,%d] (%.2f%%, %.2f%%)',
+    [AbsoluteX, AbsoluteY, ScaledX * 100, ScaledY * 100]);
 end;
 
-{TDPIMapper}
-
-constructor TDPIMapper.Create;
-begin
-  inherited Create;
-  FOptions := (
-    ForceSystemDPI: False;
-    AutoDetectPrimaryMonitor: True
-  );
-  
-  // Initialize DPI detection
-  FCurrentDPI := 96;
-  FIsDPIAware := QueryPerMonitorDPISupport;
-  
-  if FIsDPIAware then
-    FCurrentDPI := GetCurrentDPI()
-  else
-    FCurrentDPI := GSystemDPI;
-end;
-
-destructor TDPIMapper.Destroy;
-begin
-  inherited Destroy;
-end;
-
-function TDPIMapper.QueryPerMonitorDPISupport: Boolean;
-var
-  ModuleHandle: HMODULE;
-  FuncPtr: Pointer;
-begin
-  // Try to load user32.dll and check for GetDpiForMonitor
-  ModuleHandle := GetModuleHandle('user32.dll');
-  if ModuleHandle = 0 then
-    Exit(False);
-      
-  FuncPtr := GetProcAddress(ModuleHandle, 'GetDpiForMonitor');
-  Result := Assigned(FuncPtr);
-end;
+{ TDPIMapper }
 
 function TDPIMapper.GetCurrentDPI: Integer;
 var
-  Monitor: HMONITOR;
+  Mon: TMonitor;
 begin
-  // Get monitor that contains point (50,50) which is usually on primary
-  Monitor := MonitorFromPoint(Point(50, 50), MONITOR_DEFAULTTOPRIMARY);
-  
-  if FIsDPIAware and Assigned(Monitor) then
-  begin
-    // Windows 8.1+ supports per-monitor DPI
-    var DPI_X, DPI_Y: UINT;
-    if GetDpiForMonitor(Monitor, MDT_EFFECTIVE_DPI, DPI_X, DPI_Y) = NO_ERROR then
-      Result := DPI_X;  // X and Y should be same
-    else
-      Result := GSystemDPI;
-  end
+  // 取左上角所在监视器：与 VCL 自身（HB.Tray 菜单定位）同一定位口径
+  Mon := Screen.MonitorFromPoint(Point(50, 50));
+  if Mon <> nil then
+    Result := Mon.PixelsPerInch
   else
-  begin
-    // Fallback to system-wide DPI
     Result := Screen.PixelsPerInch;
-  end;
-  
-  GSystemDPI := Result;
 end;
 
-function TDPIMapper.GetPrimaryMonitorDPI: Integer;
+function TDPIMapper.GetMonitorDPI(AMonitor: HMONITOR): Integer;
 var
-  PrimaryMon: TMonitor;
+  I: Integer;
 begin
-  if Assigned(Screen) and (Screen.MonitorCount > 0) then
-  begin
-    PrimaryMon := Screen.PrimaryMonitor;
-    Result := Round(PrimaryMon.Scale * 96);
-  end
-  else
-    Result := GetSystemMetrics(LOGPIXELSX);
-end;
-
-function TDPIMapper.MapRelativeToAbsolute(RelativeX, RelativeY: Double): TDPIAwarePoint;
-var
-  EffectiveWidth, EffectiveHeight: Integer;
-begin
-  // Validate input range
-  RelativeX := Clamp(RelativeX, 0.0, 1.0);
-  RelativeY := Clamp(RelativeY, 0.0, 1.0);
-  
-  // Get effective screen dimensions
-  EffectiveWidth := GetEffectiveScreenWidth;
-  EffectiveHeight := GetEffectiveScreenHeight;
-  
-  // Convert to absolute pixels
-  var AbsX := Trunc(RelativeX * EffectiveWidth);
-  var AbsY := Trunc(RelativeY * EffectiveHeight);
-  
-  Result := TDPIAwarePoint.Create(AbsX, AbsY, RelativeX, RelativeY);
-end;
-
-function TDPIMapper.MapPercentage(PercentX, PercentY: Integer): TDPIAwarePoint;
-var
-  RelX, RelY: Double;
-begin
-  // Convert percentages to relative values
-  RelX := PercentX / 100.0;
-  RelY := PercentY / 100.0;
-  
-  Result := MapRelativeToAbsolute(RelX, RelY);
-end;
-
-function TDPIMapper.GetMonitorDPI(MonitorHandle: TMonitorHandle): Integer;
-begin
-  if not FIsDPIAware then
-    Exit(GSystemDPI);
-    
-  var DPI_X, DPI_Y: UINT;
-  if GetDpiForMonitor(MonitorHandle, MDT_EFFECTIVE_DPI, DPI_X, DPI_Y) = NO_ERROR then
-    Result := DPI_X
-  else
-    Result := GSystemDPI;
+  for I := 0 to Screen.MonitorCount - 1 do
+    if Screen.Monitors[I].Handle = AMonitor then
+      Exit(Screen.Monitors[I].PixelsPerInch);
+  Result := GetCurrentDPI;
 end;
 
 function TDPIMapper.IsDPIAware: Boolean;
 begin
-  Result := FIsDPIAware;
+  // 必须写单元限定名：方法名与 RTL 函数同名（Delphi 标识符不区分大小写），
+  // 裸调用会解析成本方法自身形成无限递归。
+  Result := System.Win.HighDpi.IsDpiAware;
+end;
+
+function TDPIMapper.MapRelativeToAbsolute(RelativeX, RelativeY: Double): TDPIAwarePoint;
+var
+  RelX, RelY: Double;
+begin
+  // 本机 System.Math 无 Clamp（实测 E2003），夹取用其 Max/Min Double 重载
+  RelX := Max(0.0, Min(1.0, RelativeX));
+  RelY := Max(0.0, Min(1.0, RelativeY));
+  Result := TDPIAwarePoint.Create(
+    Trunc(RelX * GetEffectiveScreenWidth),
+    Trunc(RelY * GetEffectiveScreenHeight),
+    RelX, RelY);
+end;
+
+function TDPIMapper.MapPercentage(PercentX, PercentY: Integer): TDPIAwarePoint;
+begin
+  Result := MapRelativeToAbsolute(PercentX / 100.0, PercentY / 100.0);
 end;
 
 function TDPIMapper.GetEffectiveScreenWidth: Integer;
 begin
-  if Assigned(Screen) then
-    Result := Screen.Width
-  else
-    Result := GetSystemMetrics(SM_CXSCREEN);
+  Result := Screen.Width;
 end;
 
 function TDPIMapper.GetEffectiveScreenHeight: Integer;
 begin
-  if Assigned(Screen) then
-    Result := Screen.Height
-  else
-    Result := GetSystemMetrics(SM_CYSCREEN);
+  Result := Screen.Height;
 end;
 
-// Global initialization
 procedure InitializeDPIMapper;
 begin
-  if not Assigned(GDMapper) then
+  if GDMapper = nil then
     GDMapper := TDPIMapper.Create;
 end;
 
 function CurrentDPIMapper: IClickDMapper;
 begin
-  if not Assigned(GDMapper) then
-    InitializeDPIMapper;
-    
+  InitializeDPIMapper;
   Result := GDMapper;
 end;
 
