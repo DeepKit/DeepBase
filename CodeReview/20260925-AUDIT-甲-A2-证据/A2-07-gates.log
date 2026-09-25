@@ -1,0 +1,11 @@
+=== EOL gate (full repo) ===
+行尾门禁通过：检查了 1538 个文件（.pas CRLF / .md LF），跳过目录 11
+EOL_EXIT=0
+=== Encoding gate (full repo) ===
+编码门禁通过：986 个 .pas + 707 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+ENC_EXIT=0
+=== Mojibake gate (narrow: 2 件 A2-07 触改单元, temp-git) + full repo ===
+丙类损坏门禁通过：扫描 2 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+MOJI_NARROW_EXIT=0
+丙类损坏门禁通过：扫描 983 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+MOJI_FULL_EXIT=0

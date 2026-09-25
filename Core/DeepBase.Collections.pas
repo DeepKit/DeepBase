@@ -530,6 +530,11 @@ end;
 
 constructor TCircularBuffer<T>.Create(ACapacity: Integer);
 begin
+  // A2-07/B-COL-01：容量 <=0 会让 Push/GetItem 的 mod FCapacity 除零并越界写，
+  // 构造期直接拒绝，杜绝带病实例流入调用方。
+  if ACapacity <= 0 then
+    raise ECollectionException.CreateFmt(
+      'TCircularBuffer: capacity must be positive (got %d)', [ACapacity]);
   inherited Create;
   FCapacity := ACapacity;
   SetLength(FItems, ACapacity);
