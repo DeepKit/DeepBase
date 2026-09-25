@@ -1,0 +1,68 @@
+# B2-10 修后：改动清单、判据落点、编译与用例、登记项
+
+- 件：`Features/DeepBase.LLM.HTTP.pas`（885 → 887 行，diff 82 增 / 80 删）
+- 配套新测试单元：`Tests/Test.DeepBase.LLM.HTTP.Stream.pas`（314 行，UTF-8 BOM + CRLF）
+- 基准：`359330a`（修前代码事实见 `B2-10-修前-代码事实与零覆盖.txt`）
+
+## 1. 改动清单（逐项对应修前事实编号）
+
+| 项 | 位置（修后行号） | 改动 | 对应修前事实 |
+|---|---|---|---|
+| a | :17 / :19 | `BuildOpenAIRequest` / `BuildAnthropicRequest` 各增 `AStream: Boolean` 形参 | §1 无开关入口 |
+| b | :111-112 / :143-144 | 两个构造函数内唯一写入口：`if AStream then Json.AddPair('stream', TJSONBool.Create(True))`；False 时该键根本不出现 | §1 / §2.1 / §2.3 |
+| c | :654-657 | `SendStream` 两侧方言都传 `True`；删掉 :608-623 的「解析→AddPair→再序列化」黑魔法（请求体写入口回归构造函数一处） | §2.1 / §2.2 |
+| d | :465 / :467 | `Send`（非流式）两侧方言都传 `False` | §2.3 |
+| e | :23 / :364-397 | 新增 `ExtractStreamDelta`，按方言分派：OpenAI `choices[0].delta.content`、Anthropic `content_block_delta.delta.text`，其余事件返回 `''` | §3 |
+| f | :683 / :728 | 流式回调与缓冲回退两处都改调 `ExtractStreamDelta`，删除两份重复的 OpenAI 专用解析块 | §3 |
+| g | :742-749 | 空增量流 fail-closed：`LResult.Content = ''` ⇒ 记 `empty_stream` + 触发 `AOnError` + `Exit`（返回 False），不再无条件 `Result := True` | §4（工单 §〇-8） |
+| h | SendStream var 段 | 删除 `Done: Boolean` 死状态：流式分支的 `AChunk = '[DONE]'` 判据按传输契约永不为真（`DeepBase.Net.Transport` 在 `[DONE]` 处自行断流且剥前缀），缓冲分支用 `Break` 已足够 | §2.2 口径互斥的同一处 |
+
+## 2. 判据落点
+
+| 工单判据 | 落点用例（`TTestLLMStreamSwitch`） | 结果 |
+|---|---|---|
+| 非流式请求构造体无 `stream:true` | `Test_OpenAI_NonStreaming_Body_HasNoStreamKey`、`Test_Anthropic_NonStreaming_Body_HasNoStreamKey`（直接断言替身收到的请求体里没有 `"stream"` 子串） | 绿 |
+| 流式请求可显式开启 | `Test_OpenAI_Streaming_Body_CarriesStreamTrue`、`Test_Anthropic_Streaming_Body_CarriesStreamTrue`（断言请求体含 `"stream":true`；后者顺带断言 URL 落 `/messages`） | 绿 |
+| 双方言往返用例绿 | `Test_OpenAI_Streaming_RoundTrip_AccumulatesDeltas`、`Test_Anthropic_Streaming_RoundTrip_AccumulatesDeltas`（流式传输面）、`Test_Anthropic_Streaming_BufferedFallback_RoundTrip`（缓冲回退面） | 绿 |
+| （同函数 fail-open，§〇-8） | `Test_Streaming_WithoutAnyDelta_FailsClosed` | 绿 |
+
+替身分两个，覆盖 `SendStream` 的两条真实分支：
+`TChunkPumpTransport` 实现 `IDeepBaseStreamingTransport`（走 `Supports(...)` 真流式分支，
+并按契约下发**已剥 `data: ` 前缀**的载荷）；`TBufferedSseTransport` 只实现
+`IDeepBaseHttpTransport`（`Supports` 失败 ⇒ 走缓冲回退分支，body 为原始 SSE 文本）。
+两者共同继承 `TRecordingTransport` 记录最后一次请求的 body/url，判据才落在「发出去的东西」
+上，而不是落在自报状态上。
+
+## 3. 编译与用例（原始输出见 `B2-10-用例真跑.txt`）
+
+- `b2_unit_compile.sh Features/DeepBase.LLM.HTTP.pas` ⇒ BUILD_EXIT=0
+- `b2_run_fixture.sh Tests/Test.DeepBase.LLM.HTTP.Stream.pas` ⇒ 8 found / 8 passed / 0 failed，RUN_EXIT=0
+- 同族邻件 `Tests/Test.DeepBase.LLM.E2E.pas` ⇒ 15 found / 15 passed / 0 failed，RUN_EXIT=0（无回归）
+- 反事实探针 M1-M5 ⇒ 全部见 `B2-10-反事实探针.txt`
+
+## 4. 登记项（本单不自决，交主控）
+
+- R1 **`BuildAnthropicRequest` 丢弃 `ATemperature`**：形参接了却从不写进请求体
+  （:128-167 全文无 temperature 键），OpenAI 侧则写入。属「参数由调用方决定」的同族问题，
+  但改它会变更所有 Anthropic 调用的采样行为，超出 B2-10 点名的 `stream` 范围 ⇒ 只登记不顺手改。
+- R2 **Anthropic 非流式响应只读 `content[0]`**（`ParseAnthropicResponse` :345-352）：
+  首个块若是 `thinking` 类型，`text` 取空 ⇒ 报成功但内容为空。与 B2-10 判据同族（返回值不
+  反映真实命中），属响应侧另一件，未派单 ⇒ 登记。
+- R3 **`SendStream` 现依赖传输契约**：流式分支不再自查 `[DONE]`，前提是
+  `TDeepBaseSystemNetTransport.SendStreaming` 只下发剥前缀载荷且遇 `[DONE]` 断流
+  （`Features/DeepBase.Net.Transport.pas` 实现如此）。任何新实现 `IDeepBaseStreamingTransport`
+  的传输层都必须守同一契约，否则终止语义失效 ⇒ 建议在接口注释里升格为硬性契约（本单不动接口）。
+- R4 **存量假覆盖**：`Tests/Test.DeepBase.LLM.E2E.pas` 五个 `Test_Stream_*` 用例
+  实际调用 `Send` 而非 `SendStream`（修前事实 §5），命名与调用面不一致；本单不改它
+  （邻件 15/15 仍绿），登记为待清理项。
+- R5 **新测试单元待注册**：`Tests/Test.DeepBase.LLM.HTTP.Stream.pas` 未写入
+  `Tests/DeepBaseTests.dpr`/.dproj（工单 §〇-4 归主控收口）。
+- R6 **`DeepBase.LLM.HTTP.pas` 不在 CI 编译矩阵**：本件由 `b2_unit_compile.sh` 探针取证，
+  build-gate 面是否覆盖该件由主控登记（与 B2-05/06 同批处理）。
+
+## 5. 自查（架构分叉/过度兜底）
+
+- 请求体写入口从两处收敛到一处（构造函数），符合 SSOT；黑魔法删除而非保留兼容路径。
+- SSE 解析从两份重复收敛为一个 `ExtractStreamDelta`，两个调用点共用；未新增单一调用的 helper。
+- 没有加「万一 content 非空但 token 为空」之类的多余兜底：判据就是 `Content = ''`。
+- 没有为旧行为留开关或注释掉的代码；`Done` 死状态一并删除。

@@ -1,0 +1,67 @@
+# B2-10 反事实（变异）探针：缺陷回退时用例必须真红
+
+工具：`bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh <测试单元> <SUT> '<perl -pe>'`
+被测：`Features/DeepBase.LLM.HTTP.pas` × `Tests/Test.DeepBase.LLM.HTTP.Stream.pas`（8 例）
+纪律：每次只动工作树副本，脚本 trap 还原后显式复跑确认回绿（下表「还原」列）。
+
+## 汇总表
+
+| 探针 | 变异意图（回退到哪条修前事实） | perl 表达式 | 红例数 | 红的是哪些用例 | 还原复跑 |
+|---|---|---|---|---|---|
+| M1 | Anthropic 侧流式写入口失效（工单点名的「Anthropic 分支同步核对」镜像缺陷） | `s/if AStream then/if False then/ if $.==143` | 1/8 | `Test_Anthropic_Streaming_Body_CarriesStreamTrue` | 8/8 绿 |
+| M2 | `stream` 开关反转（写入口不再由调用方决定） | `s/if AStream then/if not AStream then/g` | 4/8 | 两侧 `*_Streaming_Body_CarriesStreamTrue` + 两侧 `*_NonStreaming_Body_HasNoStreamKey` | 8/8 绿 |
+| M3 | 无条件注入 —— 复现修前 §2.1 的原始缺陷形态（流式与否不分岔，恒发 `stream:true`） | `s/if AStream then/if True then/g` | 2/8 | 两侧 `*_NonStreaming_Body_HasNoStreamKey` | 8/8 绿 |
+| M4 | Anthropic 增量方言不再被识别 —— 复现修前 §3（只认 OpenAI 形状，Anthropic token 全丢） | `s/content_block_delta/content_block_delta_none/g` | 2/8 | `Test_Anthropic_Streaming_RoundTrip_AccumulatesDeltas`、`Test_Anthropic_Streaming_BufferedFallback_RoundTrip` | 8/8 绿 |
+| M5 | 撤掉空流 fail-closed —— 复现修前 §4 的无条件 `Result := True` | `s/if LResult\.Content = .{2} then/if False then/` | 1/8 | `Test_Streaming_WithoutAnyDelta_FailsClosed` | 8/8 绿 |
+
+判读：
+- M1 只红一例 ⇒ 该断言精确咬在 Anthropic 侧写入口上，不是被 OpenAI 侧顺带满足。
+- M3 只红两例（非流式侧）⇒ 「恒发 stream:true」正是修前 OpenAI 分支的行为，
+  今天的用例集对它已具备回归能力。
+- M4 红两例但不红 M5 那例：方言失效时 content 仍为空 ⇒ fail-closed 独立成立，
+  两条防线（解析方言 / 返回值语义）各自可验证，没有互相掩盖。
+
+## 原始片段（每探针三段：基线绿 → 注入红 → 还原绿）
+
+```
+########## M1
+==== 2) 注入变异: s/if AStream then/if False then/ if $.==143 ====
+-    if AStream then
++    if False then
+RUNNER_STATS fixtureCount=1 testCount=8 pass=7 failure=1 error=0 ignored=0
+== 已还原 SUT: Features/DeepBase.LLM.HTTP.pas ==
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+
+########## M2
+==== 2) 注入变异: s/if AStream then/if not AStream then/g ====
+-    if AStream then
++    if not AStream then          （两处构造函数同批命中）
+RUNNER_STATS fixtureCount=1 testCount=8 pass=4 failure=4 error=0 ignored=0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0   （还原后）
+
+########## M3
+==== 2) 注入变异: s/if AStream then/if True then/g ====
+-    if AStream then
++    if True then                 （两处）
+RUNNER_STATS fixtureCount=1 testCount=8 pass=6 failure=2 error=0 ignored=0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0   （还原后）
+
+########## M4
+==== 2) 注入变异: s/content_block_delta/content_block_delta_none/g ====
+-    if Event.GetValue('type', '') = 'content_block_delta' then
++    if Event.GetValue('type', '') = 'content_block_delta_none' then
+RUNNER_STATS fixtureCount=1 testCount=8 pass=6 failure=2 error=0 ignored=0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0   （还原后）
+
+########## M5
+==== 2) 注入变异: s/if LResult\.Content = .{2} then/if False then/ ====
+-    if LResult.Content = '' then
++    if False then
+RUNNER_STATS fixtureCount=1 testCount=8 pass=7 failure=1 error=0 ignored=0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0   （还原后）
+```
+逐行原始输出（含 DUnitX 用例名列表与编译行）留在 `.tmp/b2/b10/M1..M5.txt`（gitignored）。
+变异表达式里的行号 `$.==143` 是本件修后 `BuildAnthropicRequest` 内 `if AStream then` 的行位置，
+仅用于把变异限定在 Anthropic 一处；行位置漂移会让 M1 变成 M2，故其余探针一律用文本锚点。
+
+变异全部还原后，仓根 `git diff` 只含本单申报的两件（SUT + 新测试单元），无残留。

@@ -1,0 +1,109 @@
+# B2-10 修前代码事实与零覆盖（基准 HEAD: 359330a，件为 Features/DeepBase.LLM.HTTP.pas）
+
+工单判据原文：「非流式请求构造体无 `stream:true`；流式请求可显式开启；双方言往返用例绿」，
+期望原文：「`stream` 由调用方参数决定，不得单分支硬注入；Anthropic 分支同步核对」。
+
+## 0. 基线与件指纹
+
+- 基准 commit：`359330a`（B2-03 落笔笔）
+- 修前件行数：885（`git show 359330a:Features/DeepBase.LLM.HTTP.pas | wc -l`）
+- 本件在 HEAD 可编译：`b2_unit_compile.sh` 对 HEAD 版本跑过，EXIT=0（见 §5）
+
+## 1. 两个请求构造函数都不接流式开关（写入口缺失）
+
+```
+:92   function TLLMHttpClient.BuildOpenAIRequest(const AModelId: string;
+:93     const AMessages: TArray<TChatMessage>; AMaxTokens, ATemperature: Double): string;
+:119  function TLLMHttpClient.BuildAnthropicRequest(const AModelId: string;
+:120    const AMessages: TArray<TChatMessage>; AMaxTokens, ATemperature: Double): string;
+```
+两侧构造体内部都只写 model/max_tokens/(system)/messages，没有任何 `stream` 键 ——
+即「流式与否」在这条链上根本没有参数入口，只能在调用处做手脚（见 §2）。
+
+## 2. 单分支硬注入：解析→改对象→再序列化（点名缺陷）
+
+修前 `SendStream` :604-623 原文：
+
+```pascal
+  // Build streaming request (add stream:true)
+  if SameText(AApiFormat, 'anthropic') then
+    Body := BuildAnthropicRequest(AModelId, AMessages, AMaxTokens, ATemperature)
+  else
+  begin
+    // Inject stream:true into OpenAI request
+    var MsgJson := BuildOpenAIRequest(AModelId, AMessages, AMaxTokens, ATemperature);
+    var Obj := TJSONObject.ParseJSONValue(MsgJson) as TJSONObject;
+    try
+      if Obj <> nil then
+      begin
+        Obj.AddPair('stream', TJSONBool.Create(True));
+        Body := Obj.ToJSON;
+      end
+      else
+        Body := MsgJson;
+    finally
+      Obj.Free;
+    end;
+  end;
+```
+
+事实清点：
+- 2.1 OpenAI 分支：构造完 JSON 再解析回来塞 `stream:true` 又序列化一遍（第二次序列化即
+  请求体的第二个写入口，构造函数改动会被这里覆盖）。
+- 2.2 Anthropic 分支（:605-606）：不注 `stream`，但同一函数随后按 SSE 解析增量
+  （:645-680 / :707-746），并在 :638 用 `BuildHeaders(..., True)` 声明
+  `Accept: text/event-stream`。三分支口径互斥：头说流式、体说非流式、解析按流式。
+  ⇒ 工单点名的「强制注入」在 OpenAI 侧，镜像缺陷（该注入的没注入）在 Anthropic 侧。
+- 2.3 `Send`（非流式，:415/:417）走同一对构造函数，因此今天的非流式体天然无 `stream` 键；
+  但这条正确性完全依赖 §2.1 那段只在 `SendStream` 里的黑魔法，构造函数本身表达不了意图。
+
+## 3. SSE 增量解析是两份重复代码，且只认 OpenAI 方言
+
+把修前两处解析块（:660-679 流式回调 / :723-742 缓冲回退）去缩进后逐行 diff：
+
+```
+$ diff <(sed -n '660,679p' head.pas | 去缩进) <(sed -n '723,742p' head.pas | 去缩进)
+1c1
+< var Chunk := TJSONObject.ParseJSONValue(AChunk) as TJSONObject;
+---
+> var Chunk := TJSONObject.ParseJSONValue(Data) as TJSONObject;
+```
+⇒ 两块除入参名外完全相同（复制粘贴分叉），且两块都只读 `choices[0].delta.content`。
+Anthropic 的增量事件是 `{"type":"content_block_delta","delta":{"text":"..."}}`，
+不含 `choices` ⇒ 即使服务端真按流式返回，Anthropic 侧也一个 token 都收不到，
+而 §4 的恒真返回值仍报成功。
+
+## 4. 恒真返回（同函数内的 fail-open，工单 §〇-8 总原则点名禁止）
+
+修前 :749-750：
+```pascal
+    LResult.Success := True;
+    Result := True;
+```
+`Result` 在此之前没有任何路径写 False（除 §4 之外的 HTTP≠200 早退与 except）。
+⇒ 空流、坏 JSON、Anthropic 方言不识别，一律报成功且 `Content=''`。
+
+## 5. 零覆盖取证（本单判据为何必须新建 fixture）
+
+```
+$ grep -rn "SendStream|LLM\.HTTP" Tests/
+Tests/Test.DeepBase.LLM.E2E.pas:24:  DeepBase.LLM.HTTP,
+Tests/Test.DeepBase.LLM.E2E.pas:45:    function SendStreaming(...)      # 替身的接口实现
+Tests/Test.DeepBase.LLM.E2E.pas:127: function TMockStreamTransport.SendStreaming(...)
+Tests/Test.DeepBase.LLM.E2E.pas:181-293: 五个 "Test_Stream_*" 用例
+```
+逐条读 E2E 的五个「流式」用例（:181/:213/:240/:265/:295）：它们全部调用
+`Client.Send(...)`，只断言 `Transport.RequestCount` 与 URL，**没有一处调用
+`TLLMHttpClient.SendStream`**，也没有一处检查请求体里有没有 `stream` 键。
+⇒ 「Test_Stream_*」是名字与实际调用不一致的存量假覆盖（同族现象另见 B2 段0 登记），
+修前修后它们都同样绿，不能作为本单判据。
+
+HEAD 版本可编译（证明 §1-§4 的缺陷是活代码路径，不是不可编译的死件）：
+```
+$ git show 359330a:Features/DeepBase.LLM.HTTP.pas > .tmp/b2/b10/head/DeepBase.LLM.HTTP.pas
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh .tmp/b2/b10/head/DeepBase.LLM.HTTP.pas
+1904 lines, 0.20 seconds, 49206 bytes code, 6940 bytes data.
+BUILD_EXIT=0
+```
+真实调用点在库内（不是死件）：`Features/DeepBase.LLM.Service.pas:553` 与 `:763`
+都调 `FHttpClient.SendStream(...)`。

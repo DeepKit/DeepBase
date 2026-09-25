@@ -14,9 +14,13 @@ type
     FTransport: IDeepBaseHttpTransport;
     FTimeoutMs: Integer;
     function BuildOpenAIRequest(const AModelId: string; const AMessages: TArray<TChatMessage>;
-      AMaxTokens, ATemperature: Double): string;
+      AMaxTokens, ATemperature: Double; AStream: Boolean): string;
     function BuildAnthropicRequest(const AModelId: string; const AMessages: TArray<TChatMessage>;
-      AMaxTokens, ATemperature: Double): string;
+      AMaxTokens, ATemperature: Double; AStream: Boolean): string;
+    /// <summary>Promote one SSE data payload into the text token it carries for
+    /// either dialect (OpenAI choices[].delta.content, Anthropic
+    /// content_block_delta.delta.text). Returns '' when the event has no token.</summary>
+    function ExtractStreamDelta(const AData: string): string;
     function BuildOpenAIVisionRequest(const AModelId: string; const AImageBase64: string;
       const AImageMimeType: string; const ASystemPrompt, AUserPrompt: string;
       AMaxTokens, ATemperature: Double): string;
@@ -90,7 +94,8 @@ begin
 end;
 
 function TLLMHttpClient.BuildOpenAIRequest(const AModelId: string;
-  const AMessages: TArray<TChatMessage>; AMaxTokens, ATemperature: Double): string;
+  const AMessages: TArray<TChatMessage>; AMaxTokens, ATemperature: Double;
+  AStream: Boolean): string;
 var
   Json: TJSONObject;
   Arr: TJSONArray;
@@ -101,6 +106,10 @@ begin
     Json.AddPair('model', AModelId);
     Json.AddPair('max_tokens', TJSONNumber.Create(Round(AMaxTokens)));
     Json.AddPair('temperature', TJSONNumber.Create(ATemperature));
+    // B2-10: stream 只有一个写入口，且由调用方决定。非流式体不得带这个键——
+    // 发出 stream:true 会让服务端返回 SSE，而调用方按整体 JSON 解析。
+    if AStream then
+      Json.AddPair('stream', TJSONBool.Create(True));
     Arr := TJSONArray.Create;
     for I := 0 to High(AMessages) do
     begin
@@ -117,7 +126,8 @@ begin
 end;
 
 function TLLMHttpClient.BuildAnthropicRequest(const AModelId: string;
-  const AMessages: TArray<TChatMessage>; AMaxTokens, ATemperature: Double): string;
+  const AMessages: TArray<TChatMessage>; AMaxTokens, ATemperature: Double;
+  AStream: Boolean): string;
 var
   Json: TJSONObject;
   Arr: TJSONArray;
@@ -128,6 +138,10 @@ begin
   try
     Json.AddPair('model', AModelId);
     Json.AddPair('max_tokens', TJSONNumber.Create(Round(AMaxTokens)));
+    // B2-10: 与 OpenAI 分支同构的 stream 写入口。旧实现只在 OpenAI 侧硬注 stream，
+    // Anthropic 流式调用发出的是非流式请求，却按 SSE 解析，永远收不到增量。
+    if AStream then
+      Json.AddPair('stream', TJSONBool.Create(True));
 
     SystemPrompt := '';
     for I := 0 to High(AMessages) do
@@ -347,6 +361,42 @@ begin
   end;
 end;
 
+function TLLMHttpClient.ExtractStreamDelta(const AData: string): string;
+var
+  Event, FirstChoice, Delta: TJSONObject;
+  Choices: TJSONArray;
+begin
+  // B2-10：SSE 增量解析此前是 SendStream 里两份重复的 OpenAI 专用代码，
+  // Anthropic 的流式事件被静默丢弃。合并为单一入口并按方言分派。
+  Result := '';
+  Event := TJSONObject.ParseJSONValue(AData) as TJSONObject;
+  if Event = nil then Exit;
+  try
+    // OpenAI: {"choices":[{"delta":{"content":"..."}}]}
+    if Event.GetValue('choices') is TJSONArray then
+    begin
+      Choices := TJSONArray(Event.GetValue('choices'));
+      if Choices.Count = 0 then Exit;
+      if not (Choices.Items[0] is TJSONObject) then Exit;
+      FirstChoice := TJSONObject(Choices.Items[0]);
+      if FirstChoice.GetValue('delta') is TJSONObject then
+      begin
+        Delta := TJSONObject(FirstChoice.GetValue('delta'));
+        Result := Delta.GetValue('content', '');
+      end;
+      Exit;
+    end;
+
+    // Anthropic: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
+    // 其余事件（message_start/content_block_start/ping/message_stop）不带文本增量。
+    if Event.GetValue('type', '') = 'content_block_delta' then
+      if Event.GetValue('delta') is TJSONObject then
+        Result := TJSONObject(Event.GetValue('delta')).GetValue('text', '');
+  finally
+    Event.Free;
+  end;
+end;
+
 function TLLMHttpClient.MapErrorToCode(AHttpStatus: Integer;
   const AResponseBody: string): string;
 begin
@@ -412,9 +462,9 @@ begin
   AResult := Default(TChatResult);
 
   if SameText(AApiFormat, 'anthropic') then
-    Body := BuildAnthropicRequest(AModelId, AMessages, AMaxTokens, ATemperature)
+    Body := BuildAnthropicRequest(AModelId, AMessages, AMaxTokens, ATemperature, False)
   else
-    Body := BuildOpenAIRequest(AModelId, AMessages, AMaxTokens, ATemperature);
+    Body := BuildOpenAIRequest(AModelId, AMessages, AMaxTokens, ATemperature, False);
 
   try
     // LLM-005 fix: Anthropic uses /messages endpoint, not /chat/completions
@@ -594,33 +644,17 @@ var
   Req: TDeepBaseHttpTransportRequest;
   Response: TDeepBaseHttpTransportResponse;
   StreamingTransport: IDeepBaseStreamingTransport;
-  Done: Boolean;
   LResult: TChatResult;  // local copy — 'out' params cannot be captured by anonymous methods
 begin
   Result := False;
   LResult := Default(TChatResult);
   LResult.ModelUsed := AModelId;
 
-  // Build streaming request (add stream:true)
+  // Build streaming request — stream:true comes from the builder, for both dialects
   if SameText(AApiFormat, 'anthropic') then
-    Body := BuildAnthropicRequest(AModelId, AMessages, AMaxTokens, ATemperature)
+    Body := BuildAnthropicRequest(AModelId, AMessages, AMaxTokens, ATemperature, True)
   else
-  begin
-    // Inject stream:true into OpenAI request
-    var MsgJson := BuildOpenAIRequest(AModelId, AMessages, AMaxTokens, ATemperature);
-    var Obj := TJSONObject.ParseJSONValue(MsgJson) as TJSONObject;
-    try
-      if Obj <> nil then
-      begin
-        Obj.AddPair('stream', TJSONBool.Create(True));
-        Body := Obj.ToJSON;
-      end
-      else
-        Body := MsgJson;
-    finally
-      Obj.Free;
-    end;
-  end;
+    Body := BuildOpenAIRequest(AModelId, AMessages, AMaxTokens, ATemperature, True);
 
   // Build URL — Anthropic uses /messages, OpenAI-compatible uses /chat/completions
   URL := AEndpoint;
@@ -641,41 +675,16 @@ begin
     // Try streaming transport first (true incremental SSE pipe)
     if Supports(FTransport, IDeepBaseStreamingTransport, StreamingTransport) then
     begin
-      Done := False;
       Response := StreamingTransport.SendStreaming(Req,
         procedure(const AChunk: string; var ACancel: Boolean)
         begin
-          if Done then
+          // AChunk 已被传输层剥掉 `data: ` 前缀，且 [DONE] 在传输层就断流；
+          // 这里只判断"这个事件是否携带文本增量"。
+          var Token := ExtractStreamDelta(AChunk);
+          if Token <> '' then
           begin
-            ACancel := True;
-            Exit;
-          end;
-          if AChunk = '[DONE]' then
-          begin
-            Done := True;
-            ACancel := True;
-            Exit;
-          end;
-          // Parse chunk JSON — extract delta content token
-          var Chunk := TJSONObject.ParseJSONValue(AChunk) as TJSONObject;
-          if Chunk <> nil then
-          try
-            var Choices := Chunk.GetValue('choices') as TJSONArray;
-            if (Choices <> nil) and (Choices.Count > 0) then
-            begin
-              var Delta := (Choices.Items[0] as TJSONObject).GetValue('delta') as TJSONObject;
-              if Delta <> nil then
-              begin
-                var Token := Delta.GetValue('content', '');
-                if Token <> '' then
-                begin
-                  LResult.Content := LResult.Content + Token;
-                  if Assigned(AOnChunk) then AOnChunk(Token);
-                end;
-              end;
-            end;
-          finally
-            Chunk.Free;
+            LResult.Content := LResult.Content + Token;
+            if Assigned(AOnChunk) then AOnChunk(Token);
           end;
         end, nil);
 
@@ -708,42 +717,35 @@ begin
       var BodyStream := TStringStream.Create(Response.Body, TEncoding.UTF8);
       var Reader := TStreamReader.Create(BodyStream, TEncoding.UTF8, True);
       try
-        Done := False;
-        while not Reader.EndOfStream and not Done do
+        while not Reader.EndOfStream do
         begin
           var LLine := TrimRight(Reader.ReadLine);
           if not LLine.StartsWith('data: ') then
             Continue;
           var Data := LLine.Substring(6);
           if Data = '[DONE]' then
-          begin
-            Done := True;
             Break;
-          end;
-          var Chunk := TJSONObject.ParseJSONValue(Data) as TJSONObject;
-          if Chunk <> nil then
-          try
-            var Choices := Chunk.GetValue('choices') as TJSONArray;
-            if (Choices <> nil) and (Choices.Count > 0) then
-            begin
-              var Delta := (Choices.Items[0] as TJSONObject).GetValue('delta') as TJSONObject;
-              if Delta <> nil then
-              begin
-                var Token := Delta.GetValue('content', '');
-                if Token <> '' then
-                begin
-                  LResult.Content := LResult.Content + Token;
-                  if Assigned(AOnChunk) then AOnChunk(Token);
-                end;
-              end;
-            end;
-          finally
-            Chunk.Free;
+          var Token := ExtractStreamDelta(Data);
+          if Token <> '' then
+          begin
+            LResult.Content := LResult.Content + Token;
+            if Assigned(AOnChunk) then AOnChunk(Token);
           end;
         end;
       finally
         Reader.Free;
       end;
+    end;
+
+    // B2-10：HTTP 200 不等于拿到了生成内容。空增量流一律判失败，
+    // 否则上游会把"一个字都没吐"当作成功（旧实现在这里无条件 Result := True）。
+    if LResult.Content = '' then
+    begin
+      LResult.ErrorCode := 'empty_stream';
+      LResult.ErrorMessage := 'stream returned no content';
+      if Assigned(AOnError) then AOnError(LResult.ErrorMessage);
+      AResult := LResult;
+      Exit;
     end;
 
     LResult.Success := True;

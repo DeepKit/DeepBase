@@ -1,0 +1,83 @@
+# B2-10 用例真跑（原始输出摘录，工作树 = 修后件；全部命令在仓根执行）
+
+## 1. 修前基线：HEAD 版本单件编译绿（缺陷在活路径上）
+
+```
+$ git show 359330a:Features/DeepBase.LLM.HTTP.pas > .tmp/b2/b10/head/DeepBase.LLM.HTTP.pas
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh .tmp/b2/b10/head/DeepBase.LLM.HTTP.pas
+1904 lines, 0.20 seconds, 49206 bytes code, 6940 bytes data.
+BUILD_EXIT=0
+```
+
+## 2. 修后：受影响单件编译
+
+```
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.LLM.HTTP.pas
+1906 lines, 0.19 seconds, 49283 bytes code, 6908 bytes data.
+BUILD_EXIT=0
+```
+（同批 8 条 H2443 inline hint 为存量面，非本单引入：修前 HEAD 编译同批同数）
+
+## 3. 新 fixture 真跑（一次性 runner，只挂本件测试单元）
+
+```
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh \
+    Tests/Test.DeepBase.LLM.HTTP.Stream.pas \
+    --run:Test.DeepBase.LLM.HTTP.Stream.TTestLLMStreamSwitch
+25290 lines, 1.31 seconds, 3600200 bytes code, 459384 bytes data.
+BUILD_EXIT=0
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+```
+
+## 4. 邻件回归：Test.DeepBase.LLM.E2E（同 SUT 的存量测试面，未加过滤器 = 整件）
+
+```
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.LLM.E2E.pas
+25606 lines, 1.27 seconds, 3613232 bytes code, 460584 bytes data.
+BUILD_EXIT=0
+Tests Found   : 15
+Tests Passed  : 15
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=15 pass=15 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+```
+
+## 5. 负向样本（本轮实测踩到的两个真红，原样保留）
+
+5.1 DUnitX 过滤器语法：`--run=` 不被接受（该 runner 用冒号），且短名 `--run:TTestLLMStreamSwitch`
+命中 0 件 —— 探针的 `NO_TEST_EXECUTED` 守卫按 §〇-4 把这种「假绿」判成 RUN_EXIT=2：
+
+```
+$ ... --run=Test.DeepBase.LLM.HTTP.Stream
+Unknown command line option : --run=Test.DeepBase.LLM.HTTP.Stream
+RUN_EXIT=2
+$ ... --run:TTestLLMStreamSwitch
+Tests Found   : 0
+RUNNER_STATS fixtureCount=0 testCount=0 pass=0 failure=0 error=0 ignored=0
+RUNNER_VERDICT: NO_TEST_EXECUTED
+RUN_EXIT=2
+```
+
+5.2 `TProc<T>` 形参不能写 `const`：本件测试最初把回调写成
+`procedure(const AToken: string)`，dcc64 直接判引用类型不兼容（编译红，非用例红）：
+
+```
+Tests\Test.DeepBase.LLM.HTTP.Stream.pas(184) Error: E2010 Incompatible types: 'TProc<string>' and 'Procedure'
+BUILD_EXIT=1  ⇒ 判据不成立
+```
+最小复现（同一编译器，三种写法各一行）：
+```
+$ dcc64 .tmp/b2/anon/B2AnonProbe3.dpr   ! M: TProc<string>; M := procedure(const S: string) ... ⇒ 行 12 E2010
+$ dcc64 .tmp/b2/anon/B2AnonProbe4.dpr   ! 同件里 procedure(S: string) 形式 ⇒ 通过；带 const 形式 ⇒ E2010
+```
+⇒ 落笔为注释留在测试单元里（避免下一个人再踩），编译器事实本身留在本证据。

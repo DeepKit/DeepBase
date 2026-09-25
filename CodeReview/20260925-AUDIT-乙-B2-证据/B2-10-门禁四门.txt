@@ -1,0 +1,41 @@
+# B2-10 交付树四门复跑（基准 HEAD: 359330a）
+
+- 复跑位置：仓根（四门脚本以仓根为 cwd 取 `git ls-files` 口径）
+- 时序：本笔 payload 的前 6 件（SUT + 新测试单元 + 本目录 4 件证据）已在 index 时跑四门；
+  本文件在四门跑完后落盘并同笔提交 ⇒ 证据件数比门禁读数多 1（711 → 712）。
+- 判定行与退出码原文（全量原始输出含 E3 存量清单逐行，留在 `.tmp/b2/b10/gates_staged.txt`，gitignored）。
+
+```
+$ node 09_工程脚本/encoding-gate/check_pas_encoding.js
+编码门禁通过：999 个 .pas + 709 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+$ node 09_工程脚本/eol-gate/check_eol.js
+行尾门禁通过：检查了 1552 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+$ node 09_工程脚本/mojibake-gate/check_mojibake.js
+丙类损坏门禁通过：扫描 997 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+$ node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+证据编码门禁通过：扫描 711 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+```
+
+## 计数对照（B2-03 交付时 → 本笔）
+
+| 门 | B2-03 | B2-10 | 差 | 归因 |
+|---|---|---|---|---|
+| .pas（编码门，走工作树） | 998 | 999 | +1 | 新增 `Tests/Test.DeepBase.LLM.HTTP.Stream.pas` |
+| eol 文件数 | 1551 | 1552 | +1 | 同上 |
+| .pas（丙类门，走 index） | 996 | 997 | +1 | 同上；本笔未新增/删除其他 .pas |
+| CodeReview 证据件 | 707 | 711 | +4 | 本目录前 4 件（本件为第 5 件，落盘在门禁之后） |
+| E3 存量命中行 | 240 | 240 | 0 | 本笔证据未引入双重编码/替换符行 |
+
+BOM 例外 45 / 孤立 CR 基线 0 / 双重编码基线 50 / 扩展面豁免 13 / 丙-B 0 处 ——
+与本笔前一读全部持平，说明本单没动编码基线面。
+
+## 与本单相关的行尾事实
+
+- 两个 .pas 均为 UTF-8 BOM + 全 CRLF（工具写盘过程中出现过整件转 LF 的情况，
+  落笔前用探针复核：`CRLF=887 LF-only=0 BOM=True` / `CRLF=314 LF-only=0 BOM=True`；
+  eol 门 EXIT=0 是同一事实的第二重确认）。
+- 四件证据 .txt 一律无 BOM、纯 LF（与该目录既有证据件同口径，evidence 门按 UTF-8 合法性判）。
