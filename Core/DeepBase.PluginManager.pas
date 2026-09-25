@@ -120,8 +120,10 @@ type
     procedure SetPluginEnabledSetting(const PluginID: TGUID; Enabled: Boolean);
     /// <summary>
     /// Capture a thread-safe snapshot of currently loaded plugins.
-    /// The returned array holds IDeepBasePlugin references which keep
-    /// plugin objects alive via refcount even if unloaded concurrently.
+    /// WARNING: the returned array holds IDeepBasePlugin references whose
+    /// _Release/destructor code lives inside the plugin BPL. Callers must
+    /// drop the array BEFORE the plugin is unloaded, or the final release
+    /// executes against unmapped code (use-after-free).
     /// BIZ2-023: used to invoke callbacks outside FLock safely.
     /// </summary>
     function SnapshotLoadedPlugins: TArray<TLoadedPluginData>;
@@ -779,6 +781,12 @@ begin
     // finally block first, so all post-lock work goes here.
     TMonitor.Exit(FLock);
 
+    // A2-06/B-PM-06 fail-before-unload 范式：所有指向 BPL 侧代码的托管引用
+    // （接口局变量、含托管字段的 record）必须在 UnloadBPL 之前释放——否则
+    // 过程帧尾的 _Release/@FinalizeRecord 跳进已解映射的模块代码。
+    PluginBase := nil;
+    Plugin := nil;
+
     // Post-lock: clean up BPL on failure and fire callbacks lock-free
     if (not Result) and (Handle <> 0) then
       UnloadBPL(Handle);
@@ -787,6 +795,9 @@ begin
       FirePluginError(ErrorID, ErrorName, ErrorMsg, ErrorFatal)
     else if Result then
       FirePluginLoaded(Info);
+
+    // Info 的托管字段释放同样不得晚于帧尾；FirePluginLoaded 用完后立即清
+    Info := Default(TPluginInfo);
   end;
 end;
 
@@ -836,6 +847,10 @@ begin
     PackageHandle := LoadedRec.PackageHandle;
     PluginIntf := LoadedRec.Plugin;
 
+    // 依赖检查循环结束后立刻清掉循环变量的接口/托管拷贝（A2-06/B-PM-06：
+    // 任何 BPL 侧托管引用不得活过 UnloadBPL）
+    OtherRec := Default(TLoadedPlugin);
+
     // Finalize plugin while BPL is still loaded
     if PluginIntf <> nil then
     begin
@@ -857,6 +872,12 @@ begin
       raise EPluginInUse.CreateFmt(
         'Cannot unload plugin "%s": %d in-flight call(s) still active after %d ms timeout',
         [PluginInfo.Name, FInFlightCount, FUnloadTimeoutMS]);
+
+    // A2-06/B-PM-06 fail-before-unload：UnloadBPL 之前释放最后一份指向 BPL
+    // 侧代码的托管引用（LoadedRec 内含接口；PluginInfo 为 record 托管字段），
+    // 否则过程帧尾的 _Release/@FinalizeRecord 会跳进已解映射的模块。
+    LoadedRec := Default(TLoadedPlugin);
+    PluginInfo := Default(TPluginInfo);
 
     UnloadBPL(PackageHandle);
     Result := True;
@@ -898,6 +919,7 @@ var
   Snapshot: TArray<TLoadedPluginData>;
   I: Integer;
   LoadedRec: TLoadedPlugin;
+  CallbackID: TGUID;
   UnloadedCallback: TPluginUnloadedEvent;
 begin
   // BIZ2-023 fix: snapshot plugins and clear collections under lock,
@@ -915,6 +937,8 @@ begin
         Snapshot[I].PackageHandle := LoadedRec.PackageHandle;
       end;
     end;
+    // A2-06/B-PM-06：复制循环的循环变量同样持有 BPL 侧接口引用，快照建完即清
+    LoadedRec := Default(TLoadedPlugin);
     FPlugins.Clear;
     FLoadOrder.Clear;
     UnloadedCallback := FOnPluginUnloaded;
@@ -946,9 +970,15 @@ begin
             'Finalize failed: ' + E.Message, False);
       end;
     end;
+    // A2-06/B-PM-06 fail-before-unload：逐项在 UnloadBPL 之前释放快照里的
+    // 接口与托管 record，最后的 _Release 必须发生在模块还映射在进程内时。
+    // GUID 是无托管字段的值类型，先行取出供卸载后的回调使用。
+    Snapshot[I].Plugin := nil;
+    CallbackID := Snapshot[I].Info.ID;
+    Snapshot[I].Info := Default(TPluginInfo);
     UnloadBPL(Snapshot[I].PackageHandle);
     if Assigned(UnloadedCallback) then
-      UnloadedCallback(Self, Snapshot[I].Info.ID);
+      UnloadedCallback(Self, CallbackID);
   end;
 end;
 

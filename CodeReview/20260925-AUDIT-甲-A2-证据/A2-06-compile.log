@@ -1,0 +1,9 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Governance\DeepBase.Governance.ReviewQueue.SQLite.pas(827) Hint: H2077 Value assigned to 'TReviewQueueSQLite.MarkExecuted' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Tests\Regression\Test.Regression.A8_InFlightUnloadGate.pas(128) Hint: H2077 Value assigned to 'LStart' never used
+40661 lines, 2.20 seconds, 6979244 bytes code, 723512 bytes data.
+
+COMPILE_EXIT=0

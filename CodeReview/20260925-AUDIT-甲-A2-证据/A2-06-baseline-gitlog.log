@@ -1,0 +1,5 @@
+§〇.4 A2-06 禁动区单点例外——改动前基线自证: git log -3 -- Core/DeepBase.PluginManager.pas
+$ git -c core.quotepath=false log -3 --oneline --date=short --pretty="%h %ad %s" -- Core/DeepBase.PluginManager.pas
+029edb5 2026-09-21 feat(test): 甲R7-P4 A18端到端BPL卸载可执行路径+签名门AV根因修复
+46ee3f0 2026-09-20 chore(eol): 激活 .gitattributes(E9) 全库干净集 renormalize（251 件零内容变化）+ Schema.pas 多重CR 前置修复（961 行）+ 移除双门禁 Schema.pas 豁免
+649b1e0 2026-09-19 WO-20260919-AUDIT-乙: B1-B5 编码修复、覆盖/构建归属对账、TManagedWorker、锚点核验
