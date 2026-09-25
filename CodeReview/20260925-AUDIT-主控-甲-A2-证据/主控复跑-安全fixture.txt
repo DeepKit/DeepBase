@@ -1,0 +1,9 @@
+== 主控安全 fixture 复跑 @隔离树 /tmp/db-a2-verify @02875e4（甲未注册，主控自行注册后逐个全限定名跑）2026-09-26 ==
+Test.DeepBase.LicenseSecret.TTestLicenseSecretFailClosed -> Passed 2 / Failed 0 / Errored 0
+Test.DeepBase.KeyManagerFormat.TTestKeyManagerFormatFailClosed -> Passed 3 / Failed 0 / Errored 0
+Test.DeepBase.GovernanceChainKey.TTestGovernanceChainKey -> Passed 3 / Failed 0 / Errored 0
+Test.DeepBase.ConfigurationDecrypt.TTestEncryptedConfigFailClosed -> Passed 3 / Failed 0 / Errored 0
+Test.DeepBase.SecureRandomDouble.TTestSecureRandomDoubleStats -> Passed 1 / Failed 0 / Errored 0
+Test.DeepBase.AutoFixSelfTermination.TTestAutoFixSelfTerminationGate -> Passed 4 / Failed 0 / Errored 0
+Test.DeepBase.PluginUnloadOrder（16 单元全注册后整 dpr 编译+运行） -> Passed 4 / Failed 0 / Errored 0
+合计 20/20 PASS；命令形态：run_tests.ps1 -Type Unit -CI -AllowFilteredCI -Platform Win64 -Run <全限定 fixture>

@@ -1,0 +1,12 @@
+== 编译门 HEAD树 vs 基线树 对比（主控亲跑，2026-09-26）==
+HEAD 树 @02875e4: 86 件 EXIT=0 / 7 件 EXIT=1
+基线树 @92c14d1: 84 件 EXIT=0 / 6 件 EXIT=1
+
+红项逐一对应（同一集合，A2+B2 前10笔零新增编译红）:
+  [pre-existing] DeepFlow/Source/DeepFlow.dpr F1026 File not found 'Source\Core\DeepFlow.Engine.pas'
+  [pre-existing] Examples/MVVMDemo/MVVMDemo.dpr E2004 Identifier redeclared 'System.Generics.Collections'
+  [pre-existing] Examples/Templates/CRUDApp/CRUDApp.dpr E2250 no overloaded version of Create
+  [pre-existing] Tools/Calibration/Calib.Record.dpr E2029 Identifier expected but 'RECORD' found
+  [pre-existing] Tools/Gallery/hbtheme_gallery.dpr E2003 Undeclared identifier 'hdCompact'
+  [pre-existing] Tools/UniPublisher/DeepPublisher.dpr E2029 'UNIT' expected but ']' found
+  [B2资产非A2] CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr F2613 '__UNIT__' 模板占位（基线无此文件）
