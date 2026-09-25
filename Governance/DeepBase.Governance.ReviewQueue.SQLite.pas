@@ -25,14 +25,15 @@ uses
   Data.DB,
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
-  DeepBase.Governance.ReviewQueue;
+  DeepBase.Governance.ReviewQueue,
+  DeepBase.Exceptions;
 
 type
   TReviewQueueSQLite = class(TInterfacedObject, IReviewQueue)
   private
     FConnection: TFDConnection;
     FOwnsConnection: Boolean;
-    FHmacKey: TBytes;
+    FHmacKey: TBytes;           // HMAC-SHA256 密钥（构造时强制非空，A2-13）
     FLock: TObject;
     FChainInitialized: Boolean;
     FLastChainHash: string;
@@ -219,6 +220,12 @@ const
 constructor TReviewQueueSQLite.Create(AConnection: TFDConnection;
   const AHmacKey: TBytes; AOwnsConnection: Boolean);
 begin
+  // A2-13 fail-closed: an empty HMAC key downgrades the challenge hash chain to
+  // unkeyed SHA-256, forgeable by any DB-writable attacker. Refuse it.
+  if Length(AHmacKey) = 0 then
+    raise EMissingConfigurationException.Create(
+      'TReviewQueueSQLite requires a non-empty HMAC signing key. ' +
+      'An empty key downgrades the challenge chain to forgeable unkeyed SHA-256.');
   inherited Create;
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
@@ -435,11 +442,9 @@ var
   LInput: string;
 begin
   LInput := ATimestamp + APayload + APrevHash;
-  if Length(FHmacKey) > 0 then
-    Result := TEncodingUtils.HexEncode(
-      THashUtils.HMAC(FHmacKey, TEncoding.UTF8.GetBytes(LInput), haSHA256))
-  else
-    Result := THashUtils.HashToHex(LInput, haSHA256);
+  // A2-13: 构造器已保证 FHmacKey 非空，不存在无密钥回退路径
+  Result := TEncodingUtils.HexEncode(
+    THashUtils.HMAC(FHmacKey, TEncoding.UTF8.GetBytes(LInput), haSHA256));
 end;
 
 procedure TReviewQueueSQLite.ReadChallengeRow(AQuery: TFDQuery;

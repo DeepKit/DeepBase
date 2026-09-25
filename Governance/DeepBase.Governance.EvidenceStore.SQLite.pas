@@ -20,7 +20,8 @@ uses
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
   DeepBase.Governance.Types,
-  DeepBase.Governance.EvidenceRecorder;
+  DeepBase.Governance.EvidenceRecorder,
+  DeepBase.Exceptions;
 
 type
   /// <summary>
@@ -33,7 +34,7 @@ type
   private
     FConnection: TFDConnection;
     FOwnsConnection: Boolean;
-    FHmacKey: TBytes;           // HMAC-SHA256 密钥（可为空 → 回退到 SHA-256）
+    FHmacKey: TBytes;           // HMAC-SHA256 密钥（构造时强制非空，A2-13）
     FLastChainHash: string;     // 缓存的链尾哈希（避免每次 Save 都 SELECT）
     FChainInitialized: Boolean; // 是否已从 DB 加载过链尾哈希
     FLock: TObject;             // 序列化所有 DB 访问 + 链状态
@@ -57,8 +58,9 @@ type
     /// 创建 EvidenceStore。
     /// </summary>
     /// <param name="AConnection">SQLite 连接（调用方管理生命周期，除非 AOwnsConnection=True）</param>
-    /// <param name="AHmacKey">HMAC-SHA256 密钥。为空时回退到普通 SHA-256（仍可检测篡改，
-    /// 但攻击者知道算法即可伪造）。建议从 KeyManager.GetActiveKeyForPurpose(kpSigning) 获取。</param>
+    /// <param name="AHmacKey">HMAC-SHA256 密钥。必须非空——A2-13 起空 key 直接抛
+    /// EMissingConfigurationException，不再回退到无密钥 SHA-256（可被任何写库者伪造）。
+    /// 建议从 KeyManager.GetActiveKeyForPurpose(kpSigning) 获取。</param>
     constructor Create(AConnection: TFDConnection;
       const AHmacKey: TBytes; AOwnsConnection: Boolean = False);
     destructor Destroy; override;
@@ -193,6 +195,12 @@ const
 constructor TEvidenceStoreSQLite.Create(AConnection: TFDConnection;
   const AHmacKey: TBytes; AOwnsConnection: Boolean);
 begin
+  // A2-13 fail-closed: an empty HMAC key silently downgrades the evidence chain
+  // to unkeyed SHA-256, which any DB-writable attacker can forge. Refuse it.
+  if Length(AHmacKey) = 0 then
+    raise EMissingConfigurationException.Create(
+      'TEvidenceStoreSQLite requires a non-empty HMAC signing key. ' +
+      'An empty key downgrades the evidence chain to forgeable unkeyed SHA-256.');
   inherited Create;
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
@@ -334,20 +342,17 @@ begin
 end;
 
 { DATA2-005: 计算 this_hash = HMAC-SHA256(key, timestamp || payload || prev_hash)
-  若 FHmacKey 为空则回退到 SHA-256 }
+  A2-13: 构造器已保证 FHmacKey 非空，不存在无密钥回退路径 }
 function TEvidenceStoreSQLite.ComputeHash(const ATimestamp, APayload,
   APrevHash: string): string;
 var
   LInput: string;
 begin
   LInput := ATimestamp + APayload + APrevHash;
-  if Length(FHmacKey) > 0 then
-    // FHmacKey 是二进制 TBytes 密钥，用 TBytes/TBytes 重载保持二进制语义；
-    // 返回 TBytes，再 HexEncode 转十六进制（与 else 分支 HashToHex 输出格式一致）。
-    Result := TEncodingUtils.HexEncode(
-      THashUtils.HMAC(FHmacKey, TEncoding.UTF8.GetBytes(LInput), haSHA256))
-  else
-    Result := THashUtils.HashToHex(LInput, haSHA256);
+  // FHmacKey 是二进制 TBytes 密钥，用 TBytes/TBytes 重载保持二进制语义；
+  // 返回 TBytes，再 HexEncode 转十六进制。
+  Result := TEncodingUtils.HexEncode(
+    THashUtils.HMAC(FHmacKey, TEncoding.UTF8.GetBytes(LInput), haSHA256));
 end;
 
 function TEvidenceStoreSQLite.RiskLevelToStr(ALevel: TRiskLevel): string;

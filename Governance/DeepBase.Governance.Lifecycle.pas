@@ -41,7 +41,9 @@ uses
   DeepBase.Governance.EvidenceStore.SQLite,
   DeepBase.Governance.ConfigRegistrar,
   DeepBase.Governance.ReviewQueue,
-  DeepBase.Governance.ReviewQueue.SQLite;
+  DeepBase.Governance.ReviewQueue.SQLite,
+  DeepBase.KeyManager,
+  DeepBase.Exceptions;
 
 type
   TGovernanceMode = (gmObserve, gmEnforce, gmOff);
@@ -180,6 +182,7 @@ var
   LModeProvider: TObserveModeProvider;
   LResolverForRuntime: IGateResolver;
   LPersistedMode: string;
+  LSigningKey: TBytes;
 begin
   if FMode = gmOff then Exit;
   // DATA2-008: Guard against reentry — calling Initialize twice without
@@ -200,9 +203,15 @@ begin
   // ConfigDB-backed wiring when a connection was provided.
   if FConfigDB <> nil then
   begin
-    // DATA2-005: 第 3 个参数是 HMAC 密钥（空 = 回退到 SHA-256 检测篡改）。
-    // 若需 HMAC 强度，从 TKeyManager.Instance.GetActiveKeyForPurpose(kpSigning) 获取。
-    FEvidenceStore := TEvidenceStoreSQLite.Create(FConfigDB, [], False);
+    // A2-13: 证据链与挑战链必须是 keyed HMAC-SHA256。空 key 会把完整性退化为
+    // 无密钥 SHA-256（能写库即可伪造历史），两库构造器已拒收空 key；
+    // 密钥唯一来源是 KeyManager kpSigning（SSOT），未解锁即 fail-closed 抛异常。
+    if not TKeyManager.Instance.IsUnlocked then
+      raise EMissingConfigurationException.Create(
+        'Governance ConfigDB wiring requires an unlocked KeyManager: ' +
+        'evidence/review chains are keyed with the kpSigning DEK (A2-13).');
+    LSigningKey := TKeyManager.Instance.GetActiveKeyForPurpose(kpSigning);
+    FEvidenceStore := TEvidenceStoreSQLite.Create(FConfigDB, LSigningKey, False);
     FEvidenceRecorder := TEvidenceRecorder.Create(FEvidenceStore);
     FEvidenceRecorderIntf := FEvidenceRecorder;
     // REVIEW5-GOV-001: Pass ActionGrid and DueChecker to ConfigRegistrar so it
@@ -226,9 +235,8 @@ begin
     // verifier=nil to preserve backward compatibility. TReviewQueueSQLite
     // owns no connection (the ConfigDB lifecycle is managed by TDeepBaseManager)
     // and creates its tables idempotently in its constructor (EnsureTable).
-    // DATA2-005: empty HMAC key -> ReviewQueue falls back to SHA-256 for
-    // tamper detection (same posture as EvidenceStore above).
-    FReviewQueue := TReviewQueueSQLite.Create(FConfigDB, [], False);
+    // A2-13: ReviewQueue 同样注入 kpSigning 真实密钥（与 EvidenceStore 同口径）。
+    FReviewQueue := TReviewQueueSQLite.Create(FConfigDB, LSigningKey, False);
     FReviewDecisionVerifier := TReviewDecisionVerifier.Create(FReviewQueue);
     FExecutor.SetVerifier(FReviewDecisionVerifier);
   end;
