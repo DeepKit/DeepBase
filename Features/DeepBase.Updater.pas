@@ -175,6 +175,12 @@ type
     function GetSystemIdleMilliseconds: UInt64;
     function StageUpdatePackage(const Info: TUpdateInfo; out PackagePath: string): Boolean;
     function InstallPackage(const Info: TUpdateInfo; const PackagePath: string): Boolean;
+    /// 清单侧 fail-closed 门禁（B2-08）：策略字段齐备 + manifest hash 自洽 + manifest 验签。
+    /// 唯一实现处，下载前（StageAndVerifyPackage）与就地安装（InstallDownloadedUpdate）共用，
+    /// 不再出现第二条「不验签直接装」的路径。
+    function VerifyUpdateManifest(const Info: TUpdateInfo): TGateVerdict;
+    /// 包签名门禁（B2-08）：data = 归一化 PackageHash 的 UTF-8 字节（§16.10 关键点 1）。
+    function VerifyUpdatePackageSignature(const Info: TUpdateInfo): TGateVerdict;
     function LaunchHelperForPackage(const Info: TUpdateInfo; const PackagePath: string;
       const MainExePath: string = ''): Boolean;
     procedure SetStatus(Status: TUpdateStatus; const Message: string = '');
@@ -326,6 +332,11 @@ type
     property AutoCheckInterval: Integer read FAutoCheckInterval write FAutoCheckInterval;
     property LastCheckTime: TDateTime read FLastCheckTime;
     property CurrentUpdate: TUpdateInfo read FCurrentUpdate;
+    /// <summary>暂存/备份根目录。原为 %TEMP% 下写死的两个固定目录：同一台机器上
+    /// 多宿主或并发更新会互相踩暂存，且「备份清单非空、条数可核对」这类判据无法离线测试
+    /// （B2-08 判定要求）。可注入即把安装/回滚路径变成可隔离、可断言的真实路径。</summary>
+    property TempDirectory: string read FTempDir write FTempDir;
+    property BackupDirectory: string read FBackupDir write FBackupDir;
     property DefaultInstallMode: TUpdateInstallMode read FDefaultInstallMode write FDefaultInstallMode;
     property LastStagedPackagePath: string read FLastStagedPackagePath;
     property HelperExePath: string read FHelperExePath write FHelperExePath;
@@ -973,7 +984,6 @@ end;
 function TUpdateManager.StageAndVerifyPackage(const Info: TUpdateInfo;
   out PackagePath: string; out ErrorMsg: string): TGateVerdict;
 var
-  ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
   LVerdict: TGateVerdict;
 
   function Reject(const AReason: string): TGateVerdict;
@@ -998,41 +1008,19 @@ begin
     end;
 {$ENDIF}
 
-    // 强制策略（改法项 (2)）：hash/签名/验签信任锚任一缺失即拒，无开关、无自述。
-    if Info.PackageHash = '' then
-      Exit(Reject('Package hash is missing; update refused (fail-closed)'));
-    if Info.Signature = '' then
-      Exit(Reject('Package signature is missing; update refused (fail-closed)'));
-    if Info.ManifestSignature = '' then
-      Exit(Reject('Manifest signature is missing; update refused (fail-closed)'));
-    if FPublicKey = '' then
-      Exit(Reject('RSA public key is not configured; update refused (fail-closed)'));
-
     // 改法项 (4)：manifest 验签前置于下载——download_url 只有在 payload
-    // （含 URL 字段）通过 RSA 验签后才可信。payload 唯一构造见 Contracts。
-    SetStatus(usVerifying, 'Verifying manifest signature...');
-    ManifestPayload := BuildManifestSignaturePayload(Info);
-    ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
-    ExpectedManifestHash := Info.ManifestHash;
-    if SameText(Copy(ExpectedManifestHash, 1, 7), 'sha256:') then
-      Delete(ExpectedManifestHash, 1, 7);
-    if Trim(ExpectedManifestHash) = '' then
-      Exit(Reject('Manifest hash is missing; update refused (fail-closed)'));
-    if not SameText(ExpectedManifestHash, ComputedManifestHash) then
-      Exit(Reject('Manifest hash verification failed'));
-    // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
-    LVerdict := VerifySignature(ManifestPayload, Info.ManifestSignature);
+    // （含 URL 字段）通过 RSA 验签后才可信。门禁唯一实现见 VerifyUpdateManifest。
+    LVerdict := VerifyUpdateManifest(Info);
     if not LVerdict.IsApproved then
-      Exit(Reject('Manifest signature verification failed: ' + LVerdict.Reason));
+      Exit(Reject(LVerdict.Reason));
 
     SetStatus(usDownloading, 'Downloading package...');
     if not StageUpdatePackage(Info, PackagePath) then
       Exit(Reject(FLastError));
 
-    // 包签名：data = 归一化 PackageHash 的 UTF-8 字节（§16.10 关键点 1）
-    LVerdict := VerifySignature(Info.PackageHash, Info.Signature);
+    LVerdict := VerifyUpdatePackageSignature(Info);
     if not LVerdict.IsApproved then
-      Exit(Reject('Package signature verification failed: ' + LVerdict.Reason));
+      Exit(Reject(LVerdict.Reason));
 
     Result := TGateVerdict.Approved;
   except
@@ -1043,11 +1031,64 @@ begin
     SetStatus(usFailed, ErrorMsg);
 end;
 
+function TUpdateManager.VerifyUpdateManifest(const Info: TUpdateInfo): TGateVerdict;
+var
+  ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
+  LVerdict: TGateVerdict;
+begin
+  // 强制策略（改法项 (2)）：hash/签名/验签信任锚任一缺失即拒，无开关、无自述。
+  if Info.PackageHash = '' then
+    Exit(TGateVerdict.Rejected('Package hash is missing; update refused (fail-closed)'));
+  if Info.Signature = '' then
+    Exit(TGateVerdict.Rejected('Package signature is missing; update refused (fail-closed)'));
+  if Info.ManifestSignature = '' then
+    Exit(TGateVerdict.Rejected('Manifest signature is missing; update refused (fail-closed)'));
+  if FPublicKey = '' then
+    Exit(TGateVerdict.Rejected('RSA public key is not configured; update refused (fail-closed)'));
+
+  // payload 唯一构造见 Contracts；ManifestHash 与 PackageHash 同形（可带 sha256: 前缀），
+  // 归一化也统一走 NormalizePackageHash，不再手写前缀裁剪。
+  SetStatus(usVerifying, 'Verifying manifest signature...');
+  ManifestPayload := BuildManifestSignaturePayload(Info);
+  ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
+  ExpectedManifestHash := NormalizePackageHash(Info.ManifestHash);
+  if Trim(ExpectedManifestHash) = '' then
+    Exit(TGateVerdict.Rejected('Manifest hash is missing; update refused (fail-closed)'));
+  if not SameText(ExpectedManifestHash, ComputedManifestHash) then
+    Exit(TGateVerdict.Rejected('Manifest hash verification failed'));
+  // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
+  LVerdict := VerifySignature(ManifestPayload, Info.ManifestSignature);
+  if not LVerdict.IsApproved then
+    Exit(TGateVerdict.Rejected('Manifest signature verification failed: ' + LVerdict.Reason));
+
+  Result := TGateVerdict.Approved;
+end;
+
+function TUpdateManager.VerifyUpdatePackageSignature(const Info: TUpdateInfo): TGateVerdict;
+var
+  LVerdict: TGateVerdict;
+begin
+  // 包签名：data = 归一化 PackageHash 的 UTF-8 字节（§16.10 关键点 1）
+  LVerdict := VerifySignature(Info.PackageHash, Info.Signature);
+  if not LVerdict.IsApproved then
+    Exit(TGateVerdict.Rejected('Package signature verification failed: ' + LVerdict.Reason));
+  Result := TGateVerdict.Approved;
+end;
+
 function TUpdateManager.InstallPackage(const Info: TUpdateInfo; const PackagePath: string): Boolean;
 var
   FilesToBackup: TArray<string>;
   I: Integer;
 begin
+  // 清单未声明受影响文件 ⇒ 备份清单必然为空 ⇒ ApplyUpdate 覆盖后无现场可回滚。
+  // 按 B2-08 fail-closed 口径拒装，而不是「备份 0 条然后照样覆盖」。
+  if Length(Info.Files) = 0 then
+  begin
+    FLastError := 'Update manifest declares no files; install refused (fail-closed)';
+    SetStatus(usFailed, FLastError);
+    Exit(False);
+  end;
+
   SetLength(FilesToBackup, Length(Info.Files));
   for I := 0 to High(Info.Files) do
     FilesToBackup[I] := Info.Files[I].RelativePath;
@@ -1603,24 +1644,36 @@ end;
 
 function TUpdateManager.InstallDownloadedUpdate(const PackagePath: string): Boolean;
 var
-  FilesToBackup: TArray<string>;
-begin
-  Result := False;
-  
-  if not FileExists(PackagePath) then
+  LVerdict: TGateVerdict;
+
+  function Fail(const AReason: string): Boolean;
   begin
-    FLastError := 'Update package not found';
-    Exit;
+    FLastError := AReason;
+    SetStatus(usFailed, AReason);
+    Result := False;
   end;
-  
-  // For downloaded packages, we don't have file list, backup everything
-  SetLength(FilesToBackup, 1);
-  FilesToBackup[0] := '*.*';
-  
-  if not CreateBackup(FilesToBackup) then
-    Exit;
-  
-  Result := ApplyUpdate(PackagePath, FCurrentUpdate);
+
+begin
+  if not FileExists(PackagePath) then
+    Exit(Fail('Update package not found'));
+
+  // 就地安装的包不经下载通道，但信任锚一条都不能少：manifest 自洽+验签 → 包哈希 →
+  // 包签名 → 带真实备份清单的安装，全部复用下载路径的同一组门禁。旧实现在这里是
+  // CreateBackup('*.*') + ApplyUpdate，零校验直装，且 '*.*' 使备份恒空、回滚必然扑空。
+  // InsecureDevMode 在此刻意不生效：本判据要关的正是这条旁路。
+  LVerdict := VerifyUpdateManifest(FCurrentUpdate);
+  if not LVerdict.IsApproved then
+    Exit(Fail(LVerdict.Reason));
+
+  LVerdict := VerifyFileHash(PackagePath, FCurrentUpdate.PackageHash);
+  if not LVerdict.IsApproved then
+    Exit(Fail('Package hash verification failed: ' + LVerdict.Reason));
+
+  LVerdict := VerifyUpdatePackageSignature(FCurrentUpdate);
+  if not LVerdict.IsApproved then
+    Exit(Fail(LVerdict.Reason));
+
+  Result := InstallPackage(FCurrentUpdate, PackagePath);
 end;
 
 procedure TUpdateManager.ConfigureHelper(const HelperExePath: string; RunHidden: Boolean);

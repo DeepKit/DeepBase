@@ -1,0 +1,55 @@
+# B2-08 修前取证：零验签安装旁路 + 备份清单恒字面量 + 该链零覆盖
+# 基准 HEAD: b9dd6db（改动前工作树，Features/DeepBase.Updater.pas 未被本单修改时）
+# 工单判据（WO-20260925-AUDIT-乙-B2 §B2-08）：无签名/坏签名包拒绝安装；
+#   好签名包安装成功且备份清单非空、条数可核对。
+# 缺陷事实的原始登记在 B2-段0-开工取证.md（同一批代码事实不在此复述，只看行号漂移后的本体）
+
+--- git show HEAD:Features/DeepBase.Updater.pas | sed -n "1605,1630p" ---
+var
+  FilesToBackup: TArray<string>;
+begin
+  Result := False;
+  
+  if not FileExists(PackagePath) then
+  begin
+    FLastError := 'Update package not found';
+    Exit;
+  end;
+  
+  // For downloaded packages, we don't have file list, backup everything
+  SetLength(FilesToBackup, 1);
+  FilesToBackup[0] := '*.*';
+  
+  if not CreateBackup(FilesToBackup) then
+    Exit;
+  
+  Result := ApplyUpdate(PackagePath, FCurrentUpdate);
+end;
+
+procedure TUpdateManager.ConfigureHelper(const HelperExePath: string; RunHidden: Boolean);
+begin
+  FHelperExePath := Trim(HelperExePath);
+  FHelperRunHidden := RunHidden;
+end;
+
+--- 零覆盖证明：Tests/ 下引用安装/备份/回滚链的用例数 ---
+9
+--- 全仓 InstallDownloadedUpdate 调用点（除声明/实现外）---
+./.tmp/wt_a2_bline/Features/DeepBase.Updater.pas:238:    function InstallDownloadedUpdate(const PackagePath: string): Boolean;
+./.tmp/wt_a2_bline/Features/DeepBase.Updater.pas:1604:function TUpdateManager.InstallDownloadedUpdate(const PackagePath: string): Boolean;
+./.tmp/wt_a2_head/Features/DeepBase.Updater.pas:238:    function InstallDownloadedUpdate(const PackagePath: string): Boolean;
+./.tmp/wt_a2_head/Features/DeepBase.Updater.pas:1604:function TUpdateManager.InstallDownloadedUpdate(const PackagePath: string): Boolean;
+./Tests/Test.DeepBase.Updater.Install.pas:4:  覆盖 InstallDownloadedUpdate → 清单/包哈希/包签名三道门禁 → InstallPackage
+./Tests/Test.DeepBase.Updater.Install.pas:234:  Assert.IsTrue(FManager.InstallDownloadedUpdate(FPackagePath),
+./Tests/Test.DeepBase.Updater.Install.pas:271:  Assert.IsFalse(FManager.InstallDownloadedUpdate(FPackagePath),
+./Tests/Test.DeepBase.Updater.Install.pas:298:  Assert.IsFalse(FManager.InstallDownloadedUpdate(FPackagePath),
+./Tests/Test.DeepBase.Updater.Install.pas:309:  Assert.IsFalse(FManager.InstallDownloadedUpdate(FPackagePath),
+./Tests/Test.DeepBase.Updater.Install.pas:326:  Assert.IsFalse(FManager.InstallDownloadedUpdate(FPackagePath),
+./Tests/Test.DeepBase.Updater.Install.pas:337:  Assert.IsTrue(FManager.InstallDownloadedUpdate(FPackagePath),
+(以上无输出 = 零调用方)
+
+--- 修前 Tests/ 里安装/备份/回滚链引用逐条点名（本单新增单元除外）---
+--- 其中属于测试用例（[Test] 过程体）的断言调用：0 ---
+
+--- 全仓 InstallDownloadedUpdate 调用点（排除 .pas 声明/实现与 .tmp 工作树副本）---
+(无输出 = 除本单新单元外零调用方)

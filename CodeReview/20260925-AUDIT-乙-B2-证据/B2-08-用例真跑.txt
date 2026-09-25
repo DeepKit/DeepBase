@@ -1,0 +1,39 @@
+# B2-08 用例真跑（一次性 runner，产物落 .tmp，不改 Tests/DeepBaseTests.dpr 注册）
+# runner: b2_run_fixture.sh —— 三道 fail-closed：编译非0⇒3 / testCount=0⇒2 / 任一红⇒1
+
+======== Tests/Test.DeepBase.Updater.Install.pas ========
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+======== Tests/Test.DeepBase.Updater.pas ========
+BUILD_EXIT=0
+Tests Found   : 106
+Tests Ignored : 0
+Tests Passed  : 106
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=106 pass=106 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+======== Tests/Test.DeepBase.AutoUpdate.pas ========
+BUILD_EXIT=0
+Tests Found   : 47
+Tests Ignored : 0
+Tests Passed  : 47
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=47 pass=47 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+

@@ -1,0 +1,192 @@
+# B2-08 反事实（变异）探针：把本单修掉的每一处改回错误行为，确认配套用例会真的红
+# 脚本: b2_counterfactual.sh <测试单元> <SUT> '<perl -pe>'；每轮 = 基线绿 → 注入 → 红 → 还原 → 复绿
+# M1/M2/M3/M4 挂在 Test.DeepBase.Updater.Install；M5 挂在 Test.DeepBase.Updater（下载路径既有门禁用例），
+#   用于证明「抽出 VerifyUpdateManifest 后下载路径的清单层仍然是活的」——不是只对新用例生效的死代码。
+# 覆盖判定：M1(备份清单退回 '*.*') 咬住 2 条；M2/M3/M4 各咬住 1 条对应判据；M5 咬住下载层 1 条。
+
+############ .tmp/b2/b08/cf_M1_wildcard.txt
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/FilesToBackup\[I\] := Info\.Files\[I\]\.RelativePath;/FilesToBackup[I] := '*.*';/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1091,7 +1091,7 @@
+ 
+   SetLength(FilesToBackup, Length(Info.Files));
+   for I := 0 to High(Info.Files) do
+-    FilesToBackup[I] := Info.Files[I].RelativePath;
++    FilesToBackup[I] := '*.*';
+ 
+   Result := CreateBackup(FilesToBackup);
+   if not Result then
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Failed  : 2
+Tests Errored : 0
+  Test.DeepBase.Updater.Install.TTestUpdaterInstallChain.Test_SignedPackage_InstallsAndBacksUpRealFileList
+  Test.DeepBase.Updater.Install.TTestUpdaterInstallChain.Test_RollbackAfterInstall_RestoresOldBytes
+RUNNER_STATS fixtureCount=1 testCount=6 pass=4 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+
+############ .tmp/b2/b08/cf_M2_pkgsigbypass.txt
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/TGateVerdict\.Rejected\('Package signature verification failed: '/TGateVerdict.Approved('mutant: '/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1071,7 +1071,7 @@
+   // 包签名：data = 归一化 PackageHash 的 UTF-8 字节（§16.10 关键点 1）
+   LVerdict := VerifySignature(Info.PackageHash, Info.Signature);
+   if not LVerdict.IsApproved then
+-    Exit(TGateVerdict.Rejected('Package signature verification failed: ' + LVerdict.Reason));
++    Exit(TGateVerdict.Approved('mutant: ' + LVerdict.Reason));
+   Result := TGateVerdict.Approved;
+ end;
+ 
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Updater.Install.TTestUpdaterInstallChain.Test_ForgedPackageSignature_RejectsInstall
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+
+############ .tmp/b2/b08/cf_M3_nofileguard.txt
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if Length\(Info\.Files\) = 0 then/if False then/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1082,7 +1082,7 @@
+ begin
+   // 清单未声明受影响文件 ⇒ 备份清单必然为空 ⇒ ApplyUpdate 覆盖后无现场可回滚。
+   // 按 B2-08 fail-closed 口径拒装，而不是「备份 0 条然后照样覆盖」。
+-  if Length(Info.Files) = 0 then
++  if False then
+   begin
+     FLastError := 'Update manifest declares no files; install refused (fail-closed)';
+     SetStatus(usFailed, FLastError);
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Updater.Install.TTestUpdaterInstallChain.Test_ManifestWithoutFileList_RejectsInstall
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+
+############ .tmp/b2/b08/cf_M4_hashbypass.txt
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if not SameText\(ActualHash, NormalizePackageHash\(ExpectedHash\)\) then/if False then/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1301,7 +1301,7 @@
+     FreeAndNil(FileStream);
+   end;
+ 
+-  if not SameText(ActualHash, NormalizePackageHash(ExpectedHash)) then
++  if False then
+     Exit(Reject('File hash mismatch: expected ' + ExpectedHash + ', got ' + ActualHash));
+   FLastError := '';
+   Result := TGateVerdict.Approved;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Updater.Install.TTestUpdaterInstallChain.Test_PackageReplacedAfterManifest_RejectsInstall
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+
+############ .tmp/b2/b08/cf_M5_manifestsigbypass.txt
+==== 1) 变异前基线（应绿） ====
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=106 pass=106 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/TGateVerdict\.Rejected\('Manifest signature verification failed: '/TGateVerdict.Approved('mutant: '/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -1059,7 +1059,7 @@
+   // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
+   LVerdict := VerifySignature(ManifestPayload, Info.ManifestSignature);
+   if not LVerdict.IsApproved then
+-    Exit(TGateVerdict.Rejected('Manifest signature verification failed: ' + LVerdict.Reason));
++    Exit(TGateVerdict.Approved('mutant: ' + LVerdict.Reason));
+ 
+   Result := TGateVerdict.Approved;
+ end;
+---- 变异后真跑（应红） ----
+BUILD_EXIT=0
+Tests Found   : 106
+Tests Ignored : 0
+Tests Passed  : 105
+Tests Failed  : 1
+Tests Errored : 0
+  Test.DeepBase.Updater.TTestUpdateSecurity.Test_ManifestSignatureForged_RejectedWithoutDownload
+RUNNER_STATS fixtureCount=1 testCount=106 pass=105 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=106 pass=106 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 已还原 SUT: Features/DeepBase.Updater.pas ==
+

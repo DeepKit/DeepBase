@@ -1,0 +1,71 @@
+# B2-08 修后：编译门 + 改动面 + 残留结构项
+# 基准 HEAD: b9dd6db；编译器: dcc64 37.0（Delphi 12 / Win64）
+# 探针: CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh（单件级，产物落 .tmp 不入库）
+
+======== b2_unit_compile.sh 四件（SUT + 受影响测试单元）========
+================================================================
+单元: Features/DeepBase.Updater.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+6597 lines, 0.25 seconds, 89267 bytes code, 12252 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.UpdateFixtures.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+2264 lines, 0.16 seconds, 6005 bytes code, 492 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.Updater.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+30405 lines, 1.19 seconds, 92391 bytes code, 13244 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: Tests/Test.DeepBase.Updater.Install.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+28947 lines, 1.22 seconds, 17540 bytes code, 1772 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
+
+======== 改动面（git diff --numstat，仓库侧 EOL 已按 .gitattributes 归一）========
+97	44	Features/DeepBase.Updater.pas
+31	1	Tests/Test.DeepBase.UpdateFixtures.pas
+0	26	Tests/Test.DeepBase.Updater.pas
+349	0	Tests/Test.DeepBase.Updater.Install.pas  (新增文件，全文 349 行；未跟踪故 numstat 不列，此处为 wc -l 实测)
+
+
+======== 结构与安全口径残留（逐条点名，不在本单内私改）========
+1) Features/DeepBase.Updater.pas 现 2063 行（改前 2010），已越过 AGENTS.md 的 2000 行结构审查线。
+   改前即越线，本单是净增 53 行而不是引入越线；拆分建议（下载/暂存验签 vs 安装回滚 vs 静默安装循环
+   三块职责各自成单元）登记给主控，属结构性重构，不同码在按缺陷原子提交的单里。
+2) class function TUpdateManager.StageAndVerifyPackage(AInfo, APackagePath, APublicKeyPEM, out ErrMsg)
+   仍自带一套「文件哈希 + 包签名」实现（供外部通道注入公钥校验已落盘包）。本单未合并：
+   它不接受实例配置、无 manifest 层，与实例门禁不是同一契约面。登记为主控的 SSOT 待办。
+3) manifest 签名 payload 只含 7 字段（app_id|version|channel|url|size|package_hash|signature），
+   不含 files 清单 ⇒ 备份所依据的受影响文件清单不在 RSA 信任范围内：能伪造 manifest 者
+   即可任意指定备份/覆盖清单。收紧需改协议（docs/66 §16.10）与服务端签名侧，超出乙的改动权，
+   登记不修。
+4) 工作区 EOL/BOM：Updater.pas 与 Test.DeepBase.Updater.pas 在本机会话里是纯 LF（仓库侧按
+   .gitattributes 归一为 LF，git diff 只见内容改动 97/44、0/26），门禁读归一后口径全绿；
+   本单不做全文件 EOL/BOM 转换，以免制造两千行假 diff。

@@ -1,0 +1,20 @@
+# B2-08 交付树四道门禁复跑（全库根，逐门点名 EXIT）
+# 基准 HEAD: b9dd6db
+# 本单改动面：Features/DeepBase.Updater.pas + Tests/Test.DeepBase.UpdateFixtures.pas + Tests/Test.DeepBase.Updater.pas + Tests/Test.DeepBase.Updater.Install.pas + 本证据目录
+# 证据编码门禁只落判定行：其明细段会把存量 E3 双编码原文抄进本文件，形成证据自我传染（D8 口径）
+
+======== node 09_工程脚本/encoding-gate/check_pas_encoding.js ========
+编码门禁通过：995 个 .pas + 709 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+======== node 09_工程脚本/eol-gate/check_eol.js ========
+行尾门禁通过：检查了 1548 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+
+======== node 09_工程脚本/mojibake-gate/check_mojibake.js ========
+丙类损坏门禁通过：扫描 992 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+
+======== node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js（仅判定行）========
+证据编码门禁通过：扫描 687 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0

@@ -16,7 +16,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  DeepBase.Net.Transport;
+  DeepBase.Net.Transport,
+  DeepBase.Update.Contracts;
 
 type
   /// <summary>注入式 HTTP 假传输：记录调用次数，供"门禁前不得发出请求"断言。</summary>
@@ -85,9 +86,19 @@ function TestRSASignBytes(const AData: TBytes): string;
 /// <summary>对文件原始字节做 RSA-SHA256 签名，返回 base64（AU-01 KAT 用）。</summary>
 function TestRSASignFile(const APath: string): string;
 
+/// <summary>
+/// 构造一份"自洽且已正确签名"的 manifest：包签名签归一化 PackageHash，
+/// manifest 签名与 manifest hash 均由 Contracts 的唯一 payload 派生。
+/// 篡改场景由调用方在装配完成后定向替换单个字段，验证门禁层级。
+/// 装配配方全仓仅此一份：签名顺序即 §16.10 依赖顺序，测试侧各写一份就会
+/// 重演 U-02（同一协议两套实现）。
+/// </summary>
+function BuildSignedManifestInfo(const APackageHash: string): TUpdateInfo;
+
 implementation
 
 uses
+  System.Hash,
   System.IOUtils,
   DeepBase.Crypto.RSA,
   DeepBase.Crypto.Encoding;
@@ -132,6 +143,25 @@ end;
 function TestRSASignFile(const APath: string): string;
 begin
   Result := TestRSASignBytes(TFile.ReadAllBytes(APath));
+end;
+
+function BuildSignedManifestInfo(const APackageHash: string): TUpdateInfo;
+var
+  Payload: string;
+begin
+  Result := Default(TUpdateInfo);
+  Result.AppId := 'deepbase_desktop';
+  Result.Version := TSemanticVersion.Parse('2.0.0');
+  Result.Channel := ucStable;
+  Result.DownloadUrl := 'https://cdn.example.com/updates/deepbase-2.0.0.zip';
+  Result.DownloadSize := 1024;
+  Result.PackageHash := APackageHash;
+  // 签名顺序即 §16.10 依赖顺序：包签名先入 payload 第 7 位，
+  // 再由 payload 派生 manifest_hash 与 manifest_signature。
+  Result.Signature := TestRSASign(APackageHash);
+  Payload := BuildManifestSignaturePayload(Result);
+  Result.ManifestHash := LowerCase(THashSHA2.GetHashString(Payload));
+  Result.ManifestSignature := TestRSASign(Payload);
 end;
 
 end.

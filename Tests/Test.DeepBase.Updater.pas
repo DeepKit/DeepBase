@@ -287,12 +287,6 @@ type
   private
     class function NewManager(const AUpdateUrl: string =
       'https://cdn.example.com/updates'): TUpdateManager; static;
-    /// <summary>
-    /// 构造一份"自洽且已正确签名"的 manifest：包签名签归一化 PackageHash，
-    /// manifest 签名与 manifest hash 均由 Contracts 的唯一 payload 派生。
-    /// 篡改场景在下层测试中定向替换单个字段，验证门禁层级。
-    /// </summary>
-    class function BuildSignedManifestInfo(const APackageHash: string): TUpdateInfo; static;
   public
     [Test]
     procedure Test_VerifySignature_ValidHashSignature_Approved;
@@ -1173,26 +1167,6 @@ begin
   Result := TUpdateManager.Create;
   Result.Initialize(AUpdateUrl, '1.0.0');
   Result.SetPublicKey(TEST_PUBLIC_KEY_PEM);
-end;
-
-class function TTestUpdateSecurity.BuildSignedManifestInfo(
-  const APackageHash: string): TUpdateInfo;
-var
-  Payload: string;
-begin
-  Result := Default(TUpdateInfo);
-  Result.AppId := 'deepbase_desktop';
-  Result.Version := TSemanticVersion.Parse('2.0.0');
-  Result.Channel := ucStable;
-  Result.DownloadUrl := 'https://cdn.example.com/updates/deepbase-2.0.0.zip';
-  Result.DownloadSize := 1024;
-  Result.PackageHash := APackageHash;
-  // 签名顺序即 §16.10 依赖顺序：包签名先入 payload 第 7 位，
-  // 再由 payload 派生 manifest_hash 与 manifest_signature。
-  Result.Signature := TestRSASign(APackageHash);
-  Payload := BuildManifestSignaturePayload(Result);
-  Result.ManifestHash := LowerCase(THashSHA2.GetHashString(Payload));
-  Result.ManifestSignature := TestRSASign(Payload);
 end;
 
 procedure TTestUpdateSecurity.Test_VerifySignature_ValidHashSignature_Approved;
