@@ -60,13 +60,16 @@ class function TSQLUtils.IsValidIdentifier(const AName: string): Boolean;
 begin
   if (AName = '') or (AName.Length > 128) then
     Exit(False);
-  // First character must be letter or underscore
-  if not (AName[1].IsLetter or (AName[1] = '_')) then
+  // A2-11: 只用 ASCII 字符类判定（Char in 集合对 > #$FF 的 WideChar 恒 False）。
+  // System.Character 的 IsLetter/IsLetterOrDigit 放行 Unicode 字母（如中文、
+  // 西里尔同形字），会在“引号外拼标识符”的场合引入同形字注入面。
+  // First character must be ASCII letter or underscore
+  if not (AName[1] in ['A' .. 'Z', 'a' .. 'z', '_']) then
     Exit(False);
-  // Remaining characters: letter, digit, or underscore
+  // Remaining characters: ASCII letter, digit, or underscore
   for var I := 2 to AName.Length do
   begin
-    if not (AName[I].IsLetterOrDigit or (AName[I] = '_')) then
+    if not (AName[I] in ['A' .. 'Z', 'a' .. 'z', '0' .. '9', '_']) then
       Exit(False);
   end;
   Result := True;
@@ -86,9 +89,11 @@ const
   // Keywords that, if present, indicate this is not a bare column def but an
   // attempt to chain a second statement or smuggle in a DDL/DML side effect.
   // Word-boundary, case-insensitive. ORDER MATTERS for nothing here (OR'd).
-  FORBIDDEN_KEYWORDS: array[0..13] of string = (
+  // A2-11: 补齐可终结/改写 ADD COLUMN 语义或开新语句的关键字。
+  FORBIDDEN_KEYWORDS: array[0..21] of string = (
     'DROP', 'CREATE', 'ALTER', 'DELETE', 'INSERT', 'UPDATE', 'SELECT',
-    'TRIGGER', 'INDEX', 'VIEW', 'ATTACH', 'DETACH', 'PRAGMA', 'VACUUM');
+    'TRIGGER', 'INDEX', 'VIEW', 'ATTACH', 'DETACH', 'PRAGMA', 'VACUUM',
+    'REPLACE', 'WITH', 'EXEC', 'CALL', 'BEGIN', 'COMMIT', 'GRANT', 'COPY');
 var
   UpperDef: string;
   KW: string;
