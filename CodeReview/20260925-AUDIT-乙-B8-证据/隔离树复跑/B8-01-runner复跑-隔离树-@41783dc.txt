@@ -1,0 +1,29 @@
+== 编译一次性 runner（单元: Test.DeepBase.DoQry.Literal） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\uDoQryLegacy.pas(856) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(985) Hint: H2077 Value assigned to 'doQry' never used
+doQry\uDoQryLegacy.pas(868) Hint: H2077 Value assigned to 'doQry' never used
+25014 lines, 1.84 seconds, 4374144 bytes code, 503072 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DoQry.Literal） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

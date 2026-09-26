@@ -1,0 +1,6 @@
+A 0  # CodeReview/**/*.dpr 命中数（判据①目标=0）
+build-ALL EXIT=1
+build-T0 EXIT=1
+runner EXIT=0
+attrib EXIT=1
+attrib2 EXIT=1

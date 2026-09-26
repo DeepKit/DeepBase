@@ -1,0 +1,52 @@
+B8-01 隔离树复验（判据①②③逐条实测）
+
+隔离树：git worktree add --detach ../DeepBase-wt-b8 @ 41783dc（本笔 B8-01 提交）
+脚本原件：本目录 隔离树复跑/ 下四件 + exits.txt
+
+== 判据① CodeReview/**/*.dpr = 0
+$ git ls-files 'CodeReview/**/*.dpr' | wc -l
+0
+旁证（同树 --all）：DPR 总数 68（乙 B2 收尾存档 @09db3c8）→ 65（@41783dc），
+差值 3 = 本笔改名的三件 ⇒ CodeReview 三件确已离开编译面，非仅改后缀名而仍被扫。
+
+== 判据② runner 复跑 fixture 全绿
+$ DEEPBASE_EXTRA_NS="Data.Win" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.DoQry.Literal.pas
+BUILD_EXIT=0 / RUN_EXIT=0 / Tests Found 4 = Passed 4，Failed 0，Errored 0（RUNNER_VERDICT: PASSED）
+主树与隔离树各跑一次，两份原件均落盘：
+  B8-01-runner复跑-原始输出.txt（主树 @41783dc）
+  B8-01-runner复跑-隔离树-@41783dc.txt（隔离树）
+隔离树这一跑同时验证了改名后的模板在 checkout 后仍可 sed 实体化 + 编译 + 跑通
+（.dpr.template 走 gitattributes text=auto 的 CRLF 检出，与原 .dpr 同行为）。
+
+== 判据③ 四门 EXIT=0
+在 git add 之后、commit 之前于主树亲跑（原件引用见 exits.txt 与本节）：
+  encoding-gate   EXIT=0
+  eol-gate        EXIT=0
+  mojibake-gate   EXIT=0
+  evidence-gate   EXIT=0
+
+== --all / T0 红项逐件点名（§〇-6 纪律：不许只报差值不归属）
+@41783dc --all：DPR 65 / 失败 7，DPK 25 / 失败 0。红集合（7 件）：
+  Tests/DeepBaseTests.dpr                        Fatal: F2613 Unit 'uDoQryLegacy' not found.
+  DeepFlow/Source/DeepFlow.dpr                   F1026 File not found Source\Core\DeepFlow.Engine.pas
+  Examples/MVVMDemo/MVVMDemo.dpr                 E2004 Identifier redeclared
+  Examples/Templates/CRUDApp/CRUDApp.dpr         E2250 no overloaded Create
+  Tools/Calibration/Calib.Record.dpr             E2029 Identifier expected but RECORD
+  Tools/Gallery/hbtheme_gallery.dpr              E2003 Undeclared identifier hdCompact
+  Tools/UniPublisher/DeepPublisher.dpr           E2029 'UNIT' expected but ]
+对照乙 B2 收尾存档 @09db3c8 的 7 件红集合：
+  -1  CodeReview/.../B2FixtureRunner.dpr（本笔消除，即 §二.1 即时轨目标）
+  +1  Tests/DeepBaseTests.dpr（新出现在 --all，但非本笔引入，见下）
+
+新增红归属实测（同一隔离树内切换 commit，单编该 dpr）：
+  @da846fa（本单基线 HEAD）EXIT=1  Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+  @41783dc（本笔之后）     EXIT=1  同一错误、同一行、同一 Hint/Warn 计数逐字一致
+⇒ 该红在乙开工基线上即已存在，属主控并网注册笔（Tests/DeepBaseTests.dpr +13 行 uses，
+   验收结论 §二.3）落在 build-gate 的 doQry 搜索路径缺口，与 B8-01 无关。
+   原件：B8-01-归因-DeepBaseTests-@da846fa.txt / B8-01-归因-DeepBaseTests-@41783dc.txt
+   本单按 §〇-5 不改 Tests/DeepBaseTests.dpr/.dproj，只把该缺口登记给主控（并作为 B8-04 前置条件第 1 条）。
+
+== T0 生产契约面 @41783dc
+DPR 1/1 失败（即上面 Tests/DeepBaseTests.dpr）、DPK 25/25 成功；
+噪声门未再报错（Hint 534 / Warning 140，@41783dc 判定面 26）。
+原件：B8-01-编译门T0-@41783dc.txt

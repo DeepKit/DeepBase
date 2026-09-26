@@ -1,0 +1,8 @@
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=1 HINT=46 WARN=2
+  Tests/DeepBaseTests.dpr 编译失败：Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=93 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=46 Warning=2 按码=H2443=24,H2077=13,H2219=7,H2164=2,W1050=1,W1073=1
+编译门禁失败：1 个工程编译不过
+  Tests/DeepBaseTests.dpr EXIT=1  Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
