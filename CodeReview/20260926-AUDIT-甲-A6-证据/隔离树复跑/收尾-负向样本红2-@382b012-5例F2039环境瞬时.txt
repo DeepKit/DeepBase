@@ -1,0 +1,116 @@
+# WO-20260926-AUDIT-甲-A6 收尾：交付态（master @ 382b012）隔离工作树复验原件
+# 工作树：git worktree add --detach .tmp/wt_a6e 382b012（0 件改动，纯复验）
+# 生成：2026-09-26 13:04:36
+# 首轮同树同命令跑出 ④/㉖ 两例正对照 Fatal: F2039 Could not create output file '*.drf'（dcc64 落输出文件被环境瞬时拦住），
+#       NEGATIVE-TEST: FAIL / EXIT=1，原件保留为 收尾-交付态复验-@382b012-首轮两次F2039环境瞬时.txt。
+#       门禁把这种环境红如实算成失败、没有静默跳过，本身就是 fail-closed 的实证；本件为重跑二轮（无并发门禁跑录）。
+
+===== node 09_工程脚本/build-gate/test_negative_sample.js =====
+✓ 负样本①不存在根 => EXIT=2（含 --root 不是存在的目录）
+✓ 负样本②空扫描 => EXIT=2（含 待编译 .dpr 计数为 0）
+✓ 负样本③语法断裂 => EXIT=1（含 BadProj.dpr / BUILD_EXIT=1 / 失败=1 / 被跳过=0）
+✗ 正对照④合法工程：期望 EXIT=0，实际 EXIT=1
+[dpr 1/1] OkProj.dpr CONFIG=default BUILD_EXIT=1 HINT=0 WARN=0
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=1 清单来源=all .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=0 Warning=0 按码=(无)
+  OkProj.dpr 编译失败：OkProj.dpr(6) Fatal: F2039 Could not create output file 'OkProj.drf'
+编译门禁失败：1 个工程编译不过
+  OkProj.dpr EXIT=1  OkProj.dpr(6) Fatal: F2039 Could not create output file 'OkProj.drf'
+
+✓ 负样本⑤未跟踪 .dpr => EXIT=2（含 未跟踪但存在的 .dpr）
+✓ 负样本⑥索引与工作树不一致 => EXIT=2（含 git 索引里有、工作树里却没有）
+✓ 负样本⑦部分扫描（readdir 注入失败） => EXIT=2（含 readdir 失败 / 部分扫描不得报绿）
+✓ 负样本⑧未声明范围 => EXIT=3（含 未指定编译范围）
+✓ 负样本⑨--all 与 --dpr 互斥 => EXIT=3（含 --all 与 --dpr 互斥）
+✓ 负样本⑩--dpr 指向未跟踪文件 => EXIT=2（含 不是本仓已跟踪的 .dpr）
+✓ 负样本⑪--dpr 落在 root 之外 => EXIT=2（含 落在 --root 之外）
+✓ 参数负样本(未知参数) => EXIT=3（含 fail-closed）
+✓ 参数负样本(已知参数缺值) => EXIT=3（含 fail-closed）
+✓ 参数负样本(裸位置参数) => EXIT=3（含 fail-closed）
+✓ 参数负样本(大小写不符) => EXIT=3（含 fail-closed）
+✓ 参数负样本(值形似参数) => EXIT=3（含 fail-closed）
+✗ 包面正对照⓬合法包：期望 EXIT=0，实际 EXIT=1
+[dpk 1/1] OkPkg.dpk CONFIG=default BUILD_EXIT=1 HINT=0 WARN=0
+编译门禁统计：DPR总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=1 清单来源=all .res生成=1 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=0 Warning=0 按码=(无)
+  OkPkg.dpk 编译失败：OkPkg.dpk(7) Fatal: F2039 Could not create output file 'OkPkg.drf'
+编译门禁失败：1 个工程编译不过
+  OkPkg.dpk EXIT=1  OkPkg.dpk(7) Fatal: F2039 Could not create output file 'OkPkg.drf'
+
+✓ 包面负样本⓭故意改坏 .dpk => EXIT=1（含 BadPkg.dpk / BUILD_EXIT=1 / DPK总数=1 / 失败=1 / 被跳过=0 / Error: E2010）
+✓ 包面负样本⓮整面声明落空 => EXIT=2（含 整面 all-dpk 计数为 0）
+✓ 包面负样本⓯部分扫描（.dpk 目录 readdir 注入失败） => EXIT=2（含 readdir 失败 / 部分扫描不得报绿）
+✓ 包面负样本⓰未跟踪 .dpk => EXIT=2（含 未跟踪但存在的 .dpk）
+✓ 负样本⓱--manifest 文件不存在 => EXIT=2（含 --manifest 读不到）
+✓ 负样本⓲--manifest 清单为空 => EXIT=2（含 --manifest 清单为空）
+✓ 命名空间负样本⓳声明读不到（注入 ENOENT） => EXIT=2（含 命名空间声明读不到）
+✓ 命名空间负样本⓴没有 default 行 => EXIT=2（含 命名空间声明没有 default 行）
+✓ 命名空间负样本㉑多行 default => EXIT=2（含 命名空间声明有多行 default）
+✓ 命名空间负样本㉒行缺 = => EXIT=2（含 命名空间声明行缺 '='）
+✓ 命名空间负样本㉓等号后为空 => EXIT=2（含 命名空间声明等号后为空）
+✓ 命名空间负样本㉔声明未被判定面命中 => EXIT=2（含 命名空间声明未被本轮判定面命中 / ghost.dpr）
+✓ 命名空间负样本㉕默认集合未放宽 => EXIT=1（含 F2613 Unit 'DBClient' not found）
+✗ 命名空间正对照㉖工程级声明生效且缺省集未被顶掉：期望 EXIT=0，实际 EXIT=1
+[dpr 1/1] NsDemo.dpr CONFIG=default BUILD_EXIT=1 HINT=0 WARN=0
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=1 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=0 Warning=0 按码=(无)
+  NsDemo.dpr 编译失败：NsDemo.dpr(7) Fatal: F2039 Could not create output file 'NsDemo.drf'
+编译门禁失败：1 个工程编译不过
+  NsDemo.dpr EXIT=1  NsDemo.dpr(7) Fatal: F2039 Could not create output file 'NsDemo.drf'
+
+✓ 命名空间负样本㉗命令行不接受命名空间参数 => EXIT=3（含 为未知参数）
+✗ 目录名集负样本㉘：Logs/BuildOutput 下的未跟踪 .dpr 被判进判定面（CI 产物冒充源码）=> EXIT=1
+[dpr 1/1] OkProj.dpr CONFIG=default BUILD_EXIT=1 HINT=0 WARN=0
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=1 清单来源=all .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=0 Warning=0 按码=(无)
+  OkProj.dpr 编译失败：OkProj.dpr(6) Fatal: F2039 Could not create output file 'OkProj.drf'
+编译门禁失败：1 个工程编译不过
+  OkProj.dpr EXIT=1  OkProj.dpr(6) Fatal: F2039 Could not create output file 'OkProj.drf'
+
+✓ 目录名集正对照㉘-ctl：非跳过目录下的未跟踪 .dpr 必红 => EXIT=2（含 未跟踪但存在的 .dpr / Ghost.dpr）
+✓ 目录名集负样本㉘共享口径下的 CI 产物不进判定面 => EXIT=1（输出不含 Ghost.dpr）
+✓ 证据面负样本㉙--manifest 条目指向 CodeReview/** => EXIT=2（含 证据附件不得进生产编译面 / CodeReview/证据/附件/Probe.dpr）
+✓ 证据面负样本㉚--dpr 点名 CodeReview/** => EXIT=2（含 证据附件不得进生产编译面 / CodeReview/证据/附件/Probe.dpr）
+✓ 反向闸门负样本㉛--all 模式下证据目录内真实 .dpr => EXIT=2（含 下出现已跟踪的真实 .dpr / CodeReview/证据/附件/Bad.dpr）
+✓ 反向闸门负样本㉜--manifest 模式下同样生效（不止挂一种模式） => EXIT=2（含 下出现已跟踪的真实 .dpr / CodeReview/证据/附件/Bad.dpr）
+✓ 反向闸门负样本㉝点名模式下同样生效 => EXIT=2（含 下出现已跟踪的真实 .dpr）
+✗ 反向闸门正对照㉞ .dpr.template 别名不触发：期望 EXIT=0，实际 EXIT=1
+[dpr 1/1] OkProj.dpr CONFIG=default BUILD_EXIT=1 HINT=0 WARN=0
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=1 清单来源=all .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=0 Warning=0 按码=(无)
+  OkProj.dpr 编译失败：OkProj.dpr(6) Fatal: F2039 Could not create output file 'OkProj.drf'
+编译门禁失败：1 个工程编译不过
+  OkProj.dpr EXIT=1  OkProj.dpr(6) Fatal: F2039 Could not create output file 'OkProj.drf'
+
+✓ 反向闸门对照㉟未跟踪 .dpr 走既有通道 => EXIT=2（含 未跟踪但存在的 .dpr）
+NEGATIVE-TEST: FAIL
+EXIT=1
+
+===== node 09_工程脚本/eol-gate/check_eol.js --root . =====
+行尾门禁通过：检查了 1547 个文件（.pas CRLF / .md LF），跳过目录 2
+EXIT=0
+
+===== node 09_工程脚本/encoding-gate/check_pas_encoding.js --root . =====
+编码门禁通过：1001 个 .pas + 699 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 2）
+EXIT=0
+
+===== node 09_工程脚本/mojibake-gate/check_mojibake.js --root . =====
+丙类损坏门禁通过：扫描 1001 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+
+===== node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --root . =====
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:13: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1384 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1384 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:17: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤? L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md L1 .pas 婧愮爜闈為鏈熺函 LF → 门禁输出（预期包�?L1, L2, L3 违规�? 行尾门禁失败，违�?3 �? L2 .md 文档非预期包�?CRLF (要求 LF): docs/Bad_CRLF.md L1 .pas 源码非预期纯 LF (要求 CRLF): src/（替换符 6/44）
+证据编码门禁通过：扫描 829 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+
