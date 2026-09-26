@@ -1,0 +1,26 @@
+# WO-20260926-AUDIT-甲-A6-03 判据②：覆盖路径取证（T0 dpr 传递链 + 反证「三件不在任何包工程面」）
+# 生成：2026-09-26 12:51:56  master @ 2791658
+
+## 1) T0 面条目 Tests/DeepBaseTests.dpr 的注册行
+40:  Test.DeepBase.Desktop.Screen.Click.SmartExecutor in 'Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas',
+41:  Test.DeepBase.Desktop.Screen.Click.RegionLocator in 'Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas',
+42:  Test.DeepBase.Desktop.Screen.Click.DPIMapper in 'Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas',
+
+## 2) 三件测试单元各自 uses 到的 SUT（含被测本体）
+-- Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas
+22:  DeepBase.Desktop.Screen.Click.RegionLocator;
+-- Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas
+21:  DeepBase.Desktop.Screen.Click.RegionLocator,
+22:  DeepBase.Desktop.Screen.Click.DPIMapper,
+23:  DeepBase.Desktop.Screen.Click.SmartExecutor;
+-- Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas
+21:  DeepBase.Desktop.Screen.Click.DPIMapper;
+
+## 3) 反证：三件 SUT 不出现在任何 .dpk/.dproj（编译面注册）里 ⇒ 覆盖只可能来自 T0 dpr 传递
+./Tests/DeepBaseTests.dpr
+
+## 4) 单件编译实证见 A6-03-单件编译BUILD_EXIT原件.txt（6 件全 BUILD_EXIT=0）
+
+## 5) 现状口径（如实）：T0 今天在 Test.DeepBase.DoQry.Literal.pas 处 F2613 中断，传递链跑不到这三件
+#       ⇒ 三件的 CI 覆盖 = 「注册链成立 + 单件可编译」，等主控补 doQry 搜索面后升为「T0 传递实证」；
+#       消掉乙 B2 回执 §六-2 的「不在任何编译 CI 面」悬空登记，登记文本见 T0 契约注释。

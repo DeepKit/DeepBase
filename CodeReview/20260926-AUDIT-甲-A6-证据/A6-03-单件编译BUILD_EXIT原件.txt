@@ -1,0 +1,59 @@
+# WO-20260926-AUDIT-甲-A6-03 判据①：Screen.Click 三件 SUT + 三件测试单元 单件编译 BUILD_EXIT 原件
+# 工作树：git worktree add --detach .tmp/wt_a6d 2791658（0 件改动；本项零 .pas 改动）
+# 命令：node <取证脚本> <工作树> Features/DeepBase.Desktop.Screen.Click.{RegionLocator,SmartExecutor,DPIMapper}.pas Tests/Test.DeepBase.Desktop.Screen.Click.{RegionLocator,SmartExecutor,DPIMapper}.pas
+# 环境口径：与编译门禁同源——搜索面 = Tests/DeepBaseTests.dproj 的 DCC_UnitSearchPath 全配置并集 + 门禁 UNIT_DIRS + BDS Win64 lib + DUnitX 源；
+#           命名空间 = 该 .dproj 的 DCC_Namespace 并集（缺省退回 contracts/命名空间声明.txt default 行）。
+# 为何走单件而不走 T0 传递：T0 当前在 Test.DeepBase.DoQry.Literal.pas 就 F2613 中断（A6-01-T0既有红归因与停机上报.txt），
+#           传递链今天跑不到这三件，据此报「已覆盖」不成立；单件 BUILD_EXIT 是不依赖该缺口的最小充分证据。
+# 生成：2026-09-26 12:51:20
+
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas
+$ dcc64 -Q -B -DDEBUG -U<1116 字符搜索面> -NS<105 字符命名空间> -N0<临时dcu> Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+770 lines, 0.17 seconds, 6704 bytes code, 1164 bytes data.
+BUILD_EXIT=0
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas
+$ dcc64 -Q -B -DDEBUG -U<1116 字符搜索面> -NS<105 字符命名空间> -N0<临时dcu> Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+1227 lines, 0.25 seconds, 5138 bytes code, 1052 bytes data.
+BUILD_EXIT=0
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas
+$ dcc64 -Q -B -DDEBUG -U<1116 字符搜索面> -NS<105 字符命名空间> -N0<临时dcu> Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+173 lines, 0.20 seconds, 2982 bytes code, 780 bytes data.
+BUILD_EXIT=0
+================================================================
+单元: Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas
+$ dcc64 -Q -B -DDEBUG -U<1116 字符搜索面> -NS<105 字符命名空间> -N0<临时dcu> Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23050 lines, 1.20 seconds, 13400 bytes code, 2332 bytes data.
+BUILD_EXIT=0
+================================================================
+单元: Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas
+$ dcc64 -Q -B -DDEBUG -U<1116 字符搜索面> -NS<105 字符命名空间> -N0<临时dcu> Tests/Test.DeepBase.Desktop.Screen.Click.SmartExecutor.pas
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23530 lines, 1.22 seconds, 16838 bytes code, 2140 bytes data.
+BUILD_EXIT=0
+================================================================
+单元: Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas
+$ dcc64 -Q -B -DDEBUG -U<1116 字符搜索面> -NS<105 字符命名空间> -N0<临时dcu> Tests/Test.DeepBase.Desktop.Screen.Click.DPIMapper.pas
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+22152 lines, 1.20 seconds, 4768 bytes code, 604 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本取证不吞红）=> 0 ==

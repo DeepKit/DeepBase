@@ -12,4 +12,7 @@
 all-dpk
 
 # 单元测试主入口：Delphi 侧唯一的 Tests 全量 runner，红了就是生产契约红了。
+# 覆盖面提示：`Features/DeepBase.Desktop.Screen.Click.{RegionLocator,SmartExecutor,DPIMapper}` 三件生产单元
+#   不在任何 .dpk/.dproj 注册面，其 CI 编译覆盖 = 本条目传递（Tests/DeepBaseTests.dpr 注册对应 Test.* 单元，
+#   后者 uses 三件本体）；取证与现状口径见 CodeReview/20260926-AUDIT-甲-A6-证据/A6-03-覆盖链取证.txt。
 Tests/DeepBaseTests.dpr
