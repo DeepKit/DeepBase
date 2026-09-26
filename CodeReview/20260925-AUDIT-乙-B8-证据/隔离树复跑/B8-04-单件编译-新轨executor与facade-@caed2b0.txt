@@ -1,0 +1,51 @@
+================================================================
+单元: doQry/src/uDoQryExecutor.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\src\uDoQryParamPool.pas(112) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+doQry\src\uDoQryParamPool.pas(141) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+doQry\src\uDoQryLogger.pas(91) Hint: H2164 Variable 'L' is declared but never used in 'DoQryLogEvent'
+doQry\src\uDoQryExecutor.pas(136) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(138) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(140) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(141) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(143) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(144) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(147) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(149) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(152) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(155) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(260) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+doQry\src\uDoQryExecutor.pas(313) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+doQry\src\uDoQryExecutor.pas(379) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+doQry\src\uDoQryExecutor.pas(425) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+1604 lines, 0.25 seconds, 54371 bytes code, 9020 bytes data.
+BUILD_EXIT=0
+
+================================================================
+单元: doQry/src/uDoQry.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+doQry\src\uDoQryLogger.pas(91) Hint: H2164 Variable 'L' is declared but never used in 'DoQryLogEvent'
+doQry\src\uDoQryParamPool.pas(112) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+doQry\src\uDoQryParamPool.pas(141) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(136) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(138) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(140) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(141) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(143) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(144) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(147) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(149) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(152) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(155) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+doQry\src\uDoQryExecutor.pas(260) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+doQry\src\uDoQryExecutor.pas(313) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+doQry\src\uDoQryExecutor.pas(379) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+doQry\src\uDoQryExecutor.pas(425) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+1707 lines, 0.23 seconds, 1115 bytes code, 540 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==

@@ -7,3 +7,4 @@ attrib2 EXIT=1
 unit-compile EXIT=0
 fixture EXIT=0
 BUILD_EXIT=0
+unit-compile EXIT=0
