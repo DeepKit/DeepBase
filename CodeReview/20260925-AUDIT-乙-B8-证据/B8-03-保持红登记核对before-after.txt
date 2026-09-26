@@ -1,0 +1,59 @@
+B8-03 T1-观测面 DoQryDemo「保持红」登记核对与更正
+
+判据来源：WO-20260925-AUDIT-乙-B8 §二 B8-03 / 主控-乙-B2 验收结论 §二.5
+
+== 一、rg 定位结果（先核实再改，不按转述动手）
+$ git grep -n "保持红" -- '09_工程脚本/**'
+09_工程脚本/build-gate/contracts/T1-观测面.txt:72:# doQry/examples/DoQryDemo：保持红，未移面。…（:72-74 三行注释块）
+⇒ 「保持红」这条状态文字就在 T1 清单本体里，以 # 注释行存在（:72-74），
+   紧邻清单行 doQry/examples/DoQryDemo/DoQryDemo.dpr（:75）。
+   验收结论 §二.5 的「T1 清单本体是机械差集无状态文字，乙指的『保持红』在台账/旧证据面」
+   与代码事实不符：台账/旧证据面确有转述，但登记原文在 contracts 内，本节据实定位。
+   注：T1 头部（:5-8）声明清单「派生自 git ls-files 机械取差集」，指的是路径行；
+   注释行是甲-D6/甲-D7 手工落的状态说明，且无任何脚本回写 contracts/（git grep -ln "T1-观测面" 只命中 README 与工单），
+   故更正注释文字不会被重新派生覆盖。
+
+== 二、编译状态实测（隔离树 @7adfba5，原件 隔离树复跑/B8-03-单编-DoQryDemo-@7adfba5.txt）
+$ node 09_工程脚本/build-gate/check_build.js --dpr doQry/examples/DoQryDemo/DoQryDemo.dpr
+BUILD_EXIT=0（门禁总 EXIT=0，DPR 1/1 成功，HINT=14 WARN=4）
+旁证（同一隔离树 --all @41783dc，原件 隔离树复跑/B8-01-编译门all-@41783dc.txt:71）：
+  [dpr 64/65] doQry/examples/DoQryDemo/DoQryDemo.dpr CONFIG=default BUILD_EXIT=0 HINT=14 WARN=4
+转绿的归属笔（不是乙 B8）：
+$ git log --oneline -1 -- doQry/examples/DoQryDemo/
+af367fcf fix(audit-甲-D7): 段2 doQry 代码面丙类损坏清零 + DoQryDemo 转绿（三档留痕 87/87 可核对）
+
+== 三、更正内容 before/after
+before（:72-74）
+# doQry/examples/DoQryDemo：保持红，未移面。主控「移出库（DBClient 不在 Win64 lib 面）」的前提
+# 经实测更正（Datasnap 在 Win64 存在，红因是 .dproj 缺失回落 DEFAULT_NS + 两层真实缺陷），
+# 论证与处置请求见 CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-04。
+after（:72-76）
+# doQry/examples/DoQryDemo：编译绿（隔离树单编 BUILD_EXIT=0，乙-B8-03 @7adfba5 复算，原件
+# CodeReview/20260925-AUDIT-乙-B8-证据/隔离树复跑/B8-03-单编-DoQryDemo-@7adfba5.txt）。
+# 本行原登记「保持红，未移面」，其结论在甲-D7 af367fcf（DoQryDemo 转绿）后已过期，现按实测更正；
+# 「移出库（DBClient 不在 Win64 lib 面）」前提的实测更正与论证仍见
+# CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-04。归面（T1/T0/T2）变动的决定权在主控，本行不动。
+（D6-段3-04 的论证指针原样保留，避免第二套信息；红因描述属历史论证内容，不在本登记里复述）
+
+== 四、判据逐条
+① 单编 BUILD_EXIT 原件留档：是（见 §二，文件名内嵌 commit）
+② 「保持红」指向 DoQryDemo 的残留：
+   生产面（09_工程脚本/）残留 = 0 —— 现仅 T1:74 一处，且是「本行原登记『保持红，未移面』…已过期」
+   这条更正说明本身（引用旧文字以说明改了什么），不是状态登记。
+   其余命中逐条说明为何保留：
+   - CodeReview/20260923-AUDIT-甲-D6-证据/*（2 文件 3 处）：甲-D6 当时的原始取证/校验输出，
+     定点时刻记录，改写即伪造证据（§〇-7 证据纪律）。
+   - CodeReview/20260924-AUDIT-甲-D7-证据/D7-段1-01…：甲-D7 证据，且该处讲的是 DeepBaseStudio，
+     不是 DoQryDemo。
+   - CodeReview/20260925-AUDIT-乙-B2-证据/*、-交付回执.md、主控-乙-B2-验收结论.md（6 处）：
+     乙 B2 与主控验收的原始记录/裁定原文，属已 ACCEPTED 的裁定面历史，乙不得改。
+   - docs/ui/work-orders/00-主控派单总表.md（2 处）、WO-…-B8…4项.md（6 处）：主控台账与本单工单原文，
+     归主控维护（乙只在 B8 回执登记完成状态）。
+③ 不动 contracts/** 清单行：
+   git diff -U0 过滤后非注释改动行数 = 0；清单行 doQry/examples/DoQryDemo/DoQryDemo.dpr 与
+   doQry/prjDoQry.dpr 原样在册（见本笔 commit 的 diff）。
+
+== 五、与 B8-04 的接缝
+DoQryDemo 转绿改变的是「demo 工程可编译」，不等于新轨 uDoQryExecutor 转正：
+后者仍不在任何绿面上（Tests/DeepBaseTests.dpr 现因 doQry 搜索路径缺口在 --all/T0 都红，
+见 B8-01 判据实测 §红项点名）。转正前置条件清单见 B8-04。

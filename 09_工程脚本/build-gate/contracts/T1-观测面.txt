@@ -69,8 +69,10 @@ Tools/Studio/Studio.dpr
 Tools/Tray/DeepBaseTray.dpr
 Tools/UniPublisher/DeepPublisher.dpr
 Tools/UpdaterHelper/UpdaterHelper.dpr
-# doQry/examples/DoQryDemo：保持红，未移面。主控「移出库（DBClient 不在 Win64 lib 面）」的前提
-# 经实测更正（Datasnap 在 Win64 存在，红因是 .dproj 缺失回落 DEFAULT_NS + 两层真实缺陷），
-# 论证与处置请求见 CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-04。
+# doQry/examples/DoQryDemo：编译绿（隔离树单编 BUILD_EXIT=0，乙-B8-03 @7adfba5 复算，原件
+# CodeReview/20260925-AUDIT-乙-B8-证据/隔离树复跑/B8-03-单编-DoQryDemo-@7adfba5.txt）。
+# 本行原登记「保持红，未移面」，其结论在甲-D7 af367fcf（DoQryDemo 转绿）后已过期，现按实测更正；
+# 「移出库（DBClient 不在 Win64 lib 面）」前提的实测更正与论证仍见
+# CodeReview/20260923-AUDIT-甲-D6-证据/D6-段3-04。归面（T1/T0/T2）变动的决定权在主控，本行不动。
 doQry/examples/DoQryDemo/DoQryDemo.dpr
 doQry/prjDoQry.dpr
