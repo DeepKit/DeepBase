@@ -1,0 +1,19 @@
+# WO-20260926-AUDIT-甲-A6-02 前置（硬性）核对：git ls-files 'CodeReview/**/*.dpr' 必须 = 0
+# 核对时点：2026-09-26 12:43:53  master @ 2791658（A6-01 落定后）
+
+$ git -c core.quotepath=false ls-files "CodeReview/**/*.dpr" "CodeReview/*.dpr" | wc -l
+0
+$ 原始输出（应为空）:
+LS_EXIT=0
+
+## 前置由乙 B8-01 达成：原 3 件已改名为 .dpr.template 别名
+10
+$ git log -1 --format=%h%n%s -- CodeReview/20260925-AUDIT-乙-B2-证据/附件/
+41783dc 2026-09-26 fix(WO-20260925-AUDIT-乙-B8): B8-01 三个 .dpr 证据附件改名 .dpr.template + 探针脚本引用同步
+
+## 别名清单（B2 三件在册形态）
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2-01-premise-probe.dpr.template
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr.template
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2Seg0Probe.dpr.template
+
+## 结论：前置 = 0 成立 ⇒ 直接开工（未触发「停机报主控」分支）；甲未改名、未加 SKIP（§〇.3 本单不得改 CodeReview/** 内容）。

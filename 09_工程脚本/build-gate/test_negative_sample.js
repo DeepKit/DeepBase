@@ -1,5 +1,5 @@
 // 编译门禁负向样本（WO-20260923-AUDIT-甲-D3 §2.4；WO-20260923-AUDIT-甲-D4 §3.2/§3.3 补包面与清单面；
-// WO-20260924-AUDIT-甲-D7 段4 补命名空间声明面；WO-20260926-AUDIT-甲-A6-01 补证据附件面拒绝）
+// WO-20260924-AUDIT-甲-D7 段4 补命名空间声明面；WO-20260926-AUDIT-甲-A6-01/02 补证据附件面拒绝与反向闸门）
 //
 // 这道门的价值全在「红得可信」上：S-3 的根因不是没人编译，而是没有任何机械判定，
 // 所以负向样本必须证明三件事——
@@ -350,9 +350,12 @@ expectExit('命名空间负样本㉔声明未被判定面命中', runWithNamespa
   say(`✓ 目录名集负样本㉘共享口径下的 CI 产物不进判定面 => EXIT=${skip.code}（输出不含 Ghost.dpr）`);
 }
 
-// ---- 以下为 WO-20260926-AUDIT-甲-A6-01 新增：证据附件面（CodeReview/**）的显式条目拒绝 ----
-// 证的是「回归手写证据路径进契约面/点名面」这条通道是死的：清单条目与显式点名同走 resolveProject
+// ---- 以下为 WO-20260926-AUDIT-甲-A6-01/02 新增：证据附件面（CodeReview/**）的显式条目拒绝 + 反向闸门 ----
+// ㉙㉚ 证「回归手写证据路径进契约面/点名面」这条通道是死的：清单条目与显式点名同走 resolveProject
 // 一个咽喉（读清单逐行也调它），一处拒绝覆盖两种入口；归因必须打印出【是哪个条目】，只报码不算取证。
+// ㉛-㉟ 证反向闸门：真实 .dpr 长在证据目录里（B2 三件探针的在册形态）对 --all/--manifest/点名三种
+// 模式一律红；同目录 .dpr.template 别名与未跟踪件这两个「不该响的」分别不响——后者证 ㉛ 的红
+// 归因于反向闸门本身，而不是未跟踪检测顺带撞红。
 {
   const root = makeRepo('evidence-entry', {
     'CodeReview/证据/附件/Probe.dpr': OK_DPR,
@@ -363,6 +366,28 @@ expectExit('命名空间负样本㉔声明未被判定面命中', runWithNamespa
     ['证据附件不得进生产编译面', 'CodeReview/证据/附件/Probe.dpr']);
   expectExit('证据面负样本㉚--dpr 点名 CodeReview/**', runGate(['--dpr', 'CodeReview/证据/附件/Probe.dpr', '--root', root]), 2,
     ['证据附件不得进生产编译面', 'CodeReview/证据/附件/Probe.dpr']);
+}
+{
+  const root = makeRepo('evidence-face', {
+    'CodeReview/证据/附件/Bad.dpr': OK_DPR,
+    'CodeReview/证据/附件/Probe.dpr.template': OK_DPR,
+    'OkProj.dpr': OK_DPR,
+  });
+  expectExit('反向闸门负样本㉛--all 模式下证据目录内真实 .dpr', runGate(['--all', '--root', root]), 2,
+    ['下出现已跟踪的真实 .dpr', 'CodeReview/证据/附件/Bad.dpr']);
+  const mf = writeManifest(root, 'only-ok.txt', 'OkProj.dpr\n');
+  expectExit('反向闸门负样本㉜--manifest 模式下同样生效（不止挂一种模式）', runGate(['--manifest', mf, '--root', root]), 2,
+    ['下出现已跟踪的真实 .dpr', 'CodeReview/证据/附件/Bad.dpr']);
+  expectExit('反向闸门负样本㉝点名模式下同样生效', runGate(['--dpr', 'OkProj.dpr', '--root', root]), 2,
+    ['下出现已跟踪的真实 .dpr']);
+  // ㉞ 别名不触发：同一拓扑只留 .dpr.template ⇒ 绿，且整个 CodeReview 目录不被提及。
+  // 仓内 10 件在册探针别名内容全是合法最小 .dpr，唯一让它们不编的是名字后缀——不是任何按路径的放行分支。
+  fs.unlinkSync(path.join(root, 'CodeReview', '证据', '附件', 'Bad.dpr'));
+  git(root, ['add', '-A']);
+  expectExit('反向闸门正对照㉞ .dpr.template 别名不触发', runGate(['--all', '--root', root]), 0, ['DPR总数=1']);
+  // ㉟ 未跟踪检测仍是活的（否则 ㉞ 的「不报」无法归因）：同样的 .dpr 不 add ⇒ 走未跟踪通道红。
+  fs.writeFileSync(path.join(root, 'CodeReview', '证据', '附件', 'Ghost.dpr'), OK_DPR, 'utf8');
+  expectExit('反向闸门对照㉟未跟踪 .dpr 走既有通道', runGate(['--all', '--root', root]), 2, ['未跟踪但存在的 .dpr']);
 }
 
 for (const p of trashFiles) {

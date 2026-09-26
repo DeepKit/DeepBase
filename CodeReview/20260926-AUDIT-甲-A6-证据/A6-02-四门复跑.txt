@@ -1,0 +1,261 @@
+# WO-20260926-AUDIT-甲-A6-02 判据⑤：交付前四道静态门禁复跑（主树 master @ 2791658 + A6-02 改动落盘后）
+# 生成：2026-09-26 12:52:27
+# 口径：每条命令单独跑、裸取 $?（不经管道），输出全量留档
+
+===== node 09_工程脚本/eol-gate/check_eol.js --root . =====
+行尾门禁通过：检查了 1570 个文件（.pas CRLF / .md LF），跳过目录 11
+EXIT=0
+
+===== node 09_工程脚本/encoding-gate/check_pas_encoding.js --root . =====
+编码门禁通过：1003 个 .pas + 720 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+EXIT=0
+
+===== node 09_工程脚本/mojibake-gate/check_mojibake.js --root . =====
+丙类损坏门禁通过：扫描 1001 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+
+===== node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --root . =====
+E3 双重编码命中 240 行 / 21 件（存量登记 21 件封顶，逐条 路径:行号: 原文 → 还原后；括号内「替换符 坏/总」= 还原串里的 U+FFFD 数 / 还原出的非 ASCII 字符总数，占比即 坏÷总）:
+  CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt:3: { 淇′换鏍圭己澶?= 瀹夊叏澶辫触锛堥獙鏀剁‖鏉′欢 #3锛?} → { 信任根缺�?= 安全失败（验收硬条件 #3�?}（替换符 2/16）
+  CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt:19: { 绠楁硶闂ㄧ } → { 算法门禁 }（替换符 0/4）
+  CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt:27: { signing_key_id 蹇呴』澹版槑涓斿懡涓俊浠绘牴 } → { signing_key_id 必须声明且命中信任根 }（替换符 0/10）
+  CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt:44: { 杩囨湡鏍￠獙 } → { 过期校验 }（替换符 0/4）
+  CodeReview/20260919-AUDIT-甲-证据/A2-1-excerpt-ManifestVerifier-245-327.txt:48: { 绛惧悕楠岃瘉锛氱鍚嶆暟鎹?= 鍓ョ signature 鐨?JCS 瑙勮寖鍖?} → { 签名验证：签名数�?= 剥离 signature �?JCS 规范�?}（替换符 3/15）
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:1: 缂栫爜闂ㄧ閫氳繃锛?72 涓?.pas锛堝熀绾挎畫鐣橴+FFFD鏂囦欢 18锛孊OM渚嬪 45锛屽绔婥R鍩虹嚎鏂囦欢 0锛? → 编码门禁通过�?72 �?.pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0�?（替换符 3/26）
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:3: 璇佹嵁缂栫爜闂ㄧ閫氳繃锛氭壂鎻?134 涓?CodeReview 璇佹嵁鏂囦欢锛孨UL 杩濊 0锛堝瓨閲忓熀绾胯眮鍏?0 椤?/ 鏈鍛戒腑 0 椤癸級锛屽叏閮ㄤ负鍚堟硶 UTF-8 → 证据编码门禁通过：扫�?134 �?CodeReview 证据文件，NUL 违规 0（存量基线豁�?0 �?/ 本次命中 0 项），全部为合法 UTF-8（替换符 4/39）
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:5: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/20260921-AUDIT-甲-证据/A1/06-bypass-grep.txt:82: Tools/LogAnalyzer/LogAnalyzer.MainForm.pas:997: TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '鏃ュ織瀵煎嚭 - ' + Extract → Tools/LogAnalyzer/LogAnalyzer.MainForm.pas:997: TLogExporter.ExportToHTML(FLogs, dlgSave.FileName, '日志导出 - ' + ExtractFi（替换符 0/4）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-2.2-七件重跑-修前树dry-run.txt:156: 补回前 | 璇存槑: 鎵ц鍚勯樁娈甸獙鏀舵祴璇曠殑鏍稿績閫昏緫 → ����ǰ | 说明: 执行各阶段验收测试的核心逻辑（替换符 4/21）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:39: 前 | // ========== 绗竴闃舵: 鏂囨。涓庢灦鏋勫鏌?========== → ǰ | // ========== 第一阶段: 文档与架构审�?==========（替换符 1/12）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:54: 前 | T.Description := '妫€鏌?CHANGELOG.md 璁板綍鐗堟湰鍙樻洿'; → ǰ | T.Description := '棢��?CHANGELOG.md 记录版本变更';（替换符 2/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:69: 前 | T.Description := '缂栬瘧 Win32 鐗堟湰锛岄浂閿欒闆惰鍛?; → ǰ | T.Description := '编译 Win32 版本，零错误零警�?;（替换符 1/12）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:74: 前 | T.Description := '缂栬瘧 Win64 鐗堟湰锛岄浂閿欒闆惰鍛?; → ǰ | T.Description := '编译 Win64 版本，零错误零警�?;（替换符 1/12）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:84: 前 | T.Description := '妫€鏌ヤ唬鐮佷腑鏃犳湭瀹屾垚鐨?TODO/FIXME'; → ǰ | T.Description := '棢�查代码中无未完成�?TODO/FIXME';（替换符 2/12）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:89: 前 | T.Description := '妫€鏌ユ棤纭紪鐮佺殑瀵嗛挜鎴栧瘑鐮?; → ǰ | T.Description := '棢�查无硬编码的密钥或密�?;（替换符 2/14）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:94: 前 | T.Description := '杩愯鎵€鏈夊崟鍏冩祴璇?; → ǰ | T.Description := '运行扢�有单元测�?;（替换符 2/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:99: 前 | T.ID := 'P3-002'; T.Name := '娴嬭瘯瑕嗙洊鐜?; T.Phase := 3; → ǰ | T.ID := 'P3-002'; T.Name := '测试覆盖�?; T.Phase := 3;（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:104: 前 | T.Description := '杩愯鎵€鏈夐泦鎴愭祴璇?; → ǰ | T.Description := '运行扢�有集成测�?;（替换符 2/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:109: 前 | T.Description := '杩愯鍘嬪姏娴嬭瘯锛岄獙璇佺ǔ瀹氭€?; → ǰ | T.Description := '运行压力测试，验证稳定��?;（替换符 2/14）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:114: 前 | T.Description := '楠岃瘉寰俊/Stripe/鏀粯瀹濈鍚?; → ǰ | T.Description := '验证微信/Stripe/支付宝签�?;（替换符 1/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:119: 前 | // ========== 绗叚闃舵: 鍏煎鎬ф祴璇?========== → ǰ | // ========== 第六阶段: 兼容性测�?==========（替换符 1/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:124: 前 | T.Description := '鍦?Delphi 11 Alexandria 缂栬瘧娴嬭瘯'; → ǰ | T.Description := '�?Delphi 11 Alexandria 编译测试';（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:129: 前 | T.Description := '鍦?Delphi 12 Athens 缂栬瘧娴嬭瘯'; → ǰ | T.Description := '�?Delphi 12 Athens 编译测试';（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:134: 前 | T.Description := '缂栬瘧鎵€鏈夌ず渚嬮」鐩?; → ǰ | T.Description := '编译扢�有示例项�?;（替换符 2/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:139: 前 | // ========== 绗叓闃舵: 鏈€缁堥獙鏀?========== → ǰ | // ========== 第八阶段: 朢�终验�?==========（替换符 2/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:159: 前 | Log(Format('宸插姞杞?%d 涓祴璇曢」', [FTests.Count])); → ǰ | Log(Format('已加�?%d 个测试项', [FTests.Count]));（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:169: 前 | Log(Format('绗?%d 闃舵瀹屾垚: %d/%d 閫氳繃', → ǰ | Log(Format('�?%d 阶段完成: %d/%d 通过',（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:174: 前 | Log(Format('鎵嬪姩娴嬭瘯 %s 鏍囪涓? %s', [TestID, IfThen(Passed, '閫氳繃', '澶辫触')])); → ǰ | Log(Format('手动测试 %s 标记�? %s', [TestID, IfThen(Passed, '通过', '失败')]));（替换符 1/12）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:179: 前 | Log(Format('娴嬭瘯 %s 宸茶烦杩?, [TestID])); → ǰ | Log(Format('测试 %s 已跳�?, [TestID]));（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:189: 前 | Log(Format('鍙戠幇 %d 涓枃浠跺寘鍚?TODO/FIXME', [TodoCount]), True); → ǰ | Log(Format('发现 %d 个文件包�?TODO/FIXME', [TodoCount]), True);（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:194: 前 | // 绠€鍖栧疄鐜?- 瀹為檯搴旇繍琛屾祴璇曞苟妫€鏌ュ唴瀛樻硠婕? → ǰ | // 箢�化实�?- 实际应运行测试并棢�查内存泄�?（替换符 4/21）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:199: 前 | Log(Format('鍙戠幇 %d 涓ず渚嬮」鐩?, [Length(Dirs)])); → ǰ | Log(Format('发现 %d 个示例项�?, [Length(Dirs)]));（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:239: 前 | Log('楠屾敹鎶ュ憡宸茬敓鎴? ' + OutputPath); → ǰ | Log('验收报告已生�? ' + OutputPath);（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:254: 前 | APP_TITLE = 'DeepBase 鏃ュ織鍒嗘瀽鍣?; → ǰ | APP_TITLE = 'DeepBase 日志分析�?;（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:259: 前 | // 榛樿鏃堕棿鑼冨洿: 鏈€杩?4灏忔椂 → ǰ | // 默认时间范围: 朢��?4小时（替换符 2/12）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:264: 前 | mnuFileOpen.Caption := '鎵撳紑鏁版嵁搴?&O)...'; → ǰ | mnuFileOpen.Caption := '打开数据�?&O)...';（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:269: 前 | mnuFileClose.Caption := '鍏抽棴鏁版嵁搴?&C)'; → ǰ | mnuFileClose.Caption := '关闭数据�?&C)';（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:299: 前 | dlgOpen.Filter := 'SQLite 鏁版嵁搴搢*.db;*.sqlite;*.sqlite3|鎵€鏈夋枃浠秥*.*'; → ǰ | dlgOpen.Filter := 'SQLite 数据库|*.db;*.sqlite;*.sqlite3|扢�有文件|*.*';（替换符 1/9）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:304: 前 | dlgOpen.Title := '鎵撳紑鏃ュ織鏁版嵁搴?; → ǰ | dlgOpen.Title := '打开日志数据�?;（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:309: 前 | // 绗竴琛? 鏃堕棿鑼冨洿 → ǰ | // 第一�? 时间范围（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:334: 前 | MessageDlg('鎵撳紑鏁版嵁搴撳け璐? ' + E.Message, mtError, [mbOK], 0); → ǰ | MessageDlg('打开数据库失�? ' + E.Message, mtError, [mbOK], 0);（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:339: 前 | Item.Caption := '鍞竴鏉ユ簮鏁?; → ǰ | Item.Caption := '唯一来源�?;（替换符 1/6）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:369: 前 | MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0); → ǰ | MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:374: 前 | MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0); → ǰ | MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:379: 前 | MessageDlg('娌℃湁鏃ュ織鍙鍑?, mtInformation, [mbOK], 0); → ǰ | MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);（替换符 1/8）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:384: 前 | '鐢ㄤ簬鏌ョ湅鍜屽垎鏋?DeepBase 妗嗘灦鐢熸垚鐨勬棩蹇楁暟鎹€? + #13#10#13#10 + → ǰ | '用于查看和分�?DeepBase 框架生成的日志数据��? + #13#10#13#10 +（替换符 3/19）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.1-ASCII得失行清单（引号被吞的那些）.txt:389: 前 | '- 鏃堕棿/绾у埆/鍏抽敭璇嶈繃婊? + #13#10 + → ǰ | '- 时间/级别/关键词过�? + #13#10 +（替换符 1/10）
+  CodeReview/20260923-AUDIT-乙-D6-证据/2.2-落笔写入-apply运行输出.txt:153: 补回前 | 璇存槑: 鎵ц鍚勯樁娈甸獙鏀舵祴璇曠殑鏍稿績閫昏緫 → ����ǰ | 说明: 执行各阶段验收测试的核心逻辑（替换符 4/21）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:9: - // 鏄庣‘鎸囧畾浣跨敤涓夊弬鏁扮増鏈殑doQry鍑芥暟 → - // 明确指定使用三参数版本的doQry函数（替换符 0/14）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:63: - // 鍏堣幏鍙栨彃鍏ュ墠鐨勮褰曟暟 → - // 先获取插入前的记录数（替换符 0/10）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:72: - // 鎵ц鎻掑叆 → - // 执行插入（替换符 0/4）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:77: - + '''' + '鎴戞槸涓€澶寸尓' + '''' + ', NULL, '+ '''' + '宸茬粡鍒嗕韩绛夊緟涓嬭浇' + '''' + ')'); → - + '''' + '我是丢�头猪' + '''' + ', NULL, '+ '''' + '已经分享等待下载' + '''' + ')');（替换符 1/14）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:81: - // 鑾峰彇鎻掑叆鍚庣殑璁板綍鏁? → - // 获取插入后的记录�?（替换符 1/9）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:88: - ShowMessage('鎻掑叆鎴愬姛锛屾柊澧炶褰曟暟: ' + IntToStr(newCount - oldCount)) → - ShowMessage('插入成功，新增记录数: ' + IntToStr(newCount - oldCount))（替换符 0/10）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:91: - ShowMessage('璀﹀憡锛氭病鏈夋柊澧炶褰曪紒' + #13#10 + → - ShowMessage('警告：没有新增记录！' + #13#10 +（替换符 0/10）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:92: - '鎵ц鍓嶈褰曟暟: ' + IntToStr(oldCount) + #13#10 + → - '执行前记录数: ' + IntToStr(oldCount) + #13#10 +（替换符 0/6）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:93: - '鎵ц鍚庤褰曟暟: ' + IntToStr(newCount) + #13#10 + → - '执行后记录数: ' + IntToStr(newCount) + #13#10 +（替换符 0/6）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:101: - ShowMessage('鎵ц鍑洪敊: ' + E.Message + #13#10 + → - ShowMessage('执行出错: ' + E.Message + #13#10 +（替换符 0/4）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:244: -// 鍒濆鍖栦笌涓婁笅鏂?procedure DoQryInit(const ProjectRoot: string); → -// 初始化与上下�?procedure DoQryInit(const ProjectRoot: string);（替换符 1/7）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:268: - // SQLite 涓嶆敮鎸?RETURNING锛堣€佺増鏈級銆傚湪鎵ц鍣ㄤ腑閫氳繃 last_insert_rowid() 鑾峰彇 → - // SQLite 不支�?RETURNING（��版本）。在执行器中通过 last_insert_rowid() 获取（替换符 3/19）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:290: - raise EDatabaseException.Create('闈炴煡璇㈣鍙ョ己灏?WHERE锛屽凡闃绘鎵ц'); → - raise EDatabaseException.Create('非查询语句缺�?WHERE，已阻止执行');（替换符 1/13）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:299: - raise EDatabaseException.Create('鏈繑鍥炴彃鍏?ID'); → - raise EDatabaseException.Create('未返回插�?ID');（替换符 1/5）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:321: -// 鍦?interface 閮ㄥ垎娣诲姞浠ヤ笅鍑芥暟澹版槑 → -// �?interface 部分添加以下函数声明（替换符 1/11）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:327: -// 鍚屾椂鍦?interface 閮ㄥ垎娣诲姞杩欎簺鍑芥暟鐨勫０鏄? → -// 同时�?interface 部分添加这些函数的声�?（替换符 2/14）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:335: -// 鍦?interface 閮ㄥ垎娣诲姞鏂扮殑鍑芥暟澹版槑 → -// �?interface 部分添加新的函数声明（替换符 1/11）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:339: -//Ms绾у弬鏁扮敤浜庤繑鍥炴墽琛岀殑缁撴灉銆傜粡甯哥敤浜庡嚭閿欍€? → -//Ms级参数用于返回执行的结果。经常用于出错��?（替换符 2/21）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:340: -//杩斿洖鍊艰鏄庯細濡傛灉鏄€夋嫨鐘舵€佽繑鍥為€夋嫨鍒板灏戣褰曪紝濡傛灉鏄彃鍏ョ姸鎬佽繑鍥炪€傛渶鏂版彃鍏ヨ褰曠殑ID銆傚鏋滄槸淇敼鍜屾洿鏂扮姸鎬佽繑鍥炲奖鍝嶅埌鐨勮銆? → -//返回值说明：如果是��择状��返回��择到多少记录，如果是插入状态返回��最新插入记录的ID。如果是修改和更新状态返回影响到的行�?（替换符 9/63）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:346: -// 鍐呴儴浣跨敤鐨勫嚱鏁板０鏄? → -// 内部使用的函数声�?（替换符 1/9）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:418: - // 娣诲姞闄愬埗 - 濡傛灉娌℃湁璁剧疆锛岄粯璁?000 → - // 添加限制 - 如果没有设置，默�?000（替换符 1/13）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:427: - // 鍒涘缓鐢ㄤ簬瀛樺偍瀛楁椤哄簭鐨勫瓧鍏? → - // 创建用于存储字段顺序的字�?（替换符 1/13）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:436: - // 灏嗗瓧娈甸『搴忎俊鎭瓨鍏ュ瓧鍏? → - // 将字段顺序信息存入字�?（替换符 1/11）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:445: - fieldOrder[i] := High(Integer); // 瀵逛簬娌℃湁瀹氫箟椤哄簭鐨勫瓧娈碉紝缁欎竴涓緢澶х殑椤哄簭鍊? → - fieldOrder[i] := High(Integer); // 对于没有定义顺序的字段，给一个很大的顺序�?（替换符 1/21）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:454: - // 浜ゆ崲鐩稿簲鐨勫瓧娈? → - // 交换相应的字�?（替换符 1/7）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:485: - // 鏋勫缓瀛楁鍚嶅垪琛ㄥ拰鍊煎垪琛? → - // 构建字段名列表和值列�?（替换符 1/11）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:494: - // 灏嗗弬鏁板瓧绗︿覆杞崲涓哄瓧鍏? → - // 将参数字符串转换为字�?（替换符 1/11）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:512: - // 鏍规嵁SQL绫诲瀷璋冪敤鐩稿簲鐨勬瀯寤哄嚱鏁? → - // 根据SQL类型调用相应的构建函�?（替换符 1/13）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:521: - // 浣跨敤 ||| 鍒嗗壊鍙傛暟瀵? → - // 使用 ||| 分割参数�?（替换符 1/7）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:535: - // 濡傛灉鏄腑鏂囧啋鍙凤紝闇€瑕佸鍋忕Щ涓€涓瓧绗? → - // 如果是中文冒号，霢�要多偏移丢�个字�?（替换符 3/19）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:540: - // 鍙湁key涓嶄负绌烘椂鎵嶆坊鍔? → - // 只有key不为空时才添�?（替换符 1/9）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:549: - ExecSQL; // 鎵ц鏇存柊鎴栧垹闄? → - ExecSQL; // 执行更新或删�?（替换符 1/7）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:552: - // 涓嶅啀鎶涘嚭寮傚父锛屽洜涓烘洿鏂?琛屼篃鍙兘鏄甯告儏鍐? → - // 不再抛出异常，因为更�?行也可能是正常情�?（替换符 2/20）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:570: -// 鏂板鍑芥暟锛氬垎绂诲弬鏁? → -// 新增函数：分离参�?（替换符 1/9）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:577: - // 澶嶅埗杩炴帴鍜屽熀鏈缃? → - // 复制连接和基本设�?（替换符 1/9）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:586: - // 璁剧疆闈?WHERE 鍙傛暟鏌ヨ → - // 设置�?WHERE 参数查询（替换符 1/7）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:595: - sSQL := ''; // 鍒濆鍖?SQL锛屼互渚垮湪鍑洪敊鏃朵篃鑳芥樉绀? → - sSQL := ''; // 初始�?SQL，以便在出错时也能显�?（替换符 2/14）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:604: - // 鏍规嵁涓嶅悓鐨勬搷浣滅被鍨嬪垽鏂墽琛岀粨鏋? → - // 根据不同的操作类型判断执行结�?（替换符 1/15）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:613: - if msg = '' then // 濡傛灉杩樻病鏈夎缃敊璇秷鎭? → - if msg = '' then // 如果还没有设置错误消�?（替换符 1/11）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:640: - // 濡傛灉鍒嗗壊鍚庝粛涓虹┖锛屾姏鍑哄紓甯? → - // 如果分割后仍为空，抛出异�?（替换符 1/13）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:653: - // 濡傛灉鏄?WHERE 鏉′欢瀛楁 → - // 如果�?WHERE 条件字段（替换符 1/7）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:659: - // 濡傛灉鍦ㄤ紶鍏ュ弬鏁颁腑鏈夎繖涓瓧娈电殑鍊? → - // 如果在传入参数中有这个字段的�?（替换符 1/15）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:694: -// 娣诲姞涓€涓柊鍑芥暟鏉ユ鏌ヨ〃鐨勪富閿瓧娈? → -// 添加丢�个新函数来检查表的主键字�?（替换符 2/17）
+  CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-03-diff-doQry六件全量.txt:703: - // 杩斿洖榛樿鍊? → - // 返回默认�?（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:133: " /// 鎭㈠鍘熷鍊?" → " /// 恢复原始�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:153: " - TFMXi18nLabel: 鑷姩缈昏瘧鐨?Label" → " - TFMXi18nLabel: 自动翻译�?Label"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:157: " - TFMXi18nButton: 鑷姩缈昏瘧鐨?Button" → " - TFMXi18nButton: 自动翻译�?Button"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:161: " - TFMXi18nCheckBox: 鑷姩缈昏瘧鐨?CheckBox" → " - TFMXi18nCheckBox: 自动翻译�?CheckBox"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:165: " - TFMXi18nGroupBox: 鑷姩缈昏瘧鐨?GroupBox" → " - TFMXi18nGroupBox: 自动翻译�?GroupBox"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:177: " 说明: 璺ㄥ钩鍙版洿鏂版彁绀哄璇濇锛屾敮鎸?Windows/macOS/iOS/Android" → " ˵��: 跨平台更新提示对话框，支�?Windows/macOS/iOS/Android"（替换符 3/16）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:197: " DOQRY_ERR_NOT_FOUND = 5001; // 璁板綍鏈壘鍒?" → " DOQRY_ERR_NOT_FOUND = 5001; // 记录未找�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:201: " /// 鏌ヨ涓婁笅鏂?" → " /// 查询上下�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:223: " /// <summary>鏍囪涓烘棤鏁?/summary>" → " /// <summary>标记为无�?/summary>"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:237: " /// - 褰撹繍琛岀幆澧冩纭儴缃?libcrypto 鏃讹紝浼氳繘涓€姝ラ獙璇侀殢鏈烘暟闀垮害鍜?AES-256-GCM 鐨勫姞瑙ｅ瘑寰€杩斻€?" → " /// - 当运行环境正确部�?libcrypto 时，会进丢�步验证随机数长度�?AES-256-GCM 的加解密徢�返��?"（替换符 6/33）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:243: " // 鎻掑叆绗竴鏉?" → " // 插入第一�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:259: " Assert.AreEqual(Ord(wsNormal), Ord(FTestForm.WindowState), string('WindowState 搴旇鎭㈠涓?Normal'));" → " Assert.AreEqual(Ord(wsNormal), Ord(FTestForm.WindowState), string('WindowState 应该恢复�?Normal'));"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:263: " Assert.AreEqual(Ord(wsMaximized), Ord(FTestForm.WindowState), string('WindowState 搴旇鎭㈠涓?Maximized'));" → " Assert.AreEqual(Ord(wsMaximized), Ord(FTestForm.WindowState), string('WindowState 应该恢复�?Maximized'));"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:291: " // 涓洪伩鍏嶅墠搴忕敤渚嬪垏鎹㈣瑷€/缂撳瓨褰卞搷鍚庣画鐢ㄤ緥锛岃繖閲岀粺涓€澶嶄綅銆?" → " // 为避免前序用例切换语訢�/缓存影响后续用例，这里统丢�复位�?"（替换符 3/29）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:295: " // 鑷冲皯搴旇鏈変竴涓瑷€锛堥粯璁よ瑷€锛?" → " // 至少应该有一个语訢�（默认语訢��?"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:319: " Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 搴旇鑷冲皯涓?1'));" → " Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 应该至少�?1'));"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:329: " FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1); // 4 涓笉鍚屾潵锟?" → " FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1); // 4 个不同来�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:335: " // 濡傛灉娌℃湁鎶涘嚭寮傚父锛屾鏌ュ畬鏁存€ф爣蹇? Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');" → " // 如果没有抛出异常，检查完整��标�? Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:341: " - DeepBase.WebAPI.Auth: 璁よ瘉涓棿浠?" → " - DeepBase.WebAPI.Auth: 认证中间�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:347: " - JWT Bearer 璁よ瘉涓棿浠?(TAuthMiddleware + TJWTManager)" → " - JWT Bearer 认证中间�?(TAuthMiddleware + TJWTManager)"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:351: " - WebSocket 娑堟伅璺敱鍣?(TWebSocketMessageRouter)" → " - WebSocket 消息路由�?(TWebSocketMessageRouter)"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:359: " // 鍚姩鏈嶅姟鍣?" → " // 启动服务�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:367: " // 鏈惡甯︿换浣曡璇佷俊鎭闂?/secure/profile" → " // 未携带任何认证信息访�?/secure/profile"（替换符 1/11）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:383: " /// <summary>鑾峰彇瀹屾暣鐨?Bug 淇℃伅瀛楃涓?/summary>" → " /// <summary>获取完整�?Bug 信息字符�?/summary>"（替换符 2/10）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:387: " /// <summary>榛樿绾跨▼鏁?/summary>" → " /// <summary>默认线程�?/summary>"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:391: " Result := 'P1'; // 榛樿浼樺厛绾?" → " Result := 'P1'; // 默认优先�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:405: " // 瀹為檯娴嬭瘯闇€瑕?VCL 鐜锛岃繖閲岄€氳繃浠ｇ爜瀹℃煡楠岃瘉" → " // 实际测试霢��?VCL 环境，这里��过代码审查验证"（替换符 4/21）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:409: " Assert.Pass('鍐呭瓨娉勬紡娴嬭瘯闇€瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');" → " Assert.Pass('内存泄漏测试霢��?VCL 环境，��过代码审查确认修复');"（替换符 4/23）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:413: " Assert.Pass('閲嶅鍒涘缓閿€姣佹祴璇曢渶瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');" → " Assert.Pass('重复创建锢�毁测试需�?VCL 环境，��过代码审查确认修复');"（替换符 4/25）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:417: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:497: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:505: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:515: " [Description('楠岃瘉骞跺彂鐘舵€佸彉鏇翠笉浼氬鑷存暟鎹崯鍧?)]" → " [Description('验证并发状��变更不会导致数据损�?)]"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:519: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:559: " Webhook楠岃瘉閫昏緫鏈畬鏁村疄鐜般€?" → " Webhook验证逻辑未完整实现��?"（替换符 2/11）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:571: " // 涓嶈缃叕閽?" → " // 不设置公�?"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:575: " Assert.Pass('绛惧悕鍐呭鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);" → " Assert.Pass('签名内容格式验证通过（��过代码审查确认�?);"（替换符 3/21）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:579: " Assert.Pass('Authorization 澶撮儴鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);" → " Assert.Pass('Authorization 头部格式验证通过（��过代码审查确认�?);"（替换符 3/19）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:589: " 杩欎簺瀵嗛挜鍙互琚€嗗悜宸ョ▼鎻愬彇銆?" → " 这些密钥可以被��向工程提取�?"（替换符 3/15）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:597: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:601: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:607: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:613: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:619: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:633: " 原问题 鎻掍欢鍔犺浇缂轰箯瀹夊叏楠岃瘉锛屽瓨鍦ㄨ矾寰勯亶鍘嗗拰浠ｇ爜瀹屾暣鎬ч闄┿€?" → " ԭ���� 插件加载缺乏安全验证，存在路径遍历和代码完整性风险��?"（替换符 6/32）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:653: " // 灏濊瘯鍔犺浇锛堜細鍥犱负涓嶆槸鐪熸鐨?BPL 鑰屽け璐ワ紝浣嗚矾寰勯獙璇佸簲璇ラ€氳繃锛?" → " // 尝试加载（会因为不是真正�?BPL 而失败，但路径验证应该��过�?"（替换符 4/28）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:657: " // 濡傛灉鍒拌揪杩欓噷锛岃鏄庤矾寰勯獙璇侀€氳繃浜?" → " // 如果到达这里，说明路径验证��过�?"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:667: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:673: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:679: " Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);" → " Assert.Pass('源文件不可访问，跳过静��分析测�?);"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:707: " // Credential Manager 妯″紡涓嬩笉闇€瑕侀澶栧姞瀵? Result := APlainKey;" → " // Credential Manager 模式下不霢�要额外加�? Result := APlainKey;"（替换符 2/11）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:713: " // CSV 瀛楁涓寘鍚€楀彿銆佸紩鍙锋垨鎹㈣绗︽椂闇€瑕佺敤寮曞彿鍖呭洿" → " // CSV 字段中包含��号、引号或换行符时霢�要用引号包围"（替换符 3/24）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:727: "// 娉ㄦ剰锛氳繖閲屽疄闄呰绠楃殑鏄?HMAC(SHA256(Data), Key)锛岃€岄潪鏍囧噯 HMAC(Data, Key)" → "// 注意：这里实际计算的�?HMAC(SHA256(Data), Key)，��非标准 HMAC(Data, Key)"（替换符 3/17）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:739: " WriteLog('Image鎺т欢鏈垎閰? ' + AImageKey);" → " WriteLog('Image控件未分�? ' + AImageKey);"（替换符 1/5）
+  CodeReview/20260925-AUDIT-乙-B1-证据/03-附件/residual.json:769: " // 涓哄姞瀵嗛鐣欒冻澶熺┖闂?" → " // 为加密预留足够空�?"（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B1-negative-test.txt:2: 缂栫爜闂ㄧ澶辫触锛岃繚瑙?3 椤? → 编码门禁失败，违�?3 �?（替换符 2/10）
+  CodeReview/_audit_recheck/乙-B1-negative-test.txt:3: G2 闈炴硶UTF-8(GBK/ANSI鍘熷瀛楄妭): src/Gbk.pas → G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas（替换符 0/6）
+  CodeReview/_audit_recheck/乙-B1-scan-fffd-after.txt:1: 鍚?U+FFFD 鐨勬枃浠舵暟: 19 → �?U+FFFD 的文件数: 19（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B1-scan-fffd-after.txt:3: --- 鐤戜技 GBK 鏁翠綋璇 (FF/CJK >= 1.5 涓旀棤 BOM) --- → --- 疑似 GBK 整体误读 (FF/CJK >= 1.5 且无 BOM) ---（替换符 0/8）
+  CodeReview/_audit_recheck/乙-B1-scan-fffd-before.txt:1: 锟?U+FFFD 鐨勬枃浠舵暟: 116 → �?U+FFFD 的文件数: 116（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B1-scan-fffd-before.txt:3: --- 鐤戜技 GBK 鏁翠綋璇 (FF/CJK >= 1.5 涓旀棤 BOM) --- → --- 疑似 GBK 整体误读 (FF/CJK >= 1.5 且无 BOM) ---（替换符 0/8）
+  CodeReview/_audit_recheck/乙-B2-scan-coverage2-rerun.txt:8: === Features === 瀹為檯鍗曞厓 131锛屽鏉惧尮閰嶅悗浠嶆湭鍑虹幇 34 涓? → === Features === 实际单元 131，宽松匹配后仍未出现 34 �?（替换符 1/15）
+  CodeReview/_audit_recheck/乙-B3-negative-test.txt:2: 鏋勫缓褰掑睘闂ㄧ澶辫触锛岃繚瑙?4 椤? → 构建归属门禁失败，违�?4 �?（替换符 2/12）
+  CodeReview/_audit_recheck/乙-B3-negative-test.txt:3: O2/C2 BLOCK 鏂拌建鍗曞厓杩涘叆鐢熶骇鏋勫缓: DeepBase.Plugins.Manager 鈭?prod.dpk → O2/C2 BLOCK 新轨单元进入生产构建: DeepBase.Plugins.Manager �?prod.dpk（替换符 1/11）
+  CodeReview/_audit_recheck/乙-B3-negative-test.txt:4: O4/C2 BLOCK 鐢熶骇鍗曞厓寮曠敤鏂拌建: Core/Evil.pas -> DeepBase.Plugins.Manager → O4/C2 BLOCK 生产单元引用新轨: Core/Evil.pas -> DeepBase.Plugins.Manager（替换符 0/8）
+  CodeReview/_audit_recheck/乙-B3-negative-test.txt:5: O1 FAIL 鏂板瀛ゅ効鍗曞厓锛堜笉鍦ㄥ熀绾匡級: Core/Evil.pas (unit Evil) → O1 FAIL 新增孤儿单元（不在基线）: Core/Evil.pas (unit Evil)（替换符 0/12）
+  CodeReview/_audit_recheck/乙-B3-negative-test.txt:6: O1 FAIL 鏂板瀛ゅ効鍗曞厓锛堜笉鍦ㄥ熀绾匡級: Core/FooOrphan.pas (unit FooOrphan) → O1 FAIL 新增孤儿单元（不在基线）: Core/FooOrphan.pas (unit FooOrphan)（替换符 0/12）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:35: SYM@L992: // 绛惧悕瀵嗛挜涓嶅彲鐢紙KeyManager 鏈В閿?鏃?signing key锛夛細鏃犳硶鏍￠獙锛? SYM@L994: Exit(TGateVerdict.Indeterminate('mode HMAC c → SYM@L992: // 签名密钥不可用（KeyManager 未解�?�?signing key）：无法校验�? SYM@L994: Exit(TGateVerdict.Indeterminate('mode HMAC cannot be（替换符 3/19）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:43: SYM@L23: /// verifier=nil 鍗存敹鍒伴潪绌?confirmation锛屾垨 Verify 杩斿洖 False 鏃舵姏鍑猴紝 → SYM@L23: /// verifier=nil 却收到非�?confirmation，或 Verify 返回 False 时抛出，（替换符 1/13）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:45: SYM@L97: /// 娑堣垂 challenge锛坅sOnce 闃查噸鏀撅級銆俈erify 閫氳繃鍚庛€乤ction 鎵ц鎴愬姛鍚庣敱 → SYM@L97: /// 消费 challenge（asOnce 防重放）。Verify 通过后��action 执行成功后由（替换符 2/19）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:47: SYM@L156: /// 涓嶇洿鎺ョ SQL銆俧ail-fast 浜旀瑙?IReviewDecisionVerifier.Verify 娉ㄩ噴銆? SYM@L164: function Verify(const AActionKey, → SYM@L156: /// 不直接碰 SQL。fail-fast 五步�?IReviewDecisionVerifier.Verify 注释�? SYM@L164: function Verify(const AActionKey, AAr（替换符 2/11）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:63: SYM@L597: // 楠岃瘉URL瀹夊叏鎬э紝闃叉SSRF鏀诲嚮 → SYM@L597: // 验证URL安全性，防止SSRF攻击（替换符 0/10）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:369: L350: // BUG-429 FIX (D-007): 浼氳瘽瀛楁 (State/FTurnCount) 蹇呴』鍦?FSessionLock 鍐呬慨鏀? → L350: // BUG-429 FIX (D-007): 会话字段 (State/FTurnCount) 必须�?FSessionLock 内修�?（替换符 2/10）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:370: L351: // 鍚﹀垯骞跺彂 ProcessRequest(鍚?SessionId) 閿佸瑁告敼鏍囬噺瀛楁褰㈡垚鏁版嵁绔炰簤. → L351: // 否则并发 ProcessRequest(�?SessionId) 锁外裸改标量字段形成数据竞争.（替换符 1/19）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:371: L352: // Context 寮曠敤蹇収涔熷湪閿佸唴鍙? 閬垮厤涓?Commander 鍋滄鏃?FSessions.Clear 閲婃斁绔炰簤. → L352: // Context 引用快照也在锁内�? 避免�?Commander 停止�?FSessions.Clear 释放竞争.（替换符 3/19）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:453: L373: MessageDlg('绋嬪簭閬囧埌涓ラ噸閿欒锛屽嵆灏嗗叧闂€? + sLineBreak + → L373: MessageDlg('程序遇到严重错误，即将关闭��? + sLineBreak +（替换符 2/15）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:458: SYM@L13: SafeRun('淇濆瓨璁㈠崟', procedure begin SaveOrder(FOrder) end); → SYM@L13: SafeRun('保存订单', procedure begin SaveOrder(FOrder) end);（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:464: SYM@L373: MessageDlg('绋嬪簭閬囧埌涓ラ噸閿欒锛屽嵆灏嗗叧闂€? + sLineBreak + → SYM@L373: MessageDlg('程序遇到严重错误，即将关闭��? + sLineBreak +（替换符 2/15）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:476: SYM@L13: SafeRun('淇濆瓨璁㈠崟', procedure begin SaveOrder(FOrder) end); → SYM@L13: SafeRun('保存订单', procedure begin SaveOrder(FOrder) end);（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:621: SYM-NOT-FOUND: VerifyBackup|鍚屾鎴愬姛|UploadAll|MarkSynced → SYM-NOT-FOUND: VerifyBackup|同步成功|UploadAll|MarkSynced（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:741: L281: WriteLog(Format(string('娴ｈ法鏁ES-256閸旂姴鐦戦敍灞炬殶閹诡噣鏆辨惔? %d bytes'), [Length(Result)])); → L281: WriteLog(Format(string('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));（替换符 0/13）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:758: L753: // CR-001: 鎸佷箙鍖?KDF 鍙傛暟锛堢洂涓嶆槸鏈哄瘑锛夛紝鍚﹀垯涓嬫浼氳瘽鏃犳硶澶嶇幇 KEK → L753: // CR-001: 持久�?KDF 参数（盐不是机密），否则下次会话无法复现 KEK（替换符 1/23）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:803: SYM@L75: RelativePath: string; // 鐩稿璺緞 → SYM@L75: RelativePath: string; // 相对路径（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:811: SYM@L173: SourcePaths: TArray<string>; // 瑕佸浠界殑璺緞 → SYM@L173: SourcePaths: TArray<string>; // 要备份的路径（替换符 0/6）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:812: SYM@L176: LocalBackupPath: string; // 鏈湴澶囦唤璺緞 → SYM@L176: LocalBackupPath: string; // 本地备份路径（替换符 0/6）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:899: SYM@L1775: { BUG-044 FIX: CSRF 闃叉姢涓棿浠?} → SYM@L1775: { BUG-044 FIX: CSRF 防护中间�?}（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:902: SYM@L1796: // 鍙淇敼鏁版嵁鐨勮姹傞獙璇?CSRF → SYM@L1796: // 只对修改数据的请求验�?CSRF（替换符 1/11）
+  CodeReview/_audit_recheck/乙-B5-取证/out1.txt:903: SYM@L1799: // 浠庤姹傚ご鎴栬〃鍗曡幏鍙?CSRF Token → SYM@L1799: // 从请求头或表单获�?CSRF Token（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:7: L458: { A6 fail-closed 绔嬫硶锛氭棫瀹炵幇鎭?Result := True锛屼粠鏈仛杩囦换浣曟牎楠岋紙瀹¤ → L458: { A6 fail-closed 立法：旧实现�?Result := True，从未做过任何校验（审计（替换符 1/19）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:8: L459: T1 瀹舵棌瀹為敜锛夈€傜湡瀹炴牎楠屼互鍙椾俊浠?SHA256 鍩虹嚎涓哄墠鎻愶細鍩虹嚎缂哄け鏃跺瀹?L460: 鎶?gdIndeterminate锛圛sApproved 鎭?False锛岃皟鐢ㄤ晶涓嶅彲鏀捐锛夛紝涓嶅緱璋庢 → L459: T1 家族实锤）��真实校验以受信�?SHA256 基线为前提：基线缺失时如�?L460: �?gdIndeterminate（IsApproved �?False，调用侧不可放行），不得谎报已验证��?}（替换符 8/50）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:22: L474: { 淇′换鍩虹嚎鍐欏叆鍙ｏ紙鍗曚竴鐪熺浉婧愶級锛氱敱閮ㄧ讲鏂?瀹夸富娉ㄥ叆鍙椾俊浠绘槧灏勬枃浠剁殑 → L474: { 信任基线写入口（单一真相源）：由部署�?宿主注入受信任映射文件的（替换符 1/31）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:23: L475: SHA256锛涚┖鏂囦欢鍚嶆垨绌烘憳瑕佹嫆缁濆叆搴擄紝闃叉鎶?鐧昏浜嗕絾涓嶅彲鏍￠獙"鐨勭姸鎬佸甫鍏ヨ繍琛屾湡銆?} → L475: SHA256；空文件名或空摘要拒绝入库，防止�?登记了但不可校验"的状态带入运行期�?}（替换符 2/34）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:201: L443: // 浣跨敤SHA256璁＄畻HMAC → L443: // 使用SHA256计算HMAC（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:205: L533: // 鐠侊紕鐣籋MAC鐎涙顑佹稉? → L533: // 璁＄畻HMAC瀛楃涓?（替换符 0/7）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:238: L2: DeepBase.FMX.AutoUpdater - FMX 閼奉亜濮╅弴瀛樻煀缂佸嫪娆?L14: unit DeepBase.FMX.AutoUpdater; → L2: DeepBase.FMX.AutoUpdater - FMX 鑷姩鏇存柊缁勪�?L14: unit DeepBase.FMX.AutoUpdater;（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:257: L988: // 纭繚鏄埛鏂颁护鐗?L989: if LResult.Token.Payload.GetStringClaim('type') <> 'refresh' then → L988: // 确保是刷新令�?L989: if LResult.Token.Payload.GetStringClaim('type') <> 'refresh' then（替换符 1/7）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:260: L992: // 鑾峰彇瑙掕壊 → L992: // 获取角色（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out2.txt:263: L995: // 鐢熸垚鏂扮殑璁块棶浠ょ墝 → L995: // 生成新的访问令牌（替换符 0/8）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:2: === AUDIT-BASE CryptoAES-enum [5f4f9ee] Core/DeepBase.Crypto.AES.pas /amECB|amCFB|amOFB|amCTR|TCryptoMode|闈欓粯|degrade|闄嶇 → === AUDIT-BASE CryptoAES-enum [5f4f9ee] Core/DeepBase.Crypto.AES.pas /amECB|amCFB|amOFB|amCTR|TCryptoMode|静默|degrade|降级/（替换符 0/4）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:19: L699: // 榛樿鍔犺浇鍐呯疆 RSA 楠岀鍏挜锛坉ocs/66 搂16.12锛夈€傝嫢 const 鐣欑┖鎴栬皟鐢ㄦ柟宸叉樉寮?L858: Result.SignatureAlgorithm := JSON.GetValue<s → L699: // 默认加载内置 RSA 验签公钥（docs/66 §16.12）��若 const 留空或调用方已显�?L858: Result.SignatureAlgorithm := JSON.GetValue<string>('si（替换符 3/25）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:70: L28: TableName: string; // 鏁版嵁搴撹〃锟? → L28: TableName: string; // 数据库表�?（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:71: L30: LogFileName: string; // 鏃ュ織鏂囦欢锟? → L30: LogFileName: string; // 日志文件�?（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:74: L35: EnableHMAC: Boolean; // 鏄惁鍚敤HMAC瀹屾暣鎬х锟? → L35: EnableHMAC: Boolean; // 是否启用HMAC完整性签�?（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:75: L54: // 鍒濆鍖栭厤锟? → L54: // 初始化配�?（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:76: L73: // 瀹屾暣鎬ф牎锟? → L73: // 完整性校�?（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:78: L281: WriteLog(Format(string('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱锟? %d bytes'), [Length(Result)])); → L281: WriteLog(Format(string('使用AES-256加密，数据长�? %d bytes'), [Length(Result)]));（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:79: L318: WriteLog(Format(string('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱锟? %d bytes'), [Length(Result)])); → L318: WriteLog(Format(string('使用AES-256解密，数据长�? %d bytes'), [Length(Result)]));（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:105: Tools/WebService/DeepBase.WebAPI.Auth.pas:1775:{ BUG-044 FIX: CSRF 闃叉姢涓棿浠?} → Tools/WebService/DeepBase.WebAPI.Auth.pas:1775:{ BUG-044 FIX: CSRF 防护中间�?}（替换符 1/5）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:108: Tools/WebService/DeepBase.WebAPI.Auth.pas:1796: // 鍙淇敼鏁版嵁鐨勮姹傞獙璇?CSRF → Tools/WebService/DeepBase.WebAPI.Auth.pas:1796: // 只对修改数据的请求验�?CSRF（替换符 1/11）
+  CodeReview/_audit_recheck/乙-B5-取证/out3.txt:109: Tools/WebService/DeepBase.WebAPI.Auth.pas:1799: // 浠庤姹傚ご鎴栬〃鍗曡幏鍙?CSRF Token → Tools/WebService/DeepBase.WebAPI.Auth.pas:1799: // 从请求头或表单获�?CSRF Token（替换符 1/9）
+  CodeReview/_audit_recheck/乙-B5-取证/out6.txt:58: sql/README.md:10:鈹溾攢鈹€ [DEPRECATED] tier0_init.sql # 宸插簾寮冿紝璇蜂娇锟?create_sample_db.sql → sql/README.md:10:├─┢� [DEPRECATED] tier0_init.sql # 已废弃，请使�?create_sample_db.sql（替换符 2/11）
+  CodeReview/_audit_recheck/乙-B5-取证/out6.txt:59: sql/README.md:11:鈹溾攢鈹€ [DEPRECATED] tier1_init.sql # 宸插簾寮冿紝璇蜂娇锟?create_sample_db.sql → sql/README.md:11:├─┢� [DEPRECATED] tier1_init.sql # 已废弃，请使�?create_sample_db.sql（替换符 2/11）
+  CodeReview/_audit_recheck/乙-B5-取证/out6.txt:60: sql/README.md:12:鈹溾攢鈹€ [DEPRECATED] tier2_init.sql # 宸插簾寮冿紝璇蜂娇锟?create_sample_db.sql → sql/README.md:12:├─┢� [DEPRECATED] tier2_init.sql # 已废弃，请使�?create_sample_db.sql（替换符 2/11）
+  CodeReview/_audit_recheck/乙-B5-取证/out6.txt:61: sql/tier0_init.sql:2:-- 鈿狅笍 DEPRECATED - 姝よ剼鏈凡搴熷純 → sql/tier0_init.sql:2:-- ⚠️ DEPRECATED - 此脚本已废弃（替换符 0/8）
+  CodeReview/_audit_recheck/乙-B5-取证/out6.txt:62: sql/tier1_init.sql:2:-- 鈿狅笍 DEPRECATED - 姝よ剼鏈凡搴熷純 → sql/tier1_init.sql:2:-- ⚠️ DEPRECATED - 此脚本已废弃（替换符 0/8）
+  CodeReview/_audit_recheck/乙-B5-取证/out6.txt:63: sql/tier2_init.sql:2:-- 鈿狅笍 DEPRECATED - 姝よ剼鏈凡搴熷純 → sql/tier2_init.sql:2:-- ⚠️ DEPRECATED - 此脚本已废弃（替换符 0/8）
+  CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt:1: node : 缂栫爜闂ㄧ澶辫触锛岃繚瑙?7 椤? → node : 编码门禁失败，违�?7 �?（替换符 2/10）
+  CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt:5: + CategoryInfo : NotSpecified: (缂栫爜闂ㄧ澶辫触锛岃繚瑙?7 椤?:String) [], RemoteException → + CategoryInfo : NotSpecified: (编码门禁失败，违�?7 �?:String) [], RemoteException（替换符 2/10）
+  CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt:15: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?3 绫昏繚瑙勶級: → 门禁输出（预期包�?3 类违规）:（替换符 1/13）
+  CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt:16: 缂栫爜闂ㄧ澶辫触锛岃繚瑙?3 椤? → 编码门禁失败，违�?3 �?（替换符 2/10）
+  CodeReview/_audit_recheck/乙-R2-E2-gate-run.txt:17: G2 闈炴硶UTF-8(GBK/ANSI鍘熷瀛楄妭): src/Gbk.pas → G2 非法UTF-8(GBK/ANSI原始字节): src/Gbk.pas（替换符 0/6）
+  CodeReview/_audit_recheck/乙-R2-E2-scan-fffd-after-fix.txt:1: 鍚?U+FFFD 鐨勬枃浠舵暟: 18 → �?U+FFFD 的文件数: 18（替换符 1/5）
+  CodeReview/_audit_recheck/乙-R2-E2-scan-fffd-after-fix.txt:3: --- 鐤戜技 GBK 鏁翠綋璇 (FF/CJK >= 1.5 涓旀棤 BOM) --- → --- 疑似 GBK 整体误读 (FF/CJK >= 1.5 且无 BOM) ---（替换符 0/8）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:26: L164 [LITERAL x1] ShowMessage('DeepBase 鍒濆鍖栧け璐<FFFD>: ' + DeepBase.Manager.DeepBase.LastError); → L164 [LITERAL x1] ShowMessage('DeepBase 初始化失�<FFFD>: ' + DeepBase.Manager.DeepBase.LastError);（替换符 1/5）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:27: L173 [LITERAL x1] DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤宸插惎鍔<FFFD>', 'App'); → L173 [LITERAL x1] DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启�<FFFD>', 'App');（替换符 1/5）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:165: L127 [LITERAL x1] WriteLog('闃茬鏀瑰寘鍒濆鍖栧畬鎴<FFFD>'); → L127 [LITERAL x1] WriteLog('防篡改包初始化完�<FFFD>');（替换符 1/9）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:166: L267 [LITERAL x1] raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨<FFFD>'); → L267 [LITERAL x1] raise EAntiTamperException.Create('未知的加密类�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:167: L271 [LITERAL x1] WriteLog(Format('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)])) → L271 [LITERAL x1] WriteLog(Format('使用AES-256加密，数据长�<FFFD>: %d bytes', [Length(Result)]))（替换符 1/9）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:168: L273 [LITERAL x1] WriteLog(Format('浣跨敤XOR鍔犲瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)])); → L273 [LITERAL x1] WriteLog(Format('使用XOR加密，数据长�<FFFD>: %d bytes', [Length(Result)]));（替换符 1/9）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:169: L288 [LITERAL x1] raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨<FFFD>'); → L288 [LITERAL x1] raise EAntiTamperException.Create('未知的加密类�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:170: L292 [LITERAL x1] WriteLog(Format('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)])) → L292 [LITERAL x1] WriteLog(Format('使用AES-256解密，数据长�<FFFD>: %d bytes', [Length(Result)]))（替换符 1/9）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:171: L294 [LITERAL x1] WriteLog(Format('浣跨敤XOR瑙ｅ瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)])); → L294 [LITERAL x1] WriteLog(Format('使用XOR解密，数据长�<FFFD>: %d bytes', [Length(Result)]));（替换符 1/9）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:172: L352 [LITERAL x1] WriteLog('鍗囩骇鏁版嵁琛ㄥけ璐<FFFD>'); → L352 [LITERAL x1] WriteLog('升级数据表失�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:173: L387 [LITERAL x1] WriteLog('sha256_hash瀛楁鍙兘宸插瓨鍦<FFFD>'); → L387 [LITERAL x1] WriteLog('sha256_hash字段可能已存�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:174: L395 [LITERAL x1] WriteLog('hmac_sha256瀛楁鍙兘宸插瓨鍦<FFFD>'); → L395 [LITERAL x1] WriteLog('hmac_sha256字段可能已存�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:175: L403 [LITERAL x1] WriteLog('enabled瀛楁鍙兘宸插瓨鍦<FFFD>'); → L403 [LITERAL x1] WriteLog('enabled字段可能已存�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:176: L411 [LITERAL x1] WriteLog('md5_hash瀛楁鍙兘宸插瓨鍦<FFFD>'); → L411 [LITERAL x1] WriteLog('md5_hash字段可能已存�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:177: L565 [LITERAL x1] HandleSecurityViolation(AImageKey, '缂哄皯 sha256_hash 瀛楁鎴栦负绌<FFFD>'); → L565 [LITERAL x1] HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:178: L578 [LITERAL x1] HandleSecurityViolation(AImageKey, '缂哄皯 hmac_sha256 瀛楁鎴栦负绌<FFFD>'); → L578 [LITERAL x1] HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为�<FFFD>');（替换符 1/7）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:179: L642 [LITERAL x1] '妫€娴嬪埌绋嬪簭鏂囦欢鍙兘琚鏀癸紝涓轰簡鎮ㄧ殑瀹夊叏锛岀▼搴忓皢閫€鍑恒€<FFFD>'#13#10 + → L642 [LITERAL x1] '棢�测到程序文件可能被篡改，为了您的安全，程序将逢�出��<FFFD>'#13#10 +（替换符 4/29）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:180: L643 [LITERAL x1] '璇蜂粠瀹樻柟缃戠珯涓嬭浇鏈€鏂扮増鏈€<FFFD>'#13#10#13#10 + → L643 [LITERAL x1] '请从官方网站下载朢�新版本��<FFFD>'#13#10#13#10 +（替换符 3/15）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:181: L644 [LITERAL x1] '鏄惁鐜板湪璁块棶瀹樻柟涓嬭浇椤甸潰锛<FFFD>', [ImageKey, Reason]); → L644 [LITERAL x1] '是否现在访问官方下载页面�<FFFD>', [ImageKey, Reason]);（替换符 1/13）
+  CodeReview/_audit_recheck/乙-R2-E2-残留逐行登记.txt:183: L670 [LITERAL x1] WriteLog('宸叉竻绌洪槻绡℃敼鏁版嵁琛<FFFD>'); → L670 [LITERAL x1] WriteLog('已清空防篡改数据�<FFFD>');（替换符 1/9）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:5: 鎵樼鎷疯礉闂ㄧ閫氳繃锛氭鏌ヤ簡 960 涓?.pas 鏂囦欢锛圡1 纭鍒?+ M2 鍩虹嚎 99 椤硅眮鍏嶅瓨閲忥級 → 托管拷贝门禁通过：检查了 960 �?.pas 文件（M1 硬规�?+ M2 基线 99 项豁免存量）（替换符 2/27）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:9: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?M1, M2 杩濊锛? 鎵樼鎷疯礉闂ㄧ澶辫触锛岃繚瑙?3 椤? M1 Move/鎵樼绫诲瀷瑁告嫹璐? src/Bad_M1.pas:7 M2 鏈瘎瀹＄殑瑁稿唴瀛?Move 璋冪敤 (褰撳墠 1 > 鍩虹 → 门禁输出（预期包�?M1, M2 违规�? 托管拷贝门禁失败，违�?3 �? M1 Move/托管类型裸拷�? src/Bad_M1.pas:7 M2 未评审的裸内�?Move 调用 (当前 1 > 基线 0): src/Bad_M1.pa（替换符 6/63）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:13: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1384 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1384 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:17: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤? L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md L1 .pas 婧愮爜闈為鏈熺函 LF → 门禁输出（预期包�?L1, L2, L3 违规�? 行尾门禁失败，违�?3 �? L2 .md 文档非预期包�?CRLF (要求 LF): docs/Bad_CRLF.md L1 .pas 源码非预期纯 LF (要求 CRLF): src/（替换符 6/44）
+证据编码门禁通过：扫描 818 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+

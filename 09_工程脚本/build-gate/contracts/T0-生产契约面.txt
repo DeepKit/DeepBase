@@ -4,8 +4,9 @@
 # 这里声明的是「范围划在哪」（治理决定），不是「范围内跳过谁」（门禁 bypass，禁止）。
 #   门禁源码里没有任何路径白名单；整面用选择子而非抄路径，新增包自动进面，杜绝清单漏更新造成的静默缩面。
 # 证据附件不进生产编译面：CodeReview/** 下的条目在本清单/任何清单/显式点名中一律红，
-#   由 resolveProject 的证据面拒绝机械强制——口径与实体唯一源见 09_工程脚本/build-gate/check_build.js 的
-#   EVIDENCE_FACE_DIR 与 README §二 第 4 条，此处不复述。
+#   该目录下长出已跟踪的真实 .dpr 同样一律红（.dpr.template 别名不触发），
+#   由反向闸门机械强制——口径与实体唯一源见 09_工程脚本/build-gate/check_build.js 的
+#   EVIDENCE_FACE_DIR / resolveProject / rejectEvidenceFaceProjects 与 README §二 第 4 条，此处不复述。
 
 # 包工程面 = 本仓生产交付形态（BPL），25 个 .dpk 全量。
 all-dpk

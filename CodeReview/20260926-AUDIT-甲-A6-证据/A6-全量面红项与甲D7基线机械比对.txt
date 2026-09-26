@@ -1,0 +1,31 @@
+# WO-20260926-AUDIT-甲-A6 §〇.5 主树红项逐件点名：与甲 D7 结论基线做机械差集（不得新增红）
+# 生成：2026-09-26 12:50:28
+# 基线件（甲 D7 段2 落地后 @af367fc 全量面跑录）：CodeReview/20260924-AUDIT-甲-D7-证据/D7-段2-09-原始输出-段2落地后全量编译门@af367fc.txt
+# 本轮件（A6-02 隔离树 @2791658+delta 全量面跑录）：隔离树复跑/A6-02-全量面all-@2791658+delta.log
+
+## 基线红名单（甲 D7 在册 6 件）
+DeepFlow / MVVMDemo / CRUDApp / Calib.Record / hbtheme_gallery / DeepPublisher
+
+## 本轮红名单（逐件，取自跑录点名行）
+DeepFlow/Source/DeepFlow.dpr EXIT=1  DeepFlow.dpr(7) Fatal: F1026 File not found: 'Source\Core\DeepFlow.Engine.pas'
+Examples/MVVMDemo/MVVMDemo.dpr EXIT=1  LoginViewModel.pas(66) Error: E2004 Identifier redeclared: 'System.Generics.Collections'
+Examples/Templates/CRUDApp/CRUDApp.dpr EXIT=1  Entity.Customer.pas(38) Error: E2250 There is no overloaded version of 'Create' that can be called with these arguments
+Tests/DeepBaseTests.dpr EXIT=1  Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+Tools/Calibration/Calib.Record.dpr EXIT=1  Calib.Record.dpr(23) Error: E2029 Identifier expected but 'RECORD' found
+Tools/Gallery/hbtheme_gallery.dpr EXIT=1  Gallery.MainForm.pas(160) Error: E2003 Undeclared identifier: 'hdCompact'
+Tools/UniPublisher/DeepPublisher.dpr EXIT=1  Core\Publisher.Manifest.pas(15) Error: E2029 'UNIT' expected but ']' found
+
+## 差集判定
+基线 6 件在本轮全部仍在册（首错原文逐字未变）：
+  仍在册 DeepFlow/Source/DeepFlow.dpr
+  仍在册 Examples/MVVMDemo/MVVMDemo.dpr
+  仍在册 Examples/Templates/CRUDApp/CRUDApp.dpr
+  仍在册 Tools/Calibration/Calib.Record.dpr
+  仍在册 Tools/Gallery/hbtheme_gallery.dpr
+  仍在册 Tools/UniPublisher/DeepPublisher.dpr
+本轮新增红（相对基线）：
+Tests/DeepBaseTests.dpr
+
+## 归因：唯一新增 = Tests/DeepBaseTests.dpr 的 F2613 uDoQryLegacy，系主控 c5d6658 并网注册 13 件测试单元时搜索面未补 doQry 目录所致
+#       （逐条取证见 A6-01-T0既有红归因与停机上报.txt；甲 D7 基线当时该 dpr 尚未引用 doQry 测试单元，故不在红名单）。
+#       与 A6 四子项无关：同 commit 对照跑录逐行全等（隔离树复跑/A6-01-对照与改后跑录逐行diff.txt）。

@@ -107,6 +107,9 @@ function main(argv) {
   // 判定面前置：--all 与 --dpr/--dpk/--manifest 互斥（同时给无法确定判定覆盖的是哪个面）。
   const declared = collectTargets(root, opts);
 
+  // 反向闸门先于编译与工具链解析：这条红线不依赖 dcc64，也不该为一棵已经红的树付编译成本。
+  rejectEvidenceFaceProjects(root);
+
   const tools = resolveToolchain();
   if (!tools.dcc64) failScan(`找不到 dcc64.exe（设 PATH 或环境变量 DCC64；缺省回退 ${FALLBACK_BDS}\\bin\\dcc64.exe）`);
 
@@ -378,6 +381,26 @@ function resolveProject(root, v, tracked, origin, face) {
 // 路径是否落在证据附件面下（大小写不敏感，与扩展名判定同一口径）。
 function isEvidenceFacePath(rel) {
   return rel.toLowerCase().startsWith(EVIDENCE_FACE_DIR.toLowerCase() + '/');
+}
+
+// 反向闸门（WO-20260926-AUDIT-甲-A6-02）：已跟踪的【真实 .dpr】出现在 CodeReview/** ⇒ EXIT=2 逐条点名。
+// 与 resolveProject 的证据面拒绝正交：后者拦「声明把证据件拉进面」（A6-01），本闸门拦「证据目录里长出了
+// 工程真相源」——--all 面无条件纳入已跟踪 .dpr，没有本闸门时这类混入会被真编进去（B2 三件探针的在册形态）。
+// `.dpr.template` 别名不触发：它是证据件的既定登记形态，endsWith('.dpr') 天然为假，不进任何判定面。
+// 独立于 collectTargets 再查一次是刻意冗余最后一环：判定必须对 --all/--manifest/点名三种模式都成立，
+// 不依赖某个模式的枚举顺序；闸门自身枚举失败（git 不可用/输出不可信）⇒ 同样 fail-closed，禁 fail-open。
+function rejectEvidenceFaceProjects(root) {
+  const r = spawnSync('git', ['-c', 'core.quotePath=false', 'ls-files', '-z', '--', `${EVIDENCE_FACE_DIR}/**/*.dpr`, `${EVIDENCE_FACE_DIR}/*.dpr`],
+    { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  if (r.status !== 0) {
+    failScan(`${EVIDENCE_FACE_DIR}/** 反向闸门枚举失败（EXIT=${r.status}，部分扫描不得报绿）：${(r.stderr || r.error && r.error.message || '').trim()}`);
+  }
+  const reports = r.stdout.split('\0').filter(Boolean)
+    .filter(rel => !rel.toLowerCase().endsWith('.template'))
+    .sort();
+  if (reports.length === 0) return;
+  failScan(`${EVIDENCE_FACE_DIR}/** 下出现已跟踪的真实 .dpr（证据附件面不是工程真相源；探针/夹具按 .dpr.template 别名登记）：` +
+    `\n  ${reports.join('\n  ')}\n  ${EVIDENCE_FACE_REJECT}`);
 }
 
 // 外部契约清单：每行一个仓内相对路径或整面选择子（all-dpr / all-dpk），# 起注释，空行忽略。
