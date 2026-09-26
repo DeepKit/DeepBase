@@ -412,18 +412,86 @@ end;
 
 { THbDialog Implementation }
 
+// WO-20260926-0294 T3：THbButton 为纯自绘控件（无 ModalResult/Default 属性），
+// 按钮与键盘行为经由此桥接对象转发给模态窗体。Owner 挂在 DlgForm 下，随窗体释放。
+type
+  TDialogModalBridge = class(TComponent)
+  private
+    FForm: TCustomForm;
+    FResult: TModalResult;
+    FEdit: TCustomEdit;
+    procedure HandleClick(Sender: TObject);
+    procedure HandleKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+  end;
+
+procedure TDialogModalBridge.HandleClick(Sender: TObject);
+begin
+  // VCL 模态语义：置 ModalResult 后由 ShowModal 循环收敛关闭；
+  // 切勿调 Close（TCustomForm.Close 会无条件覆写为 mrCancel）。
+  if FForm <> nil then
+    FForm.ModalResult := FResult;
+end;
+
+procedure TDialogModalBridge.HandleKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if FForm = nil then
+    Exit;
+  if Key = VK_ESCAPE then
+  begin
+    FForm.ModalResult := mrCancel;
+    Key := 0;
+  end
+  else if Key = VK_RETURN then
+  begin
+    // 输入框内回车保留给换行/输入，其余一律等价确认（替代 TButton.Default）。
+    if FForm.ActiveControl <> FEdit then
+    begin
+      FForm.ModalResult := mrOk;
+      Key := 0;
+    end;
+  end;
+end;
+
 class function THbDialog.Execute(const AOptions: THbDialogOptions; var AInputValue: string): THbDialogResult;
 var
   DlgForm: TForm;
-  LblTitle, LblSummary, LblPrompt: TLabel;
+  LblTitle, LblPrompt: TLabel;
+  MemSummary: TMemo;
   EdtInput: TCustomEdit;
-  BtnOk, BtnCancel: TButton;
+  BtnOk, BtnCancel: THbButton;
   PnlHeader, PnlBody, PnlFooter: TPanel;
   Tokens: THbTokens;
   PPI: Integer;
+  LNeedH, LBodyH: Integer;
+  LBridgeOk, LBridgeCancel, LBridgeKeys: TDialogModalBridge;
   function ScalePx(AVal: Integer): Integer;
   begin
     Result := Round(AVal * (PPI / 96.0));
+  end;
+  // WO-20260926-0294 T2：按正文字体度量自动换行高度（位图画布离屏度量，
+  // 不依赖窗体 Handle 与面板 Realign 时序，从根本上避开 153px 烘焙折行）。
+  function MeasureSummaryHeight(const AText: string; AWidth: Integer): Integer;
+  var
+    LBmp: TBitmap;
+    LRect: TRect;
+  begin
+    LBmp := TBitmap.Create;
+    try
+      LBmp.Canvas.Font.Name := Tokens.FontFamily;
+      LBmp.Canvas.Font.Size := Round(Tokens.SizeS);
+      LRect := Rect(0, 0, AWidth, 32767);
+      if AText = '' then
+        Result := 0
+      else
+      begin
+        DrawText(LBmp.Canvas.Handle, PChar(AText), Length(AText), LRect,
+          DT_CALCRECT or DT_WORDBREAK or DT_NOPREFIX or DT_EDITCONTROL);
+        Result := LRect.Bottom;
+      end;
+    finally
+      LBmp.Free;
+    end;
   end;
 begin
   Result := drCancel;
@@ -478,23 +546,57 @@ begin
     PnlBody.Color := TColor(Tokens.Surface and $00FFFFFF);
     PnlBody.ParentBackground := False;
 
-    LblSummary := TLabel.Create(PnlBody);
-    LblSummary.Parent := PnlBody;
-    LblSummary.Left := ScalePx(16);
-    LblSummary.Top := ScalePx(8);
-    LblSummary.Width := DlgForm.ClientWidth - ScalePx(32);
-    LblSummary.WordWrap := True;
-    LblSummary.Caption := AOptions.Summary;
-    LblSummary.Font.Name := Tokens.FontFamily;
-    LblSummary.Font.Size := Round(Tokens.SizeS);
-    LblSummary.Font.Color := TColor(Tokens.Ink and $00FFFFFF);
+    // WO-20260926-0294 T1/T2：正文改用全宽只读 TMemo（替代静态窄 TLabel）。
+    // 根因：TLabel 在父面板尚未 Realign（宽 185）时即按 ~153px 烘焙折行，
+    // 且 akLeft/akTop 锚定使其永不拓宽。TMemo 显式定界 + 四向锚定，
+    // 彻底消除左侧挤缩；同时获得滚动与划选复制能力。
+    MemSummary := TMemo.Create(PnlBody);
+    MemSummary.Parent := PnlBody;
+    MemSummary.Left := ScalePx(20);
+    MemSummary.Top := ScalePx(8);
+    MemSummary.Width := DlgForm.ClientWidth - ScalePx(40);
+    MemSummary.BorderStyle := bsNone;
+    MemSummary.ReadOnly := True;
+    MemSummary.WordWrap := True;
+    MemSummary.WantReturns := False;
+    MemSummary.HideSelection := False;
+    MemSummary.ScrollBars := ssNone;
+    MemSummary.Color := TColor(Tokens.Surface and $00FFFFFF);
+    MemSummary.Font.Name := Tokens.FontFamily;
+    MemSummary.Font.Size := Round(Tokens.SizeS);
+    MemSummary.Font.Color := TColor(Tokens.Ink and $00FFFFFF);
+    // 固定尺寸对话框（bsDialog 不可拉伸）：保持默认 [akLeft, akTop]，
+    // 显式边界永久有效。切勿加 akRight/akBottom——父面板在 ClientHeight
+    // 赋值时 274→129 收缩会把锚定控件的高度钳制为 0（实机 dump 取证）。
+    MemSummary.Text := AOptions.Summary;
+
+    // 高度自适应：短文本收敛（告别 380 大黑框两行字），超长截断改滚动。
+    LNeedH := MeasureSummaryHeight(AOptions.Summary, MemSummary.Width) + ScalePx(8);
+    if AOptions.Kind in [dkPrompt, dkPromptReason] then
+    begin
+      // 输入区固定占位（标签 70 / 输入 94+110）：正文区让行，可滚。
+      LBodyH := ScalePx(274);
+      MemSummary.Height := ScalePx(52);
+    end
+    else
+    begin
+      LBodyH := LNeedH + ScalePx(16);
+      if LBodyH < ScalePx(64) then
+        LBodyH := ScalePx(64);
+      if LBodyH > ScalePx(280) then
+        LBodyH := ScalePx(280);
+      MemSummary.Height := LBodyH - ScalePx(16);
+    end;
+    if LNeedH > MemSummary.Height then
+      MemSummary.ScrollBars := ssVertical;
+    DlgForm.ClientHeight := ScalePx(54) + LBodyH + ScalePx(52);
 
     // Optional Prompt Input Zone
     if AOptions.Kind in [dkPrompt, dkPromptReason] then
     begin
       LblPrompt := TLabel.Create(PnlBody);
       LblPrompt.Parent := PnlBody;
-      LblPrompt.Left := ScalePx(16);
+      LblPrompt.Left := ScalePx(20);
       LblPrompt.Top := ScalePx(70);
       LblPrompt.Caption := AOptions.PromptLabel;
       LblPrompt.Font.Name := Tokens.FontFamily;
@@ -505,9 +607,9 @@ begin
       begin
         var Memo := TMemo.Create(PnlBody);
         Memo.Parent := PnlBody;
-        Memo.Left := ScalePx(16);
+        Memo.Left := ScalePx(20);
         Memo.Top := ScalePx(94);
-        Memo.Width := DlgForm.ClientWidth - ScalePx(32);
+        Memo.Width := DlgForm.ClientWidth - ScalePx(40);
         Memo.Height := ScalePx(110);
         Memo.Text := AOptions.DefaultInput;
         EdtInput := Memo;
@@ -516,9 +618,9 @@ begin
       begin
         var Edit := TEdit.Create(PnlBody);
         Edit.Parent := PnlBody;
-        Edit.Left := ScalePx(16);
+        Edit.Left := ScalePx(20);
         Edit.Top := ScalePx(94);
-        Edit.Width := DlgForm.ClientWidth - ScalePx(32);
+        Edit.Width := DlgForm.ClientWidth - ScalePx(40);
         Edit.Height := ScalePx(32);
         Edit.Text := AOptions.DefaultInput;
         EdtInput := Edit;
@@ -527,26 +629,52 @@ begin
     else
       EdtInput := nil;
 
-    // Footer Buttons
-    BtnOk := TButton.Create(PnlFooter);
+    // WO-20260926-0294 T3：底栏升级为 HB 胶囊矢量按钮（替代 Win95 原生 TButton）。
+    // 注：THbBtnKind 无 bkDefault，按语义取最接近的高亮主色 bkPrimary；取消取 bkGhost。
+    // 右下锚定（akRight/akBottom），与底栏边距保持 16/10px，杜绝高 DPI 截断脱位。
+    LBridgeOk := TDialogModalBridge.Create(DlgForm);
+    LBridgeOk.FForm := DlgForm;
+    LBridgeOk.FResult := mrOk;
+    BtnOk := THbButton.Create(PnlFooter);
     BtnOk.Parent := PnlFooter;
+    BtnOk.Kind := bkPrimary;
+    BtnOk.Pill := True;
     BtnOk.Width := ScalePx(86);
     BtnOk.Height := ScalePx(32);
     BtnOk.Top := ScalePx(10);
     BtnOk.Left := DlgForm.ClientWidth - ScalePx(16 + 86);
+    BtnOk.Anchors := [akRight, akBottom];
     BtnOk.Caption := '确定';
     if AOptions.OkCaption <> '' then
       BtnOk.Caption := AOptions.OkCaption;
-    BtnOk.ModalResult := mrOk;
+    BtnOk.TabStop := True;
+    BtnOk.OnClick := LBridgeOk.HandleClick;
 
-    BtnCancel := TButton.Create(PnlFooter);
+    LBridgeCancel := TDialogModalBridge.Create(DlgForm);
+    LBridgeCancel.FForm := DlgForm;
+    LBridgeCancel.FResult := mrCancel;
+    BtnCancel := THbButton.Create(PnlFooter);
     BtnCancel.Parent := PnlFooter;
+    BtnCancel.Kind := bkGhost;
+    BtnCancel.Pill := True;
     BtnCancel.Width := ScalePx(86);
     BtnCancel.Height := ScalePx(32);
     BtnCancel.Top := ScalePx(10);
     BtnCancel.Left := BtnOk.Left - ScalePx(10 + 86);
+    BtnCancel.Anchors := [akRight, akBottom];
     BtnCancel.Caption := '取消';
-    BtnCancel.ModalResult := mrCancel;
+    if AOptions.CancelCaption <> '' then
+      BtnCancel.Caption := AOptions.CancelCaption;
+    BtnCancel.TabStop := True;
+    BtnCancel.OnClick := LBridgeCancel.HandleClick;
+
+    // 键盘等价：回车确认（输入框内除外）/ Esc 取消（替代 TButton.Default/Cancel）。
+    LBridgeKeys := TDialogModalBridge.Create(DlgForm);
+    LBridgeKeys.FForm := DlgForm;
+    LBridgeKeys.FEdit := EdtInput;
+    DlgForm.KeyPreview := True;
+    DlgForm.OnKeyDown := LBridgeKeys.HandleKeyDown;
+    DlgForm.ActiveControl := BtnOk;
 
     var ModalRes: TModalResult;
     if Assigned(FModalRunner) then
