@@ -1,0 +1,59 @@
+# WO-20260926-AUDIT-甲-A6-04：旧 D3 工单 §三 7 判据以当前 HEAD 逐条实测（不采信台账转述）
+# 生成：2026-09-26 12:55:16  master @ c4b09bf
+# 判据面原件：CodeReview/20260926-AUDIT-甲-A6-证据/隔离树复跑/A6-02-全量面all-@2791658+delta.log（隔离 --detach 工作树 @2791658 + A6 改动的 --all 全量跑录）
+
+## 判据 1 隔离工作树跑出 EXIT=0
+结论：不成立（非门禁之过）。
+ALL_EXIT=1
+唯一红 = Tests/DeepBaseTests.dpr（既存，主控并网笔），归因见 A6-01-T0既有红归因与停机上报.txt；
+门禁自身的绿能力由负样本 ④/⓬/㉞（合法工程 EXIT=0）与甲 D7 在册结论共同背书。
+
+## 判据 2 .dpr 总数与独立复算一致
+$ git ls-files '*.dpr' | wc -l  => 65   （跑录 DPR总数=65）
+$ git ls-files '*.dpk' | wc -l  => 25   （跑录 DPK总数=25）
+判定面 = 已跟踪：
+编译门禁统计：判定面=90 已跟踪=90 清单来源=all .res生成=18 编译器=dcc64.exe 陈旧DCU清理=0
+
+## 判据 3 三条 fail-closed 逐型实测
+  80:expectExit('负样本①不存在根', runGate(['--all', '--root', path.join(os.tmpdir(), 'buildgate-no-such-root-' + Date.now())]), 2,
+  86:  expectExit('负样本②空扫描', runGate(['--all', '--root', root]), 2, ['待编译 .dpr 计数为 0']);
+  105:  expectExit('负样本⑤未跟踪 .dpr', runGate(['--all', '--root', root]), 2, ['未跟踪但存在的 .dpr']);
+  112:  expectExit('负样本⑥索引与工作树不一致', runGate(['--all', '--root', root]), 2, ['git 索引里有、工作树里却没有']);
+  140:  expectExit('负样本⑦部分扫描（readdir 注入失败）', { code: r.status, out: (r.stdout || '') + (r.stderr || '') }, 2,
+  197:  expectExit('包面负样本⓭故意改坏 .dpk', res, 1, ['BadPkg.dpk', 'BUILD_EXIT=1', 'DPK总数=1', '失败=1', '被跳过=0', 'Error: E2010']);
+  198:  if (/Fatal:/.test(res.out)) bug('包面负样本⓭：输出含 Fatal: ——「改坏」退化成了 F 类断裂（文件缺失/依赖不可解析），不能证明包体被编译');
+  206:  expectExit('包面负样本⓮整面声明落空', runGate(['--manifest', mf, '--root', root]), 2, ['整面 all-dpk 计数为 0']);
+  231:  expectExit('包面负样本⓯部分扫描（.dpk 目录 readdir 注入失败）', { code: r.status, out: (r.stdout || '') + (r.stderr || '') }, 2,
+  239:  expectExit('包面负样本⓰未跟踪 .dpk', runGate(['--all', '--root', root]), 2, ['未跟踪但存在的 .dpk']);
+  243:expectExit('负样本⓱--manifest 文件不存在', runGate(['--manifest', path.join(os.tmpdir(), 'buildgate-no-such-manifest-' + Date.now() + '.txt'), '--root', makeRepo('mfmissing', { 'OkPkg.dpk': OK_DPK })]), 2,
+  248:  expectExit('负样本⓲--manifest 清单为空', runGate(['--manifest', mf, '--root', root]), 2, ['--manifest 清单为空']);
+  跑录（逐型 EXIT=2/1 且断言文本命中）：A6-02-负向样本全量跑录.txt 全 41 例 PASS
+
+## 判据 4 负向样本 ≥3 条全红且含故意语法错误
+  样本总数：41 条（含语法断裂③/改坏包 ⓭）
+  9:✓ 负样本③语法断裂 => EXIT=1（含 BadProj.dpr / BUILD_EXIT=1 / 失败=1 / 被跳过=0）
+  24:✓ 包面负样本⓭故意改坏 .dpk => EXIT=1（含 BadPkg.dpk / BUILD_EXIT=1 / DPK总数=1 / 失败=1 / 被跳过=0 / Error: E2010）
+
+## 判据 5 参数解析复用 gate-args.js，无第二套 arg()
+  17:const { parseGateArgs } = require('../gate-args.js');
+  $ grep -nE 'function (arg|parseArgs)\(' 09_工程脚本/build-gate/*.js
+  （无命中=0，唯一实现是 gate-args.js 的 parseGateArgs）
+
+## 判据 6 脚本 + 负向样本 + 说明全部入库
+  09_工程脚本/build-gate/README-编译门禁.md
+  09_工程脚本/build-gate/check_build.js
+  09_工程脚本/build-gate/contracts/T0-生产契约面.txt
+  09_工程脚本/build-gate/contracts/T1-观测面.txt
+  09_工程脚本/build-gate/contracts/T2-待定面.txt
+  09_工程脚本/build-gate/contracts/命名空间声明.txt
+  09_工程脚本/build-gate/noise-baseline.json
+  09_工程脚本/build-gate/test_negative_sample.js
+  09_工程脚本/build-gate/test_noise.js
+
+## 判据 7 既有四道门禁仍全绿
+  逐子项复跑原件：A6-01-四门复跑.txt / A6-02-四门复跑.txt / A6-03-四门复跑.txt（各 4 × EXIT=0）
+
+## 本项唯一改动（不成立项的补法）
+  b6a6b69：require.main 守卫使注入式负样本 ⑦/⓯/⓳–㉖ 在 require 路径下静默 EXIT=0（假绿），
+  改 main(argv) + 导出后 10 例恢复真实断言；改前实证与改后跑录同目录留原件。
+  判据 1 不改门禁代码：红源在被判对象（既存红），代码侧无可补。
