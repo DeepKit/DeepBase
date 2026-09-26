@@ -30,8 +30,10 @@ mkdir -p "$DIR"
 
 # 模板本体是 CRLF（与仓内 .dpr 同行尾），sed 只替换单元名占位符，不动行尾
 # 模板刻意不带 {$R *.res}：一次性 runner 没有 IDE 生成的版本资源，留着会编成 E1026 File not found
+# 模板存为 .dpr.template：以 .dpr 入库会被全库编译门扫成生产面红项（主控-乙-B2 验收结论 §二.1 即时轨）
+# 实体化后的跑件仍是真 .dpr，且落在 gitignored 的 .tmp 下，不进任何构建面
 sed "s/__UNIT__/$UNIT_NAME/" \
-  "$ROOT/CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr" > "$DIR/B2FixtureRunner.dpr"
+  "$ROOT/CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr.template" > "$DIR/B2FixtureRunner.dpr"
 
 echo "== 编译一次性 runner（单元: $UNIT_NAME） =="
 # 搜索面与 b2_unit_compile.sh 同一批目录口径，不另立一套

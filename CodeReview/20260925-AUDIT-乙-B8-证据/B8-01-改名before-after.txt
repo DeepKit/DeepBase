@@ -1,0 +1,52 @@
+B8-01 附件改名 .dpr → .dpr.template：before/after 对账
+
+判据来源：WO-20260925-AUDIT-乙-B8 §二 B8-01 判据①（隔离树/工作树 CodeReview/**/*.dpr = 0）
+裁定来源：主控-乙-B2 验收结论 §二.1 即时轨 (b)
+
+== before（HEAD=da846fa 索引在册的 CodeReview/**/*.dpr）
+$ git ls-tree -r HEAD --name-only | grep 'CodeReview.*\.dpr$'
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2-01-premise-probe.dpr
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2Seg0Probe.dpr
+
+== after（改名后索引面）
+$ git ls-files 'CodeReview/**/*.dpr'
+（空，命中 0 件）
+
+$ git ls-files 'CodeReview/**/*.dpr.template'
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2-01-premise-probe.dpr.template
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr.template
+CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2Seg0Probe.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A401_Databinding.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A402_Manager.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A403_Serialization.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A404_IoC.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A405_LogQuery.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A406_PDF.dpr.template
+CodeReview/20260925-AUDIT-甲-A4-证据/附件/A407_DOCX.dpr.template
+（甲 A4 三件系既有登记，非本单改动；本单只动乙 B2 三件，与甲 A4 同一别名约定 ⇒ 口径统一，非新立一套）
+
+== 文件系统面（含未跟踪，确认无漏改）
+$ find CodeReview -name '*.dpr'
+（空，命中 0 件）
+
+== 改名记账（R100 = 字节级零改动纯改名）
+$ git diff --cached --name-status
+R100	.../附件/B2-01-premise-probe.dpr	.../附件/B2-01-premise-probe.dpr.template
+R100	.../附件/B2FixtureRunner.dpr	.../附件/B2FixtureRunner.dpr.template
+R100	.../附件/B2Seg0Probe.dpr	.../附件/B2Seg0Probe.dpr.template
+
+== 探针脚本引用同步（只改证据目录内脚本；门禁脚本与禁动区未碰）
+$ grep -rn "附件/B2FixtureRunner\.dpr\|附件/B2Seg0Probe\.dpr\|premise-probe\.dpr" CodeReview/20260925-AUDIT-乙-B2-证据/*.sh
+b2_nonreentrant_probe.sh:76:  "$ROOT/.../附件/B2FixtureRunner.dpr.template" > "$DIR/B2FixtureRunner.dpr"
+b2_run_fixture.sh:36:          "$ROOT/.../附件/B2FixtureRunner.dpr.template" > "$DIR/B2FixtureRunner.dpr"
+b2_seg0_probe.sh:17:         cp "$HERE/附件/B2Seg0Probe.dpr.template" "$SRC/B2Seg0Probe.dpr"
+
+同步口径：只改「读取仓库内模板」的路径；实体化产物名保持真 .dpr（dcc64 只认 .dpr），
+且落在 gitignored 的 $ROOT/.tmp/b2/ 下 ⇒ 不进任何构建面。
+B2-01-premise-probe.dpr 无任何脚本引用（该探针当时内联跑），故只改名、无同步项。
+
+== 未改动项与理由
+历史证据原件（.txt/.md 内提到旧路径的 25 件，如 B2-段0-探针原始输出.txt、
+收尾原始输出/编译门-all-@09db3c8.txt）属定点时刻原始输出，按 §〇-4「不照抄、不改写原件」
+一律不重写；改名后的实测状态以本文件与 runner 复跑原件为准。

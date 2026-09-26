@@ -12,8 +12,9 @@ SRC="$ROOT/.tmp/b2"
 OUT="$SRC/out"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"
-# 探针源件在册落在本证据目录的 附件/ 下，复算时复制进 .tmp 再编（证据不依赖 gitignored 目录）。
-cp "$HERE/附件/B2Seg0Probe.dpr" "$SRC/"
+# 探针源件在册落在本证据目录的 附件/ 下（存为 .dpr.template，避免以 .dpr 入库被全库编译门扫成红项），
+# 复算时复制成 .tmp 下的真 .dpr 再编（证据不依赖 gitignored 目录）。
+cp "$HERE/附件/B2Seg0Probe.dpr.template" "$SRC/B2Seg0Probe.dpr"
 
 echo "== 编译器版本 =="
 "$DCC" -b 2>&1 | head -2

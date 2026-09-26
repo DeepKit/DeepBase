@@ -73,7 +73,7 @@ grep -n "B2NoReentrantLock" "$DIR/DeepFlow.Workflow.Context.pas" \
 
 # 3) 一次性 runner（与 b2_run_fixture.sh 同一模板，不另立口径）
 sed "s/__UNIT__/$UNIT_NAME/" \
-  "$ROOT/CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr" > "$DIR/B2FixtureRunner.dpr"
+  "$ROOT/CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr.template" > "$DIR/B2FixtureRunner.dpr"
 
 U="$DIR;$ROOT/Core;$ROOT/Features;$ROOT/Persistence;$ROOT/VCL;$ROOT/FMX;$ROOT/Governance"
 U="$U;$ROOT/Tests;$ROOT/Tests/Regression;$ROOT/Tests/Integration;$ROOT/DeepFlow/Source"
