@@ -80,8 +80,10 @@ function failScan(msg) {
   process.exit(EXIT_SCAN_FAILED);
 }
 
-function main() {
-  const opts = parseGateArgs(process.argv.slice(2), {
+// argv 显式入参：注入式负样本（test_negative_sample.js ⑦/⓯/⓳-㉖）在【门禁自身进程】内替换 fs 后
+// 调用本函数——main 挂在 require.main 守卫后，require 不触发判定，静默 EXIT=0 就是假绿。
+function main(argv) {
+  const opts = parseGateArgs(argv || process.argv.slice(2), {
     label: '编译',
     root: REPO_ROOT,
     baseline: NOISE_BASELINE,
@@ -706,4 +708,4 @@ function cleanSourceDcus(root, before) {
 
 if (require.main === module) main();
 
-module.exports = { parseNoise, sumCodes, compareAgainstBaseline, compareNoise };
+module.exports = { main, parseNoise, sumCodes, compareAgainstBaseline, compareNoise };

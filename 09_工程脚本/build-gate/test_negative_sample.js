@@ -131,7 +131,7 @@ expectExit('负样本①不存在根', runGate(['--all', '--root', path.join(os.
     '  return real.call(fs, p, ...a);',
     '};',
     'process.argv = [process.execPath, process.env.BG_GATE, "--all", "--root", process.env.BG_ROOT];',
-    'require(process.env.BG_GATE);',
+    'require(process.env.BG_GATE).main(process.argv.slice(2));',
   ].join('\n'), 'utf8');
   const r = spawnSync(process.execPath, [injector], {
     encoding: 'utf8',
@@ -222,7 +222,7 @@ function writeManifest(root, name, text) {
     '  return real.call(fs, p, ...a);',
     '};',
     'process.argv = [process.execPath, process.env.BG_GATE, "--all", "--root", process.env.BG_ROOT];',
-    'require(process.env.BG_GATE);',
+    'require(process.env.BG_GATE).main(process.argv.slice(2));',
   ].join('\n'), 'utf8');
   const r = spawnSync(process.execPath, [injector], {
     encoding: 'utf8',
@@ -273,7 +273,7 @@ function runWithNamespace(contractText, args, throwOnRead) {
     '  return real.call(fs, process.env.BG_NS_REPL, ...a);',
     '};',
     'process.argv = [process.execPath, process.env.BG_GATE, ...JSON.parse(process.env.BG_ARGV)];',
-    'require(process.env.BG_GATE);',
+    'require(process.env.BG_GATE).main(process.argv.slice(2));',
   ].join('\n'), 'utf8');
   const r = spawnSync(process.execPath, [injector], {
     encoding: 'utf8',
