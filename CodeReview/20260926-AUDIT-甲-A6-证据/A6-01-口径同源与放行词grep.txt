@@ -1,0 +1,52 @@
+# WO-20260926-AUDIT-甲-A6-01 判据③：口径同源自证（机械强制实体只在 check_build.js，文档/契约只指不述）
+# 生成：2026-09-26 12:33:54  工作树 master @ b6a6b69 + A6-01 改动
+
+## 1) 证据面口径在 build-gate 下的全部出现处（实体）
+37:const EVIDENCE_FACE_DIR = 'CodeReview';
+38:const EVIDENCE_FACE_REJECT = '证据附件不得进生产编译面（口径唯一源：check_build.js 的 EVIDENCE_FACE_DIR，README §二 / T0 契约注释指向此处）';
+369:  if (isEvidenceFacePath(rel)) {
+370:    failScan(`${origin} 条目指向 ${EVIDENCE_FACE_DIR}/** 证据附件面：${rel}——${EVIDENCE_FACE_REJECT}`);
+379:function isEvidenceFacePath(rel) {
+380:  return rel.toLowerCase().startsWith(EVIDENCE_FACE_DIR.toLowerCase() + '/');
+
+## 2) 文档/契约侧只出现指针名，不出现退出码/判定分支复述
+09_工程脚本/build-gate/README-编译门禁.md:19:`CodeReview/20260921-AUDIT-主控-乙-P0-HEAD编译断裂修复-请求审核报告.md`：
+09_工程脚本/build-gate/README-编译门禁.md:34:`CodeReview/20260923-AUDIT-甲-D4-证据/D4-10-运行元数据与耗时口径.txt`；
+09_工程脚本/build-gate/README-编译门禁.md:61:4. **证据附件不进编译面**：`CodeReview/**` 下的探针/夹具不是工程真相源，不得被显式点名或清单条目
+09_工程脚本/build-gate/README-编译门禁.md:110:`CodeReview/20260923-AUDIT-甲-D4-证据/D4-04-判据4-判定路径grep.txt`）。
+09_工程脚本/build-gate/README-编译门禁.md:147:`CodeReview/20260923-AUDIT-甲-D3-交付回执.md`。
+09_工程脚本/build-gate/README-编译门禁.md:150:`CodeReview/20260923-AUDIT-甲-D4-交付回执.md`（属 D5/丁类等其它工单范围，本单不修、只如实照出；
+
+## 3) README §四 放行词 grep 口径（命中仍只允许 gateSkipSet 三行）
+$ grep -inE "skip|exempt|whitelist" 09_工程脚本/build-gate/check_build.js | grep -v 被跳过
+18:const { gateSkipSet } = require('../gate-skip.js');
+40:// 与其余四道门共用 gate-skip 的目录名集（`Logs` 是本门专属：dcc64 的编译日志落处）。
+42:const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
+
+## 4) resolveProject 咽喉全貌：证据面拒绝之后仍有已跟踪校验，无任何放行分支
+$ grep -n "" check_build.js | sed -n "358,382p"
+358:// 点名的工程必须是本仓已跟踪的、且扩展名与所给参数一致：拼错的路径不会静默缩小扫描面，直接红。
+359:// face 参数为显式点名时限定扩展名（--dpk 不接受 .dpr），清单里靠扩展名自己归面，故传 null。
+360:function resolveProject(root, v, tracked, origin, face) {
+361:  const abs = path.resolve(root, v);
+362:  const rel = path.relative(root, abs).split(path.sep).join('/');
+363:  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) {
+364:    failScan(`${origin} 落在 --root 之外：${v}（root=${root}）`);
+365:  }
+366:  const got = FACES.find(f => rel.toLowerCase().endsWith(f.ext));
+367:  if (!got) failScan(`${origin} 只接受 .dpr 或 .dpk 工程文件：${rel}`);
+368:  if (face && got !== face) failScan(`${origin} 要的是 ${face.label}，给的是 ${got.label}：${rel}`);
+369:  if (isEvidenceFacePath(rel)) {
+370:    failScan(`${origin} 条目指向 ${EVIDENCE_FACE_DIR}/** 证据附件面：${rel}——${EVIDENCE_FACE_REJECT}`);
+371:  }
+372:  if (!tracked[got.key].includes(rel)) {
+373:    failScan(`${origin} 不是本仓已跟踪的 ${got.label}：${rel}（拼错的根/路径不会静默缩小扫描面，直接红）`);
+374:  }
+375:  return rel;
+376:}
+377:
+378:// 路径是否落在证据附件面下（大小写不敏感，与扩展名判定同一口径）。
+379:function isEvidenceFacePath(rel) {
+380:  return rel.toLowerCase().startsWith(EVIDENCE_FACE_DIR.toLowerCase() + '/');
+381:}
+382:

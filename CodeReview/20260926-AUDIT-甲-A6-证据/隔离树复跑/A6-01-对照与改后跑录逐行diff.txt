@@ -1,0 +1,8 @@
+# WO-20260926-AUDIT-甲-A6-01 判据①：同 commit（b6a6b69）对照 vs 打完 A6-01 的 T0 跑录逐行 diff
+# 生成：2026-09-26 12:39:32
+# 口径：剥离注释头与 EXIT 行后逐行比；唯一差异 = 末行工作树改动清单（对照树 0 件，改后树 M check_build.js）
+
+$ diff <(对照) <(改后)
+34a35
+>  M 09_工程脚本/build-gate/check_build.js
+DIFF_EXIT=1

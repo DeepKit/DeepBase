@@ -30,6 +30,13 @@ const FACES = [
 // 清单文件里的整面选择子：写 all-dpk 而不是抄 25 条路径，新增包自动进面，杜绝「清单漏更新」这种静默缩面。
 const FACE_SELECTOR = new Map(FACES.map(f => [`all-${f.key}`, f]));
 
+// 证据附件面（WO-20260926-AUDIT-甲-A6-01）。口径唯一一处在本文件，README §二 与契约注释只指向这里：
+//   CodeReview/** 下的证据件（探针、夹具）不是工程真相源，不得被显式点名/清单条目拉进任何编译判定面。
+// 这是机械强制，不是第二套路径白名单：白名单放行谁=门禁 bypass（禁止），本口径回答的是「证据目录根本
+// 不是工程真相源」——与 BUILD_ARTIFACT_DIRS 屏蔽 CI 产物目录同类，判定路径上依然没有按工程放行形态。
+const EVIDENCE_FACE_DIR = 'CodeReview';
+const EVIDENCE_FACE_REJECT = '证据附件不得进生产编译面（口径唯一源：check_build.js 的 EVIDENCE_FACE_DIR，README §二 / T0 契约注释指向此处）';
+
 // 与其余四道门共用 gate-skip 的目录名集（`Logs` 是本门专属：dcc64 的编译日志落处）。
 // 这是「枚举面」的定义，不是「范围内放行谁」——判定面内每一个工程都编、都判，红就红。
 const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
@@ -359,10 +366,18 @@ function resolveProject(root, v, tracked, origin, face) {
   const got = FACES.find(f => rel.toLowerCase().endsWith(f.ext));
   if (!got) failScan(`${origin} 只接受 .dpr 或 .dpk 工程文件：${rel}`);
   if (face && got !== face) failScan(`${origin} 要的是 ${face.label}，给的是 ${got.label}：${rel}`);
+  if (isEvidenceFacePath(rel)) {
+    failScan(`${origin} 条目指向 ${EVIDENCE_FACE_DIR}/** 证据附件面：${rel}——${EVIDENCE_FACE_REJECT}`);
+  }
   if (!tracked[got.key].includes(rel)) {
     failScan(`${origin} 不是本仓已跟踪的 ${got.label}：${rel}（拼错的根/路径不会静默缩小扫描面，直接红）`);
   }
   return rel;
+}
+
+// 路径是否落在证据附件面下（大小写不敏感，与扩展名判定同一口径）。
+function isEvidenceFacePath(rel) {
+  return rel.toLowerCase().startsWith(EVIDENCE_FACE_DIR.toLowerCase() + '/');
 }
 
 // 外部契约清单：每行一个仓内相对路径或整面选择子（all-dpr / all-dpk），# 起注释，空行忽略。

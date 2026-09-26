@@ -1,0 +1,42 @@
+# WO-20260926-AUDIT-甲-A6-01 判据①：隔离工作树 T0 复跑（HEAD b6a6b69 + A6-01 未提交改动）
+# 命令：node 09_工程脚本/build-gate/check_build.js --manifest <工作树内 T0 绝对路径>
+# 工作树：git worktree add --detach .tmp/wt_a6b b6a6b69；仅 check_build.js 被替换为含 A6-01 delta 的版本（见下方 git status）
+# 开始：2026-09-26 12:33:19
+
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=1 HINT=46 WARN=2
+  Tests/DeepBaseTests.dpr 编译失败：Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+[dpk 1/25] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=19 WARN=0
+[dpk 2/25] DeepBaseServices.dpk CONFIG=DeepBaseServices.dproj BUILD_EXIT=0 HINT=8 WARN=2
+[dpk 3/25] DeepAxis.dpk CONFIG=DeepAxis.dproj BUILD_EXIT=0 HINT=11 WARN=4
+[dpk 4/25] DeepBaseBrowser.dpk CONFIG=DeepBaseBrowser.dproj BUILD_EXIT=0 HINT=18 WARN=4
+[dpk 5/25] DeepBaseCommerce.dpk CONFIG=DeepBaseCommerce.dproj BUILD_EXIT=0 HINT=8 WARN=2
+[dpk 6/25] DeepBasePlatform.dpk CONFIG=DeepBasePlatform.dproj BUILD_EXIT=0 HINT=18 WARN=6
+[dpk 7/25] DeepBaseDataPlatform.dpk CONFIG=DeepBaseDataPlatform.dproj BUILD_EXIT=0 HINT=21 WARN=8
+[dpk 8/25] DeepBaseLLM.dpk CONFIG=DeepBaseLLM.dproj BUILD_EXIT=0 HINT=21 WARN=6
+[dpk 9/25] DeepBaseIntentClarification.dpk CONFIG=DeepBaseIntentClarification.dproj BUILD_EXIT=0 HINT=21 WARN=6
+[dpk 10/25] DeepBaseInference.dpk CONFIG=DeepBaseInference.dproj BUILD_EXIT=0 HINT=8 WARN=2
+[dpk 11/25] DeepBaseSpeechCore.dpk CONFIG=DeepBaseSpeechCore.dproj BUILD_EXIT=0 HINT=9 WARN=2
+[dpk 12/25] DeepBaseFeatures.dpk CONFIG=DeepBaseFeatures.dproj BUILD_EXIT=0 HINT=35 WARN=10
+[dpk 13/25] DeepBaseFMX.dpk CONFIG=DeepBaseFMX.dproj BUILD_EXIT=0 HINT=45 WARN=23
+[dpk 14/25] DeepBasePersistence.dpk CONFIG=DeepBasePersistence.dproj BUILD_EXIT=0 HINT=23 WARN=2
+[dpk 15/25] DeepBaseGovernance.dpk CONFIG=DeepBaseGovernance.dproj BUILD_EXIT=0 HINT=36 WARN=6
+[dpk 16/25] DeepBaseSpeechASR.dpk CONFIG=DeepBaseSpeechASR.dproj BUILD_EXIT=0 HINT=11 WARN=2
+[dpk 17/25] DeepBaseSpeechTTS.dpk CONFIG=DeepBaseSpeechTTS.dproj BUILD_EXIT=0 HINT=10 WARN=2
+[dpk 18/25] DeepBaseSpeechVoice.dpk CONFIG=DeepBaseSpeechVoice.dproj BUILD_EXIT=0 HINT=9 WARN=2
+[dpk 19/25] DeepBaseSpeechWake.dpk CONFIG=DeepBaseSpeechWake.dproj BUILD_EXIT=0 HINT=10 WARN=2
+[dpk 20/25] DeepBaseVCL.dpk CONFIG=DeepBaseVCL.dproj BUILD_EXIT=0 HINT=51 WARN=11
+[dpk 21/25] Examples/PluginExample/SamplePluginPkg.dpk CONFIG=default BUILD_EXIT=0 HINT=0 WARN=0
+[dpk 22/25] Tests/Regression/R7P4Probe.dpk CONFIG=default BUILD_EXIT=0 HINT=0 WARN=2
+[dpk 23/25] dclDeepBaseCore.dpk CONFIG=dclDeepBaseCore.dproj BUILD_EXIT=0 HINT=0 WARN=0
+[dpk 24/25] dclDeepBaseFMX.dpk CONFIG=dclDeepBaseFMX.dproj BUILD_EXIT=0 HINT=45 WARN=23
+[dpk 25/25] dclDeepBaseVCL.dpk CONFIG=dclDeepBaseVCL.dproj BUILD_EXIT=0 HINT=51 WARN=11
+编译门禁统计：DPR总数=1 成功=0 失败=1 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=25 成功=25 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=26 已跟踪=90 清单来源=manifest:T0-生产契约面.txt .res生成=2 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=534 Warning=140 按码=H2077=338,H2219=127,W1033=77,H2164=41,H2443=24,W1000=12,W1010=12,W1050=10,W1073=10,W1024=7,W1035=7,H2269=4,W1036=4,W1057=1
+编译门禁失败：1 个工程编译不过
+  Tests/DeepBaseTests.dpr EXIT=1  Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+T0_EXIT=1
+# 结束：2026-09-26 12:35:43
+# 工作树被改动文件：
+ M 09_工程脚本/build-gate/check_build.js

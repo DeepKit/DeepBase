@@ -1,0 +1,43 @@
+# WO-20260926-AUDIT-甲-A6-01 判据① 附属上报：T0 面既有红（非本单引入），归因证据
+# 生成：2026-09-26 12:36:19  master @ b6a6b69
+# 结论：A6-01 判据①「隔离树 T0 复跑 EXIT=0」的分母已不成立——T0 在本单开工前即为 EXIT=1。
+#       对照见 隔离树复跑/A6-00-T0对照基线-@e721af4-无patch.log 与 A6-01-T0复跑-@b6a6b69+delta.log（逐件 BUILD_EXIT 与统计行全等）。
+
+## 1) 唯一红项
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=1 HINT=46 WARN=2
+  Tests/DeepBaseTests.dpr 编译失败：Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+  Tests/DeepBaseTests.dpr EXIT=1  Test.DeepBase.DoQry.Literal.pas(27) Fatal: F2613 Unit 'uDoQryLegacy' not found.
+
+## 2) 缺什么：引用面与搜索面差一个目录
+-- 报错处：
+6:  被测面：uDoQryLegacy.QuoteValue —— legacy SQL 文本构建器里唯一「不带类型信息」的值出口
+27:  uDoQryLegacy;
+-- 单元在仓且已跟踪：
+doQry/uDoQryLegacy.pas
+-- Tests/DeepBaseTests.dproj 的 DCC_UnitSearchPath（无 ..\doQry）：
+$(DCC_UnitSearchPath)
+..\Core
+..\DeepFlow\Source\AI
+..\DeepFlow\Source\Core
+..\DeepFlow\Source\Roles
+..\DeepFlow\Source\Workflow
+..\FMX
+..\Features
+..\Governance
+..\Persistence
+..\ThirdParty\Payment
+..\ThirdParty\Social
+..\Tools\CLI
+..\Tools\WebService
+..\VCL
+
+## 3) 三方 git log -1（谁最后碰过这三个文件）
+-- Tests/DeepBaseTests.dpr
+c5d6658 2026-09-26 docs(audit): 乙 B2 验收 ACCEPTED 13/13 + 8 条裁定落地，派生乙 B8 收尾单
+-- Tests/Test.DeepBase.DoQry.Literal.pas
+e4a9720 2026-09-26 fix(乙-B2-13): 关掉 QuoteValue「像数值就原样拼」的通道，并把本文件两套引号器合一
+-- doQry/uDoQryLegacy.pas
+e4a9720 2026-09-26 fix(乙-B2-13): 关掉 QuoteValue「像数值就原样拼」的通道，并把本文件两套引号器合一
+
+## 4) 处置：本单边界=只动 09_工程脚本/build-gate/**（§二 A6-01 边界），禁动区含 Tests/DeepBaseTests.dpr；
+#       搜索面补目录属并网收口笔，归主控（乙 B8-04 已登记 uDoQryExecutor 转正前置条件）。甲不改、不绕、不为凑绿加 uses。

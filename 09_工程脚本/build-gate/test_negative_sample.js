@@ -1,5 +1,5 @@
 // 编译门禁负向样本（WO-20260923-AUDIT-甲-D3 §2.4；WO-20260923-AUDIT-甲-D4 §3.2/§3.3 补包面与清单面；
-// WO-20260924-AUDIT-甲-D7 段4 补命名空间声明面）
+// WO-20260924-AUDIT-甲-D7 段4 补命名空间声明面；WO-20260926-AUDIT-甲-A6-01 补证据附件面拒绝）
 //
 // 这道门的价值全在「红得可信」上：S-3 的根因不是没人编译，而是没有任何机械判定，
 // 所以负向样本必须证明三件事——
@@ -348,6 +348,21 @@ expectExit('命名空间负样本㉔声明未被判定面命中', runWithNamespa
   expectExit('目录名集正对照㉘-ctl：非跳过目录下的未跟踪 .dpr 必红', runGate(['--all', '--root', ctlRoot]), 2,
     ['未跟踪但存在的 .dpr', 'Ghost.dpr']);
   say(`✓ 目录名集负样本㉘共享口径下的 CI 产物不进判定面 => EXIT=${skip.code}（输出不含 Ghost.dpr）`);
+}
+
+// ---- 以下为 WO-20260926-AUDIT-甲-A6-01 新增：证据附件面（CodeReview/**）的显式条目拒绝 ----
+// 证的是「回归手写证据路径进契约面/点名面」这条通道是死的：清单条目与显式点名同走 resolveProject
+// 一个咽喉（读清单逐行也调它），一处拒绝覆盖两种入口；归因必须打印出【是哪个条目】，只报码不算取证。
+{
+  const root = makeRepo('evidence-entry', {
+    'CodeReview/证据/附件/Probe.dpr': OK_DPR,
+    'OkProj.dpr': OK_DPR,
+  });
+  const mf = writeManifest(root, 'with-evidence.txt', 'OkProj.dpr\nCodeReview/证据/附件/Probe.dpr\n');
+  expectExit('证据面负样本㉙--manifest 条目指向 CodeReview/**', runGate(['--manifest', mf, '--root', root]), 2,
+    ['证据附件不得进生产编译面', 'CodeReview/证据/附件/Probe.dpr']);
+  expectExit('证据面负样本㉚--dpr 点名 CodeReview/**', runGate(['--dpr', 'CodeReview/证据/附件/Probe.dpr', '--root', root]), 2,
+    ['证据附件不得进生产编译面', 'CodeReview/证据/附件/Probe.dpr']);
 }
 
 for (const p of trashFiles) {
