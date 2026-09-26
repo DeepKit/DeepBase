@@ -4,3 +4,5 @@ build-T0 EXIT=1
 runner EXIT=0
 attrib EXIT=1
 attrib2 EXIT=1
+unit-compile EXIT=0
+fixture EXIT=0

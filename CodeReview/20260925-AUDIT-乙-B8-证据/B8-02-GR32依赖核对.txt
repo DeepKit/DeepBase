@@ -1,0 +1,62 @@
+B8-02 RegionLocator 改引仓内 GR32 —— 实测结论：前置事实已不成立（§〇-4 上报，不绕）
+
+工单判据来源：WO-20260925-AUDIT-乙-B8 §二 B8-02 / 主控-乙-B2 验收结论 §二.4
+裁定原文（引用不转述）：「RegionLocator 的 GR32 依赖决策主控自决——仓内已有 GR32（wyjx 线引入），
+  直接改引仓内 ThirdParty/ 或仓内既有路径，不引外部库路径、不新增 vendored 拷贝」
+
+== 一、代码事实（三条命令自证，均为本单现查）
+1) RegionLocator 的 uses 清单里没有任何 GR32/Graphics32：
+$ awk '/^uses/{p=1} p{print} /;/{if(p){exit}}' Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas
+uses
+  System.SysUtils, System.Types, System.Classes, System.Math,
+  Winapi.Windows,
+  DeepBase.Desktop.Perception.ColorMatch;
+⇒ 判据③「rg -n "GR32" … 指向仓内单元」的实测结果是 0 命中：不存在待改引的外部位图依赖。
+
+2) 全仓代码面（.pas/.dpr/.dpk）零 GR32 引用：
+$ git grep -ln "GR32\|Graphics32" -- '*.pas' '*.dpr' '*.dpk'
+（空）
+$ git grep -in "graphics32\|gr32" -- '*.dproj' '*.dpk' '*.groupproj' '*.inc' '*.cfg'
+（空）⇒ 也没有任何工程文件配置了外部库搜索路径（裁定担心的「引外部库路径」当前不存在，
+   本单也没有新增）。
+
+3) 全仓不存在名为 GR32/Graphics32 的单元文件（含 ThirdParty/）：
+$ git ls-files | grep -i "gr32\|graphics32"
+（空）
+ThirdParty/ 现状只有 Cloud/DB/Payment/Social/UI 五组 DeepBase.* 自研适配件，无第三方库拷贝。
+⇒ 裁定所依据的「仓内已有 GR32（wyjx 线引入）」在代码面不成立；GR32 字样只存在于
+   wyjx 期的历史汇报文档（FINAL_SUMMARY_REPORT.md:282、FINAL_ZH_REPORT.md:303/388-390、
+   history*.md），那些是当时状态的叙述，与当前索引内容不一致。
+   另据乙 B2 段0 取证（B2-段0-开工取证.md:71）：本机 graphics32 4.x 的核心单元名是 GR32.pas，
+   连 `Graphics32` 单元名本身都不存在——B2 当时登记的是「差一次依赖决策」，
+   而该决策在 B2-05 落笔时已被「复用仓内像素层」这条实现路径取代。
+
+4) 归属锚点（§〇-4 要求的 git log -1）：
+$ git log -1 --format='%h|%ad|%s' --date=iso -- Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas
+39bce62|2026-09-25 20:56:24 +0800|fix(乙-B2-05): RegionLocator 重写为仓内像素层实现——27 处编译断裂清零、假占位评分与恒真判定移除
+
+== 二、裁定意图的达成方式（不做无谓改动）
+裁定目标是「消外部库依赖、只留仓内实现」。当前实现已经落在仓内像素层
+（TPixelBuffer / TColorMatcher 复用 Features/DeepBase.Desktop.Perception.ColorMatch.pas，
+该单元自带的 TColor32 = type Cardinal 与 wyjx TBitmap32 位布局对齐，见其 :31-33 注释），
+⇒ 意图已达成。为「改引 GR32」而新建 vendored 拷贝或引入外部路径，反而会违反同一裁定的
+「不新增 vendored 拷贝、不引外部库路径」和 §〇-3 禁动面，故本单不改任何生产代码，
+只按判据把「不回归」实测出来。
+
+== 三、判据实测（隔离树 @0e1b8cc，原件见 隔离树复跑/）
+① 单件编译 EXIT=0：
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas
+BUILD_EXIT=0，总 EXIT=0（原件 B8-02-单件编译-RegionLocator-@0e1b8cc.txt）
+② fixture 不回归（B2 验收基线 14/14）：
+$ bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.Desktop.Screen.Click.RegionLocator.pas
+Tests Found 14 / Passed 14 / Failed 0 / Errored 0，RUN_EXIT=0
+（原件 B8-02-fixture-RegionLocator-@0e1b8cc.txt）
+③ rg 指向：0 命中（见 §一.1），依赖面为仓内单元 DeepBase.Desktop.Perception.ColorMatch
+④ 四门 EXIT=0：见本笔 commit 前后跑录（receipt）
+
+== 四、留给主控的一项更正
+`CodeReview/20260925-AUDIT-乙-B2-交付回执.md` §六-2 与验收结论 §二.4 的「差一次 GR32 依赖决策」
+文字已被 B2-05 的实现取代；乙 B2 回执 §六-2 原文转述的是改写前的 uses。
+按「文档不留第二套信息」，本项不改动验收结论原文（主控的裁定记录），只在 B8 回执里登记
+「§二.4 前置事实已不成立，结论面（不引外部库）已达成」。
+Screen.Click 三件不在任何编译 CI 面的登记（§二.4 前半句）仍然成立，归 D3/CI 矩阵单。

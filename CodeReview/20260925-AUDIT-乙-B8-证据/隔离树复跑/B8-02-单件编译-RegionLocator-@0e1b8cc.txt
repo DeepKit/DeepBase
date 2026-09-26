@@ -1,0 +1,9 @@
+================================================================
+单元: Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas   (graphics32 搜索面: 0)
+---- dcc64 原始输出 ----
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+770 lines, 0.12 seconds, 6704 bytes code, 1164 bytes data.
+BUILD_EXIT=0
+
+== 汇总: 任一单元非 0 ⇒ 总 EXIT=1（本探针不吞红） => 0 ==
