@@ -1,8 +1,10 @@
 # WO-20260925-AUDIT-甲-A5 Core 域审阅缺陷修复（9 项）
 
-> 签发：主控 · 2026-09-25
-> 基线锚点：HEAD `b603cc9`（= A4 验收结论提交；A2/A4 全部收口后的叠加态）
+> 签发：主控 · 2026-09-25 · **2026-09-28 正式派出（重锚 HEAD `2dcd1ae`）**
+> 基线锚点：HEAD `2dcd1ae`（原锚 `b603cc9` = A4 验收结论提交；其后经甲 A6、乙 B8、主控 dproj 修复笔 `d80671e` 与台账回填叠加；`git diff b603cc9 2dcd1ae -- Core/ Features/` = **空** ⇒ 本单 9 项目标文件零漂移）
 > 派工对象：**开发 AI 甲**（9 项全部落 Core 域及 Core 侧测试，与乙 B3 零文件重叠）
+> 派发时主控核查（2026-09-28）：九项目标符号逐项 `rg` 抽核全部在册；**文本更正两处**（R04 缺陷文件路径、R03 符号形态）见 §〇-10，按更正执行。
+> 串行纪律：甲线 **A5 第一优先**；A7（CI 门禁收口）排本单验收通过之后，A5 交付验收前不得并开 A7。
 > 缺陷来源：**甲 A4 只读补验单的 8 项判定**（已由主控亲读代码路径复算坐实，结论 `CodeReview/20260925-AUDIT-主控-甲-A4-验收结论.md`）+ 主控三项裁定。本单不是新审阅，是**已验证缺陷的修复执行面**。
 
 ## 〇、开工纪律（对全单生效，违者整单打回）
@@ -16,6 +18,7 @@
 7. **回归前置**：A5-R04（Serialization）动的是高频公共路径，**修复前必须先跑既有 Serialization 相关 fixture 子集并留档基线**——甲 A4 回执明确警示「既有用例可能依赖错类型静默默认」；先有基线再动手，不许修完才发现回归说不清。
 8. **fail-closed 总原则**：异常/失败路径一律显式报错（具体异常类），禁止吞异常、禁止无条件 `Result := True`、禁止兜底默认值掩盖错类型。老板口径「质量优先于兼容，允许 breaking change」。
 9. **编码/行尾**：`.pas` 四门（encoding/eol/mojibake）交付树复跑全 EXIT=0；中文字面量 UTF-8 BOM；探针不入扫描面（`.dpr.template` 别名）。
+10. **派发时文本更正（2026-09-28 主控实测，本单其余内容维持 09-25 原文）**：① R04 缺陷文件是 `Core/DeepBase.Serialization.pas`——`Core/DeepBase.Services.Serialization.pas` 是 80 行门面单元（`rg "IsAllowedType"` 对其命中 0），`TSerializationContext.IsAllowedType` 实测在 `Core\DeepBase.Serialization.pas:630`、白名单 `ALLOWED_TYPES` 在 `:633`、`SameText(...) or ClassName.StartsWith(...)` 绕过臂在 `:647-648`（缺陷仍在）；② R03 符号形态是 `function InitializeEx(out ErrorMsg: string): Boolean`（`:177`/`:655`，非 `procedure`）。本单相关处已同步更正。
 
 ## 一、修单一览
 
@@ -24,7 +27,7 @@
 | A5-R01 | Unbind 退订共享 handler ⇒ 同源兄弟绑定静默失效 | `Core/DeepBase.DataBinding.pas` | 高 | 甲 A4 已复现（唯一失败断言） |
 | A5-R02 | BindingEntry 持裸指针，无析构登记 ⇒ 未解绑即释放 = 真 UAF | 同上 | 高 | **主控裁定：取强路线 (a)** 析构登记自动解绑（见 §二.2） |
 | A5-R03 | 初始化失败时 `FIsInitialized` 未置位 ⇒ Finalize 早退 ⇒ 模块批量泄漏 | `Core/DeepBase.Manager.pas` | 中高 | 按 `FModulesCreated` 标志清理；**不采纳**把 7 处 Create*Storage 改 fail-fast（那是另一种产品语义，超范围） |
-| A5-R04 | 反序列化无值类型校验（AV/堆字节进消息/静默默认）+ 白名单 StartsWith 前缀绕过 | `Core/DeepBase.Services.Serialization.pas` | 高 | 精确匹配 `SameText`；标量赋值前类型校验 |
+| A5-R04 | 反序列化无值类型校验（AV/堆字节进消息/静默默认）+ 白名单 StartsWith 前缀绕过 | `Core/DeepBase.Serialization.pas` | 高 | 精确匹配 `SameText`；标量赋值前类型校验 |
 | A5-R05 | IoC 单例双路径各判单例 ⇒ 双实例+泄漏；RegisterSingleton 后对象路径 AV | `Core/DeepBase.IoC.pas` | 高 | 抽 `EnsureSingletonInstance` 单一真相源；interface-only 注册后对象路径解析改抛 `EIoCException`（见 §二.5 三条硬约束） |
 | A5-R06 | `TopExceptions` 换入换出不可逆 ⇒ owned 源被提前释放/borrowed 源引用永久丢失 | `Core/DeepBase.LogQuery.pas` | 高 | **首选**过滤列表参数下传 `TopErrors`，取消状态往返 |
 | A5-R07 | 字体伴生 CIDFont 用 `ObjNum+1` 从未预留 ⇒ 对象号撞号/孤儿体/DescendantFonts 错指 | `Core/DeepBase.Export.PDF.pas` | 高 | 登记时一次分配两个对象号 + 删死预分配循环；**不采纳**重写字体嵌入的大修提案（超范围） |
@@ -49,16 +52,16 @@
 - **破坏面**：同 R01 全部调用方；本项改公共 API 语义，提交说明必须写清「绑定不再要求调用方保证对象存活顺序」。
 
 ### A5-R03 [待修] 初始化失败路径模块泄漏
-- **代码事实**：`InitializeEx`（`rg -n "procedure InitializeEx" Core\DeepBase.Manager.pas`）中 `FIsInitialized := True` 位于 `InitializeModules` **之后**；两者之间还有无保护消费点（配置读取等）。该窗口抛异常 ⇒ `FIsInitialized` 保持 False ⇒ `Finalize` 首行 `if not FIsInitialized then Exit`（`rg -n "not FIsInitialized" Core\DeepBase.Manager.pas`）⇒ `FinalizeModules`（唯一释放点）被跳过 ⇒ FLogger/FConfig/FI18n/FTheme/FSecurity 整批泄漏，且全局 logger 悬挂。（甲 A4 S2 实证：释放后 `loggerInstalled=1 samePtr=1`。`InitializeWithDB` 的 except 分支同型，须一并核对。）
+- **代码事实**：`InitializeEx`（`rg -n "function InitializeEx" Core\DeepBase.Manager.pas`，实测 `:177`/`:655`）中 `FIsInitialized := True` 位于 `InitializeModules` **之后**；两者之间还有无保护消费点（配置读取等）。该窗口抛异常 ⇒ `FIsInitialized` 保持 False ⇒ `Finalize` 首行 `if not FIsInitialized then Exit`（`rg -n "not FIsInitialized" Core\DeepBase.Manager.pas`）⇒ `FinalizeModules`（唯一释放点）被跳过 ⇒ FLogger/FConfig/FI18n/FTheme/FSecurity 整批泄漏，且全局 logger 悬挂。（甲 A4 S2 实证：释放后 `loggerInstalled=1 samePtr=1`。`InitializeWithDB` 的 except 分支同型，须一并核对。）
 - **修法**：引入 `FModulesCreated` 标志（`InitializeModules` 内成功创建的模块置位，逐模块就逐模块置位，失败也保留已创建部分的位图）；`Finalize`/两条 except 分支按该标志（而非 `FIsInitialized`）决定是否执行 `FinalizeModules`。**不采纳**把 7 处 `Create*Storage` 改 fail-fast——产品语义变更，超范围。
 - **判据**：复刻 A4-02 S2 为单测——注入配置读取异常 ⇒ 走完失败路径 ⇒ 析构后断言各模块实例已释放、全局 logger 已摘除；另加「初始化成功后 Finalize 正常释放」对照（防修出双释放）。
 - **破坏面**：全仓初始化链路（VCL/FMX/Examples/Tools Studio/DeepBaseRun）；既有 `Tests\Test.DeepBase.Manager.pas`、`Tests\Regression\Test.Regression.BUG007_WhenReadyDeadlock.pas`、`Tests\Stress\*` 不得回归。
 
 ### A5-R04 [待修] Serialization 值类型校验 + 白名单精确匹配
-- **代码事实**（甲 A4 14 类错型输入实测，主控复算）：错类型 → AV（`Age=bool`）；异常消息含原始堆字节（`Age=object/array`）；静默默认值 4 例（`Age=null→0`、`Name=int→123` 等）。附加：`TSerializationContext.IsAllowedType`（`rg -n "IsAllowedType" Core\DeepBase.Services.Serialization.pas`）用 `ClassName.StartsWith(ALLOWED_TYPES[I])` ⇒ `TObject*` 命名全过白名单。
+- **代码事实**（甲 A4 14 类错型输入实测，主控复算）：错类型 → AV（`Age=bool`）；异常消息含原始堆字节（`Age=object/array`）；静默默认值 4 例（`Age=null→0`、`Name=int→123` 等）。附加：`TSerializationContext.IsAllowedType`（`rg -n "IsAllowedType" Core\DeepBase.Serialization.pas`，实测 `:630`，白名单 `ALLOWED_TYPES` 在 `:633`）判定链为 `SameText(ClassName, ALLOWED_TYPES[I]) or ClassName.StartsWith(ALLOWED_TYPES[I])`（`:647-648`）⇒ `StartsWith` 臂令 `TObject*` 命名全过白名单。
 - **修法**：① 标量赋值前按目标属性类型校验 JSON 值类型（number/string/bool/null 四分），不符抛**带属性路径 + 期望/实际类型**的类型化异常（`Core/DeepBase.Exceptions.pas` 具体异常类优先）；② 白名单前缀匹配改 `SameText` 精确匹配（`SerializableAttribute` 路径已精确，保留）。
 - **判据**：A4-03 的 14 类错型输入全部转正为「类型化异常 + 明确消息」，无 AV、无堆字节进消息、无静默；`TObject` 前缀命名类不过白名单。既有序列化 fixture 子集（`Tests\Test.DeepBase.Serialization.pas`、`Tests\Regression\BUG059_*`/`BUG060_*`）**按纪律 7 先留基线再修**，修后逐一比对。
-- **破坏面**：`Core\DeepBase.Services.Serialization.pas` 及全部 `FromJson/FromXml/FromBinary` 调用方（数量大，提交前 `rg -ln "FromJson|FromXml|FromBinary" --glob "*.pas"` 自报影响面）。
+- **破坏面**：`Core\DeepBase.Serialization.pas`（2370 行，`TSerializer`/`TSerializationContext` 实现本体，`FromJson/FromXml/FromBinary` 均在此）及全部 `FromJson/FromXml/FromBinary` 调用方（数量大，提交前 `rg -ln "FromJson|FromXml|FromBinary" --glob "*.pas"` 自报影响面）。
 
 ### A5-R05 [待修] IoC 单例双路径（三条硬约束）
 - **代码事实**：对象路径单例分支只读写 `Reg.SingletonInstance`，接口路径只读写 `Reg.SingletonInterface`（并迟后回填），两路径各自判断 ⇒ 双实例（`created=2`）+ 泄漏（`leaked=1`）；`RegisterSingleton(instance)` 只置接口侧，对象路径解析 `CreateInstance` 解引用空实现类型 ⇒ AV。
@@ -114,4 +117,4 @@
 - 验收：主控对 9 项逐项亲跑判据（探针或单测全限定 fixture）+ 亲读修复 diff + 四门复跑 + 隔离树编译对照基线；**甲自报不作为验收依据**。
 - 建议顺序：R04（先留基线，防回归扯皮）→ R05/R06（UAF/泄漏类）→ R01/R02 → R03 → R07/R08（产出物不可用）→ R09（甲段，乙段等符号）。
 
-*主控 · 2026-09-25 · 签发即生效；本单三项裁定（R02 强路线 / R09 拆两段 / R07 最小修复）随单生效，不属可再议项*
+*主控 · 2026-09-25 签发 · **2026-09-28 正式派出**（重锚 HEAD `2dcd1ae`，派发核查与文本更正见 §〇-10）；本单三项裁定（R02 强路线 / R09 拆两段 / R07 最小修复）随单生效，不属可再议项*
