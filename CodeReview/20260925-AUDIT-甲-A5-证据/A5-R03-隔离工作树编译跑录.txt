@@ -1,0 +1,72 @@
+A5-R03 隔离 --detach 工作树字面编译跑录（工单纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R03）
+日期：2026-09-29
+目标 commit：d0fa5b6 fix(core): A5-R03 初始化失败路径回收已创建模块与全局状态（WO-20260925-AUDIT-甲-A5）
+工作树：git worktree add --detach .tmp/a5r03/wt-d0fa5b6 d0fa5b6
+        （HEAD 即目标 commit；工作树内除本单拷入的 runner 外无任何未提交改动）
+
+一、环境
+------------------------------------------------------------------------------
+  dcc64 = D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\dcc64.exe（Delphi for Win64 37.0）
+  DUnitX 源码 = D:\ProgramData\delphi\DUnitX\Source
+  搜索路径全部指向工作树自身：
+    -U$WD/Core -U$WD/Features -U$WD/Tests -U$WD/Tests/Regression -U$WD/Persistence -U$WD/VCL
+    （VCL 源根必须有，否则 Test.DeepBase.Hotkeys 报 F2613 Unit 'DeepBase.VCL.Hotkeys' not found；
+      这是宽面 runner 的既存依赖，与本单改动无关）
+  产物目录：工作树内 .tmp/r03/dcu、.tmp/r03/bin（-NU./dcu -E./bin，cwd 与工作树根一致）
+  runner 一律取入库件 附件/A5R03{Baseline,Verify,Wide}.dpr.template 原样拷入，不现场改源码。
+
+二、编译（-B -Q）
+------------------------------------------------------------------------------
+  A5R03Baseline.dpr  EXIT=0   40305 lines, 1.80s, 5938508 bytes code, 669816 bytes data
+  A5R03Verify.dpr    EXIT=0   40776 lines, 1.75s, 5951980 bytes code, 670760 bytes data
+  A5R03Wide.dpr      EXIT=0   44836 lines, 2.11s, 7793436 bytes code, 811856 bytes data
+  A402_Manager.dpr   EXIT=0   16406 lines, 0.78s, 5246156 bytes code, 592864 bytes data
+  （A402 用的是甲 A4 入库探针件，零改动，作为判据的独立复验面）
+
+  与非隔离跑的字节数比对：A5R03Verify 40776/5951980 与主树修后完全一致；
+  A5R03Wide 44836 对主树 44837 只差 1 行——入库模板件把头注释改成了 ASCII（3 行中文注释 → 1 行），
+  uses 列表与编译参数逐字相同，代码量一致（两者 bytes code 同为 7793436）。
+
+三、运行（同一批工作树产物）
+------------------------------------------------------------------------------
+  A5R03Verify --run:Test.DeepBase.ManagerInitFailureLeak.TManagerInitFailureLeak
+    Found 10 / Passed 10 / Failed 0 / Errored 0 / Leaked 0
+  A5R03Verify（全跑：Test.DeepBase.Manager + BUG007 + 新单元）
+    Found 30 / Passed 30 / Failed 0 / Errored 0 / Leaked 0
+  A5R03Baseline（既有窄基线）
+    Found 20 / Passed 20 / Failed 0 / Errored 0 / Leaked 0
+  A5R03Wide（受影响面宽子集）
+    Found 133 / Passed 129 / Failed 4 / Errored 0 / Leaked 0
+    4 红逐件点名，全部为既存项（修前工作树宽子集 123/119/4 同名同 Message，见基线件第四节）：
+      Test.Regression.BUG007_WhenReadyDeadlock.TBug007_WhenReadyDeadlockTest
+        .Test_WhenReady_NestedCall_NoDeadlock                检测到死锁：WhenReady 回调在 5 秒内未完成
+        .Test_WhenReady_AfterInit_ExecutesImmediately        回调应该在初始化后快速执行
+        .Test_WhenReady_MultipleConcurrentCallbacks          只有 0/10 个回调被执行
+        .Test_WhenReady_ExceptionInCallback_DoesNotBlockOthers 第一个回调的异常不应该阻止其他回调执行
+  A402_Manager（判据探针，目标 commit 字面代码）
+    S2-ConfigReadValueRaises init=0 isInit=0 loggerInstalled=0 lastError=INJECTED-ReadValue
+    S2-ConfigReadValueRaises after_free loggerInstalled=0 loggerPtrBefore=0000000000000000 loggerPtrAfter=… samePtr=0
+    S0/S1 init=1 loggerInstalled=1、after_free loggerInstalled=0（与主树修后逐字一致）
+    ⇒ 与修前工作树（S2 loggerInstalled=1 / loggerPtrBefore=0000020A9C4500B0 / samePtr=1）形成同一探针件、
+      两个 commit 的字面差分，缺陷现场已消除。
+
+四、非静默项（告警点名）
+------------------------------------------------------------------------------
+  三个 runner 的诊断计数完全相同（54 条：H2443×41、H2077×8、W1074×4、H2164×1），
+  全部落在本单未改的单元：
+    H2443 —— Tests/Test.DeepBase.Manager.pas 与 Persistence/*FireDAC.pas 的 TFDParam.SetAsString 内联提示
+    H2077×8 —— Core/DeepBase.Logging.pas 4 条、DeepBase.PluginManager.pas:1125、
+      DeepBase.Manager.Operational.pas:56、Tests/Regression/Test.Regression.Base.pas:172 各 1 条，
+      以及 Core/DeepBase.Manager.pas:578 DoLocateConfigDB 1 条（既存，本单未触碰该过程）
+    W1074 —— Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas 的自定义属性
+    H2164 —— 同上一单元的既存未用变量提示
+  本单新建单元 Test.DeepBase.ManagerInitFailureLeak.pas 在三个 runner 里诊断命中数均为 0；
+  Core/DeepBase.Manager.pas 仅上述既存 1 条，本单新增行零告警。
+
+五、收尾
+------------------------------------------------------------------------------
+  工作树 .tmp/a5r03/wt-d0fa5b6 与本单早前留档用的 .tmp/a5r03/wt-prefix（修前树）在跑录完成后移除；
+  判据原始输出留档于 .tmp/a5r03/（未入库，入库面只含本文件与两份跑录、三份 runner 模板）。
+  git push 未执行（工单纪律 1：禁 push）。
