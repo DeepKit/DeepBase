@@ -1,7 +1,7 @@
 # WO-20260925-AUDIT-乙-B7 Licensing 时间源接线（A4-R09 乙段 · 1 项）
 
-> 签发：主控 · 2026-09-25
-> 基线锚点：HEAD `b603cc9`（= A4 验收结论提交）
+> 签发：主控 · 2026-09-25 · **2026-09-28 正式派出（重锚 HEAD `2dcd1ae`）**
+> 基线锚点：HEAD `2dcd1ae`（原锚 `b603cc9` = A4 验收结论提交；其后经甲 A6、乙 B8、主控 dproj 修复笔 `d80671e` 与台账回填叠加；`git diff b603cc9 2dcd1ae -- Features/` = **空** ⇒ 本单目标文件 `Features\DeepBase.Licensing.pas` 零漂移）
 > 派工对象：**开发 AI 乙**
 > 缺陷来源：甲 A4 补验单 A4-08 判定（**主控已亲读复算坐实**，结论 `CodeReview/20260925-AUDIT-主控-甲-A4-验收结论.md` §四.2 跨层拆分裁定）。本单是 A4-R09 的 **Features 侧段**；Core 侧段（时间源注入 + LastSeen 单调水位）已派 **甲 A5-R09**，甲先乙后。
 > 本单与甲 A5（全 Core 域）、乙 B2（Features/DeepFlow/doQry/VCL 在途）**文件零重叠**。
@@ -9,7 +9,7 @@
 ## 〇、开工纪律（违者整单打回）
 
 1. **H15 原子提交**：本单仅 1 条缺陷，提交 message 带 `B7-R09`；显式 pathspec，前后 `git diff --cached --name-only` == 申报清单；**禁 push**。
-2. **两重开工前置（未满足不得动手）**：① 乙 **B2 收尾验收已完成**（乙线不并发两单）；② 甲 **A5-R09 甲段已交付且符号在 HEAD 可见**——开工第一步须 `rg` 核对甲交付回执点名的符号名与签名，核对不上 ⇒ 停机上报，**禁止按猜的符号硬接**。
+2. **两重开工前置（未满足不得动手）**：① 乙线不并发两单——B2（✅ ACCEPTED `c5d6658`）与 B8（✅ ACCEPTED，结论 `CodeReview/20260926-AUDIT-主控-乙-B8-验收结论.md`）均已收口，**乙线当前零在途单，本前置已达成**；② 甲 **A5-R09 甲段已交付且符号在 HEAD 可见**——**截至派发（2026-09-28）仍未达成**：派单即启程，允许只读准备（`rg` 清单核对、`VerifyTime`/`GetCorrectedNow` 调用链 trace、既有 License fixture 子集基线预留），**禁止任何代码改动与提交**；待甲 A5-R09 符号在 HEAD 可见后，开工第一步 `rg` 核对甲交付回执点名的符号名与签名，核对通过才可动手；核对不上 ⇒ 停机上报，**禁止按猜的符号硬接**。
 3. **禁动区维持**：`v1.1.0` 标签 / EHAI 冻结面 / `TestResults/**` / 旧轨 `Core/DeepBase.PluginManager.pas` / 新轨 `DeepBase.Plugins.*`；**本单不得改任何 Core 文件**（Core 侧归甲 A5；发现 Core 侧 API 不足 ⇒ 停机上报主控，不许越域代改）。
 4. **行号漂移警示**：只按符号定位，不照抄本单线索行号（Licensing.pas 在乙 B2 期间是否被动过以 `git log -1 -- Features\DeepBase.Licensing.pas` 为准）；找不到符号 ⇒ 报「已不成立」取证，不许绕。
 5. **测试**：配 DUnitX 回归（**自建新 test 单元文件**，不改 `Tests/DeepBaseTests.dpr`/.dproj 注册——归主控收口）；全量 run 崩 216 是既存问题，**禁止用全量当判据**，用全限定 `<单元>.<Fixture>` fixture 子集。
@@ -22,8 +22,8 @@
 ### 代码事实（甲 A4-08 trace T1..T7，主控复算）
 
 - 仓内确有回拨防护 `Features\DeepBase.TimeGuard.pas`（`tgClockRewound` / `GetCorrectedNow` / `SaveLastKnownGoodTime`），但 `rg` 全仓仅 2 文件引用它：TimeGuard 自身与 `Features\DeepBase.Licensing.pas`——**挂了没用上**。
-- `Features\DeepBase.Licensing.pas` 试用判定用裸 `Now`（按符号 `rg -n "TTimeZone.Local.ToUniversalTime\(Now\)" Features\DeepBase.Licensing.pas` 定位，甲 trace 记 :689/:690），与 Core 的 `TLicenseInfo.IsExpired`（甲 A5-R09 已修）**各用各的时间源** ⇒ 双轨时钟。
-- `GetCorrectedNow` 在时间未经验证时 **`Result := Now` 裸兜底**（甲 trace 记 :837）⇒ fail-open：回拨后时间不可信反而放行。
+- `Features\DeepBase.Licensing.pas` 试用判定用裸 `Now`（按符号 `rg -n "TTimeZone.Local.ToUniversalTime\(Now\)" Features\DeepBase.Licensing.pas` 定位，甲 trace 记 :689/:690，2026-09-28 实测为 `:689` 一点），与 Core 的 `TLicenseInfo.IsExpired`（甲 A5-R09 已修）**各用各的时间源** ⇒ 双轨时钟。另实测 `Licensing.pas` 全文 `\bNow\b` 共 4 处：`:689`（判时）、`:837`（兜底）、`:968`/`:974`（超时测量的 `StartTime`/`SecondsBetween`，非判时用途，静态自证时按纪律逐条说明理由）。
+- fail-open 兜底点实测三处（2026-09-28 派发时定位）：`Features\DeepBase.Licensing.pas:837`（`TDeepLicensing.GetCorrectedNow` 未验证兜底裸 `Now`）、`Features\DeepBase.Licensing.pas:845`（`TDeepLicensing.IsTimeTrusted` 未验证默认 `Result := True`）、`Features\DeepBase.TimeGuard.pas:467`（`TTimeGuard.GetCorrectedNow` 未验证兜底裸 `Now`）⇒ 回拨后时间不可信反而放行。前两处在本单 Licensing 单文件范围内必修；第三处**只读登记**——Licensing 侧 fail-closed 后该分支应随之不可达，若实测仍可达 ⇒ 接线不完整，回头补 Licensing 侧守卫（**仍不改 TimeGuard**）。
 - `VerifyTime` 的结果**未接入任何过期判定链**；`Tests/` 对回拨零覆盖。
 
 ### 修法（乙段）
@@ -50,4 +50,4 @@
 - 验收：主控亲跑判据（假时钟回拨用例 + fail-closed 断言）+ 亲读 diff + 四门复跑 + 隔离树编译对照基线；**乙自报不作为验收依据**。
 - 衔接纪律：甲 A5-R09 未落地不得开工；开工先核符号；B2 收尾验收前不得开工。
 
-*主控 · 2026-09-25 · 签发即生效；本单为 A4-R09 跨层拆分的乙段，范围收敛为 Licensing 单文件，越界改动一律打回*
+*主控 · 2026-09-25 签发 · **2026-09-28 正式派出**（重锚 HEAD `2dcd1ae`，前置①已达成、前置②维持硬门槛：只读准备可、动手待 A5-R09 符号）；本单为 A4-R09 跨层拆分的乙段，范围收敛为 Licensing 单文件，越界改动一律打回*
