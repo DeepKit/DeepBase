@@ -41,3 +41,37 @@ Tests Passed  : 23
 Tests Leaked  : 0
 Tests Failed  : 0
 Tests Errored : 0
+
+------------------------------------------------------------------------------
+补充复验（2026-09-28，目标 commit 字面复验）
+------------------------------------------------------------------------------
+上文一节的隔离树是 098eeb3 + 手工复制本单两件交付内容，属「内容等价」证明，不是纪律 6
+字面上的「@ 目标 commit」。本笔以 HEAD 树直接切出，排除复制差异：
+  git worktree add --detach .tmp\a5r04\wt-57de33c 57de33c
+  （工作树内 git status 除 runner 脚手架 A5R04Verify.dpr 与 dcu/bin 外无任何改动）
+
+-- 编译（dcc64 v37.0，工作目录 = wt-57de33c 根，EXIT=0）--
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(40) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(44) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(48) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(39) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(43) Warning: W1074 Unknown custom attribute
+27795 lines, 1.25 seconds, 2872768 bytes code, 392648 bytes data.
+
+-- 运行（工作目录 = wt-57de33c 根，EXIT=0）--
+  .tmp\a5r04\wt-57de33c\bin\A5R04Verify.exe --run:Test.DeepBase.SerializationTypeGuard.TA5R04JsonTypeGuardTests
+DUnitX - [A5R04Verify.exe] - Starting Tests.
+
+..............................................
+
+Tests Found   : 23
+Tests Ignored : 0
+Tests Passed  : 23
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+结论：纪律 6 的「隔离 --detach 工作树 @ 目标 commit EXIT=0」在 57de33c 上字面成立。
