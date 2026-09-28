@@ -339,6 +339,7 @@ var
   procedure WriteRun(const ARun: TParagraphRun);
   var
     SizeVal: Integer;
+    FontNameAttr: string;
   begin
     SB.Append('<w:r>');
     if ARun.Bold or ARun.Italic or (ARun.FontName <> '') or
@@ -349,16 +350,22 @@ var
         SB.Append('<w:b/>');
       if ARun.Italic then
         SB.Append('<w:i/>');
+      // 属性值与文本面共用同一个 EscapeXML：值里的裸 " 会提前闭合属性，让
+      // document.xml 不再是良构 XML，甚至能在属性位里开出新元素。
+      // 三个属性同源于一个字体名，故只转义一次。
       if ARun.FontName <> '' then
+      begin
+        FontNameAttr := EscapeXML(ARun.FontName);
         SB.AppendFormat('<w:rFonts w:ascii="%s" w:eastAsia="%s" w:hAnsi="%s"/>',
-          [ARun.FontName, ARun.FontName, ARun.FontName]);
+          [FontNameAttr, FontNameAttr, FontNameAttr]);
+      end;
       if ARun.FontSize > 0 then
       begin
         SizeVal := Round(ARun.FontSize * 2);
         SB.AppendFormat('<w:sz w:val="%d"/><w:szCs w:val="%d"/>', [SizeVal, SizeVal]);
       end;
       if ARun.FontColor <> '' then
-        SB.AppendFormat('<w:color w:val="%s"/>', [ARun.FontColor]);
+        SB.AppendFormat('<w:color w:val="%s"/>', [EscapeXML(ARun.FontColor)]);
       SB.Append('</w:rPr>');
     end;
     SB.AppendFormat('<w:t xml:space="preserve">%s</w:t>', [EscapeXML(ARun.Text)]);
@@ -428,7 +435,7 @@ begin
       begin
         SB.Append('<w:tc>');
         SB.AppendFormat('<w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="%s"/></w:tcPr>',
-          [T.HeaderColor]);
+          [EscapeXML(T.HeaderColor)]);
         SB.Append('<w:p><w:pPr><w:jc w:val="center"/></w:pPr>');
         SB.Append('<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/></w:rPr>');
         SB.AppendFormat('<w:t xml:space="preserve">%s</w:t></w:r></w:p>', [EscapeXML(T.Columns[J].Header)]);

@@ -1,0 +1,211 @@
+A5-R08 修后（判据跑录）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R08）
+日期：2026-09-29
+配套件：A5-R08-基线-修前跑录.txt（同一份最终用例的修前读数、判据宿主差异、
+        测试侧三处写法坑、w:color 不可达登记均在该件）
+
+-- 1. 修法 --------------------------------------------------------------------
+  只做一件事：三个属性值写出口统一过本单元既有的 EscapeXML（:146），不新增 escaper、
+  不动文本面、不动 OOXML 结构。
+  1) WriteRun 增加局部变量 FontNameAttr：字体名三个属性同源，只转义一次，
+     避免同一字符串三次调用形成「三处转义三处漏」的复发形态。
+  2) w:color w:val 的入参改 EscapeXML(ARun.FontColor)。
+  3) w:shd w:fill 的入参改 EscapeXML(T.HeaderColor)。
+  未触碰面：EscapeXML 本体（& 先替换的顺序正确，无需改）、<w:t> 文本面、
+    BuildContentTypes/BuildRels/BuildStyles/BuildDocRels、图片面 AddImage/AddImageToZip、
+    表宽/字号等 %d 数值面（无字符串入参，不存在注入面）。
+
+  完整 diff（git diff -U2 -- Core/DeepBase.Export.DOCX.pas，+10/-3）：
+  diff --git a/Core/DeepBase.Export.DOCX.pas b/Core/DeepBase.Export.DOCX.pas
+  index b1afe075..d1ec145b 100644
+  --- a/Core/DeepBase.Export.DOCX.pas
+  +++ b/Core/DeepBase.Export.DOCX.pas
+  @@ -340,4 +340,5 @@ var
+     var
+       SizeVal: Integer;
+  +    FontNameAttr: string;
+     begin
+       SB.Append('<w:r>');
+  @@ -350,7 +351,13 @@ var
+         if ARun.Italic then
+           SB.Append('<w:i/>');
+  +      // 属性值与文本面共用同一个 EscapeXML：值里的裸 " 会提前闭合属性，让
+  +      // document.xml 不再是良构 XML，甚至能在属性位里开出新元素。
+  +      // 三个属性同源于一个字体名，故只转义一次。
+         if ARun.FontName <> '' then
+  +      begin
+  +        FontNameAttr := EscapeXML(ARun.FontName);
+           SB.AppendFormat('<w:rFonts w:ascii="%s" w:eastAsia="%s" w:hAnsi="%s"/>',
+  -          [ARun.FontName, ARun.FontName, ARun.FontName]);
+  +          [FontNameAttr, FontNameAttr, FontNameAttr]);
+  +      end;
+         if ARun.FontSize > 0 then
+         begin
+  @@ -359,5 +366,5 @@ var
+         end;
+         if ARun.FontColor <> '' then
+  -        SB.AppendFormat('<w:color w:val="%s"/>', [ARun.FontColor]);
+  +        SB.AppendFormat('<w:color w:val="%s"/>', [EscapeXML(ARun.FontColor)]);
+         SB.Append('</w:rPr>');
+       end;
+  @@ -429,5 +436,5 @@ begin
+           SB.Append('<w:tc>');
+           SB.AppendFormat('<w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="%s"/></w:tcPr>',
+  -          [T.HeaderColor]);
+  +          [EscapeXML(T.HeaderColor)]);
+           SB.Append('<w:p><w:pPr><w:jc w:val="center"/></w:pPr>');
+           SB.Append('<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/></w:rPr>');
+
+-- 2. 判据：A4-07 校验器 2→0（pwsh 7，同一判据件原样调用）----------------------
+  重编译探针（同一模板、同一源根形态，只有 Core 变了）：
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    657 lines, 0.19 seconds, 1629084 bytes code, 227464 bytes data.
+    POST_PROBE_COMPILE_EXIT=0
+  修后真导出：
+    A4-07 DOCX export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a5r08\bin\
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\bin\A407_case1_text.docx
+      case1 size=1716
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\bin\A407_case2_fontquote.docx
+      case2 size=1676
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\bin\A407_case3_fontinject.docx
+      case3 size=1702
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\bin\A407_case4_table.docx
+      case4 size=1897
+    A4-07 PROBE DONE
+    POST_PROBE_EXIT=0
+  四份 DOCX 里 case1/case4 体积逐字不变（1716 / 1897），
+  case2 1668→1676、case3 1684→1702：字体名里的 " 由 1 字符变成 &quot; 5 字符，
+  document.xml 变长后经 deflate 落到 +8/+18 字节，属预期转义开销，非新增内容。
+
+  pwsh -NoProfile -ExecutionPolicy Bypass -File <A407_docx_verify.ps1>
+    -InDir <repo>\.tmp\a5r08\bin -OutPath <repo>\.tmp\a5r08\post-verify-pwsh7.txt
+  FILE A407_case1_text.docx size=1716
+    PASS zip-readable :: entries=5
+    PASS required-parts :: has word/document.xml + [Content_Types].xml
+    PASS document-part-present :: document.xml bytes=684
+    PASS document-xml-well-formed :: parsed as XML
+    w:t count=1 rFonts-ascii=SimSun w:ins elements=0
+    PASS text-escaping-round-trip :: joined w:t contains the full special+CJK source text
+    PASS raw-ampersand-not-broken :: no bare & outside an entity in document.xml
+  FILE A407_case2_fontquote.docx size=1676
+    PASS zip-readable :: entries=5
+    PASS required-parts :: has word/document.xml + [Content_Types].xml
+    PASS document-part-present :: document.xml bytes=674
+    PASS document-xml-well-formed :: parsed as XML
+    w:t count=1 rFonts-ascii=Bad"Font w:ins elements=0
+    PASS font-attribute-escaping :: expected full font name 'Bad"Font', got 'Bad"Font'
+  FILE A407_case3_fontinject.docx size=1702
+    PASS zip-readable :: entries=5
+    PASS required-parts :: has word/document.xml + [Content_Types].xml
+    PASS document-part-present :: document.xml bytes=858
+    PASS document-xml-well-formed :: parsed as XML
+    w:t count=1 rFonts-ascii=x"/><w:ins w:id="9"/><w:rFonts w:ascii="y w:ins elements=0
+    PASS font-attribute-injection-blocked :: font value='x"/><w:ins w:id="9"/><w:rFonts w:ascii="y' injected w:ins elements=0
+  FILE A407_case4_table.docx size=1897
+    PASS zip-readable :: entries=5
+    PASS required-parts :: has word/document.xml + [Content_Types].xml
+    PASS document-part-present :: document.xml bytes=1878
+    PASS document-xml-well-formed :: parsed as XML
+    w:t count=6 rFonts-ascii= w:ins elements=0
+    PASS table-cell-escaping-round-trip :: all 6 cell strings round-trip
+
+  TOTAL files=4 failed-checks=0
+  VERIFIER_EXIT=0
+
+  三条工单判据逐条对上：
+    failed-checks 2→0（case2 良构转 PASS、case3 注入拦截转 PASS）
+    Bad"Font / x"/><w:ins ... 两个载荷 round-trip 逐字一致
+      （报告行 rFonts-ascii=Bad"Font 与 rFonts-ascii=x"/><w:ins w:id="9"/><w:rFonts w:ascii="y
+       即 XPath 取回的属性值 == 输入原文）
+    w:ins elements=0（四例全为 0；修前 case3 为 3）
+  含 ]]> 的样本 round-trip 由本单新单元 HeaderColor_WithQuoteAndAngleBrackets_RoundTrips
+  覆盖（载荷 A]]>B"C&D<E>F）：属性值里 ]]> 无需转义，但必须逐字回来，见第 4 节。
+  WinPS 5.1 对照读数：WINPS51_VERIFIER_EXIT=1，failed-checks=2，且这两条恰是修前件 §1/§5
+  登记的宿主脚本解码假红（case1/case4 的 CJK 期望值），与修复无关；修前该宿主下为 4
+  （2 真 + 2 宿主）⇒ 真缺陷相关的读数同样是 2→0。
+
+-- 3. 回归面：A5R08Docx.exe（EXIT=0）-------------------------------------------
+  重编译：
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    25550 lines, 1.22 seconds, 2948284 bytes code, 408520 bytes data.
+    POST_TEST_COMPILE_EXIT=0
+  运行：
+    DUnitX - [A5R08Docx.exe] - Starting Tests.
+
+    ................................................
+
+    Tests Found   : 24
+    Tests Ignored : 0
+    Tests Passed  : 24
+    Tests Leaked  : 0
+    Tests Failed  : 0
+    Tests Errored : 0
+    POST_TEST_EXIT=0
+
+-- 4. 红绿对照（同一份最终用例）------------------------------------------------
+  既有 18 例（TDOCXExportTests / TPDFExportTests / TShareTests）修前修后皆绿 ⇒ 零回归。
+  新建 TDOCXAttributeEscapeTests 6 例：
+    FontName_WithQuote_AttributeValueRoundTrips                    红 → 绿
+    FontName_WithMarkupInjection_NoExtraElementsProduced           红 → 绿
+    HeaderColor_WithQuoteAndAngleBrackets_RoundTrips               红 → 绿
+    HeaderColor_WithElementInjection_ShadingCountStaysAtColumnCount 红 → 绿
+    AttributeSinks_NoRawQuoteInsideStartTags                        红 → 绿
+    TextAndCellRoundTrip_WithSpecialCjkAndBracketBracketGreater     绿 → 绿（护栏）
+  修前读数 24 found / 19 passed / 5 failed（EXIT=1），修后 24/24/0（EXIT=0）；
+  修前 Core 取自隔离工作树 @2a999e8，修后取自工作副本（= 本笔提交内容），
+  两侧唯一的差集是 Core/DeepBase.Export.DOCX.pas 的这 +10/-3。
+
+-- 5. 破坏面自报 --------------------------------------------------------------
+  改动文件：Core/DeepBase.Export.DOCX.pas（+10/-3；仅 WriteRun 与表格表头底色一处）
+            Tests/Test.DeepBase.ExportDOCXAttrEscape.pas（新建，UTF-8 BOM+CRLF，302 行，6 例）
+            Tests/DeepBaseTests.dpr / .dproj 未改（fixture 注册收口归主控，纪律 5）
+            附件/A5R08Docx.dpr.template（runner 字面模板，ASCII+CRLF，662 字节）
+            证据：本件 + A5-R08-基线-修前跑录.txt
+                  A5-R08-隔离工作树编译跑录.txt（纪律 6）随第二笔 docs 提交入账
+  零改动区：Features/**、VCL/**、FMX/**、Tools/**、Persistence/**、Examples/**、
+            v1.1.0 标签、旧轨 Core/DeepBase.PluginManager.pas、新轨 DeepBase.Plugins.*、
+            TestResults/**、CodeReview/20260925-AUDIT-甲-A4-证据/**（判据件只读引用）、
+            Core/DeepBase.Export.PDF.pas（R07 已收口，本单未碰）
+  消费面取证：grep -rln "TDOCXDocument|DeepBase.Export.DOCX"（排除 .tmp 脚手架，含 .pas/.dpr/.dpk）
+            = Core/DeepBase.Export.DOCX.pas
+              DeepBaseCore.dpk（包内单元清单，无代码改动）
+              Tests/Test.DeepBase.Export.Gen.pas
+              Tests/Test.DeepBase.ExportDOCXAttrEscape.pas
+            即除测试面与包清单外全仓无调用方 ⇒ Features 侧零联动，不触发工单 §〇
+            「修法迫使 Features 联动 ⇒ 停机上报」的条件。
+  行为变更口径：转义后同一输入的 document.xml 字节变长（见第 2 节体积漂移）。若有外部
+            快照/摘要按字节比对 DOCX，需按老板「质量优先于兼容」口径接受；全仓无此类
+            消费方（TestResults/** 未触碰，快照面零命中）。
+
+-- 6. 编码/行尾四门（先 git add 本单文件，再跑，使计数含新增件）-----------------
+  本单 5 个文件（Core 单元、新测试单元、runner 模板、本件与修前件）先入索引后复跑：
+    node 09_工程脚本/eol-gate/check_eol.js --root .
+    node 09_工程脚本/encoding-gate/check_pas_encoding.js --root .
+    node 09_工程脚本/mojibake-gate/check_mojibake.js --root .
+    node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --root .
+  四门 EXIT=0 / 0 / 0 / 0，结论行原文：
+    行尾门禁通过：检查了 1589 个文件（.pas CRLF / .md LF），跳过目录 11
+    编码门禁通过：1010 个 .pas + 732 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+    丙类损坏门禁通过：扫描 1008 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+    证据编码门禁通过：扫描 883 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+  计数增量对上本单入账面：.pas 1009→1010 与行尾面 1588→1589、丙类 1007→1008 均因
+    Tests/Test.DeepBase.ExportDOCXAttrEscape.pas 一件新增；证据面 880→883 因两份跑录
+    加 runner 模板三件（模板走 .template 别名，不触发 A6-02 反向闸门）。
+  逐件自检（门禁口径）：Core 单元与测试单元 = UTF-8 BOM + CRLF + U+FFFD 0；
+    两份证据与 .dpr.template = 无 BOM + CRLF + U+FFFD 0（模板全 ASCII，nonAscii=0）。
+  git add 时的 "CRLF will be replaced by LF" warning 属 .gitattributes 对证据 .txt
+    的既定 text eol=lf 策略，非本单新增异常。
+
+-- 7. 发现但不修（登记，待主控另派）--------------------------------------------
+  a) w:color w:val 的 FontColor 是死分支（无公开写入口），修法已随批落地，
+     但端到端覆盖缺口留在修前件 §8；若后续接入颜色 API，判据应复用本单元载荷集。
+  b) document.xml 全程手工字符串拼装，无 OOXML schema 校验面：属性面之外仍可能出现
+     结构性错误（例如表头底色传空串会写出 w:fill=""）。良构性校验已由本单用例与
+     A4 判据件覆盖到「可解析 + 无注入」这一层，更深的 schema 符合性属另一工单。
+  c) AddTable 的 AColWidths 走 %d 数值格式化，无字符串注入面；表格边框颜色写死 "auto"。
+  d) TDOCXDocument 可对同一实例重复 SaveToFile/SaveToStream，每次都重新编号 rId
+     （FRelCounter 单调但不清零），与 R07 §六 b 同类，登记不修。
+
