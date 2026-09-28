@@ -99,6 +99,7 @@ HEAD blob 内符号锚点（git show HEAD:Core/DeepBase.Export.DOCX.pas | grep -
          回显的缺陷态 document.xml 本身，无独立信息量，需要全文时按
          第 2/3 节的命令重跑即可复现，原始输出留在 .tmp/a5r08/ 工作
          目录（脚手架，不入库））
+  FILE A407_case3_fontinject.docx size=1684
     PASS zip-readable :: entries=5
     PASS required-parts :: has word/document.xml + [Content_Types].xml
     PASS document-part-present :: document.xml bytes=762

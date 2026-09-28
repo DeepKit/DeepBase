@@ -1,0 +1,291 @@
+A5-R08 隔离工作树编译跑录（纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R08）
+日期：2026-09-29
+目的：纪律 6 要求「编译判据在隔离 --detach 工作树 @ 目标 commit 取 EXIT=0」。
+      本件把 A5-R08-修后-判据跑录.txt 的全部读数在**不含主树工作副本**的环境里
+      重取一遍：-U 源根只指向工作树目录，主树的 Core/Tests 一律不参与；
+      并在 @2a999e8（修前）用同一份已提交用例复现 5 红。
+配套：A5-R08-基线-修前跑录.txt / A5-R08-修后-判据跑录.txt（主树侧读数、判据宿主
+      差异、测试侧写法坑、w:color 不可达登记均在那两件，本件不重复）
+
+-- 0. 现场与命令口径 ------------------------------------------------------------
+  git worktree list（仓库根写作 <repo>）：
+    <repo>                        10d7082 [master]
+    <repo>/.tmp/a5r04/wt-57de33c  57de33c (detached HEAD)
+    <repo>/.tmp/a5r04/wt-prefix   098eeb3 (detached HEAD)
+    <repo>/.tmp/a5r08/wt-post     10d7082 (detached HEAD)
+    <repo>/.tmp/a5r08/wt-prefix   2a999e8 (detached HEAD)
+  本单用到的两棵（均 --detach，用完即拆，见第 4 节）：
+    .tmp/a5r08/wt-post   @10d7082e6edee065e7ea34380b507fc41e422ce9  修后（本单修复笔）
+    .tmp/a5r08/wt-prefix @2a999e8e3e6b112589267012039953fcaedee33a  修前（A5-R07 隔离跑录笔，
+                                                     DOCX 单元自 26f533d 起零改动）
+  建树命令：git worktree add --detach .tmp/a5r08/wt-<post|prefix> <sha>
+  构建目录放在工作树**之外**（.tmp/a5r08/wtbuild-{post,pre2}/…），工作树内不产出
+  任何 bin/dcu/exe ⇒ 两棵树 git status --short 全程为空（第 4 节复验读数）。
+  源根隔离：编译命令的 -U 只出现 wt-post/ 或 wt-prefix/ 与 DUnitX 源码目录，
+  <repo>/Core、<repo>/Tests 不出现在任何一条 -U 里。
+  退出码读法：out=$(cmd 2>&1); rc=$?（不接管道），EXIT 行由本件写入日志文件末尾。
+  dcc64：D:/Program Files (x86)/Embarcadero/Studio/37.0/bin/dcc64.exe（37.0 Win64）
+  判据宿主：D:/Program Files/PowerShell/7/pwsh.exe（为何不用 WinPS 5.1 见修前件 §1）
+
+  模板字面源（纪律 9：探针以 .dpr.template 入账，不入扫描面）：
+    cp <repo>/CodeReview/20260925-AUDIT-甲-A4-证据/附件/A407_DOCX.dpr.template \
+       .tmp/a5r08/wtbuild-post/probe/A407_DOCX.dpr        # cmp 逐字节全等，2296 字节
+    cp <repo>/CodeReview/20260925-AUDIT-甲-A4-证据/附件/A407_DOCX.dpr.template \
+       .tmp/a5r08/wtbuild-pre2/probe/A407_DOCX.dpr         # 同一份，cmp 全等
+    cp <repo>/CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R08Docx.dpr.template \
+       .tmp/a5r08/wtbuild-post/test/A5R08Docx.dpr          # cmp 逐字节全等，662 字节
+    cp <repo>/CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R08Docx.dpr.template \
+       .tmp/a5r08/wtbuild-pre2/test/A5R08Docx.dpr          # 同一份，cmp 全等
+  与修前件里那次主树构建的脚手架 .dpr（633 字节）差别只在行尾：模板是 CRLF、
+  脚手架当时被编辑器写成 LF；内容（剥掉 \r 后）逐字节相同，dcc64 对两者一致处理，
+  编译行数与产物可横向对照。本件一律用模板的 CRLF 字面，不再需要「行数 Δ1」豁免。
+
+-- 1. 修后侧 @10d7082（EXIT 全 0）----------------------------------------------
+  1a 探针编译（cwd=.tmp/a5r08/wtbuild-post/probe）：
+    dcc64 -B -Q -NU./dcu -E./bin -U<repo>/.tmp/a5r08/wt-post/Core A407_DOCX.dpr
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    657 lines, 0.19 seconds, 1629084 bytes code, 227464 bytes data.
+    WT_POST_PROBE_COMPILE_EXIT=0
+  1b 探针真导出（cwd 同上，输出落在 exe 同目录 ./bin）：
+    A4-07 DOCX export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-post\probe\bin\
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-post\probe\bin\A407_case1_text.docx
+      case1 size=1716
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-post\probe\bin\A407_case2_fontquote.docx
+      case2 size=1676
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-post\probe\bin\A407_case3_fontinject.docx
+      case3 size=1702
+    EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-post\probe\bin\A407_case4_table.docx
+      case4 size=1897
+    A4-07 PROBE DONE
+    WT_POST_PROBE_EXIT=0
+  1c A4-07 校验器（pwsh 7，判据件只读引用，未改一个字）：
+    pwsh -NoProfile -ExecutionPolicy Bypass \
+      -File <repo>/CodeReview/20260925-AUDIT-甲-A4-证据/附件/A407_docx_verify.ps1 \
+      -InDir <repo>\.tmp\a5r08\wtbuild-post\probe\bin \
+      -OutPath <repo>\.tmp\a5r08\wt-post-verify-pwsh7.txt
+    FILE A407_case1_text.docx size=1716
+      PASS zip-readable :: entries=5
+      PASS required-parts :: has word/document.xml + [Content_Types].xml
+      PASS document-part-present :: document.xml bytes=684
+      PASS document-xml-well-formed :: parsed as XML
+      w:t count=1 rFonts-ascii=SimSun w:ins elements=0
+      PASS text-escaping-round-trip :: joined w:t contains the full special+CJK source text
+      PASS raw-ampersand-not-broken :: no bare & outside an entity in document.xml
+    FILE A407_case2_fontquote.docx size=1676
+      PASS zip-readable :: entries=5
+      PASS required-parts :: has word/document.xml + [Content_Types].xml
+      PASS document-part-present :: document.xml bytes=674
+      PASS document-xml-well-formed :: parsed as XML
+      w:t count=1 rFonts-ascii=Bad"Font w:ins elements=0
+      PASS font-attribute-escaping :: expected full font name 'Bad"Font', got 'Bad"Font'
+    FILE A407_case3_fontinject.docx size=1702
+      PASS zip-readable :: entries=5
+      PASS required-parts :: has word/document.xml + [Content_Types].xml
+      PASS document-part-present :: document.xml bytes=858
+      PASS document-xml-well-formed :: parsed as XML
+      w:t count=1 rFonts-ascii=x"/><w:ins w:id="9"/><w:rFonts w:ascii="y w:ins elements=0
+      PASS font-attribute-injection-blocked :: font value='x"/><w:ins w:id="9"/><w:rFonts w:ascii="y' injected w:ins elements=0
+    FILE A407_case4_table.docx size=1897
+      PASS zip-readable :: entries=5
+      PASS required-parts :: has word/document.xml + [Content_Types].xml
+      PASS document-part-present :: document.xml bytes=1878
+      PASS document-xml-well-formed :: parsed as XML
+      w:t count=6 rFonts-ascii= w:ins elements=0
+      PASS table-cell-escaping-round-trip :: all 6 cell strings round-trip
+
+    TOTAL files=4 failed-checks=0
+    WT_POST_VERIFIER_EXIT=0
+  ⇒ failed-checks=0、VERIFIER_EXIT=0，与修后件 §2 的主树侧读数同号同形
+    （四例 w:ins elements=0，case2/case3 的 rFonts-ascii 取回完整载荷原文）。
+  1d 回归 runner 编译与运行（cwd=.tmp/a5r08/wtbuild-post/test）：
+    dcc64 -B -Q -NU./dcu -E./bin -U<repo>/.tmp/a5r08/wt-post/Core \
+      -U<repo>/.tmp/a5r08/wt-post/Tests -U<DUnitX>/Source A5R08Docx.dpr
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    25550 lines, 1.25 seconds, 2948284 bytes code, 408520 bytes data.
+    WT_POST_TEST_COMPILE_EXIT=0
+    DUnitX - [A5R08Docx.exe] - Starting Tests.
+
+    ................................................
+
+    Tests Found   : 24
+    Tests Ignored : 0
+    Tests Passed  : 24
+    Tests Leaked  : 0
+    Tests Failed  : 0
+    Tests Errored : 0
+    WT_POST_TEST_EXIT=0
+  ⇒ 24/24/0、EXIT=0，工作树内的产品代码与用例（含本单新单元）在隔离环境下
+    编译通过并全绿，纪律 6 的「@ 目标 commit EXIT=0」成立。
+
+  1e 与主树侧构建的产物对照（同一模板、同一判据，只有源根不同）：
+    整包 md5 与 document.xml md5（主树 .tmp/a5r08/bin ↔ 工作树 wtbuild-post/probe/bin）：
+      case1_text | 整包 size 1716/1716 md5 8bd472e4/f4e77456 DIFF | document.xml md5 34736136/34736136 SAME
+      case2_fontquote | 整包 size 1676/1676 md5 6d61c7b4/d6be2df5 DIFF | document.xml md5 582ed517/582ed517 SAME
+      case3_fontinject | 整包 size 1702/1702 md5 075f5207/4186c662 DIFF | document.xml md5 56c07efb/56c07efb SAME
+      case4_table | 整包 size 1897/1897 md5 c5821b93/82e1537e DIFF | document.xml md5 a25c27dd/a25c27dd SAME
+    解包后逐部件 diff -rq：
+      case1_text | 解包后全部部件（5 项）逐字节全等
+      case2_fontquote | 解包后全部部件（5 项）逐字节全等
+      case3_fontinject | 解包后全部部件（5 项）逐字节全等
+      case4_table | 解包后全部部件（5 项）逐字节全等
+    结论：四份 DOCX 解包后全部 5 个部件（[Content_Types].xml、_rels/.rels、
+    word/document.xml、word/_rels/document.xml.rels、word/styles.xml）逐字节全等；
+    整包 md5 不同只来自 ZIP 本地头的条目时间戳（unzip -l 读数：主树侧 01:26、
+    工作树侧 01:31），与修复内容无关。⇒ 隔离工作树构建与主树构建产出同一产物，
+    「主树工作副本偷偷参与」的可能性被排除。
+
+-- 2. 修前侧 @2a999e8（同判据必须红）-------------------------------------------
+  2a 缺陷态自证（git grep 按内容定位，不照抄行号；源文件 = wt-prefix 工作树）：
+    Core/DeepBase.Export.DOCX.pas:354:          [ARun.FontName, ARun.FontName, ARun.FontName]);
+    Core/DeepBase.Export.DOCX.pas:361:        SB.AppendFormat('<w:color w:val="%s"/>', [ARun.FontColor]);
+    Core/DeepBase.Export.DOCX.pas:431:          [T.HeaderColor]);
+    --- EscapeXML 在属性面的命中数（修前应只在文本面）---
+    Core/DeepBase.Export.DOCX.pas:5
+    5 处 EscapeXML 命中全部落在声明/实现与 <w:t> 文本面，三个属性 sink
+    （:354 w:rFonts、:361 w:color、:431 w:shd w:fill）拿的是裸值 ⇒ 工单 R08 的
+    前提在 @2a999e8 依旧成立，不是「符号没了/别处已修」。
+    修后侧同法复验：git -C wt-post grep -c EscapeXML = 9（+注释 1 行、
+    +FontNameAttr 赋值 1 行、+w:color 与 +w:shd 各 1 行），
+    git -C wt-prefix diff --stat 2a999e8 10d7082 -- Core/DeepBase.Export.DOCX.pas
+      = 1 file changed, 10 insertions(+), 3 deletions(-) ⇒ 两棵工作树之间
+    DOCX 单元的唯一差集就是本单修复，没有夹带。
+  2b 用例来源点名（纪律 5：本单新建单元在 @2a999e8 尚不存在，属预期）：
+    Core   ← .tmp/a5r08/wt-prefix/Core（缺陷态，2a999e8 字面）
+    Tests  ← .tmp/a5r08/wt-post/Tests（含 10d7082 提交的最终版新单元与既存
+             Test.DeepBase.Export.Gen.pas，均为仓库字面内容，非工作副本）
+    即「缺陷态产品代码 + 本单已提交用例」，红只能由 Core 引起。
+  2c 判据侧（cwd=.tmp/a5r08/wtbuild-pre2/probe，命令与 1a/1b/1c 同形，
+    只把 -U wt-post/Core 换成 -U wt-prefix/Core）：
+    编译：
+      Embarcadero Delphi for Win64 compiler version 37.0
+      Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+      650 lines, 0.17 seconds, 1628924 bytes code, 227464 bytes data.
+      WT_PRE_PROBE_COMPILE_EXIT=0
+    真导出：
+      A4-07 DOCX export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-pre2\probe\bin\
+      EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-pre2\probe\bin\A407_case1_text.docx
+        case1 size=1716
+      EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-pre2\probe\bin\A407_case2_fontquote.docx
+        case2 size=1668
+      EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-pre2\probe\bin\A407_case3_fontinject.docx
+        case3 size=1684
+      EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r08\wtbuild-pre2\probe\bin\A407_case4_table.docx
+        case4 size=1897
+      A4-07 PROBE DONE
+      WT_PRE_PROBE_EXIT=0
+    校验器（pwsh 7）：
+      FILE A407_case1_text.docx size=1716
+        PASS zip-readable :: entries=5
+        PASS required-parts :: has word/document.xml + [Content_Types].xml
+        PASS document-part-present :: document.xml bytes=684
+        PASS document-xml-well-formed :: parsed as XML
+        w:t count=1 rFonts-ascii=SimSun w:ins elements=0
+        PASS text-escaping-round-trip :: joined w:t contains the full special+CJK source text
+        PASS raw-ampersand-not-broken :: no bare & outside an entity in document.xml
+      FILE A407_case2_fontquote.docx size=1668
+        PASS zip-readable :: entries=5
+        PASS required-parts :: has word/document.xml + [Content_Types].xml
+        PASS document-part-present :: document.xml bytes=659
+        FAIL document-xml-well-formed :: PARSE FAILED（报错文本把整份
+             document.xml 原样打印，此处按行折叠；被折叠的部分只是解析器
+             回显的缺陷态 document.xml，全文可由第 2c 节命令重跑得到，
+             与修前件 §4 同段）
+      FILE A407_case3_fontinject.docx size=1684
+        PASS zip-readable :: entries=5
+        PASS required-parts :: has word/document.xml + [Content_Types].xml
+        PASS document-part-present :: document.xml bytes=762
+        PASS document-xml-well-formed :: parsed as XML
+        w:t count=1 rFonts-ascii=x | y | y | y w:ins elements=3
+        FAIL font-attribute-injection-blocked :: font value='x' injected w:ins elements=3
+      FILE A407_case4_table.docx size=1897
+        PASS zip-readable :: entries=5
+        PASS required-parts :: has word/document.xml + [Content_Types].xml
+        PASS document-part-present :: document.xml bytes=1878
+        PASS document-xml-well-formed :: parsed as XML
+        w:t count=6 rFonts-ascii= w:ins elements=0
+        PASS table-cell-escaping-round-trip :: all 6 cell strings round-trip
+
+      TOTAL files=4 failed-checks=2
+      WT_PRE_VERIFIER_EXIT=1
+    ⇒ failed-checks=2 / VERIFIER_EXIT=1，两红恰是 case2 良构与 case3 注入，
+      与修前件 §4 及甲 A4 原始跑录 A407-docx-verify.log 同号同因；
+      case1/case4 体积（1716/1897）与修后一致，case2/case3 停在缺陷态
+      1668/1684 ⇒ 隔离环境完整复现判据红。
+  2d 回归侧（cwd=.tmp/a5r08/wtbuild-pre2/test，命令与 1d 同形）：
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    25543 lines, 1.22 seconds, 2948124 bytes code, 408520 bytes data.
+    WT_PRE_TEST_COMPILE_EXIT=0
+    DUnitX - [A5R08Docx.exe] - Starting Tests.
+
+    .....................................F.F.F.F.F..
+
+    Tests Found   : 24
+    Tests Ignored : 0
+    Tests Passed  : 19
+    Tests Leaked  : 0
+    Tests Failed  : 5
+    Tests Errored : 0
+
+    Failing Tests
+
+      Test.DeepBase.ExportDOCXAttrEscape.TDOCXAttributeEscapeTests.FontName_WithQuote_AttributeValueRoundTrips
+      Message: Expected [Bad"Font] but got [Bad] font name must come back byte-for-byte; raw attribute value was: Bad
+
+      Test.DeepBase.ExportDOCXAttrEscape.TDOCXAttributeEscapeTests.FontName_WithMarkupInjection_NoExtraElementsProduced
+      Message: Expected [x"/><w:ins w:id="9"/><w:rFonts w:ascii="y] but got [x] injected payload must stay inside the attribute value; raw was: x
+
+      Test.DeepBase.ExportDOCXAttrEscape.TDOCXAttributeEscapeTests.HeaderColor_WithQuoteAndAngleBrackets_RoundTrips
+      Message: Expected [A]]>B"C&D<E>F] but got [A]]>B] header colour must round-trip through the attribute; raw was: A]]>B
+
+      Test.DeepBase.ExportDOCXAttrEscape.TDOCXAttributeEscapeTests.HeaderColor_WithElementInjection_ShadingCountStaysAtColumnCount
+      Message: Expected [x"/><w:ins w:id="9"/><w:rFonts w:ascii="y] but got [x] header colour injection must stay quoted; raw was: x
+
+      Test.DeepBase.ExportDOCXAttrEscape.TDOCXAttributeEscapeTests.AttributeSinks_NoRawQuoteInsideStartTags
+      Message: Condition is False when True expected. [<w:rFonts was torn apart before attribute w:eastAsia: <w:rFonts w:ascii="x"/]
+    WT_PRE_TEST_EXIT=1
+    计数小结：Tests Found 24 / Passed 19 / Failed 5，TEST_EXIT=1。
+    与修前件 §6 的主树侧读数（25543 lines / 2948124 bytes code / 24-19-5 / EXIT=1）
+    逐项一致 ⇒ 隔离环境复现成功。
+    上列 Failing Tests 块是原始日志字面；三条归因分类（属性值截断 / 注入段逃出引号
+    成元素 / 开始标记被撕开导致属性集缺失）与用例来源见修前件 §6，本件不重复分析。
+
+-- 3. 两侧对照（唯一变量 = Core/DeepBase.Export.DOCX.pas）----------------------
+  全部读数取自本件的两棵 --detach 工作树，主树工作副本未参与任何一条命令。
+  编译行数：修后探针 657 ↔ 修前探针 650（差 7 = diff 净增 +10/-3，编译器自证）
+  编译行数：修后 runner 25550 ↔ 修前 runner 25543（同一差值 7）
+  判据：failed-checks 0（EXIT=0） ↔ 2（EXIT=1）
+  回归：24/24/0（EXIT=0） ↔ 24/19/5（EXIT=1）
+  用例侧、模板侧、DUnitX 源根、dcc64 版本、cwd 相对路径写法全部同源同形。
+  与主树侧（修前件/修后件）的交叉一致：探针 650/657、runner 25543/25550、
+  failed-checks 2/0、回归 24-19-5 / 24-24-0 四个量两侧逐项相等，
+  且第 1e 节证明 DOCX 产物解包后逐部件全等 ⇒ 主树读数不是环境特权。
+
+-- 4. 结论与清理 ----------------------------------------------------------------
+  纪律 6 满足：修后 @10d7082 在 --detach 工作树里字面编译探针与 runner 均 EXIT=0，
+  判据与回归全绿；修前 @2a999e8 在同一环境下复现 5 红与 failed-checks=2，
+  红绿之差只落在 Core/DeepBase.Export.DOCX.pas 的 +10/-3。
+  工作树洁净度复验（构建全部产物落在树外）：
+    git -C .tmp/a5r08/wt-post   status --short  → 空
+    git -C .tmp/a5r08/wt-prefix status --short  → 空
+  收尾命令（本件提交后执行，两棵树与三个构建目录一并拆除）：
+    git worktree remove --force .tmp/a5r08/wt-post
+    git worktree remove --force .tmp/a5r08/wt-prefix
+    rm -rf .tmp/a5r08/wtbuild-post .tmp/a5r08/wtbuild-pre2 .tmp/a5r08/wtbuild-pre
+  历史遗留的 .tmp/a5r04/wt-57de33c 与 .tmp/a5r04/wt-prefix 属 A5-R04 笔，第 0 节
+  worktree list 原样如实存档，拆除随 A5 收尾一并处理，不在本笔动。
+  主树状态：本单只提交 5 个文件（Core 单元、新测试单元、runner 模板、两份跑录），
+  Tests/DeepBaseTests.dpr 与 .dproj 未动，fixture 注册收口归主控（纪律 5）。
+  同笔更正：A5-R08-基线-修前跑录.txt §4 折叠 case2 的长 FAIL 时，把 case3 的文件头
+  FILE A407_case3_fontinject.docx size=1684 一起吞掉了（折叠收尾的正则只认两空格缩进
+  的行，不认顶格的 FILE/TOTAL）；正则修正后重出该件，diff = +1 行，其余读数逐字未动。
+  本件 §2c 用同一支修正后的函数，四个 FILE 头与 TOTAL 行齐备。
+  本件入账后四门复跑（先 git add 再跑，纪律 9）：行尾 1589 / 编码 1010+732 /
+  丙类 1008（丙-B 0 处，存量 17 件 343 处封顶内）/ 证据编码 884 件（本件 +1），
+  四门 EXIT 全 0；证据 .txt 的 "CRLF will be replaced by LF" warning 属 .gitattributes
+  对证据面的既定 text eol=lf 策略，非本单异常。
+
