@@ -34,7 +34,10 @@ uses
   System.SyncObjs,
   System.DateUtils,
   DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Random,
-  DeepBase.Security.MachineIdentity;
+  DeepBase.Security.MachineIdentity,
+  // 与 DeepBase.License 共用同一个时钟源：密钥有效期若读裸墙钟，回拨系统时间就能
+  // 让到期密钥重新可用，也会把新建密钥的有效期窗口整体往前挪。
+  DeepBase.TimeSource;
 
 type
   EKeyManagerException = class(Exception);
@@ -317,7 +320,8 @@ end;
 
 function TKeyInfo.IsExpired: Boolean;
 begin
-  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+  // 与许可同一条判据：裸 Now 会被系统回拨绕过，到期密钥因此重新可用
+  Result := (ExpiresAt > 0) and (TDeepBaseTimeSource.Shared.Now > ExpiresAt);
 end;
 
 function TKeyInfo.DaysUntilExpiry: Integer;
@@ -325,7 +329,7 @@ begin
   if ExpiresAt = 0 then
     Result := MaxInt
   else
-    Result := DaysBetween(Now, ExpiresAt);
+    Result := DaysBetween(TDeepBaseTimeSource.Shared.Now, ExpiresAt);
 end;
 
 { TKeyDerivationParams }
@@ -352,7 +356,7 @@ constructor TMasterKey.Create;
 begin
   inherited Create;
   FIsUnlocked := False;
-  FCreatedAt := Now;
+  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
 end;
 
 destructor TMasterKey.Destroy;
@@ -373,7 +377,7 @@ begin
   FKeyData := TPasswordUtils.PBKDF2(APassword, AParams.Salt, AParams.Iterations,
                                     AParams.KeyLength, AParams.Algorithm);
   FIsUnlocked := True;
-  FCreatedAt := Now;
+  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
 end;
 
 procedure TMasterKey.Lock;
@@ -395,7 +399,7 @@ begin
   inherited Create;
   FPurpose := APurpose;
   FStatus := ksActive;
-  FCreatedAt := Now;
+  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
   FVersion := 1;
   FKeyId := TRandomGenerator.NewGuidNoDashes;
 end;
@@ -557,7 +561,7 @@ begin
   try
     Key := TDataKey.Create(APurpose);
     Key.Generate(32);
-    Key.FExpiresAt := IncDay(Now, AExpiryDays);
+    Key.FExpiresAt := IncDay(TDeepBaseTimeSource.Shared.Now, AExpiryDays);
     Key.EncryptWith(GetKEK, Binding.ToBinding);
     FKeys.Add(Key.KeyId, Key);
     Save;

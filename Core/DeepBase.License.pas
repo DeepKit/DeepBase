@@ -24,7 +24,8 @@ uses
   System.JSON,
   System.Generics.Collections,
   DeepBase.Storage.Interfaces,
-  DeepBase.StorageFactory;
+  DeepBase.StorageFactory,
+  DeepBase.TimeSource;
 
 type
   /// <summary>
@@ -189,17 +190,21 @@ end;
 
 function TLicenseInfo.IsExpired: Boolean;
 begin
-  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+  // 单一时钟源：裸 Now 让系统回拨就能给到期许可续命
+  Result := (ExpiresAt > 0) and (TDeepBaseTimeSource.Shared.Now > ExpiresAt);
 end;
 
 function TLicenseInfo.DaysRemaining: Integer;
+var
+  EffectiveNow: TDateTime;
 begin
+  EffectiveNow := TDeepBaseTimeSource.Shared.Now;
   if ExpiresAt <= 0 then
     Result := MaxInt  // Perpetual
-  else if Now > ExpiresAt then
+  else if EffectiveNow > ExpiresAt then
     Result := 0
   else
-    Result := DaysBetween(Now, ExpiresAt);
+    Result := DaysBetween(EffectiveNow, ExpiresAt);
 end;
 
 function TLicenseInfo.HasFeature(const FeatureName: string): Boolean;
@@ -357,13 +362,18 @@ var
   F: string;
   Payload, PayloadEncoded, Signature: string;
   TempLicense: TDeepBaseLicense;
+  IssuedNow: TDateTime;
 begin
+  IssuedNow := TDeepBaseTimeSource.Shared.Now;
   JsonObj := TJSONObject.Create;
   try
     JsonObj.AddPair('v', LICENSE_VERSION);
     JsonObj.AddPair('t', TJSONNumber.Create(Ord(LicenseType)));
     JsonObj.AddPair('e', TJSONNumber.Create(DateTimeToUnix(ExpiresAt)));
-    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(Now)));
+    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(IssuedNow)));
+    // 'l' = 签发时刻的 last-seen 水位。载荷是 HMAC 签名的，回载时水位只能被它推进、
+    // 不能被它降低（SeedWatermark），删除或换成旧副本因此都退不回过去。
+    JsonObj.AddPair('l', TJSONNumber.Create(DateTimeToUnix(IssuedNow)));
     JsonObj.AddPair('to', IssuedTo);
     JsonObj.AddPair('d', DeviceId);
     JsonObj.AddPair('u', TJSONNumber.Create(MaxUsers));
@@ -398,9 +408,12 @@ var
   FeaturesArray: TJSONArray;
   I: Integer;
   LicenseDeviceId: string;
+  LastSeenUnix: Int64;
+  LastSeenValue: TDateTime;
 begin
   Result := TLicenseInfo.Empty;
   Result.LicenseKey := LicenseKey;
+  LastSeenValue := 0;
   
   if LicenseKey = '' then
     Exit;
@@ -444,6 +457,11 @@ begin
       Result.LicenseType := TLicenseType(JsonObj.GetValue<Integer>('t', 0));
       Result.ExpiresAt := UnixToDateTime(JsonObj.GetValue<Int64>('e', 0));
       Result.IssuedAt := UnixToDateTime(JsonObj.GetValue<Int64>('i', 0));
+      // 修前签发的历史载荷没有 'l'：取默认 0，按"无水位可播种"处理，
+      // 过期判定继续走进程水位（时钟读数本身已经推进过它）
+      LastSeenUnix := JsonObj.GetValue<Int64>('l', 0);
+      if LastSeenUnix > 0 then
+        LastSeenValue := UnixToDateTime(LastSeenUnix);
       Result.IssuedTo := JsonObj.GetValue<string>('to', '');
       Result.DeviceId := JsonObj.GetValue<string>('d', '');
       Result.MaxUsers := JsonObj.GetValue<Integer>('u', 1);
@@ -463,6 +481,12 @@ begin
     Exit;
   end;
   
+  // 先按载荷里的 last-seen 推进水位（只升不降），再做过期判定：
+  // 顺序颠倒会让本次判定用不上刚读到的水位，进程重启后回拨防护就失效一天。
+  // 位置在验签之后 ⇒ 伪造的更早水位根本走不到这里。
+  if LastSeenValue > 0 then
+    TDeepBaseTimeSource.Shared.SeedWatermark(LastSeenValue);
+
   // Check expiration
   if Result.IsExpired then
   begin

@@ -1,0 +1,396 @@
+A5-R09 修后（判据跑录）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R09）
+日期：2026-09-29
+配套件：A5-R09-基线-修前跑录.txt（10 处裸 Now 缺陷态取证、既有面 60 例基线、
+        11 条修前红项与红因分类、测试侧三处写法坑均在该件）
+        A5-R09-隔离工作树编译跑录.txt（纪律 6 的隔离环境构造与逐文件差异）
+
+-- 1. 修法 ----------------------------------------------------------------------
+  分层约束（工单 §一 R09 + Tests/Architecture/Test.Arch.PackageBoundaries.pas）：
+  DeepBaseCore 不得反向依赖 Features，故时钟源落在 Core 自己的新单元
+  Core/DeepBase.TimeSource.pas（包清单 DeepBaseServices.dpk，与 DeepBase.License /
+  DeepBase.KeyManager 同包），uses 只有 System.SysUtils / System.DateUtils /
+  System.SyncObjs —— 零 Features 引用、零新增第三方依赖。
+
+  为什么新建单元而不是塞进 Core/DeepBase.DateTime.pas：后者是纯格式化/算术无状态工具，
+  「带状态的安全水位」属另一职责，合入即职责不清；且它自己有 12 处 System.SysUtils.Now
+  读数点（相对时间格式化，属相邻超范围，见 §8 b）。新建单元是单一真相源的正解：
+  Core 内授权相关的时间读数只有一个入口。
+
+  四步（对工单 §一 R09 修法四步逐条落地）：
+   ①可注入时间源：TDeepBaseNowFunc = reference to function: TDateTime;
+     TDeepBaseTimeSource.Now 内部 FNowFunc 非空则取注入读数，否则取 System.SysUtils.Now
+     （必须全限定：本单元方法名同为 Now，裸调用自我递归）。形态参考 Core/DeepBase.IoC.pas
+     的注册/替换风格，但用进程共享实例 + initialization 期建实例，避免 R05 那类
+     「双路径单例」再立一轨。
+   ②last-seen 单调水位 + 持久化字段：实例持 FLastSeen；许可证载荷新增 'l'
+     （签发时刻水位的 unix 秒，紧随 'i'）。读回时走 SeedWatermark —— 该过程只升不降，
+     所以删除许可文件、换成更早的真副本、或篡改载荷（改 'l' 必然过不了 HMAC）都退不回过去。
+   ③EffectiveNow = Max(注入读数, 水位)：Now 内部在锁内比较，读数低于水位即
+     Inc(FRollbackCount) 并累计 MaxRollbackSeconds（SecondsBetween），返回值仍取水位 ——
+     回拨只登记、不续命。
+   ④IsExpired / DaysRemaining / DaysUntilExpiry / 三处 FCreatedAt / 一处 FExpiresAt /
+     载荷 'i' 全部改走 TDeepBaseTimeSource.Shared.Now，两个单元的裸 Now 归零。
+
+  执行顺序上的一处关键（注释已写进代码）：ValidateLicense 里 SeedWatermark 必须在验签之后、
+  判过期之前。放在验签后 ⇒ 伪造的更早水位走不到播种点；放在判过期前 ⇒ 本次判定就用得上
+  刚读到的水位，否则进程重启后回拨防护会失效一天。
+
+-- 2. 完整 diff ----------------------------------------------------------------
+  diff --git a/Core/DeepBase.License.pas b/Core/DeepBase.License.pas
+  index cc13662..cdd4a19 100644
+  --- a/Core/DeepBase.License.pas
+  +++ b/Core/DeepBase.License.pas
+  @@ -25,5 +25,6 @@ uses
+     System.Generics.Collections,
+     DeepBase.Storage.Interfaces,
+  -  DeepBase.StorageFactory;
+  +  DeepBase.StorageFactory,
+  +  DeepBase.TimeSource;
+   
+   type
+  @@ -190,15 +191,19 @@ end;
+   function TLicenseInfo.IsExpired: Boolean;
+   begin
+  -  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+  +  // 单一时钟源：裸 Now 让系统回拨就能给到期许可续命
+  +  Result := (ExpiresAt > 0) and (TDeepBaseTimeSource.Shared.Now > ExpiresAt);
+   end;
+   
+   function TLicenseInfo.DaysRemaining: Integer;
+  +var
+  +  EffectiveNow: TDateTime;
+   begin
+  +  EffectiveNow := TDeepBaseTimeSource.Shared.Now;
+     if ExpiresAt <= 0 then
+       Result := MaxInt  // Perpetual
+  -  else if Now > ExpiresAt then
+  +  else if EffectiveNow > ExpiresAt then
+       Result := 0
+     else
+  -    Result := DaysBetween(Now, ExpiresAt);
+  +    Result := DaysBetween(EffectiveNow, ExpiresAt);
+   end;
+   
+  @@ -358,5 +363,7 @@ var
+     Payload, PayloadEncoded, Signature: string;
+     TempLicense: TDeepBaseLicense;
+  +  IssuedNow: TDateTime;
+   begin
+  +  IssuedNow := TDeepBaseTimeSource.Shared.Now;
+     JsonObj := TJSONObject.Create;
+     try
+  @@ -364,5 +371,8 @@ begin
+       JsonObj.AddPair('t', TJSONNumber.Create(Ord(LicenseType)));
+       JsonObj.AddPair('e', TJSONNumber.Create(DateTimeToUnix(ExpiresAt)));
+  -    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(Now)));
+  +    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(IssuedNow)));
+  +    // 'l' = 签发时刻的 last-seen 水位。载荷是 HMAC 签名的，回载时水位只能被它推进、
+  +    // 不能被它降低（SeedWatermark），删除或换成旧副本因此都退不回过去。
+  +    JsonObj.AddPair('l', TJSONNumber.Create(DateTimeToUnix(IssuedNow)));
+       JsonObj.AddPair('to', IssuedTo);
+       JsonObj.AddPair('d', DeviceId);
+  @@ -399,7 +409,10 @@ var
+     I: Integer;
+     LicenseDeviceId: string;
+  +  LastSeenUnix: Int64;
+  +  LastSeenValue: TDateTime;
+   begin
+     Result := TLicenseInfo.Empty;
+     Result.LicenseKey := LicenseKey;
+  +  LastSeenValue := 0;
+     
+     if LicenseKey = '' then
+  @@ -445,4 +458,9 @@ begin
+         Result.ExpiresAt := UnixToDateTime(JsonObj.GetValue<Int64>('e', 0));
+         Result.IssuedAt := UnixToDateTime(JsonObj.GetValue<Int64>('i', 0));
+  +      // 修前签发的历史载荷没有 'l'：取默认 0，按"无水位可播种"处理，
+  +      // 过期判定继续走进程水位（时钟读数本身已经推进过它）
+  +      LastSeenUnix := JsonObj.GetValue<Int64>('l', 0);
+  +      if LastSeenUnix > 0 then
+  +        LastSeenValue := UnixToDateTime(LastSeenUnix);
+         Result.IssuedTo := JsonObj.GetValue<string>('to', '');
+         Result.DeviceId := JsonObj.GetValue<string>('d', '');
+  @@ -464,4 +482,10 @@ begin
+     end;
+     
+  +  // 先按载荷里的 last-seen 推进水位（只升不降），再做过期判定：
+  +  // 顺序颠倒会让本次判定用不上刚读到的水位，进程重启后回拨防护就失效一天。
+  +  // 位置在验签之后 ⇒ 伪造的更早水位根本走不到这里。
+  +  if LastSeenValue > 0 then
+  +    TDeepBaseTimeSource.Shared.SeedWatermark(LastSeenValue);
+  +
+     // Check expiration
+     if Result.IsExpired then
+
+  diff --git a/Core/DeepBase.KeyManager.pas b/Core/DeepBase.KeyManager.pas
+  index 9160b64..4ff65ef 100644
+  --- a/Core/DeepBase.KeyManager.pas
+  +++ b/Core/DeepBase.KeyManager.pas
+  @@ -35,5 +35,8 @@ uses
+     System.DateUtils,
+     DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Random,
+  -  DeepBase.Security.MachineIdentity;
+  +  DeepBase.Security.MachineIdentity,
+  +  // 与 DeepBase.License 共用同一个时钟源：密钥有效期若读裸墙钟，回拨系统时间就能
+  +  // 让到期密钥重新可用，也会把新建密钥的有效期窗口整体往前挪。
+  +  DeepBase.TimeSource;
+   
+   type
+  @@ -318,5 +321,6 @@ end;
+   function TKeyInfo.IsExpired: Boolean;
+   begin
+  -  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+  +  // 与许可同一条判据：裸 Now 会被系统回拨绕过，到期密钥因此重新可用
+  +  Result := (ExpiresAt > 0) and (TDeepBaseTimeSource.Shared.Now > ExpiresAt);
+   end;
+   
+  @@ -326,5 +330,5 @@ begin
+       Result := MaxInt
+     else
+  -    Result := DaysBetween(Now, ExpiresAt);
+  +    Result := DaysBetween(TDeepBaseTimeSource.Shared.Now, ExpiresAt);
+   end;
+   
+  @@ -353,5 +357,5 @@ begin
+     inherited Create;
+     FIsUnlocked := False;
+  -  FCreatedAt := Now;
+  +  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
+   end;
+   
+  @@ -374,5 +378,5 @@ begin
+                                       AParams.KeyLength, AParams.Algorithm);
+     FIsUnlocked := True;
+  -  FCreatedAt := Now;
+  +  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
+   end;
+   
+  @@ -396,5 +400,5 @@ begin
+     FPurpose := APurpose;
+     FStatus := ksActive;
+  -  FCreatedAt := Now;
+  +  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
+     FVersion := 1;
+     FKeyId := TRandomGenerator.NewGuidNoDashes;
+  @@ -558,5 +562,5 @@ begin
+       Key := TDataKey.Create(APurpose);
+       Key.Generate(32);
+  -    Key.FExpiresAt := IncDay(Now, AExpiryDays);
+  +    Key.FExpiresAt := IncDay(TDeepBaseTimeSource.Shared.Now, AExpiryDays);
+       Key.EncryptWith(GetKEK, Binding.ToBinding);
+       FKeys.Add(Key.KeyId, Key);
+
+  包清单（唯一一处工程文件改动，1 行新增，无代码语义）：
+  @@ -31,6 +31,7 @@ contains
+     DeepBase.Crypto.PBKDF2 in 'Core\DeepBase.Crypto.PBKDF2.pas',
+     DeepBase.Security.DPAPI in 'Core\DeepBase.Security.DPAPI.pas',
+     DeepBase.Security.SecretStore in 'Core\DeepBase.Security.SecretStore.pas',
+  +  DeepBase.TimeSource in 'Core\DeepBase.TimeSource.pas',
+     DeepBase.KeyManager in 'Core\DeepBase.KeyManager.pas',
+
+  修后裸 Now 复验（主树，本笔内容）：
+    grep -n '\bNow\b' Core/DeepBase.License.pas Core/DeepBase.KeyManager.pas
+    ⇒ 11 行命中，全部是 TDeepBaseTimeSource.Shared.Now 或中文注释里的「裸 Now」字样，
+      零裸 Now；两单元不再调用 System.SysUtils.Now。
+    （10 处缺陷态站点 → 8 处换成 Shared.Now + 载荷 'i' 改用 IssuedNow，共 9 个读数点收口。）
+
+-- 3. 移交：新时间源符号清单（乙 B7 判据①、乙 B3 依赖，工单 §〇 纪律 11 要求点名）--
+  单元：DeepBase.TimeSource（路径 Core/DeepBase.TimeSource.pas，200 行，UTF-8 BOM+CRLF）
+  包：DeepBaseServices（与 DeepBase.License / DeepBase.KeyManager 同包）
+
+    type
+      TDeepBaseNowFunc = reference to function: TDateTime;
+
+      TDeepBaseTimeSource = class
+      public
+        constructor Create;
+        destructor Destroy; override;
+        function Now: TDateTime;                                  // EffectiveNow
+        procedure SetNowFunc(const ANowFunc: TDeepBaseNowFunc);   // nil ⇒ 恢复墙钟
+        procedure SeedWatermark(const ALastSeen: TDateTime);      // 只升不降，<=0 直接 Exit
+        procedure Reset;                                          // 清注入/水位/计数
+        property LastSeen: TDateTime read GetLastSeen;
+        property RollbackCount: Integer read GetRollbackCount;
+        property MaxRollbackSeconds: Int64 read GetMaxRollbackSeconds;
+        class function Shared: TDeepBaseTimeSource; static;
+      end;
+
+  线程安全：所有读写走实例内 TCriticalSection；Shared 实例在单元 initialization 期建立、
+  finalization 期 FreeAndNil，不存在惰性构造竞态，宿主无需初始化调用。
+
+  注入用法（生产侧，乙 B3 接线口径）：
+    TDeepBaseTimeSource.Shared.SetNowFunc(
+      function: TDateTime
+      begin
+        Result := TTimeGuard.GetCorrectedNow;   // 网络校时/可信时间源，Features 侧已有
+      end);
+  —— 装一次即全 Core 生效：许可 IsExpired/DaysRemaining、密钥 IsExpired/DaysUntilExpiry/
+  FCreatedAt/FExpiresAt、载荷签发戳 'i' 与水位 'l' 全部随之改源。Core 不再有任何一处
+  直接读墙钟，因此 B7 不需要在每个消费点分别打桩。
+  回拨观测：RollbackCount / MaxRollbackSeconds 供上层记录与告警；Core 只登记不处置。
+  跨进程持久水位：Core 不引入存储面（ILicenseStorage 只有 key 字符串，扩接口会牵动
+  Features/Persistence，属甲禁改区）。载荷 'l' 提供了可持久载体，读取侧在 ValidateLicense
+  已按「只升不降」播种；把额外一层 last-seen 落到存储/注册表并与 TTimeGuard 接线属乙 B3。
+
+  测试用法（确定性起点）：
+    TDeepBaseTimeSource.Shared.Reset;                       // 每个用例 Setup 先归零
+    TDeepBaseTimeSource.Shared.SeedWatermark(AMoment);      // 铺水位
+    TDeepBaseTimeSource.Shared.SetNowFunc(
+      function: TDateTime
+      var LFixed: TDateTime;                                // 必须捕获局部变量
+      begin
+        Result := LFixed;
+      end);
+    ...
+    TDeepBaseTimeSource.Shared.Reset;                       // Teardown 还原，避免污染同进程其他用例
+
+-- 4. 载荷格式变更（'l' 字段）---------------------------------------------------
+  许可证载荷 = Base64URL(JSON) + '.' + HMAC-SHA256（32 hex）。
+  键序：修前 v,t,e,i,to,d,u,f  →  修后 v,t,e,i,l,to,d,u,f（'l' 紧随 'i'）。
+  兼容性（生产级项目须评估，老板口径「质量优先于兼容，允许 breaking change」）：
+    修后读修前载荷：'l' 取默认 0 ⇒ 无水位可播种，判定继续走进程水位，历史许可照常可用。
+                    已由 LegacyLicense_WithoutLastSeenField_StillJudgedByWatermark 用
+                    真实修前产物（LEGACY_KEY_WITHOUT_LAST_SEEN 常量，e=2027-08-15）覆盖。
+    修前读修后载荷：JSON 多余键不校验、且 HMAC 覆盖整个 JSON ⇒ 签名照常通过，字段被忽略。
+                    不存在「新载荷在旧版本被判非法」的降级风险。
+    既有快照/摘要类消费面：TestResults/** 属禁动区、未触碰；全仓无按载荷字节比对的消费方
+                    （grep 见 §6 消费面取证）。
+
+-- 5. 判据跑录（主树，修后）-----------------------------------------------------
+  重编译探针（附件/A5R09Verify.dpr.template 原样，只多了新单元）：
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    43899 lines, 1.64 seconds, 3708684 bytes code, 465400 bytes data.
+    GREEN_COMPILE_EXIT=0
+  运行：
+    DUnitX - [A5R09Verify.exe] - Starting Tests.
+    Tests Found   : 78
+    Tests Ignored : 0
+    Tests Passed  : 78
+    Tests Leaked  : 0
+    Tests Failed  : 0
+    Tests Errored : 0
+    GREEN_RUN_EXIT=0
+
+  工单三条判据逐条对上：
+   ①「假时钟回拨 30 天 ⇒ 到期许可仍判过期、天数按水位计」
+      ExpiredLicense_StaysExpired_AfterThirtyDayRollback  红→绿（水位 2027-09-01，
+        注入读数 2027-08-02，过期日 2027-08-15：仍判 LicenseStatus 2 = 已过期）
+      DaysRemaining_CountsFromWatermark_NotFromRolledBackClock  红→绿（修前 428，修后 91）
+      密钥侧同判：ExpiredKeyInfo_StaysExpired_AfterRollback、DaysUntilExpiry_CountsFromWatermark
+   ②「删除/篡改降水位后重载 ⇒ 水位不回退」
+      OlderGenuineLicense_WithLowerLastSeen_DoesNotLowerWatermark  红→绿
+        （真 HMAC 签名、'l' 更早的副本回载后 LastSeen 仍是 2027-09-01，许可仍判过期）
+      ForgedLowerLastSeen_IsRejected_AndWatermarkUnchanged  红→绿
+        （改 'l' 不改签名 ⇒ ValidateSignature 常量时间比较直接拒，水位不动）
+      LegacyLicense_WithoutLastSeenField_StillJudgedByWatermark  红→绿
+   ③「既有 Tests/Test.DeepBase.{License,LicenseSecret}.pas 不回归」
+      基线件 §3：修前 60/60/0；修后同一批既存单元读数未变（78 = 60 既存 + 18 新增，
+      新增全在 TTimeSourceContractTests/TLicenseClockRollbackTests/TKeyClockRollbackTests），
+      整体 78/78/0 ⇒ 零回归。
+      注：60 里不含 LicenseSecret 的 2 例（该单元缺 fixture 注册，另派 A8 单），
+      故本条按既存可跑读数对齐，未借该单元自证。
+
+  红绿对照（11 项红 → 绿）：
+    TLicenseClockRollbackTests.ExpiredLicense_StaysExpired_AfterThirtyDayRollback      红→绿
+    TLicenseClockRollbackTests.DaysRemaining_CountsFromWatermark_NotFromRolledBackClock 红→绿
+    TLicenseClockRollbackTests.OlderGenuineLicense_WithLowerLastSeen_DoesNotLowerWatermark 红→绿
+    TLicenseClockRollbackTests.LegacyLicense_WithoutLastSeenField_StillJudgedByWatermark 红→绿
+    TLicenseClockRollbackTests.GenerateLicenseKey_PersistsLastSeenField                 红→绿
+    TLicenseClockRollbackTests.ForgedLowerLastSeen_IsRejected_AndWatermarkUnchanged     红→绿
+    TKeyClockRollbackTests.ExpiredKeyInfo_StaysExpired_AfterRollback                    红→绿
+    TKeyClockRollbackTests.DaysUntilExpiry_CountsFromWatermark                          红→绿
+    TKeyClockRollbackTests.MasterKeyCreatedAt_ComesFromSharedClock                      红→绿
+    TKeyClockRollbackTests.DataKeyCreatedAt_ComesFromSharedClock                        红→绿
+    TKeyClockRollbackTests.CreatedKeyExpiryWindow_ComesFromSharedClock                  红→绿
+  TTimeSourceContractTests 7 例：修前修后皆绿（新建单元自身的契约，红因无关项，
+    用作「注入机制可用」的前置证明）。
+  既存 60 例：修前修后皆绿 ⇒ 零回归。
+
+-- 6. 破坏面自报 ---------------------------------------------------------------
+  改动文件：
+    Core/DeepBase.TimeSource.pas（新建，200 行，UTF-8 BOM+CRLF）
+    Core/DeepBase.License.pas（+29/-5）
+    Core/DeepBase.KeyManager.pas（+11/-7）
+    DeepBaseServices.dpk（+1，包清单注册新单元）
+    Tests/Test.DeepBase.TimeSource.pas（新建，524 行，UTF-8 BOM+CRLF，3 fixture / 18 例）
+    Tests/DeepBaseTests.dpr / .dproj 未改（fixture 注册收口归主控，纪律 5）
+    附件/A5R09Baseline.dpr.template、附件/A5R09Verify.dpr.template（runner 字面模板，
+      ASCII+CRLF，走 .template 别名不触发 A6-02 反向闸门）
+    证据：本件 + A5-R09-基线-修前跑录.txt + A5-R09-隔离工作树编译跑录.txt
+  零改动区：Features/**（含 Features/DeepBase.Licensing.pas、Features/DeepBase.Unlock.pas）、
+    VCL/**、FMX/**、Tools/**、Studio/**、Persistence/DeepBase.Persistence.License.FireDAC.pas、
+    Examples/FullDemo、v1.1.0 标签、EHAI 冻结面、TestResults/**、
+    旧轨 Core/DeepBase.PluginManager.pas、新轨 DeepBase.Plugins.*、
+    Tests/Architecture/**（分层约束只读引用）。
+  分层约束取证：Tests/Architecture/Test.Arch.PackageBoundaries.pas 要求的
+    DeepBaseCore 不依赖 Features —— 新单元 uses 面为三个 System.* 单元，
+    且与 License/KeyManager 同包（DeepBaseServices），未跨包边界。
+  消费面取证：grep -rln "DeepBase.License\b|DeepBase.KeyManager\b|DeepBase\.TimeSource"
+    --include=*.pas --include=*.dpr --include=*.dpk（排除 .tmp 脚手架）
+    命中面 = Core 内部互引 + DeepBaseServices.dpk + Tests 既存单元 + 新单元 +
+    Features/Persistence/VCL/Examples 的既有引用点。
+    引用形态未变（签名、公有成员、单元名全部兼容），仅时间读数换源与载荷多一字段 ⇒
+    无调用方需要联动修改，不触发工单 §〇「修法迫使 Features 联动 ⇒ 停机上报」。
+  行为变更口径（对外可见）：
+    a) 系统时间回拨不再给到期许可/密钥续命，也不再虚高剩余天数 —— 判据变更属修复目标。
+    b) 新建密钥的 FCreatedAt/FExpiresAt 在回拨期间不再前移，改按水位开窗。
+    c) 许可载荷新增 'l'（签名覆盖），长度按 JSON 增长约 +18 字符再经 Base64URL 膨胀；
+       按字节比对载荷的外部面需按老板口径接受（全仓无此类消费方）。
+    d) 回拨被登记在 RollbackCount/MaxRollbackSeconds，Core 不因此报错、不阻断 ——
+       处置权在 Features/宿主（乙 B3）。
+
+-- 7. 编码/行尾四门（先 git add 本单文件，再跑，使计数含新增件）----------------
+    node 09_工程脚本/eol-gate/check_eol.js --root .
+    node 09_工程脚本/encoding-gate/check_pas_encoding.js --root .
+    node 09_工程脚本/mojibake-gate/check_mojibake.js --root .
+    node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --root .
+  本单 9 个文件先入索引后复跑，四门 EXIT=0 / 0 / 0 / 0，结论行原文：
+    行尾门禁通过：检查了 1591 个文件（.pas CRLF / .md LF），跳过目录 11
+    编码门禁通过：1012 个 .pas + 732 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+    丙类损坏门禁通过：扫描 1010 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+    证据编码门禁通过：扫描 888 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+  计数增量对上本单入账面（参照 A5-R08 收尾读数：1589 / 1010+732 / 1008 / 884）：
+    .pas 1010->1012、行尾面 1589->1591、丙类 1008->1010 -- 均因 Core/DeepBase.TimeSource.pas
+      与 Tests/Test.DeepBase.TimeSource.pas 两件新增，无第三件。
+    证据面 884->888 -- 本笔 fix 提交入账 4 件（两份跑录 + 两份 .dpr.template）；
+      A5-R09-隔离工作树编译跑录.txt 随第二笔 docs 提交入账，届时应为 889。
+    BOM 例外 45、双重编码基线 50、扩展面存量损坏豁免 13、U+FFFD 残留 18 全部未变
+      => 本单没有新纳入任何豁免，也没有消耗任何存量豁免额度。
+  逐件自检（门禁口径）：三个新/改 .pas + 新测试单元 = UTF-8 BOM + CRLF + U+FFFD 0；
+    三份证据 .txt = 无 BOM + CRLF（仓内按 .gitattributes *.txt text eol=lf 存 LF）；
+    两份 .dpr.template = 纯 ASCII（nonAscii=0）+ CRLF。
+
+-- 8. 发现但不修（登记，待主控另派）--------------------------------------------
+  a) DaysBetween / SecondsBetween（System.DateUtils）返回绝对值，「已过期」在天数上是
+     正数而非负数：TLicenseInfo.DaysRemaining 有显式 else 0 分支所以不受影响，但
+     TKeyInfo.DaysUntilExpiry（Core/DeepBase.KeyManager.pas:329-333）只有
+     ExpiresAt<=0 => MaxInt 的永久分支，已过期密钥仍返回正天数 -- 消费方按
+     「还剩 N 天」展示时在过期后继续显示正数。属既存口径，本单只把读数换源、
+     不改判据形状（改了会牵动所有消费方的显示语义）。判据用例
+     ExpiredKeyInfo_StaysExpired_AfterRollback 走的是 IsExpired，不受该口径影响。
+  b) Core/DeepBase.DateTime.pas 的 TDateTimeUtils 有 12 处 System.SysUtils.Now 读数点
+     （:1109 :1127 :1149 :1171 :1176 :1181 :1186 :1191 :1196 :1217 :1659 :1664），
+     全部是相对时间格式化/判断（WasToday、IsWithinDays 等），不承载授权判定 => 风险面
+     与 R09 不同。若主控要「Core 全域单一时钟源」，应另派一单把这些读数改走
+     TDeepBaseTimeSource.Shared（改动面 12 处 + 该单元全部调用方回归），本单不扩面。
+  c) Core/DeepBase.Cache.pas:326 用裸 Now 做缓存条目过期判定（另 :514 :515 :520 :584
+     :1026 :1027 :1050 :1068 共 9 处）。缓存回拨只影响条目寿命，不构成授权绕过；
+     但它确实是 Core 内第三条时钟轨，与 R09「单一时钟源」目标同源，登记待派。
+  d) Features 侧仍是第二轨时钟（甲禁改区，属乙 B3 接线范围，本单已提供接入点）：
+     - Features/DeepBase.Licensing.pas:689 `var NowUtc := TTimeZone.Local.ToUniversalTime(Now)`
+       加 :693 `DaysBetween(NowUtc, ExpiresAt)` -- 试用余额在 Features 内自算，没走
+       Core 的 DaysRemaining，系统回拨仍能虚高「试用剩余天数」，这正是 R09 危害面 b
+       在 Features 的投影。修法：该函数改走 TDeepBaseTimeSource.Shared.Now。
+     - Features/DeepBase.Licensing.pas:837 TDeepLicensing.GetCorrectedNow 的
+       `else Result := Now`（TimeGuard 未验证时回落裸墙钟），与本单位 :845
+       IsTimeTrusted 的 `Result := True; // Trust by default if not verified` 同形，
+       属 fail-open 家族，与 A2-14 类问题一致，应一并处置。
+     - Features/DeepBase.Unlock.pas:492-493 用 Now 划当月窗口（业务窗口，非授权判定）。
+     移交口径见 §3：乙 B3 把 TTimeGuard 经 SetNowFunc 注入 Shared 实例后，上述点只需
+     把裸 Now 换成 Shared.Now 即可同源，无需各自打桩。
+  e) 载荷 'l' 与 'i' 当前同值（都取 IssuedNow）。这是刻意的：水位语义是「签发时刻
+     已经不早于此」，与签发戳同源才不会引入第二个读数点。若乙 B3 需要「签发时的历史
+     最高水位」这一不同语义，需另立字段并在生成侧读 LastSeen，属存储面设计，本单不预设。

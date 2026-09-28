@@ -1,0 +1,137 @@
+A5-R09 基线（修前跑录）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R09）
+日期：2026-09-29
+锚点：修前代码 = HEAD 7549d0c（本单 R09 改动此前全部未提交）
+配套件：A5-R09-修后-判据跑录.txt（修法、diff、红绿对照、移交清单、发现不修）
+        A5-R09-隔离工作树编译跑录.txt（纪律 6 的隔离环境构造与逐文件差异）
+
+-- 0. 工单口径（§〇 纪律 11 的范围修订，原文要点）------------------------------
+  「R09 的 Core 单一时钟源必须同时消除两处裸 Now 过期判定——Core/DeepBase.License.pas:192
+   （原列）与 Core/DeepBase.KeyManager.pas:320（TKeyInfo.IsExpired，主控实测同形）。
+   只修前者 ⇒ Core 内仍留第二轨时钟，违背 R09 单一时钟源目标；且甲时间源符号须为可注入
+   形态，现因乙 B7 判据①端到端依赖，回执必须点名符号名 + 签名 + 注入用法。」
+  本单按修订后的两点执行：两处判定 + 两处的时间戳写入面一起收口；时间源可注入；
+  符号清单见修后件 §3。
+
+-- 1. 缺陷事实：修前 Core 的裸 Now 站点（10 处，两个单元）----------------------
+  取证方式：隔离工作树 @7549d0c（工作树 status 为空，代码 = 修前 HEAD 字面）上
+            grep -n '\bNow\b' Core/DeepBase.License.pas Core/DeepBase.KeyManager.pas
+  原文（.tmp/a5r09/wt-prefix-bare-now.txt，行号属该 commit 的字面行号，非抄工单）：
+
+    wt-prefix/Core/DeepBase.License.pas:192:  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+    wt-prefix/Core/DeepBase.License.pas:199:  else if Now > ExpiresAt then
+    wt-prefix/Core/DeepBase.License.pas:202:    Result := DaysBetween(Now, ExpiresAt);
+    wt-prefix/Core/DeepBase.License.pas:366:    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(Now)));
+    wt-prefix/Core/DeepBase.KeyManager.pas:320:  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+    wt-prefix/Core/DeepBase.KeyManager.pas:328:    Result := DaysBetween(Now, ExpiresAt);
+    wt-prefix/Core/DeepBase.KeyManager.pas:355:  FCreatedAt := Now;
+    wt-prefix/Core/DeepBase.KeyManager.pas:376:  FCreatedAt := Now;
+    wt-prefix/Core/DeepBase.KeyManager.pas:398:  FCreatedAt := Now;
+    wt-prefix/Core/DeepBase.KeyManager.pas:560:    Key.FExpiresAt := IncDay(Now, AExpiryDays);
+
+  与工单 :192 / :320 两处引用逐字对上（同号同行），另确认 8 处同形站点，全部属 R09
+  「Core 单一时钟源」的收口面。工单 §〇 纪律 4 的行号漂移核查结论：符号与行号均未漂移。
+
+  危害面（判据设计依据）：
+    a) 到期判定：把系统时间往前拨 ⇒ Now <= ExpiresAt ⇒ IsExpired=False，已到期许可/密钥
+       重新可用（续命）。
+    b) 剩余天数：同一回拨让 DaysRemaining/DaysUntilExpiry 虚高，授权面看到假余额。
+    c) 写入面：FCreatedAt / FExpiresAt / 载荷 'i' 直接落裸墙钟 ⇒ 回拨期间新建的密钥
+       有效期窗口整体前移，等于凭空延长有效期。
+    d) 无任何回拨观测：Core 里不存在「系统时间倒退过」这件事的记录点。
+
+-- 2. 判据先行的三个 fixture（新建 Tests/Test.DeepBase.TimeSource.pas）---------
+  TTimeSourceContractTests      7 例：时钟源自身契约（默认墙钟、注入替换、nil 还原、
+                                   水位只升不降、回拨计数与最大幅度、Reset 归零、
+                                   Shared 进程唯一）。这一组在修前即绿，因为时钟源是
+                                   新建单元、与被修的两个 Core 单元无关 ⇒ 用作「注入机制
+                                   本身可用」的前置证明，避免红因混淆。
+  TLicenseClockRollbackTests    6 例：许可侧（判据①回拨 30 天仍判过期、天数按水位计、
+                                   签发落 'l' 字段、真实旧副本不降水位、无 'l' 历史载荷
+                                   仍按水位判、伪造更早 'l' 被 HMAC 拒且水位不动）。
+  TKeyClockRollbackTests        5 例：密钥侧（同形判据：到期密钥、剩余天数、主钥/数据钥
+                                   建戳、新建密钥有效期窗口）。
+
+  场景日期一律推到真实墙钟（2026-09-29）之后（2027-08/09/12、2028-05）。原因记档：
+  修前判据走真实 Now，若场景日期落在真实时间之前，水位/回拨关系会被真实时钟吃掉，
+  红项就退化成「有没有调用时钟」而不是「回拨有没有被防住」——判据失去指向性。
+  第一版用例就踩了这个坑（修前读数 10 红里有 1 条意外绿），已随日期整体后移修正。
+
+-- 3. 既有面基线（纪律 7：动高频公共路径前先留档）------------------------------
+  探针：附件/A5R09Baseline.dpr.template（ASCII+CRLF，31 行）
+        uses 四个既存单元 —— Test.DeepBase.License / LicenseSecret / KeyManager /
+        KeyManagerFormat，即 R09 改动面（许可 + 密钥）的全部既存回归网。
+  编译（修前主树，改动尚未落地）：
+    Embarcadero Delphi for Win64 compiler version 37.0
+    43142 lines, 1.67 seconds, 3685656 bytes code, 463808 bytes data.
+    BASELINE_COMPILE_EXIT=0
+  运行：
+    DUnitX - [A5R09Baseline.exe] - Starting Tests.
+    Tests Found   : 60
+    Tests Ignored : 0
+    Tests Passed  : 60
+    Tests Leaked  : 0
+    Tests Failed  : 0
+    Tests Errored : 0
+    BASELINE_RUN_EXIT=0
+  基线口径：60 例 = 修前既有许可/密钥回归网的全量读数，工单判据③「既有
+    Tests/Test.DeepBase.{License,LicenseSecret}.pas 不回归」以此为准。
+  附带发现（不属本单，已由主控另派）：这 60 例不含 Test.DeepBase.LicenseSecret 的 2 例
+    ——该单元缺 initialization RegisterTestFixture，挂着名永不执行（WO-20260928-AUDIT-甲-A8）。
+    本单因此也不得以该单元的「绿」当作许可面证据。
+
+-- 4. 修前红（隔离工作树 @7549d0c + 同一份最终用例）----------------------------
+  环境构造见 A5-R09-隔离工作树编译跑录.txt；唯一变量 = Core/DeepBase.{License,KeyManager}.pas。
+  编译：PRE2_COMPILE_EXIT=0（43871 lines）
+  运行：PRE2_RUN_EXIT=1 / Tests Found 78 / Passed 67 / Failed 11 / Errored 0
+  11 条红项与红因逐条点名（原文消息）：
+
+  续命类（到期判定被回拨绕过）
+   1) TLicenseClockRollbackTests.ExpiredLicense_StaysExpired_AfterThirtyDayRollback
+      Expected [2] but got [1] a licence past its expiry is expired at the injected time
+   2) TLicenseClockRollbackTests.OlderGenuineLicense_WithLowerLastSeen_DoesNotLowerWatermark
+      Expected [2] but got [1] the licence is expired once the clock has passed 2027-08-15
+   3) TLicenseClockRollbackTests.LegacyLicense_WithoutLastSeenField_StillJudgedByWatermark
+      Expected [2] but got [1] a pre-fix licence without last-seen still validates and is expired
+   4) TKeyClockRollbackTests.ExpiredKeyInfo_StaysExpired_AfterRollback
+      Condition is False when True expected. [a key past its expiry is expired at the injected time]
+
+  天数虚高类（余额按回拨后的时钟计）
+   5) TLicenseClockRollbackTests.DaysRemaining_CountsFromWatermark_NotFromRolledBackClock
+      Expected [91] but got [428] 2027-09-01 -> 2027-12-01 is 91 days
+   6) TKeyClockRollbackTests.DaysUntilExpiry_CountsFromWatermark
+      Expected [91] but got [428] 2027-09-01 -> 2027-12-01 is 91 days
+
+  写入面类（建戳/有效期窗口取裸墙钟）
+   7) TKeyClockRollbackTests.MasterKeyCreatedAt_ComesFromSharedClock
+      expected 46878.5000000000, got 46294.0959179167
+   8) TKeyClockRollbackTests.DataKeyCreatedAt_ComesFromSharedClock
+      expected 46878.5000000000, got 46294.0959206366
+   9) TKeyClockRollbackTests.CreatedKeyExpiryWindow_ComesFromSharedClock
+      the expiry window must be measured from the watermark, not the rolled-back clock
+      (expected 46661.5000000000, got 46324.0959230787)
+
+  载荷字段类（水位无处持久 ⇒ 删文件即重置）
+  10) TLicenseClockRollbackTests.GenerateLicenseKey_PersistsLastSeenField
+      an issued licence must persist the current watermark as payload field l, got:
+      {"v":"1.0","t":2,"e":1827662400,"i":1790648287,"to":"Watermark Writer","d":"cfd9f07a5efd326cabcd1c32d9ae1d67","u":1,"f":[]}
+  11) TLicenseClockRollbackTests.ForgedLowerLastSeen_IsRejected_AndWatermarkUnchanged
+      fixture payload must contain "l":1819800000
+
+  4 与 5 的红因分类归属：判定与天数都读裸 Now，同一条缺陷的两个投影；
+  9 属修前 FExpiresAt := IncDay(Now, ...) 用回拨后的时钟开窗；
+  10/11 属修前载荷根本没有水位字段（'l' 缺失），护栏用例的 fixture 前置断言即红。
+
+-- 5. 测试侧写法坑（留档，避免后续工单重踩）----------------------------------
+  a) fixture 必须在单元 initialization 里 TDUnitX.RegisterTestFixture(...)，否则单元
+     编译进 runner 也不跑——首轮 verify 的 Tests Found 停在 60，补三处注册后才是 78。
+     （与 A8 单的缺陷同一成因，此处是新建单元自己踩到。）
+  b) dcc64 v37.0 Win64 的 Assert.AreEqual(TDateTime, TDateTime) 重载解析失败（E2532），
+     Assert.AreEqual(0, <Int64>) 与 Integer 字面量不匹配。本轮改判为 Assert.IsTrue(x = 0, msg)。
+  c) TDateTime 经 DateTimeToUnix 往返会丢亚秒，跨往返比较必须留容差；本单元统一用
+     AssertSameMoment（容差 1e-8 日 ≈ 0.864 毫秒）。
+  d) DaysBetween（System.DateUtils）返回绝对值，过期后仍为正数 ⇒ 「过期就 <= 0」的断言
+     本身错。已按既存口径改为断言具体天数，并把该口径登记为「发现不修」（修后件 §9）。
+  e) 匿名方法（TDeepBaseNowFunc）必须捕获局部变量而非 const 形参，否则闭包读到的是
+     const 参数的生命周期外值；本轮夹具统一走 PinClock(值) 内部的局部变量捕获。
