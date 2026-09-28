@@ -1,0 +1,79 @@
+A5-R06 隔离工作树编译判据（工单纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R06）
+日期：2026-09-28
+目标 commit：1fbbd83 fix(core): A5-R06 LogQuery TopExceptions 取消数据源换入换出
+方法：git worktree add --detach .tmp\a5r06\wt-1fbbd83 1fbbd83 直接切出目标 commit，
+      不复制任何主树现场；runner 取自本单交付的附件模板
+      （CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R06Verify.dpr.template），
+      A4-05 探针取自甲 A4 证据附件模板
+      （CodeReview/20260925-AUDIT-甲-A4-证据/附件/A405_LogQuery.dpr.template）；
+      单元搜索路径全部指向隔离树自身
+      （Tests / Tests/Regression / Core / Features / DUnitX/Source 绝对路径）。
+
+隔离树内 git status（除 runner 脚手架与 dcu/bin 外无任何改动）：
+  ?? A405_LogQuery.dpr / A5R06Verify.dpr（脚手架与跑录，不入库）
+
+-- 编译（dcc64 v37.0，工作目录 = wt-1fbbd83 根）--
+  A5R06Verify : 31926 lines, 1.77s  EXIT=0
+  A405_LogQuery: 5457 lines, 0.52s  EXIT=0
+  hint/warning：A405 与 A5R06Verify 两份日志的 hint 行完全相同，共 4 条 H2077，
+  逐条为 Core/DeepBase.Logging.pas(411) 'DroppedDelta' 与 (790)/(805)/(819) 'List'，
+  属既存；本单改动的 Core/DeepBase.LogQuery.pas 与
+  Tests/Test.DeepBase.LogQuerySourceLifetime.pas 零 hint、零 warning。
+
+-- 运行（工作目录 = wt-1fbbd83 根）--
+  bin\A5R06Verify.exe（整 runner：既有四 fixture + 本单新单元）
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R06Verify.exe] - Starting Tests.
+
+...........................................................................
+
+Tests Found   : 43
+Tests Ignored : 0
+Tests Passed  : 43
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+  bin\A5R06Verify.exe --run:Test.DeepBase.LogQuerySourceLifetime.TLogQuerySourceLifetime
+Tests Found   : 9
+Tests Ignored : 0
+Tests Passed  : 9
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+  bin\A405_LogQuery.exe（A4-05 双场景探针，工单判据）
+--- case A: analyzer owns data source --- |
+caseA-before | source-count=4 stats-total=4
+caseA-TopExceptions | returned 2 row(s)
+True A4-05-owned-source-freed-mid-query | owned data source destroy count during/after TopExceptions = 0
+True A4-05-restore-after-query | GetStats.TotalCount right after TopExceptions = 4 (expected 4)
+caseA-after-decoy | stats-total=4 top=ERR-beta(1),ERR-alpha(1)
+  [detector] tracked data source destroyed inside analyzer call
+caseA-teardown | analyzer freed without incident
+caseA-teardown | probe skipped Src.Free, destroyed-count=1
+--- case B: caller owns data source --- |
+caseB-before | source-count=4 stats-total=4
+caseB-TopExceptions | returned 2 row(s)
+True A4-05-borrowed-source-alive | GetStats.TotalCount right after TopExceptions = 4 (expected 4, source still alive with 4 rows)
+True A4-05-source-still-linked | GetStats.TotalCount after appending to the live source = 5 (expected 5)
+caseB-after-append | top=ERR-beta(1),ERR-alpha(1)
+caseB-teardown | analyzer freed without incident
+
+A4-05 PROBE DONE, failed-assertions=0
+
+主树红项归属：全量 DeepBaseTests.dpr 在 216 例后崩溃属既存问题（甲 A5 工单纪律 5
+已点名禁止以全量为判据）。本单未改 Tests/DeepBaseTests.dpr 与 .dproj 注册，新单元
+未并网，全量面与本单改动无因果关系，未新增红项。
+调用方核对：Core/DeepBase.LogAlert.pas:588 与 Core/DeepBase.LogDashboard.pas:1125
+的 TopErrors/TopExceptions 调用点签名未变，随 A5R06Verify 一并编译通过。
+
+结论：纪律 6 的「隔离 --detach 工作树 @ 目标 commit EXIT=0」在 1fbbd83 上字面成立。
+
