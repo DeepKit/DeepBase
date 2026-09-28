@@ -1,0 +1,101 @@
+A5-R04 修前/修后回归比对 —— 既有 Serialization fixture 子集零回归
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R04）
+日期：2026-09-28
+口径：工单纪律 5（不用全量当判据）+ 纪律 7（先留基线再动手）。修前基线见
+      A5-R04-基线-修前fixture跑录.txt，本件只给修后与修前的逐项对照。
+
+对照 A：基线子集（Test.DeepBase.Serialization + Test.Regression.Base + BUG059 + BUG060）
+  修前  ：Tests Found 63 / Passed 58 / Failed 2 / Ignored 3 / EXIT=1
+  修后  ：Tests Found 63 / Passed 58 / Failed 2 / Ignored 3 / EXIT=1  ← 逐项一致，零回归
+  命令（工作目录 = 仓库根）：.tmp\a5r04\bin\A5R04Baseline.exe
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R04Baseline.exe] - Starting Tests.
+
+......................................................................................I........................II.F.....F..
+
+Tests Found   : 63
+Tests Ignored : 3
+Tests Passed  : 58
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+对照 B：扩展子集（再并入引用序列化的 CR20260824_OwnerDecisions/P0Batch3/P0Batch4，共 78 例）
+  修前  ：在 --detach 隔离工作树 @ 098eeb3（未含本次改动）整编并运行 —— EXIT=1，78/73/2/3
+  修后  ：主树同 runner 同命令 —— EXIT=1，78/73/2/3  ← 同名单同计数，零回归
+  命令（各自仓库根）：.tmp\a5r04\bin\A5R04Broad.exe
+
+---- 修前（隔离工作树 .tmp/a5r04/wt-prefix @ 098eeb3）----
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R04Broad.exe] - Starting Tests.
+
+......................................................................................I........................II.F.....F................................
+
+Tests Found   : 78
+Tests Ignored : 3
+Tests Passed  : 73
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists
+  Message: Condition is False when True expected. [代码应该包含类型白名单验证机制]
+
+  Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable
+  Message: Condition is True when False expected. 默认深度不应该是 32（过高）
+
+---- 修后（主树）----
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R04Broad.exe] - Starting Tests.
+
+......................................................................................I........................II.F.....F................................
+
+Tests Found   : 78
+Tests Ignored : 3
+Tests Passed  : 73
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists
+  Message: Condition is False when True expected. [代码应该包含类型白名单验证机制]
+
+  Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable
+  Message: Condition is True when False expected. 默认深度不应该是 32（过高）
+
+红项归属（两侧同名同因，非本次引入）：
+· Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists
+  该用例按字面 token 静态扫源码（'whitelist'/'Whitelist'/'AllowedTypes'/'IsTypeAllowed'/'ValidateType'），
+  而单元里真实标识符是 IsAllowedType / ALLOWED_TYPES，token 清单从一开始就与实现不同名 → 恒红；
+  且它按当前工作目录相对路径读文件，工作目录不是仓库根时会走 Assert.Pass 分支假绿。
+· Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable
+  断言默认 MaxDepth 不取 32，而实现默认值即为 32；本次未改 MaxDepth → 恒红，同因。
+  两件都属「未注册进 DeepBaseTests.dpr 的休眠回归单元」，登记为发现项，不在 R04 修复范围。
+
+过程中由本单新用例暴露并一并修正的缺陷：
+· TSerializationContext.GetPath 用 High downto 0 拼接 FPath.ToArray，而 TStack.ToArray 按压入顺序
+  （根在前）给出元素，导致嵌套属性报错路径反写成 leaf.root。修前跑录：
+    NestedScalarMismatch_MessageCarriesDottedPath — Expected [Address.City] but got [City.Address]
+  报错路径是本单交付物（类型不匹配消息的定位凭据），故按根因改正为 0 to High 正序拼接，
+  既有序列化用例 Test_GetPath/Test_PushPath/Test_PopPath 只断言 Contains，不受影响（见对照 A/B 计数）。

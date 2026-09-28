@@ -1,0 +1,53 @@
+A5-R04 修复前基线跑录（开工纪律 7）
+生成：主控线开发甲 · 2026-09-28 · HEAD 59a1a24（工单锚点 2dcd1ae 之后 Core/ 零漂移）
+判据面：Tests/Test.DeepBase.Serialization.pas 全部 8 个 fixture + Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas + Test.Regression.BUG060_SerializationDepth.pas
+
+## 运行方式与一处既存基线红（非本单引入）
+
+Scripts/run_tests.ps1 的 $UnitPaths 缺 ..\Governance（ps1:528-542 路径表），
+而 Tests/DeepBaseTests.dpr:22 已注册 Test.DeepBase.GovernanceChainKey，该单元 uses DeepBase.Governance.EvidenceRecorder（实体在 Governance/ 目录）。
+⇒ 主树 ps1 整编在 HEAD 即红：Test.DeepBase.GovernanceChainKey.pas(24) Fatal: F2613 Unit 'DeepBase.Governance.EvidenceRecorder' not found.（原件见同目录 A5-R04-基线-主树ps1整编红-F2613.txt）。
+归属：既存红，早于本单（run_tests.ps1 最后一次改动 2f3f936，Governance 目录与链钥匙测试在其后入库）；本单不改 Scripts/，已登记回执「需主控处理」。
+本单基线因此改用自建独立 DUnitX Runner 直取（附件 A5R04_Runner.dpr.template），编译 EXIT=0。
+
+另登记：BUG059/BUG060 两单元在 Tests/DeepBaseTests.dpr 与 .dproj 中均无注册行（rg 'BUG059|BUG060' 命中 0），即休眠未跑件；本单将其纳入基线后暴露 2 项既存红（见下），属休眠缺陷而非本单回归。
+
+## 编译
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(40) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(44) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(48) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(39) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(43) Warning: W1074 Unknown custom attribute
+27318 lines, 1.33 seconds, 2858852 bytes code, 391544 bytes data.
+
+## 运行（DUnitX 控制台输出为 GBK，已 iconv 转 UTF-8 落盘）
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R04Baseline.exe] - Starting Tests.
+
+......................................................................................I........................II.F.....F..
+
+Tests Found   : 63
+Tests Ignored : 3
+Tests Passed  : 58
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists
+  Message: Condition is False when True expected. [代码应该包含类型白名单验证机制]
+
+  Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable
+  Message: Condition is True when False expected. 默认深度不应该是 32（过高）
+
+
+RUN_EXIT=1（2 项既存红）

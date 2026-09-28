@@ -25,6 +25,30 @@ uses
 type
   ESerializationException = class(Exception);
 
+  /// <summary>
+  /// A5-R04: 反序列化时 JSON 值形态与目标类型不符。
+  /// 此前这类输入表现为 AV、把原始堆字节写进 RTL 异常消息，或静默落默认值；
+  /// 类型化异常带属性路径与期望/实际形态，调用方可以只捕这一类而不吞掉真实错误。
+  /// </summary>
+  ESerializationTypeMismatchException = class(ESerializationException)
+  private
+    FPath: string;
+    FExpectedKind: string;
+    FActualKind: string;
+    FTargetTypeName: string;
+  public
+    constructor Create(const APath, ATargetTypeName, AExpectedKind,
+      AActualKind: string); reintroduce;
+    /// <summary>出错属性的完整路径（嵌套对象以 '.' 连接），根层为 '&lt;root&gt;'</summary>
+    property Path: string read FPath;
+    /// <summary>目标 Delphi 类型名</summary>
+    property TargetTypeName: string read FTargetTypeName;
+    /// <summary>该目标类型可接受的 JSON 值形态（如 'number' 或 'number/string'）</summary>
+    property ExpectedKind: string read FExpectedKind;
+    /// <summary>输入实际的 JSON 值形态</summary>
+    property ActualKind: string read FActualKind;
+  end;
+
   /// <summary>Serialization format</summary>
   TSerializationFormat = (sfJSON, sfXML, sfBinary);
 
@@ -415,6 +439,129 @@ begin
       [AOrdinal, ATypeInfo.Name, TypeData.MinValue, TypeData.MaxValue]);
 end;
 
+type
+  /// A5-R04: JSON 值形态的唯一分类口径——「目标类型接受什么形态」与「实际收到什么形态」
+  /// 两处判定共用，避免校验表与赋值分支各写一套而分叉。
+  TJsonValueKind = (vkNull, vkNumber, vkString, vkBoolean, vkObject, vkArray);
+  TJsonValueKinds = set of TJsonValueKind;
+
+const
+  JSON_VALUE_KIND_NAMES: array[TJsonValueKind] of string =
+    ('null', 'number', 'string', 'boolean', 'object', 'array');
+
+function JsonValueKindOf(AJson: TJSONValue): TJsonValueKind;
+begin
+  // TJSONObject 继承 TJSONArray，必须先判对象，否则对象会被归为数组
+  if AJson is TJSONNull then
+    Result := vkNull
+  else if AJson is TJSONNumber then
+    Result := vkNumber
+  else if AJson is TJSONString then
+    Result := vkString
+  else if AJson is TJSONBool then
+    Result := vkBoolean
+  else if AJson is TJSONObject then
+    Result := vkObject
+  else
+    Result := vkArray;
+end;
+
+/// 目标类型可接受的 JSON 形态；返回空集表示该类型不由本表把门
+/// （类与数组属性走 ValidateContainerJsonValue），调用方据此放行。
+function AcceptedJsonKindsForType(ATypeInfo: PTypeInfo): TJsonValueKinds;
+begin
+  case ATypeInfo.Kind of
+    tkInteger, tkInt64:
+      Result := [vkNumber];
+    tkFloat:
+      if ATypeInfo = TypeInfo(TDateTime) then
+        // TDateTime 双形态：序列化端按 DateFormat 输出字符串，历史上也接受数值ticks
+        Result := [vkNumber, vkString]
+      else
+        Result := [vkNumber];
+    tkString, tkLString, tkWString, tkUString:
+      Result := [vkString];
+    tkRecord, tkMRecord:
+      // 记录只在拿到 JSON 对象时才可逐字段还原；null/标量/数组进门即报错（带路径），
+      // 不再让 JsonToValue 的 tkRecord 分支自己判——两处判一个口径。
+      Result := [vkObject];
+    tkEnumeration:
+      if ATypeInfo = TypeInfo(Boolean) then
+        Result := [vkBoolean]
+      else
+        // 枚举名或序数皆可，取值范围由 ValidateEnumOrdinal 把守
+        Result := [vkString, vkNumber];
+  else
+    Result := [];
+  end;
+end;
+
+/// 形态判定与报错的唯一出口：收到 AAllowed 之外的 JSON 形态即抛类型化异常（带路径/期望/实际）。
+procedure RequireJsonValueKind(AJson: TJSONValue; AContext: TSerializationContext;
+  const ATargetTypeName: string; const AAllowed: TJsonValueKinds);
+var
+  LActual: TJsonValueKind;
+  LKind: TJsonValueKind;
+  LExpected: string;
+  LPath: string;
+begin
+  LActual := JsonValueKindOf(AJson);
+  if LActual in AAllowed then
+    Exit;
+
+  for LKind := Low(TJsonValueKind) to High(TJsonValueKind) do
+    if LKind in AAllowed then
+    begin
+      if LExpected <> '' then
+        LExpected := LExpected + '/';
+      LExpected := LExpected + JSON_VALUE_KIND_NAMES[LKind];
+    end;
+
+  LPath := AContext.GetPath;
+  if LPath = '' then
+    LPath := '<root>';
+  raise ESerializationTypeMismatchException.Create(
+    LPath, ATargetTypeName, LExpected, JSON_VALUE_KIND_NAMES[LActual]);
+end;
+
+/// A5-R04: 标量赋值前的类型闸门。错类型输入此前经 TJSONNumber()/TJSONString()/as TJSONBool
+/// 硬转产生 AV、把堆字节带进 RTL 异常消息，或（null 与未覆盖形态）静默落默认值。
+procedure ValidateScalarJsonValue(AJson: TJSONValue; ATypeInfo: PTypeInfo;
+  AContext: TSerializationContext);
+var
+  LAccepted: TJsonValueKinds;
+begin
+  if ATypeInfo = nil then
+    Exit; // 无目标类型信息（如未定型数组元素）：由容器路径负责
+
+  LAccepted := AcceptedJsonKindsForType(ATypeInfo);
+  if LAccepted = [] then
+    Exit;
+
+  RequireJsonValueKind(AJson, AContext, string(ATypeInfo.Name), LAccepted);
+end;
+
+/// A5-R04: 容器属性（对象/数组）的形态闸门。null 是合法的「无值」（映射为 nil/空），
+/// 其余非容器形态此前一律静默置 Empty ⇒ 字段凭空消失。
+procedure ValidateContainerJsonValue(AJson: TJSONValue; ATypeInfo: PTypeInfo;
+  AContext: TSerializationContext; AContainerKind: TJsonValueKind);
+begin
+  RequireJsonValueKind(AJson, AContext, string(ATypeInfo.Name),
+    [AContainerKind, vkNull]);
+end;
+
+constructor ESerializationTypeMismatchException.Create(const APath,
+  ATargetTypeName, AExpectedKind, AActualKind: string);
+begin
+  FPath := APath;
+  FTargetTypeName := ATargetTypeName;
+  FExpectedKind := AExpectedKind;
+  FActualKind := AActualKind;
+  inherited CreateFmt(
+    '反序列化值类型不匹配: 属性 "%s" (目标类型 %s) 期望 JSON %s，实际收到 %s',
+    [APath, ATargetTypeName, AExpectedKind, AActualKind]);
+end;
+
 { TSerializationOptions }
 
 class function TSerializationOptions.Default: TSerializationOptions;
@@ -573,7 +720,9 @@ var
 begin
   LItems := FPath.ToArray;
   Result := '';
-  for I := High(LItems) downto 0 do
+  // TStack.ToArray 按压入顺序（根在前）给出元素，正序拼接才是 root.child.leaf 的属性路径；
+  // 此前的倒序拼接会让嵌套属性的报错路径反写成 leaf.root（A5-R04 类型不匹配消息要用它定位字段）。
+  for I := 0 to High(LItems) do
   begin
     if Result <> '' then
       Result := Result + '.';
@@ -640,12 +789,12 @@ var
 begin
   Result := False;
   ClassName := AClass.ClassName;
-  
-  // 检查是否在白名单中
+
+  // A5-R04: 精确匹配。原先的 StartsWith 臂令任何以白名单名开头的类
+  // （TObjectEvil、TDictionaryAttacker…）都通过白名单，等于白名单形同虚设。
   for I := Low(ALLOWED_TYPES) to High(ALLOWED_TYPES) do
   begin
-    if SameText(ClassName, ALLOWED_TYPES[I]) or 
-       ClassName.StartsWith(ALLOWED_TYPES[I]) then
+    if SameText(ClassName, ALLOWED_TYPES[I]) then
     begin
       Result := True;
       Exit;
@@ -1049,9 +1198,9 @@ var
   LDT: TDateTime;
   LOrdinal: Integer;
 begin
-  if (AJson = nil) or (AJson is TJSONNull) then
+  if AJson = nil then
     Exit(TValue.Empty);
-    
+
   // Check for custom converter
   LConverter := AContext.FindConverter(ATypeInfo);
   if Assigned(LConverter) then
@@ -1060,8 +1209,14 @@ begin
       Exit(LConverter.Deserialize(TValue.From<string>(TJSONString(AJson).Value), ATypeInfo, AContext))
     else if AJson is TJSONNumber then
       Exit(LConverter.Deserialize(TValue.From<Double>(TJSONNumber(AJson).AsDouble), ATypeInfo, AContext));
+    // 其余形态（bool/object/array/null）转换器不接管，落到下方闸门按目标类型判定
   end;
-    
+
+  // A5-R04: 硬转之前先过值类型闸门；null 只有非标量目标（类/数组）才是合法「无值」
+  ValidateScalarJsonValue(AJson, ATypeInfo, AContext);
+  if AJson is TJSONNull then
+    Exit(TValue.Empty);
+
   case ATypeInfo.Kind of
     tkInteger:
       Result := TValue.From<Integer>(TJSONNumber(AJson).AsInt);
@@ -1092,10 +1247,7 @@ begin
     tkRecord, tkMRecord:
       begin
         // CR-015: 递归还原记录字段（此前返回 Empty 静默丢数据）
-        if not (AJson is TJSONObject) then
-          raise ESerializationException.CreateFmt(
-            '记录类型 %s 需要 JSON 对象，实际收到 %s',
-            [ATypeInfo.Name, AJson.ClassName]);
+        // 形态（必须是 JSON 对象）已由进门处的闸门判定
         Result := JsonToRecord(TJSONObject(AJson), ATypeInfo, AContext);
       end;
       
@@ -1151,7 +1303,13 @@ begin
     LV := AJson.FindValue(LField.Name);
     if LV <> nil then
     begin
-      LFieldVal := JsonToValue(LV, LField.FieldType.Handle, AContext);
+      // 字段名入路径栈：类型闸门报错时要能指到具体字段（A5-R04）
+      AContext.PushPath(LField.Name);
+      try
+        LFieldVal := JsonToValue(LV, LField.FieldType.Handle, AContext);
+      finally
+        AContext.PopPath;
+      end;
       if not LFieldVal.IsEmpty then
         LField.SetValue(LDataRef, LFieldVal);
     end;
@@ -1194,6 +1352,9 @@ begin
       try
         if LProp.PropertyType.TypeKind = tkClass then
         begin
+          // A5-R04: 非对象且非 null 的形态此前静默置 Empty（字段凭空消失）
+          ValidateContainerJsonValue(LPair.JsonValue, LProp.PropertyType.Handle,
+            AContext, vkObject);
           if LPair.JsonValue is TJSONObject then
             LValue := TValue.From<TObject>(JsonToObject(
               TJSONObject(LPair.JsonValue), 
@@ -1204,6 +1365,8 @@ begin
         end
         else if LProp.PropertyType.TypeKind in [tkDynArray, tkArray] then
         begin
+          ValidateContainerJsonValue(LPair.JsonValue, LProp.PropertyType.Handle,
+            AContext, vkArray);
           if LPair.JsonValue is TJSONArray then
             LValue := JsonArrayToValue(TJSONArray(LPair.JsonValue), LProp.PropertyType.Handle, AContext)
           else

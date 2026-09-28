@@ -1,0 +1,34 @@
+program A5R04Broad;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  Test.DeepBase.Serialization,
+  Test.Regression.Base,
+  Test.Regression.BUG059_JsonDeserializationType,
+  Test.Regression.BUG060_SerializationDepth,
+  Test.Regression.CR20260824_OwnerDecisions,
+  Test.Regression.CR20260824_P0Batch3,
+  Test.Regression.CR20260824_P0Batch4;
+
+begin
+  try
+    TDUnitX.CheckCommandLine;
+    var LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+    var LResults := LRunner.Execute;
+    if not LResults.AllPassed then
+      System.ExitCode := 1;
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

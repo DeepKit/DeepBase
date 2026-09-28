@@ -1,0 +1,50 @@
+A5-R04 修后判据跑录 —— 新增回归单元 Test.DeepBase.SerializationTypeGuard
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R04）
+日期：2026-09-28
+主树：d:\_Progs\02Business\DeepBase（分支 master）
+说明：全量 run_tests.ps1 在基线即因 F2613（见 A5-R04-基线-主树ps1整编红-F2613.txt）无法整编，
+      故按工单纪律 5/6 用自建 DUnitX 独立 runner 跑「全限定 fixture 子集」，不用全量当判据。
+      runner 源码见 附件/A5R04Verify.dpr.template、附件/A5R04Broad.dpr.template。
+
+-- 编译（dcc64 v37.0，EXIT=0，新增单元 0 error / 0 warning）--
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(40) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(44) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(48) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(39) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(43) Warning: W1074 Unknown custom attribute
+27793 lines, 1.23 seconds, 2872752 bytes code, 392640 bytes data.
+-- 运行 --
+命令（工作目录 = 仓库根）：
+  .tmp\a5r04\bin\A5R04Verify.exe --run:Test.DeepBase.SerializationTypeGuard.TA5R04JsonTypeGuardTests
+注：DUnitX 的 --run 过滤按「单元名.fixture类名」全限定匹配，只写类名会得到 Tests Found : 0。
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R04Verify.exe] - Starting Tests.
+
+..............................................
+
+Tests Found   : 23
+Tests Ignored : 0
+Tests Passed  : 23
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+-- 判据对应（工单 §二 R04）--
+· A4-03 的错型输入 15 例（Age/Name/Price/Flag × string/bool/object/array/null）全部转正为
+  ESerializationTypeMismatchException，无 AV、无堆字节进消息、无静默：
+  MistypedScalar_RaisesTypeMismatch（15 例）+ MistypedScalar_NeverLeaksHeapBytesIntoMessage
+· 异常带属性路径/期望形态/实际形态：TypeMismatchMessage_CarriesPathAndExpectedKind
+· 嵌套路径点号串联：NestedScalarMismatch_MessageCarriesDottedPath（Address.City）
+· TSerializationContext.IsAllowedType 改 SameText 精确匹配后，TObject 前缀命名类被拒：
+  Whitelist_RejectsPrefixLookalikeClassName；[Serializable] 类仍放行：Whitelist_StillAcceptsSerializableClass
+· 对象属性的 null 仍是合法「无值」（不误判）：NullForClassProperty_IsStillLegalNoValue
+· 正常输入与 TDateTime 字符串形态不回归：WellFormedInput_StillDeserializes / DateTimeAsString_StillAccepted

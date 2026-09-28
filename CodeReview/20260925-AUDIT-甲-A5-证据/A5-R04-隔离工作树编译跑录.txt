@@ -1,0 +1,43 @@
+A5-R04 隔离工作树编译判据（工单纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R04）
+日期：2026-09-28
+方法：git worktree add --detach .tmp\a5r04\wt-prefix 098eeb3 取得不含本次改动的干净树，
+      只把本单两件交付内容放入（Core/DeepBase.Serialization.pas、
+      Tests/Test.DeepBase.SerializationTypeGuard.pas）与 runner 附件 A5R04Verify.dpr，
+      在隔离树内独立整编并运行 —— 证明「HEAD + 本单改动」自洽可编译，不依赖主树未提交现场。
+
+隔离树内 git status（除本单两件 + runner 脚手架外无其它改动）：
+  M Core/DeepBase.Serialization.pas
+  ?? Tests/Test.DeepBase.SerializationTypeGuard.pas
+  ?? A5R04Verify.dpr / A5R04Broad.dpr / broad-prefix*.txt（脚手架与对照产物，不入库）
+
+-- 编译（工作目录 = 隔离树根，EXIT=0）--
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(40) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(44) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG059_JsonDeserializationType.pas(48) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(39) Warning: W1074 Unknown custom attribute
+Tests\Regression\Test.Regression.BUG060_SerializationDepth.pas(43) Warning: W1074 Unknown custom attribute
+27795 lines, 1.30 seconds, 2872768 bytes code, 392648 bytes data.
+
+-- 运行（工作目录 = 隔离树根，EXIT=0）--
+  .tmp\a5r04\wt-prefix\bin\A5R04Verify.exe --run:Test.DeepBase.SerializationTypeGuard.TA5R04JsonTypeGuardTests
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R04Verify.exe] - Starting Tests.
+
+..............................................
+
+Tests Found   : 23
+Tests Ignored : 0
+Tests Passed  : 23
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
