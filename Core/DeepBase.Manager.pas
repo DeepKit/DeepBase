@@ -70,6 +70,12 @@ type
     FConfigDB: TObject;
     FStorage: IManagerStorage;
     FIsInitialized: Boolean;
+    // A5-R03: 模块创建流程是否已开始。InitializeModules 一进入就置位，因此中途抛异常时
+    // 它仍为 True 而 FIsInitialized 为 False；释放路径必须以本标志为判据，否则
+    // Finalize 首行的 FIsInitialized 检查会跳过 FinalizeModules，把半批已创建模块
+    // 以及它们装上的全局 logger/翻译回调留在原地（悬垂 + 泄漏）。
+    // 不引入逐模块位图：FinalizeModules 的逐字段 Assigned 检查就是「已创建子集」的唯一真相源。
+    FModulesCreated: Boolean;
     FLastError: string;
     FInitErrorCode: TInitErrorCode;
     
@@ -110,6 +116,11 @@ type
     // 内部方法
     procedure InitializeModules;
     procedure FinalizeModules;
+    /// <summary>
+    /// 释放本次初始化创建的全部模块与配置库连接，并复位初始化状态。
+    /// Finalize 与两条初始化 except 分支共用的唯一释放路径；调用方必须已持有 FLock。
+    /// </summary>
+    procedure ReleaseModulesAndConnection;
     procedure WaitForPendingReadyTasks;
     function ReadRootTxt(const FilePath: string): string;
     function WriteRootTxt(const FilePath, RootPath: string): Boolean;
@@ -496,6 +507,7 @@ begin
   FPendingReadyTasks := TList<ITask>.Create;
   FReadyFired := False;
   FIsInitialized := False;
+  FModulesCreated := False;
   FInitErrorCode := ecUnknown;
   FLastError := '';
   FCurrentLanguage := 'en-US';
@@ -702,6 +714,10 @@ begin
         FLastError := E.Message;
         ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
           InitErrorCodeToStr(FInitErrorCode), FLastError]);
+        // A5-R03: 失败即回收。已成功创建的模块与它们注册的全局 logger/翻译回调
+        // 不能等调用方再走 Finalize/析构——IsInitialized=False 的实例对外已不可用，
+        // 保留它们只会留下指向半初始化对象的悬垂全局指针。
+        ReleaseModulesAndConnection;
       end;
     end;
   finally
@@ -775,6 +791,8 @@ begin
       begin
         FInitErrorCode := ecUnknown;
         FLastError := E.Message;
+        // A5-R03: 与 InitializeEx 同一条失败回收路径（两条 except 分支同缺陷同修法）
+        ReleaseModulesAndConnection;
       end;
     end;
   finally
@@ -788,6 +806,20 @@ begin
     RaiseInitializationError('InitializeWithDB', '');
 end;
 
+procedure TDeepBaseManager.ReleaseModulesAndConnection;
+begin
+  FinalizeModules;
+
+  CloseConnection(FConfigDB);
+  FStorage := nil;
+
+  FIsInitialized := False;
+  FModulesCreated := False;
+  FReadyFired := False;
+  FRootPath := '';
+  FConfigDBPath := '';
+end;
+
 procedure TDeepBaseManager.Finalize;
 begin
   // CR-289 fix: FIsInitialized check moved inside lock to prevent race with
@@ -795,7 +827,10 @@ begin
   // the main lock during its 5-second wait, preventing potential deadlock
   TMonitor.Enter(FLock);
   try
-    if not FIsInitialized then
+    // A5-R03: 释放判据是「有没有东西要回收」，不是「是否成功初始化过」。
+    // 单看 FIsInitialized 会让初始化失败的实例跳过整条释放路径，
+    // 把已创建的半批模块和全局 logger/翻译回调留在原地。
+    if (not FIsInitialized) and (not FModulesCreated) then
       Exit;
 
     // Release the lock while waiting for async callbacks so they can
@@ -807,15 +842,7 @@ begin
       TMonitor.Enter(FLock);
     end;
 
-    FinalizeModules;
-
-    CloseConnection(FConfigDB);
-    FStorage := nil;
-
-    FIsInitialized := False;
-    FReadyFired := False;
-    FRootPath := '';
-    FConfigDBPath := '';
+    ReleaseModulesAndConnection;
   finally
     TMonitor.Exit(FLock);
   end;
@@ -904,6 +931,10 @@ var
   MRUStorage: IMRUStorage;
   HotkeyStorage: IHotkeyStorage;
 begin
+  // A5-R03: 置位必须先于第一个模块实例化——本过程后续任何一步抛异常，
+  // 释放路径都要能识别「模块已经存在（哪怕是半批）」并回收它们。
+  FModulesCreated := True;
+
   // 1. Logger - create and register as global logger
   FLogger := TDeepBaseLogger.Create(FConfigDBPath);
   SetGlobalLogger(FLogger);  // Register with global Logger() function

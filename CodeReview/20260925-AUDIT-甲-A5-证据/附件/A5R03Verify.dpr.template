@@ -1,0 +1,33 @@
+program A5R03Verify;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  FireDAC.Stan.Def,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  Test.DeepBase.Manager,
+  Test.Regression.BUG007_WhenReadyDeadlock,
+  Test.DeepBase.ManagerInitFailureLeak;
+
+begin
+  try
+    TDUnitX.CheckCommandLine;
+    var LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+    var LResults := LRunner.Execute;
+    if not LResults.AllPassed then
+      System.ExitCode := 1;
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

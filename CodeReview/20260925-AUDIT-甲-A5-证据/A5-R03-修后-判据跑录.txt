@@ -1,0 +1,128 @@
+A5-R03 修后判据跑录
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R03）
+日期：2026-09-29
+被测面：Core/DeepBase.Manager.pas（初始化失败路径的模块与全局状态回收）
+回归单元：Tests/Test.DeepBase.ManagerInitFailureLeak.pas（新建，10 例）
+基线件：A5-R03-基线-修前跑录.txt（窄基线 20/20 / 新单元 6 红 / A4-02 S2 现场 / 宽面既存 4 红）
+
+一、修法
+------------------------------------------------------------------------------
+释放判据从「是否成功初始化过」改为「有没有东西要回收」，并把释放本体收成一条共用路径：
+
+  1) 新增字段 FModulesCreated（Core/DeepBase.Manager.pas:78），
+     在 InitializeModules 入口先于第一个模块实例化置位（:936）。
+     中途抛异常时它保持 True 而 FIsInitialized 保持 False —— 这正是缺陷窗口。
+  2) 新增 private 唯一释放路径 ReleaseModulesAndConnection（声明 :123，实现 :809）：
+       FinalizeModules; CloseConnection(FConfigDB); FStorage := nil;
+       FIsInitialized := False; FModulesCreated := False;
+       FReadyFired := False; FRootPath := ''; FConfigDBPath := '';
+     即原 Finalize 尾段本体，未增删任何动作，只是搬家并补 FModulesCreated 复位。
+  3) Finalize 判据改为 (not FIsInitialized) and (not FModulesCreated)（:833），
+     本体改为调用共用路径（:845）。
+  4) 两条 except 分支各加一次 ReleaseModulesAndConnection：
+     InitializeEx :720、InitializeWithDB :795。失败即回收，不再等调用方 Finalize/析构。
+  5) 构造函数补 FModulesCreated := False（:510），与既有 FIsInitialized 初始化同处。
+
+锁与幂等：except 分支进入时已持 FLock（TMonitor 同线程可重入），共用路径不自取锁，
+该前提写在方法注释里；释放后 FModulesCreated 复位 ⇒ 调用方再显式 Finalize 或随后析构时，
+Finalize 在门口直接 Exit，不会二次释放同一批模块（对应 FailedInit_ExplicitFinalizeAfterReleaseIsSafe
+与两条 SuccessfulInit_* 对照用例）。Finalize 原有的「等待 WhenReady 异步任务时临时放锁」结构未动。
+
+与工单建议的偏差点名（必须登记，不静默采纳）：
+  工单 R03 修法原文建议「逐模块就逐模块置位，失败也保留已创建部分的位图」。实际实现用单一布尔位。
+  理由：FinalizeModules 本身就是逐字段 `if Assigned(...) then FreeAndNil(...)`，
+  「已创建子集」的唯一真相源是这些字段是否为 nil；再加一张位图等于维护第二套状态，
+  且不会改变任何一个被释放的对象——违反 SSOT/KISS，属只增不减的维护债。
+  单布尔同样满足工单判据（失败路径释放已创建模块、全局 logger 摘除、无双释放），
+  下方第一、二、三节为实测。
+
+二、判据一：A4-02 探针 S2 转正（主树修后，同一份 template 零改动）
+------------------------------------------------------------------------------
+  编译：16406 lines, 0.80 s  EXIT=0
+  运行（全文）：
+
+A402 begin
+S0-baseline init=1 isInit=1 loggerInstalled=1 lastError=
+S0-baseline after_free loggerInstalled=0 loggerPtrBefore=000001553A3504D0 loggerPtrAfter=000001553A34F660 samePtr=0
+S1-CreateConfigStorageRaises init=1 isInit=1 loggerInstalled=1 lastError=
+S1-CreateConfigStorageRaises after_free loggerInstalled=0 loggerPtrBefore=000001553A350630 loggerPtrAfter=000001553A3504D0 samePtr=0
+S2-ConfigReadValueRaises init=0 isInit=0 loggerInstalled=0 lastError=INJECTED-ReadValue
+S2-ConfigReadValueRaises after_free loggerInstalled=0 loggerPtrBefore=0000000000000000 loggerPtrAfter=000001553A34F660 samePtr=0
+A402 end
+
+  逐项对照基线：
+    S2 失败后 loggerInstalled  1 → 0（全局 logger 随失败路径摘除）
+    S2 after_free loggerInstalled 1 → 0；loggerPtrBefore 0000020A9C4500B0 → 0000000000000000（M.Logger 已为 nil，无悬挂）
+    S0/S1 逐字未变（成功路径与「有保护的 CreateConfigStorage」路径不受影响）
+
+三、判据二：回归单元与既有子集
+------------------------------------------------------------------------------
+  runner = 附件/A5R03Verify.dpr.template（与修前同一份）
+  编译：40776 lines, 1.69 s  EXIT=0
+  · 新单元子集 --run:Test.DeepBase.ManagerInitFailureLeak.TManagerInitFailureLeak
+      Tests Found 10 / Passed 10 / Failed 0 / Errored 0 / Leaked 0     （修前：4 pass / 6 fail）
+  · 新单元 + 既有窄基线（Test.DeepBase.Manager + Test.Regression.BUG007_WhenReadyDeadlock）全跑
+      Tests Found 30 / Passed 30 / Failed 0 / Errored 0 / Leaked 0      （修前窄基线：20/20，无回归）
+
+  用例 → 约束映射（哪条钉住哪个行为）：
+    InjectedFailureReachesModuleCreationStage        失败必须显式暴露（返回 False + LastError 带注入标记），不得静默成功
+    FailedInit_ReleasesAlreadyCreatedModules         半批模块必须回收（Logger/Config/I18n 归 nil）
+    FailedInit_DetachesGlobalLoggerBeforeDestroy     全局 logger 在宿主存活期间就摘除
+    FailedInit_ClearsGlobalTranslateCallback         全局翻译回调与 FI18n 同步摘除（FinalizeModules 职责不外漏）
+    FailedInit_DestroyLeavesNoGlobalState            A4-02 S2 判据本体：析构后无任何全局残留
+    FailedInit_ExplicitFinalizeAfterReleaseIsSafe    失败回收后 Finalize 幂等，不得双释放
+    SuccessfulInit_FinalizeThenDestroyReleasesOnce   成功路径 Finalize→Destroy 只释放一次（对照）
+    SuccessfulInit_DestroyWithoutFinalizeReleases    未显式 Finalize 时析构负责释放（对照）
+    FailedInitThenSuccessfulReinit_LeavesNoGlobalState 失败回收不留占位字段，同实例可重新初始化
+    InitializeEx_FailurePath_ReleasesGlobalLogger    另一条入口（root.txt 路径）的 except 分支同修
+
+四、受影响面宽子集（纪律 6：既存红逐件点名，本单不得新增红）
+------------------------------------------------------------------------------
+  runner = 附件/A5R03Wide.dpr.template（窄集 + Config/I18n/Theme/Security/FormState/MRU/Hotkeys + 新单元；
+    入库件相对实跑件只把头注释改成 ASCII，uses 列表与编译参数逐字一致）
+  编译：44837 lines, 2.02 s  EXIT=0
+  运行：Tests Found 133 / Passed 129 / Failed 4 / Errored 0 / Leaked 0
+  与修前宽基线（123 / 119 / 4）比对：
+    Found 123 → 133（+10，即新建单元，10 例全绿）
+    Failed 4 → 4，同名同 Message，全部仍是 Test.Regression.BUG007_WhenReadyDeadlock 的
+    Test_WhenReady_NestedCall_NoDeadlock / Test_WhenReady_AfterInit_ExecutesImmediately /
+    Test_WhenReady_MultipleConcurrentCallbacks / Test_WhenReady_ExceptionInCallback_DoesNotBlockOthers
+  ⇒ 本单零新增红；该 4 红为既存项（修前工作树同样成立，且与 fixture 顺序相关），归属 BUG-007 链。
+
+五、改动面与门禁
+------------------------------------------------------------------------------
+  本笔改动文件（精确 pathspec，git diff --cached --name-only 一致）：
+    Core/DeepBase.Manager.pas                              （修复本体，5 处锚点见第一节）
+    Tests/Test.DeepBase.ManagerInitFailureLeak.pas          （新建回归单元，未并网）
+    CodeReview/20260925-AUDIT-甲-A5-证据/A5-R03-基线-修前跑录.txt
+    CodeReview/20260925-AUDIT-甲-A5-证据/A5-R03-修后-判据跑录.txt
+    CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R03Baseline.dpr.template
+    CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R03Verify.dpr.template
+    CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R03Wide.dpr.template
+  Features/** 零改动（初始化/释放的调用面未变，无需 Features 侧联动，不触发停机条款）。
+  Tests/DeepBaseTests.dpr 与 .dproj 未改（纪律 5：并网归主控收口）。
+  禁动区（v1.1.0 标签 / EHAI 冻结面 / TestResults/** / 旧轨 PluginManager / 新轨 Plugins.*）未触碰。
+
+  编码与行尾四门（node 09_工程脚本/<gate>/check_*.js --root .）：
+    eol-gate              EXIT=0（1587 件，.pas CRLF / .md LF）
+    encoding-gate         EXIT=0（1008 .pas + 732 扩展面；新建单元为 UTF-8 BOM + CRLF）
+    mojibake-gate         EXIT=0（丙-B 命中 0）
+    evidence-encoding-gate EXIT=0（870 件证据全为合法 UTF-8）
+  探针件均以 .dpr.template 后缀入库（纪律 9，避免触发 A6-02 反向闸门）。
+
+六、未纳入面与不可测项（诚实登记，不宣称已修）
+------------------------------------------------------------------------------
+  1) InitializeEx 的布尔 Exit 分支（DoFindRootPath / DoLocateConfigDB / DoConnectAndValidate
+     返回 False 时直接 Exit，:686/:690/:694）不在本单项内：这些位置尚未创建任何模块
+     （FModulesCreated 未置位），不存在 R03 描述的模块泄漏；但 DoConnectAndValidate 内部
+     ConnectToDatabase 已成功而 CreateSchema 返回 False 时，配置库连接句柄会留在 FConfigDB 上
+     等待后续 Finalize（此时 IsInitialized=False，修前修后都不回收）。这是与 R03 相邻但判据不同的
+     另一条缺陷（连接句柄滞留，非模块泄漏），本单按「精准手术刀、不扩面」原则只登记不修。
+  2) 全量 DeepBaseTests.dpr 未跑（纪律 5 明令禁止把它当判据：216 例后崩溃属既存问题）。
+     新建单元未在 .dpr/.dproj 注册，并网由主控收口。
+  3) FireDAC driver 未链接导致的 Manager 面整批假红属环境面，已在基线件 〇b 登记识别方法。
+  4) 失败回收本身不可在「模块析构再次抛错」的路径上保证登记错误信息先于释放：
+     实现选择「先记 FInitErrorCode/FLastError，再 ReleaseModulesAndConnection」，
+     若释放过程再次抛错，异常按 Delphi 语义替换原异常向外传播（fail-closed，不吞），
+     该情形无既有用例覆盖，登记为不可测项而非已验证行为。

@@ -1,0 +1,49 @@
+program A5R03Wide;
+
+{$APPTYPE CONSOLE}
+
+{ Manager init/finalize surface plus the core modules it assembles. }
+
+uses
+  System.SysUtils,
+  FireDAC.Stan.Def,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  DeepBase.Persistence.Config.FireDAC,
+  DeepBase.Persistence.I18n.FireDAC,
+  DeepBase.Persistence.Theme.FireDAC,
+  DeepBase.Persistence.Security.FireDAC,
+  DeepBase.Persistence.FormState.FireDAC,
+  DeepBase.Persistence.MRU.FireDAC,
+  DeepBase.Persistence.Hotkeys.FireDAC,
+  Test.DeepBase.Manager,
+  Test.Regression.BUG007_WhenReadyDeadlock,
+  Test.DeepBase.ManagerInitFailureLeak,
+  Test.DeepBase.Config,
+  Test.DeepBase.I18n,
+  Test.DeepBase.Theme,
+  Test.DeepBase.Security,
+  Test.DeepBase.FormState,
+  Test.DeepBase.MRU,
+  Test.DeepBase.Hotkeys;
+
+begin
+  try
+    TDUnitX.CheckCommandLine;
+    var LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+    var LResults := LRunner.Execute;
+    if not LResults.AllPassed then
+      System.ExitCode := 1;
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.
