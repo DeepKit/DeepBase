@@ -1,0 +1,139 @@
+A5-R02 停机上报：强路线 (a)「析构登记自动解绑」的能力取证与待裁定项
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R02）
+日期：2026-09-29
+状态：**本项未动代码**（Core/DeepBase.DataBinding.pas 内 R02 面 0 改动）
+停因：工单 §三 末条「若任一项修下去发现前提已变（符号没了/别处已修）：停机上报，
+      附 `git log -1 -- <file>` 取证，不许绕过去硬修」。本项命中的是同一门类的第三种情形：
+      前提不是「符号没了」也不是「别处已修」，而是**修法所依赖的能力不存在**——
+      「Bind 时对 Source/Target 各登记一次析构回调」这一能力，对 Delphi 37.0 RTL 里的
+      任意 TObject 不存在，且工单预设的替代路径（「或仓内既有等价的弱通知机制」）在 Core
+      也不存在。按该条纪律停下来上报，不擅自把 (a) 改成能落地的别的形态。
+
+取证锚点（工单 §三 末条要求的 git log）
+------------------------------------------------------------------------------
+  git log -1 -- Core/DeepBase.DataBinding.pas
+    968d9f3 2026-09-28 fix(core): A5-R01 数据绑定按源引用计数退订（WO-20260925-AUDIT-甲-A5）
+    ⇒ 文件在、缺陷面在，本单 R01 笔只动了 Unbind/UnbindObject；R02 面（Bind 与析构登记）零改动。
+  git log -1 -- Core/DeepBase.Memory.pas
+    dfa6b13 2026-07-15 fix: REVIEW5-R2/R3 审阅修复闭环 + 异常悬垂(BUG-438/439) + 编译健康(BUG-446~448) + LLM 模板提取
+    ⇒ 弱引用件 TWeakRef<T> 自该笔后未再变动，其假实现性质见下文 E3。
+
+
+一、缺陷本身成立（不是「已不成立」）
+------------------------------------------------------------------------------
+  代码事实仍在：TBindingEntry 持裸指针
+    Core/DeepBase.DataBinding.pas:169-177  Source: TObject / Target: TObject
+  公开入口无组件身份要求
+    Core/DeepBase.DataBinding.pas:210      procedure Bind(Source: TObject; const SourceProp: string;
+                                                          Target: TObject; const TargetProp: string; ...)
+  A4-01 探针在 R01 修后复跑（failed-assertions=0，S2 已转正）里 S3/S4 仍显示缺陷在场：
+    True S3-write-after-free | decoy[0].Text=WAF-SENTINEL after source notification (original target already freed)
+    True S4-read-after-free  | target Text=DECOY-VALUE (expected DECOY-VALUE only if the freed source slot was re-read)
+  ⇒ 缺陷真实、判据明确（复刻 S3/S4 为单测），本单是「修不了成工单写的形态」，不是「无需修」。
+
+二、能力取证（逐条可复算）
+------------------------------------------------------------------------------
+E1  RTL 的析构登记只挂在 TComponent 上
+    grep -rn "FreeNotification" <RTL>/source/rtl/{sys,common} 命中（全量）：
+      common/System.Classes.pas:2650  procedure FreeNotification(AComponent: TComponent);   ← 声明在 TComponent
+      common/System.Classes.pas:2651  procedure RemoveFreeNotification(AComponent: TComponent);
+      common/System.Classes.pas:17666 实现（内部再调 AComponent.FreeNotification(Self)，对称登记）
+      common/System.Classes.pas:17589 TComponent.Destroy → RemoveFreeNotifications
+      common/System.Actions.pas:962/1098 使用方
+    sys/System.pas（TObject 本体）：**零命中**。即 TObject 层没有任何
+    「A 死了通知 B」的登记 API；FreeNotification 的参数类型就是 TComponent，
+    传不进裸 TObject。
+
+E2  工单预设的「仓内既有等价的弱通知机制」在 Core 不存在
+    grep -rln "FreeNotification" --include=*.pas .（排除 .tmp 脚手架）命中仅三件：
+      VCL/DeepBase.VCL.MVVMControls.pas、VCL/DeepBase.VCL.TrayIcon.pas
+    Core 目录零命中。
+    乙 B2-14 已确立的范式（VCL/DeepBase.VCL.MVVMControls.pas:282 起
+    TCommandButtonBinding = class(TComponent) + FButton.FreeNotification(Self) +
+    override Notification）之所以成立，正是因为被跟踪的按钮是 TComponent；
+    该范式无法直接搬到「任意 TObject 的绑定目标」。
+
+E3  唯一的弱引用件是假实现，不能当登记机制
+    Core/DeepBase.Memory.pas:339  TWeakRef<T: class> = record
+    :1208 GetIsAlive 只做 FRef <> nil；源码注释自证：
+      「无法检测目标对象是否已被释放（悬空指针风险）」
+    ⇒ 它给不了析构通知，也不能把 S3/S4 的悬垂读转变为安全读。它自身是另案缺陷面，
+      不属于本单项范围（本单纪律：不得改 A5 范围外文件）。
+
+E4  接口路线（延长寿命 / 借 _Release 感知析构）在本仓不成立
+    TObservableObject = class(TInterfacedPersistent, INotifyPropertyChanged)
+    （Core/DeepBase.DataBinding.pas:107）
+    TInterfacedPersistent 的引用计数不参与生命周期：
+      common/System.Classes.pas:471   TInterfacedPersistent = class(TPersistent, IInterface)
+      common/System.Classes.pas:6203-6208
+        function TInterfacedPersistent._Release: Integer;
+        begin if FOwnerInterface <> nil then Result := FOwnerInterface._Release
+              else Result := -1; end;   ← 计数归零既不 Free 也不回调
+    ⇒ 绑定条目就算持住接口引用，也拿不到「对象正在析构」这一事件；
+      对裸 TObject 目标（不实现接口）更是无从取引用。
+
+三、真实调用面盘点：谁能登记、谁不能
+------------------------------------------------------------------------------
+  生产面（两侧都可登记）：
+    VCL/DeepBase.VCL.MVVMControls.pas:457/580  Bind(FViewModelObj, prop, Control, prop, Mode)
+        Control: TControl（:80/:145 形参类型）⇒ TComponent，可 FreeNotification
+        FViewModelObj: TViewModelBase = class(TObservableObject, IValidatable)
+        （Core/DeepBase.MVVM.pas:268）⇒ 自有基类，:122 已有 destructor Destroy override
+    VCL/DeepBase.VCL.BindableControls.pas:12   Bind(FUser, 'Name', EditName, 'Text', bmTwoWay) 同上
+    Examples/DataBindingDemo/MainForm.pas:276-283  目标 TEdit/TCheckBox（可登记），
+        源 TPersonModel = class(TObservableObject)（:35，可登记）
+  不可登记的只剩测试替身（裸 TObject）：
+    Tests/Test.DeepBase.DataBinding.pas:41   TTestTarget = class            （14 处 Bind 目标）
+    Tests/Test.DeepBase.DataBinding.pas:26   TTestPerson = class(TObservableObject)（源可登记）
+    Tests/Test.DeepBase.DataBindingUnbindRefCount.pas:26  TUnbindProbeTarget = class(TObject)（R01 新建，7 例）
+    Tests/Test.DeepBase.MVVM.pas  无对 TBindingManager 的 Bind 调用（fixture 类不含裸 target）
+
+  ⇒ 结论：强路线 (a) 在生产面全覆盖可行；阻塞点只在「Bind 的形参类型是 TObject」
+    这一 API 契约 + 两处裸 TObject 测试替身。工单 §R02 破坏面一栏要求
+    「既有 Tests\Test.DeepBase.{DataBinding,MVVM}.pas 不得回归」，与「不可登记对象
+    一律 fail-closed」直接相撞（该 fixture 的 target 全部是裸 TObject，会被闸门拦住）。
+
+四、三条候选路线及其代价（请主控裁定，甲不自行选路）
+------------------------------------------------------------------------------
+(a-1) 分层登记 + 不可登记面 fail-closed【甲的建议】
+   形态：source 必须是 TObservableObject 后代 → 在自有基类 TObservableObject.Destroy
+         （:259，现为 FreeAndNil(FPropertyChangedHandlers)）加一条「正在析构」通知，
+         由 TBindingManager 订阅并摘除条目；
+         target 必须是 TComponent → Bind 里 FreeNotification(Self)，
+         manager 以 Notification() 回调摘除该对象全部条目并同步 R01 的按源计数；
+         两者皆非 → Bind 抛类型化异常（Core/DeepBase.Exceptions.pas 现有类优先，
+         无则新增 EBindingTargetNotTraceable），不静默降级。
+   得到：S3/S4 在生产面根治，判据可复刻为真单测；符合 fail-closed 总原则与
+         「质量优先于兼容，允许 breaking change」。
+   代价：① `Bind` 契约从「任意 TObject」收窄为「可追踪对象」= 公共 API 语义变更，
+            需登记 breaking change（CHANGELOG / consumer-contract.json 由谁落需明示）；
+         ② 两处裸 TObject 测试替身必须改成 TComponent / TObservableObject 后代
+            （Tests/Test.DeepBase.DataBinding.pas 的 TTestTarget、本单 R01 新单元的
+            TUnbindProbeTarget）⇒ 需主控确认「改测试替身基类」不算违反「不得回归」；
+         ③ TObservableObject 加析构通知 = 该基类全部后代（含 VCL/MVVM 侧）行为面扩大，
+            属高频公共路径，按纪律 7 须先留既有 fixture 基线。
+(a-2) 绑定持强引用延长对象寿命
+   已在 E4 证伪：TInterfacedPersistent._Release 不参与生命周期，裸 TObject 无法取引用；
+   且「绑定改变所有权/寿命」与 VCL Owner 树释放顺序冲突。甲不建议，列此说明已排查。
+(a-3) 只覆盖可登记面，其余维持裸指针不报错
+   = 主控已否决的「保留裸指针契约 + 文档化」弱路线的变体（差别只在多一层静默分支）。
+   列此仅作对照，不推荐：违背 fail-closed（同一 API 有的安全有的不安全，且不可区分）。
+
+五、若采纳 (a-1)，甲计划的分笔落地（保持与 R01 可分离）
+------------------------------------------------------------------------------
+   R01 已作为 968d9f3 独立提交并在隔离树复验（d81a167），两笔各可编译。
+   R02 落地拆两笔：
+     ① TObservableObject 析构通知 + manager 订阅（source 面，判据 = S4 复刻转绿）
+     ② target 侧 TComponent.FreeNotification 登记 + Notification 摘除 + 不可登记面闸门
+        （判据 = S3 复刻转绿；同笔内含测试替身基类调整）
+   全程不改 Features/**（已核实：Features 侧对 TBindingManager 只读、无 Bind 调用，
+   故 (a-1) 不产生 Features 联动，无需停机）；不改 Tests/DeepBaseTests.dpr 注册。
+
+六、需要主控回答的三个问题
+------------------------------------------------------------------------------
+   Q1  (a-1) 是否采纳？（或指定其他形态）
+   Q2  「既有 Tests\Test.DeepBase.DataBinding.pas 不得回归」是否允许以
+       「测试替身 TTestTarget 改继承 TComponent」的方式满足（断言内容不变，仅基类变）？
+   Q3  `Bind` 契约收窄的 breaking change 登记（CHANGELOG / consumer-contract / HB 文档）
+       由甲在 A5 回执内一并落，还是归主控收口？
