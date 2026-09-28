@@ -61,6 +61,10 @@ type
         Size: Double;
         Key: string;
         ObjNum: Integer;
+        // A5-R07: Type0 字体的伴生 CIDFontType2 对象号。CIDFont 必须与 Type0 一起
+        // 在登记时从同一条 NextObj 分配链取号；只取一个号、写出时用 ObjNum+1，就会
+        // 把后续 Page/Content/Catalog 的号当成自己的伴生体（重号 + 孤儿体 + 错指）。
+        CIDObjNum: Integer;
       end;
 
       TImageEntry = record
@@ -346,6 +350,7 @@ begin
   E.Size := ASize;
   E.Key := FKey;
   E.ObjNum := NextObj;
+  E.CIDObjNum := NextObj;
   FFonts.Add(E);
   FId := 'F' + IntToStr(E.ObjNum);
   if FPages.Count > 0 then
@@ -724,13 +729,9 @@ begin
   CatObj := NextObj;
   PagesObj := NextObj;
 
+  // A5-R07: 对象号一律由 NextObj 分配链决定（页面、内容流、字体及其伴生 CIDFont
+  // 都在登记时取号），写出阶段不再预留任何不写出的号。
   TotalObjs := FObjNum;
-  // Pre-allocate CIDFont objects: one per font entry
-  for I := 0 to FFonts.Count - 1 do
-  begin
-    CIDObj := NextObj;
-    TotalObjs := FObjNum;
-  end;
   SetLength(Offsets, TotalObjs + 1);
 
   // Header
@@ -754,17 +755,17 @@ begin
   for I := 0 to FFonts.Count - 1 do
   begin
     ObjNum := FFonts[I].ObjNum;
+    CIDObj := FFonts[I].CIDObjNum;
     Offsets[ObjNum] := AStream.Position;
     WriteBuf(Format('%d 0 obj'#10, [ObjNum]));
     WriteBuf('<< /Type /Font /Subtype /Type0'#10);
     WriteBuf(Format('   /BaseFont /%s'#10, [FFonts[I].Name]));
     WriteBuf('   /Encoding /Identity-H'#10);
-    WriteBuf(Format('   /DescendantFonts [%d 0 R]'#10, [ObjNum + 1]));
+    WriteBuf(Format('   /DescendantFonts [%d 0 R]'#10, [CIDObj]));
     WriteBuf('>>'#10'endobj'#10);
 
-    // CIDFont companion uses next sequential number
-    Offsets[ObjNum + 1] := AStream.Position;
-    WriteBuf(Format('%d 0 obj'#10, [ObjNum + 1]));
+    Offsets[CIDObj] := AStream.Position;
+    WriteBuf(Format('%d 0 obj'#10, [CIDObj]));
     WriteBuf('<< /Type /Font /Subtype /CIDFontType2'#10);
     WriteBuf(Format('   /BaseFont /%s'#10, [FFonts[I].Name]));
     WriteBuf('   /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>'#10);

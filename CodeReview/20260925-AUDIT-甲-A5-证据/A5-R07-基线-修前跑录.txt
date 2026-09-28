@@ -1,0 +1,182 @@
+A5-R07 基线（修前跑录）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R07）
+日期：2026-09-29
+缺陷：Core/DeepBase.Export.PDF.pas —— Type0 字体的伴生 CIDFontType2 用 ObjNum+1 写出，
+      而该号从未在 NextObj 分配链上登记 ⇒ 与后续 Page/Content/Catalog 撞号：
+      重复对象号 + CIDFont 体成孤儿 + /DescendantFonts 指向无 /Subtype 的对象。
+判据来源：CodeReview/20260925-AUDIT-甲-A4-证据/附件/A406_PDF.dpr.template（真导出 3 份 PDF）
+          CodeReview/20260925-AUDIT-甲-A4-证据/附件/A406_xref_verify.ps1（xref/对象图校验器）
+          本单原样复用 A4 判据件，不改写探针与校验器，故不复制新的 .dpr.template 别名。
+回归面：Tests/Test.DeepBase.Export.Gen.pas（TPDFExportTests 18 例，唯一既有消费方）
+        Tests/Test.DeepBase.ExportPDFObjGraph.pas（本单新建，6 例对象号不变量）
+
+-- 0. 开工复核（纪律 4：只认符号与定位方法，不照抄行号）-----------------------
+git log -1 -- Core/DeepBase.Export.PDF.pas
+  649b1e07a623df9d44877479a891f139f8435cd9 2026-09-19
+  WO-20260919-AUDIT-乙: B1-B5 编码修复、覆盖/构建归属对账、TManagedWorker、锚点核验
+基线 HEAD：047e3c5（R03 证据笔之后；该 commit 起 PDF 单元零改动）
+
+HEAD blob 内符号锚点（git show HEAD:Core/DeepBase.Export.PDF.pas | grep -n）：
+  59:      TFontEntry = record
+  96:    function FindOrAddFont(const AName: string; ASize: Double): string;
+  129:    procedure SaveToStream(AStream: TStream);
+  348:  E.ObjNum := NextObj;
+  361:  E.ObjNum := NextObj;
+  718:  CatObj, PagesObj, CIDObj: Integer;
+  728:  // Pre-allocate CIDFont objects: one per font entry
+  731:    CIDObj := NextObj;
+  762:    WriteBuf(Format('   /DescendantFonts [%d 0 R]'#10, [ObjNum + 1]));
+  766:    Offsets[ObjNum + 1] := AStream.Position;
+  767:    WriteBuf(Format('%d 0 obj'#10, [ObjNum + 1]));
+
+  注：:348 与 :361 两处 E.ObjNum := NextObj 中，:361 属 AddImageObj（图片对象无伴生体，
+  不在本单范围）；缺陷面是 :348 的字体登记与 :762/:766/:767 的 ObjNum + 1 写出。
+⇒ 前提未变：FindOrAddFont / SaveToStream / TFontEntry / CIDObj / ObjNum+1 全部在位，
+  缺陷形态与工单 §二 R07 逐条对得上，不属「符号没了/别处已修」，按主控裁定做最小修复。
+
+-- 1. 编译（dcc64 v37.0 Win64，cwd=.tmp/a5r07，与 -NU./dcu -E./bin 同目录）-----
+  A406_PDF.exe ← A4 探针模板原样复制；-U<repo>/Core
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    952 lines, 0.19 seconds, 1442240 bytes code, 195520 bytes data.
+
+  A5R07Export.exe（回归 runner，见附件 A5R07Export.dpr.template）
+    -U<repo>/Core -U<repo>/Tests -U<DUnitX>/Source
+    DeepBase.Export.PDF / DOCX / Share 三件均在 Core，无需 VCL/FireDAC 源根
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    25633 lines, 1.22 seconds, 2966172 bytes code, 410352 bytes data.
+
+-- 2. 修前真导出（探针写到 exe 同目录 .tmp/a5r07/bin）-------------------------
+  A4-06 PDF export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a5r07\bin\
+  EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r07\bin\A406_case1.pdf size=957
+  EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r07\bin\A406_case2_cjk.pdf size=925
+  EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r07\bin\A406_case3_twopage.pdf size=1651
+  A4-06 PROBE DONE
+  与甲 A4 证据件 A406_PDF-run.log 逐字一致（case1=957 / case2=925 / case3=1651 字节），
+  即自 A4 审阅以来导出面未变，判据可横向对照。
+
+-- 3. 修前 xref 校验器输出（TOTAL failed-checks=9，与 A4 基线同号同因）--------
+  powershell -NoProfile -ExecutionPolicy Bypass -File <A406_xref_verify.ps1>
+    -InDir <repo>\.tmp\a5r07\bin -OutPath <repo>\.tmp\a5r07\A406-xref-verify-pre.txt
+  校验器退出码：1 —— 在隔离工作树 @047e3c5 的同一判据上直接测得（见
+    A5-R07-隔离工作树编译跑录.txt 第 2 节）。本目录首轮跑录时命令输出接了 | tail，
+    $? 取到的是 tail 的 0，该读数作废不采信：不把管道末命令的退出码冒充判据。
+
+  FILE A406_case1.pdf size=957
+    PASS header :: starts with %PDF-1.4
+    PASS eof-marker :: file ends with %%EOF
+    PASS startxref-present :: startxref token found, value=754
+    PASS startxref-target :: offset 754 -> 'xref.0 7.000'
+    xref entries: used=5 free=2
+    PASS xref-entry-points-to-own-object :: 5 in-use entries checked, 0 mismatched
+      object 4 bodies: @197='4 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @705='4 0 obj.<< /Type /Catalog /Pages 5 0 R >>.endobj' ; xref maps object 4 to offset 705
+    FAIL no-duplicate-object-numbers :: duplicated object numbers: 4
+      orphaned body: object 4 at offset 197 is not the body the xref selects (xref selects 705)
+    FAIL no-orphaned-object-bodies :: 1 object bodies unreachable through the xref
+    PASS all-references-resolve :: 5 distinct indirect refs, unresolved: none
+    PASS no-ref-to-free-xref-entry :: references landing on free/offset-0 xref entries: none
+    PASS catalog-pages-type :: catalog->/Pages target subtype checked, 0 bad
+    PASS pages-kids-type :: 1 kid refs checked, 0 bad
+      Type0 font 3 -> descendant 4 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+    FAIL type0-descendant-is-cidfont :: 1 descendant refs checked, 1 bad
+    PASS page-font-resource-type :: 1 page font refs checked, 0 bad
+  FILE A406_case2_cjk.pdf size=925
+    PASS header :: starts with %PDF-1.4
+    PASS eof-marker :: file ends with %%EOF
+    PASS startxref-present :: startxref token found, value=722
+    PASS startxref-target :: offset 722 -> 'xref.0 7.000'
+    xref entries: used=5 free=2
+    PASS xref-entry-points-to-own-object :: 5 in-use entries checked, 0 mismatched
+      object 4 bodies: @197='4 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @673='4 0 obj.<< /Type /Catalog /Pages 5 0 R >>.endobj' ; xref maps object 4 to offset 673
+    FAIL no-duplicate-object-numbers :: duplicated object numbers: 4
+      orphaned body: object 4 at offset 197 is not the body the xref selects (xref selects 673)
+    FAIL no-orphaned-object-bodies :: 1 object bodies unreachable through the xref
+    PASS all-references-resolve :: 5 distinct indirect refs, unresolved: none
+    PASS no-ref-to-free-xref-entry :: references landing on free/offset-0 xref entries: none
+    PASS catalog-pages-type :: catalog->/Pages target subtype checked, 0 bad
+    PASS pages-kids-type :: 1 kid refs checked, 0 bad
+      Type0 font 3 -> descendant 4 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+    FAIL type0-descendant-is-cidfont :: 1 descendant refs checked, 1 bad
+    PASS page-font-resource-type :: 1 page font refs checked, 0 bad
+  FILE A406_case3_twopage.pdf size=1651
+    PASS header :: starts with %PDF-1.4
+    PASS eof-marker :: file ends with %%EOF
+    PASS startxref-present :: startxref token found, value=1365
+    PASS startxref-target :: offset 1365 -> 'xref.0 11.00'
+    xref entries: used=8 free=3
+    PASS xref-entry-points-to-own-object :: 8 in-use entries checked, 0 mismatched
+      object 7 bodies: @483='7 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @1316='7 0 obj.<< /Type /Catalog /Pages 8 0 R >>.endobj' ; xref maps object 7 to offset 1316
+      object 4 bodies: @203='4 0 obj.<< /Type /Font /Subtype /CIDFontType2.  '  ||  @1172='4 0 obj.<< /Type /Page.   /Parent 8 0 R.   /Medi' ; xref maps object 4 to offset 1172
+    FAIL no-duplicate-object-numbers :: duplicated object numbers: 7,4
+      orphaned body: object 7 at offset 483 is not the body the xref selects (xref selects 1316)
+      orphaned body: object 4 at offset 203 is not the body the xref selects (xref selects 1172)
+    FAIL no-orphaned-object-bodies :: 2 object bodies unreachable through the xref
+    PASS all-references-resolve :: 8 distinct indirect refs, unresolved: none
+    PASS no-ref-to-free-xref-entry :: references landing on free/offset-0 xref entries: none
+    PASS catalog-pages-type :: catalog->/Pages target subtype checked, 0 bad
+    PASS pages-kids-type :: 2 kid refs checked, 0 bad
+      Type0 font 6 -> descendant 7 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+      Type0 font 3 -> descendant 4 has /Subtype /no-subtype (expected CIDFontType0/1/2)
+    FAIL type0-descendant-is-cidfont :: 2 descendant refs checked, 2 bad
+    PASS page-font-resource-type :: 2 page font refs checked, 0 bad
+
+  TOTAL files=3 failed-checks=9
+
+  三症状与判据对应：
+    no-duplicate-object-numbers  FAIL（case1/2 撞号 4；case3 撞号 4、7）
+    no-orphaned-object-bodies    FAIL（CIDFont 体被 Pages/Catalog 体盖掉）
+    type0-descendant-is-cidfont  FAIL（/DescendantFonts 指过去无 /Subtype）
+  其余 8 项（header/eof/startxref-present/startxref-target/xref-entry-points-to-own-object/
+  all-references-resolve/no-ref-to-free/catalog-pages-type/pages-kids-type/
+  page-font-resource-type）修前即 PASS —— 复算确认 A4 结论「xref 偏移算式无错」。
+
+-- 4. 修前回归面（A5R07Export.exe，EXIT=1）-----------------------------------
+  Tests Found 24 = 既有 TPDFExportTests 18（全绿，作为不得回归的基线）
+                 + 新建 TPDFObjectGraphTests 6（全红，逐条消息见下）
+
+  **********************************************************************
+  *        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+  *                                                                    *
+  *        License - http://www.apache.org/licenses/LICENSE-2.0        *
+  **********************************************************************
+
+  DUnitX - [A5R07Export.exe] - Starting Tests.
+
+  .....................................F.F.F.F.F.F
+
+  Tests Found   : 24
+  Tests Ignored : 0
+  Tests Passed  : 18
+  Tests Leaked  : 0
+  Tests Failed  : 6
+  Tests Errored : 0
+
+  Failing Tests
+
+    Test.DeepBase.ExportPDFObjGraph.TPDFObjectGraphTests.SingleFont_Type0AndCompanion_HaveDistinctObjectNumbers
+    Message: Expected [] but got [4,] duplicate object numbers written into one PDF (A5-R07: the CIDFont companion was emitted at ObjNum+1 without reserving that number)
+
+    Test.DeepBase.ExportPDFObjGraph.TPDFObjectGraphTests.SingleFont_DescendantFontResolvesToCidFontType2
+    Message: Expected [1] but got [2] object 4 must have exactly one body, found 2
+
+    Test.DeepBase.ExportPDFObjGraph.TPDFObjectGraphTests.SingleFont_ObjectNumberSpaceIsContiguousAndComplete
+    Message: Expected [] but got [6,] object numbers declared but never written: 6,
+
+    Test.DeepBase.ExportPDFObjGraph.TPDFObjectGraphTests.TwoFontsTwoPages_NoDuplicateObjectNumbers
+    Message: Expected [] but got [4,5,] duplicate object numbers with 2 fonts on 2 pages
+
+    Test.DeepBase.ExportPDFObjGraph.TPDFObjectGraphTests.TwoFontsTwoPages_EachType0PointsAtItsOwnCidFont
+    Message: Expected [1] but got [2] object 4 must have exactly one body, found 2
+
+    Test.DeepBase.ExportPDFObjGraph.TPDFObjectGraphTests.TwoFontsTwoPages_ObjectNumberSpaceIsContiguousAndComplete
+    Message: Expected [] but got [9,10,] object numbers declared but never written: 9,10,
+
+-- 5. 测试侧写法坑（登记，非产品缺陷）----------------------------------------
+  首版用例把行分隔符写成 Split(['#10'])（字符串数组重载），实测对 957 字节的 PDF 返回
+  LineCount=1，六例全部以「0 written object bodies」假红；改为 Split([#10])（Char 数组重载）
+  后，红项恢复成第 4 节所列的真实对象号症状。基线与修后跑录用同一份修正后用例，
+  红/绿差异只来自 Core，不来自测试解析代码。
+  测试样本不含图像 XObject，文本走 <hex> Tj 操作符，流内容不会出现「N 0 obj」形态行，
+  故测试侧无需像 A406_xref_verify.ps1 那样先 Mask-Streams；该差异写在用例单元注释里。
