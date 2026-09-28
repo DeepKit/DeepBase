@@ -172,7 +172,8 @@ A5-R07 修后（判据跑录）
             Tests/Test.DeepBase.ExportPDFObjGraph.pas（新建，UTF-8 BOM+CRLF，393 行，6 例）
             Tests/DeepBaseTests.dpr / .dproj 未改（fixture 注册收口归主控，纪律 5）
             证据：本件 + A5-R07-基线-修前跑录.txt + 附件/A5R07Export.dpr.template
-                  A5-R07-隔离工作树编译跑录.txt（纪律 6）随第二笔提交入账
+                  + A5-R07-隔离工作树编译跑录.txt（纪律 6；该件在第二笔 docs 提交入账，
+                  本件写就时它尚未入库，故当时以「随下一笔」措辞登记）
   零改动区：Features/**、VCL/**、FMX/**、Tools/**、Persistence/**、Examples/**、
             v1.1.0 标签、旧轨 Core/DeepBase.PluginManager.pas、新轨 DeepBase.Plugins.*、
             TestResults/**、CodeReview/20260925-AUDIT-甲-A4-证据/**（判据件只读引用）

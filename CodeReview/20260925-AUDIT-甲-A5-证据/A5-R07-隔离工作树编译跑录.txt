@@ -1,0 +1,176 @@
+A5-R07 隔离工作树编译跑录（工单纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R07）
+日期：2026-09-29
+纪律原文：隔离 --detach 工作树 @ 目标 commit 编译 EXIT=0；主树红项逐件点名归属，
+          本单不得新增红。
+本件同时跑两侧，理由：修前的校验器退出码 1 是基线件（A5-R07-基线-修前跑录.txt
+§3）唯一一处「非本目录首轮跑录」的读数，必须能被同一判据复现；修后的 EXIT=0
+则是纪律 6 字面要求的对象。
+
+-- 0. 现场与命令口径 ----------------------------------------------------------
+  git worktree list（跑录期间）
+    D:/_Progs/02Business/DeepBase                          fcef19f [master]
+    D:/_Progs/02Business/DeepBase/.tmp/a5r07/wt-fcef19f    fcef19f (detached HEAD)
+    D:/_Progs/02Business/DeepBase/.tmp/a5r07/wt-prefix     047e3c5 (detached HEAD)
+  建树命令
+    git worktree add --detach .tmp/a5r07/wt-fcef19f fcef19f   （WT_ADD=0）
+    git worktree add --detach .tmp/a5r07/wt-prefix  047e3c5   （修前提件，已先建）
+  工作树全程 git status --short 为空（wt-fcef19f）：编译器产物一律写在树外
+    .tmp/a5r07/wtbuild-post/、.tmp/a5r07/wtbuild-pre/，工作树只作为只读源根，
+    主树工作副本（可能含未提交改动）完全不参与本轮编译，-U 全部指向工作树绝对路径。
+  退出码读法：一律 out=$(cmd 2>&1); rc=$?；不给命令接 | tee / | tail，
+    以免取到管道末命令的状态（本目录首轮曾犯，已在基线件 §3 点名作废）。
+
+-- 1. 修后侧：--detach @ fcef19f（本单提交）-----------------------------------
+源（全部取自工作树内的已提交字面件，不复制主树脚手架）：
+  CodeReview/20260925-AUDIT-甲-A5-证据/附件/A5R07Export.dpr.template → A5R07Export.dpr
+  CodeReview/20260925-AUDIT-甲-A4-证据/附件/A406_PDF.dpr.template    → A406_PDF.dpr
+  产品单元 Core/DeepBase.Export.PDF.pas、测试单元 Tests/Test.DeepBase.ExportPDFObjGraph.pas
+  均由 -U 指向工作树，即 @fcef19f 的提交内容。
+
+编译（dcc64 v37.0 Win64，cwd=.tmp/a5r07/wtbuild-post，与 -NU./dcu -E./bin 同目录）：
+  PROBE_COMPILE_EXIT=0
+    dcc64 -B -Q -NU./dcu -E./bin -U<wt-fcef19f>/Core A406_PDF.dpr
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    953 lines, 0.19 seconds, 1442288 bytes code, 195520 bytes data.
+  TEST_COMPILE_EXIT=0
+    dcc64 -B -Q -NU./dcu -E./bin -U<wt-fcef19f>/Core -U<wt-fcef19f>/Tests
+          -U<DUnitX>/Source A5R07Export.dpr
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    25633 lines, 1.19 seconds, 2966204 bytes code, 410352 bytes data.
+  两份日志均无 hint/warning 行（-Q 抑制提示，错误/告警仍会打印；本单改动的两个单元零告警）。
+
+运行探针（PROBE_EXIT=0，PDF 写在 exe 同目录 wtbuild-post/bin）：
+  A4-06 PDF export probe, outdir=D:\_Progs\02Business\DeepBase\.tmp\a5r07\wtbuild-post\bin\
+  EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r07\wtbuild-post\bin\A406_case1.pdf size=957
+  EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r07\wtbuild-post\bin\A406_case2_cjk.pdf size=925
+  EXPORT D:\_Progs\02Business\DeepBase\.tmp\a5r07\wtbuild-post\bin\A406_case3_twopage.pdf size=1655
+  A4-06 PROBE DONE
+
+运行判据件（工作树内已提交的 A4 校验器，原样调用不改写）：
+  powershell -NoProfile -ExecutionPolicy Bypass
+    -File <wt-fcef19f>\CodeReview\20260925-AUDIT-甲-A4-证据\附件\A406_xref_verify.ps1
+    -InDir  <repo>\.tmp\a5r07\wtbuild-post\bin
+    -OutPath <repo>\.tmp\a5r07\wtbuild-post\A406-xref-verify-wt.txt
+  VERIFIER_EXIT=0
+  A406 verify: files=3 failed-checks=0 out=...wtbuild-post\A406-xref-verify-wt.txt
+  TOTAL files=3 failed-checks=0
+  逐文件 FAIL 行数=0（11 项检查全 PASS，明细同修后件 §2，此处不复述以免形成第二套真相源）。
+
+运行回归面（TEST_EXIT=0）：
+  **********************************************************************
+  *        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+  *                                                                    *
+  *        License - http://www.apache.org/licenses/LICENSE-2.0        *
+  **********************************************************************
+
+  DUnitX - [A5R07Export.exe] - Starting Tests.
+
+  ................................................
+
+  Tests Found   : 24
+  Tests Ignored : 0
+  Tests Passed  : 24
+  Tests Leaked  : 0
+  Tests Failed  : 0
+  Tests Errored : 0
+
+与主树修后跑录的横向对照（同一 commit、两个源根）：
+  指标                主树 .tmp/a5r07/bin      隔离 wtbuild-post/bin    判定
+  case1/case2/case3   957 / 925 / 1655         957 / 925 / 1655         一致
+  case1 md5           7be92fc0466de32995...    7be92fc0466de32995...    逐字节一致
+  case3 md5           dac43c48b4e768f5ac3f...   dac43c48b4e768f5ac3f...   逐字节一致
+  failed-checks       0                        0                        一致
+  测试                24 passed / 0 failed     24 passed / 0 failed     一致
+  即修后判据不依赖主树现场，@fcef19f 的字面提交自证成立。
+
+-- 2. 修前侧：--detach @ 047e3c5（缺陷态，同一判据）----------------------------
+基线 commit 047e3c5 = 「R03 证据笔之后、PDF 单元零改动」的那一点（基线件 §0 已用
+  git log -1 -- Core/DeepBase.Export.PDF.pas 取证：PDF 单元最后一次改动是 649b1e0 2026-09-19）。
+
+缺陷态自证（在 wt-prefix 内，不靠行号）：
+  git grep -c CIDObjNum -- Core/DeepBase.Export.PDF.pas   → 无匹配（GREP_EXIT=1）
+    即修复引入的伴生号字段在基线不存在。
+  git grep -n "ObjNum + 1" -- Core/DeepBase.Export.PDF.pas →
+    762:    WriteBuf(Format('   /DescendantFonts [%d 0 R]'#10, [ObjNum + 1]));
+    766:    Offsets[ObjNum + 1] := AStream.Position;
+    767:    WriteBuf(Format('%d 0 obj'#10, [ObjNum + 1]));
+    即未预留的伴生号写出面在基线在位，工作单 §二 R07 描述的缺陷形态成立。
+
+源与用例来源（必须点名，因为这决定红基线的含义）：
+  探针 .dpr   = wt-prefix 内已提交的 A406_PDF.dpr.template（@047e3c5 即存在）
+  runner .dpr = 主树脚手架 .tmp/a5r07/A5R07Export.dpr 的副本；A5R07Export.dpr.template
+                是本单新建，@047e3c5 尚不存在，无法从该树取出。
+  测试单元    = 取自 wt-fcef19f/Tests（本单新单元，@047e3c5 亦不存在）；与 wt-prefix
+                内早期一次性副本 diff（忽略行尾）逐字一致。
+  ⇒ 组合语义为「缺陷态产品代码（047e3c5 Core）+ 本单新用例」，正是基线件 §4 六例全红
+    的构造条件；产品代码侧无任何主树工作副本参与。
+
+编译（cwd=.tmp/a5r07/wtbuild-pre）：
+  PROBE_COMPILE_EXIT=0
+    -U<wt-prefix>/Core A406_PDF.dpr
+    952 lines, 0.19 seconds, 1442240 bytes code, 195520 bytes data.
+  TEST_COMPILE_EXIT=0
+    -U<wt-prefix>/Core -U<wt-fcef19f>/Tests -U<DUnitX>/Source A5R07Export.dpr
+    25633 lines, 1.20 seconds, 2966172 bytes code, 410352 bytes data.
+  注：缺陷态编译同样 EXIT=0 —— 本缺陷不表现为编译错误，而是写出期的号段语义错误，
+      这正是判据必须落在「真导出 + xref 校验 + 对象号断言」而不是编译门的原因。
+
+运行探针（PROBE_EXIT=0）：
+  EXPORT ...wtbuild-pre\bin\A406_case1.pdf size=957
+  EXPORT ...wtbuild-pre\bin\A406_case2_cjk.pdf size=925
+  EXPORT ...wtbuild-pre\bin\A406_case3_twopage.pdf size=1651
+  （1651 = 基线件 §2 与甲 A4 证据 A406_PDF-run.log 的原始值，未漂移。）
+
+运行判据件（← 基线件 §3 所引用的原始读数在此复现）：
+  powershell -NoProfile -ExecutionPolicy Bypass
+    -File <wt-prefix>\CodeReview\20260925-AUDIT-甲-A4-证据\附件\A406_xref_verify.ps1
+    -InDir  <repo>\.tmp\a5r07\wtbuild-pre\bin
+    -OutPath <repo>\.tmp\a5r07\wtbuild-pre\A406-xref-verify-wt.txt
+  VERIFIER_EXIT=1
+  TOTAL files=3 failed-checks=9
+  文件内 FAIL 行数 = 9，与主树修前跑录逐条同项：
+    no-duplicate-object-numbers（case1/2 撞号 4；case3 撞号 4、7）
+    no-orphaned-object-bodies（CIDFont 体被 Pages/Catalog 体盖掉）
+    type0-descendant-is-cidfont（/DescendantFonts 指过去无 /Subtype）
+  其余 8 项在缺陷态即 PASS ⇒ 复算确认 A4 结论「xref 偏移算式无错」。
+
+运行回归面（TEST_EXIT=1）：
+  Tests Found   : 24
+  Tests Ignored : 0
+  Tests Passed  : 18
+  Tests Leaked  : 0
+  Tests Failed  : 6
+  Tests Errored : 0
+  18 绿 = 既有 TPDFExportTests（基线，不得回归）；6 红 = 本单新单元 TPDFObjectGraphTests
+  全数命中缺陷，逐条失败消息见基线件 §4（此处不复述）。
+
+早期一次性同判据跑录（wt-prefix/.tmpbuild，随工作树一并移除）：
+  c-probe.log 952 lines / 1442240 bytes code；c-test.log 25633 lines / 2966172 bytes code；
+  v-rc.log failed-checks=9。与本次重跑的数字完全一致 ⇒ 修前隔离复现可重复。
+
+-- 3. 模板件与主树脚手架 .dpr 的差异（解释唯一一处数字漂移）--------------------
+  A406_PDF.dpr    脚手架 1496 B / 58 LF / 0 CR / 末行带换行
+                  模板   1554 B / 58 LF / 58 CR / 末行带换行
+                  剥离行尾后 diff 为空 ⇒ 内容逐字一致，模板只是 CRLF 化。
+  A5R07Export.dpr 脚手架  632 B / 29 LF / 0 CR / 末行带换行
+                  模板    659 B / 28 LF / 28 CR / 末行 'end.' 无结尾换行
+                  剥离行尾后 diff 仅一处：模板末行少一个换行符。
+  ⇒ 修后 runner 在隔离侧为 25633 lines，主树侧为 25634 lines，差 1 行即上述 EOF 换行；
+    两侧 bytes of code 同为 2966204、data 同为 410352 ⇒ 编译产物等价，
+    漂移在输入文件的行数统计口径，不在代码。修前侧脚手架/脚手架两侧同为 25633 亦吻合。
+
+-- 4. 结论与清理 --------------------------------------------------------------
+  纪律 6 的「隔离 --detach 工作树 @ 目标 commit EXIT=0」在 fcef19f 字面成立：
+    探针编译 EXIT=0、runner 编译 EXIT=0、PROBE_EXIT=0、VERIFIER_EXIT=0（failed-checks=0）、
+    TEST_EXIT=0（24/24/0）。
+  同一判据在 047e3c5 给出 VERIFIER_EXIT=1 / failed-checks=9 / 24-18-6，红绿之差只来自
+    Core/DeepBase.Export.PDF.pas 的对象号登记，测试解析代码与判据件两侧共用同一份。
+  主树红项归属：本单未改 Tests/DeepBaseTests.dpr 与 .dproj，新单元未并网；全量 run 崩 216
+    属既存问题（工单纪律 5 已点名禁止以全量为判据），本单零新增红。
+  本单两个工作树（wt-fcef19f、wt-prefix）与树外构建目录（wtbuild-post、wtbuild-pre）
+    在本笔证据入账后移除；早期一次性尝试目录 .tmp/a5r04/wt-57de33c、.tmp/a5r04/wt-prefix
+    属 R04 段现场，随 A5 收尾统一清理。
