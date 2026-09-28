@@ -1,0 +1,59 @@
+A5-R01 隔离 --detach 工作树字面编译跑录（工单纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R01）
+日期：2026-09-28
+目标 commit：968d9f3 fix(core): A5-R01 数据绑定按源引用计数退订（WO-20260925-AUDIT-甲-A5）
+工作树：git worktree add --detach .tmp/a5r01/wt-968d9f3 968d9f3
+        （干净树，HEAD 即目标 commit；工作树内除本单拷入的 runner 外无任何未提交改动）
+
+一、环境
+------------------------------------------------------------------------------
+  dcc64 = D:\Program Files (x86)\Embarcadero\Studio\37.0\bin\dcc64.exe（Delphi for Win64 37.0）
+  DUnitX 源码 = D:\ProgramData\delphi\DUnitX\Source
+  搜索路径全部指向工作树自身（-U$WD/Core -U$WD/Features -U$WD/Tests -U$WD/Tests/Regression），
+  不落回主树，确保编译的是 968d9f3 的字面代码。
+  产物目录：工作树内 .tmp/a5r01/dcu、.tmp/a5r01/bin（-NU./dcu -E./bin）
+
+二、编译（-B -Q）
+------------------------------------------------------------------------------
+  A5R01Verify.dpr      EXIT=0   27061 lines, 1.25s, 2917708 bytes code, 392096 bytes data
+  A5R0102Baseline.dpr  EXIT=0   26773 lines, 1.25s, 2908500 bytes code, 391576 bytes data
+  A401_Databinding.dpr EXIT=0     868 lines, 0.17s, 1379956 bytes code, 191752 bytes data
+
+  runner 与附件模板一一对应：
+    A5R01Verify.dpr     = 附件/A5R01Verify.dpr.template（既有绑定面 + 本单新建单元）
+    A5R0102Baseline.dpr = 附件/A5R0102Baseline.dpr.template（既有绑定面，回归前置基线）
+    A401_Databinding.dpr= 甲 A4 附件 A401_Databinding.dpr.template（S1..S4 探针，改制后未改名入库）
+
+三、运行（工作树内 exe）
+------------------------------------------------------------------------------
+  bin\A5R01Verify.exe      EXIT=0
+    Tests Found 71 / Passed 71 / Failed 0 / Errored 0 / Leaked 0
+  bin\A5R0102Baseline.exe  EXIT=0
+    Tests Found 64 / Passed 64 / Failed 0 / Errored 0 / Leaked 0
+  bin\A401_Databinding.exe EXIT=0
+    True S2-sibling-still-live | surviving binding T2.Text=phase-B (expected phase-B)
+    A4-01 PROBE DONE, failed-assertions=0
+    （S3/S4 仍显示 True = 探针断言「R02 缺陷现场仍在」，本单未触及生命周期面；
+      S3/S4 的地址数值随进程堆布局变化，与判据无关）
+
+  ⇒ 在 968d9f3 的字面代码上：新建单元 7 例 + 既有绑定面 64 例全绿，A4-01 R01 判据为 0 红。
+
+四、告警与红项逐件点名
+------------------------------------------------------------------------------
+  三次编译的输出中，非静默项只有 A401_Databinding.dpr 自身产生的 6 条既存 W1036
+  （"Variable might not have been initialized"，行 108/109/110/163/200/201），
+  来自甲 A4 探针模板自身的局部变量写法，属探针面、非本单被测代码，且基线（修前）同量存在。
+  两个测试 runner 的编译零告警零错误。
+  链接错误 / 单元缺失（F2051、E2003 等）：无。
+
+  主树侧红项归属：本单未跑全量 DeepBaseTests.dpr（工单纪律 5 禁止当判据），
+  因此不涉及全量面 216 例后崩溃这一既存问题；本单改动面（Core/DeepBase.DataBinding.pas
+  的 Unbind/UnbindObject + 新建测试单元）在本跑录内无红项。
+  另外核实过调用面：仓内除 Tests 外无 Features/VCL 代码调用 TBindingManager.Unbind/
+  UnbindObject/UnbindAll（VCL/DeepBase.VCL.Hotkeys.pas:206 的 Unbind 属另一类，无关），
+  故本单无 Features 联动需求，未触碰 Features/**（保持只读）。
+
+五、清理
+------------------------------------------------------------------------------
+  git worktree remove --force .tmp/a5r01/wt-968d9f3（跑录取证后移除，产物不落库）
