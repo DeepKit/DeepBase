@@ -1,0 +1,111 @@
+A5-R09 隔离工作树编译跑录（纪律 6）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（A5-R09）
+日期：2026-09-29
+目的：把「修前红」的读数取自一个与工作副本无关的隔离 --detach 工作树 @目标 commit，
+      使红/绿差异只能来自被修的两个 Core 单元，而不是脚手架污染或顺手带上的改动。
+
+-- 1. 环境构造 ------------------------------------------------------------------
+  a) 隔离工作树（目标 commit = 本单修前 HEAD，R09 改动此前全部未提交）：
+       git worktree add --detach .tmp/a5r09/wt-prefix 7549d0c
+     复验：
+       git -C .tmp/a5r09/wt-prefix log --oneline -1
+         7549d0c docs(a5-r08): 隔离 --detach 工作树 @10d7082 字面编译跑录 + @2a999e8 同判据红复现（纪律 6）
+       git -C .tmp/a5r09/wt-prefix status --short | wc -l
+         0                     ← 工作树零污染：无修改、无未跟踪文件
+  b) 输出目录在树外，避免 dcu/exe 落进工作树：
+       .tmp/a5r09/wtbuild/dcu   .tmp/a5r09/wtbuild/bin
+  c) 本单两个新建文件不放进修前工作树（放了就等于把修后代码塞进修现场），改放树外
+     staging 面，用独立 -U 供给：
+       .tmp/a5r09/staging/DeepBase.TimeSource.pas
+       .tmp/a5r09/staging/Test.DeepBase.TimeSource.pas
+     与主树版本逐字节一致（cmp 无输出）：
+       cmp .tmp/a5r09/staging/DeepBase.TimeSource.pas       Core/DeepBase.TimeSource.pas        → STAGING_TIME_SAME
+       cmp .tmp/a5r09/staging/Test.DeepBase.TimeSource.pas  Tests/Test.DeepBase.TimeSource.pas  → STAGING_TEST_SAME
+  d) 探针 dpr 由入库模板逐字节复制，两侧同源：
+       cp 附件/A5R09Verify.dpr.template → .tmp/a5r09/A5R09Verify.dpr（主树侧）
+                                          .tmp/a5r09/wtbuild/A5R09Verify.dpr（隔离侧）
+       cmp 附件/A5R09Verify.dpr.template .tmp/a5r09/wtbuild/A5R09Verify.dpr → WT_DPR_SAME
+       cmp 附件/A5R09Verify.dpr.template .tmp/a5r09/A5R09Verify.dpr        → MAIN_DPR_SAME
+
+-- 2. 唯一变量核对：内容级（忽略 CR）比对 --------------------------------------
+  注：主树多数 .pas 工作副本是 LF、--detach 工作树 checkout 出 CRLF（.gitattributes
+  *.pas text eol=crlf 只管 checkout 方向，索引内一律 LF，两侧 git 状态都干净）。
+  因此字节级 diff 会对几乎每个文件报 differ，属行尾噪声；比对必须用 --strip-trailing-cr。
+
+  diff -rq --strip-trailing-cr .tmp/a5r09/wt-prefix/Core Core   | grep -v '^Only in'
+    Files .../Core/DeepBase.KeyManager.pas and Core/DeepBase.KeyManager.pas differ
+    Files .../Core/DeepBase.License.pas     and Core/DeepBase.License.pas     differ
+  diff -rq --strip-trailing-cr .tmp/a5r09/wt-prefix/Tests Tests  | grep -v '^Only in'
+    （无输出：既存测试单元内容逐行相同）
+
+  仅主树存在（即本单新增，隔离侧经 staging 供给）：
+    Only in Core:  DeepBase.TimeSource.pas
+    Only in Tests: Test.DeepBase.TimeSource.pas
+  其余 "Only in" 行全是主树的构建产物/日志/临时件（*.exe *.res *.rsm *.drc Win64/
+  TestResults/ Logs/ evidence/ *.log sqlite3.dll test_output.xml，以及既存
+  Core/DeepBase.Schema.pas.bak），均被 .gitignore 排除、不参与本次编译面。
+
+  ⇒ 结论：隔离侧与主树在「参与本次 runner 编译的源码」上的差集只有
+    Core/DeepBase.License.pas（+29/-5）与 Core/DeepBase.KeyManager.pas（+11/-7）。
+    DeepBaseServices.dpk 也 differ（+1 行单元注册），但探针 runner 走 -U 源根直编、
+    不经包，故不影响本判据；该 +1 行的正确性由第 5 节的包清单核对负责。
+
+-- 3. 修前编译（隔离侧，EXIT=0）------------------------------------------------
+  cd .tmp/a5r09/wtbuild
+  "D:/Program Files (x86)/Embarcadero/Studio/37.0/bin/dcc64.exe" \
+    -B -Q -NU./dcu -E./bin \
+    -U<D:/_Progs/02Business/DeepBase/.tmp/a5r09>/staging \
+    -U.tmp/a5r09/wt-prefix/Core \
+    -U.tmp/a5r09/wt-prefix/Tests \
+    -U"D:/ProgramData/delphi/DUnitX/Source" \
+    A5R09Verify.dpr
+  ⇒ PRE2_COMPILE_EXIT=0
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    43871 lines, 1.67 seconds, 3708380 bytes code, 465400 bytes data.
+  提示面（均为既存 hint，逐条归属见第 4 节对照，本单零新增）：
+    wt-prefix/Core/DeepBase.Logging.pas(411/790/805/819) H2077
+    wt-prefix/Core/DeepBase.PluginManager.pas(1125) H2077
+    wt-prefix/Core/DeepBase.FormState.pas(409) H2443
+    wt-prefix/Core/DeepBase.Manager.Operational.pas(56) H2077
+    wt-prefix/Core/DeepBase.Manager.pas(578) H2077
+    wt-prefix/Core/DeepBase.Crypto.Hash.pas(599) H2077
+
+  要点：修前代码 + 修后用例 ⇒ 编译必须绿（用例引用的 TDeepBaseTimeSource 来自 staging，
+  与新 API 无关的 License/KeyManager 签名未变）。编译绿、运行红才是「缺陷本身红」。
+  若这里编译红，说明判据写到了不存在的 API 上，属判据缺陷，不能当修前红用。
+
+-- 4. 修前运行（隔离侧）与主树修后对照 ------------------------------------------
+  隔离侧（修前 Core + 最终用例）：
+    ./bin/A5R09Verify.exe → PRE2_RUN_EXIT=1
+      Tests Found 78 / Passed 67 / Ignored 0 / Leaked 0 / Failed 11 / Errored 0
+    11 条红项全文与红因分类：见 A5-R09-基线-修前跑录.txt §4
+  主树侧（修后 Core + 同一份用例）：
+      43899 lines, 1.64 seconds, 3708684 bytes code, 465400 bytes data.
+      GREEN_COMPILE_EXIT=0
+      Tests Found 78 / Passed 78 / Ignored 0 / Leaked 0 / Failed 0 / Errored 0
+      GREEN_RUN_EXIT=0
+  行数差自证：43899 - 43871 = 28 = (29-5) + (11-7) —— 两个 Core 单元 diffstat 的净增行数
+    与编译器读入行数逐行对上，说明两侧差异确实只有这两个单元、且没有夹带其他改动。
+    （基线件 43142 行走的是 A5R09Baseline.dpr（四个既存单元），单元集合不同，
+     不与 43871/43899 直接做减法；只有「同 dpr、同用例、只差两个 Core 单元」这一对
+     才是纪律 6 要求的可比读数。）
+
+-- 5. 主树红项逐件点名（纪律 6：主树不得新增红）--------------------------------
+  本单落地后主树 `git status --short` 的改动面 = 本单 5 个文件（2 个 Core 单元 +
+  1 个 dpk + 2 个新建 .pas）+ 证据件，无第三类改动。
+  判据面（A5R09Verify.exe，5 个单元 + 其传递依赖）修后编译 EXIT=0、运行 78/78/0
+  ⇒ 本单零新增红；License/KeyManager/TimeSource 及新测试单元的编译告警面
+  在修前修后完全一致（第 3 节列出的 8 条 hint 全在既存单元既存行号上，本单未新增一条）。
+  全量套件 216 崩属既存问题（纪律 5 明令禁止当判据），本单未以其作任何结论依据。
+
+  修后侧（对照读数）取自本单 fix 提交 1f3f9dd 的工作副本内容：提交前后该 5 个文件的
+  字节内容一致（提交只改索引，未再触碰工作树），故 43899/78-78-0 即 1f3f9dd 的字面读数。
+-- 6. 脚手架归属与拆除 ----------------------------------------------------------
+  .tmp/a5r09/** 全部落在 .gitignore 的 *.tmp 面内（git check-ignore -v 确认），
+  不入库；.tmp/a5r09/wt-prefix 是本单唯一工作树，收尾后由
+    git worktree remove --force .tmp/a5r09/wt-prefix
+  拆除，随后 git worktree list 复验只剩主树。
+  历史遗留 .tmp/a5r04/wt-57de33c、.tmp/a5r04/wt-prefix（属 R04/R01 期脚手架）在
+  A5 收尾一并拆除，登记在交付回执。
