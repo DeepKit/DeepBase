@@ -191,7 +191,15 @@ type
     
     function GetPropertyValue(Obj: TObject; const PropName: string): TValue;
     procedure SetPropertyValue(Obj: TObject; const PropName: string; const Value: TValue);
-    
+
+    { A5-R01 退订按源引用计数：AddPropertyChangedHandler 对同一 handler 去重
+      （TObservableObject.AddPropertyChangedHandler 有 Contains 判重），一个 Source
+      在同一个 manager 内只登记一份订阅。因此删除绑定条目时必须先确认该 Source 没有
+      其它条目，否则解绑同源兄弟绑定中的一条会退订共享订阅，让存活的绑定静默失效。
+      ASkipIndex 指向即将删除的那一条，不计入「剩余」。 }
+    function HasRemainingBindingForSource(ASource: TObject;
+      ASkipIndex: Integer): Boolean;
+
   public
     constructor Create;
     destructor Destroy; override;
@@ -446,6 +454,17 @@ begin
     RttiProp.SetValue(Obj, Value);
 end;
 
+function TBindingManager.HasRemainingBindingForSource(ASource: TObject;
+  ASkipIndex: Integer): Boolean;
+var
+  i: Integer;
+begin
+  for i := 0 to FBindings.Count - 1 do
+    if (i <> ASkipIndex) and (FBindings[i].Source = ASource) then
+      Exit(True);
+  Result := False;
+end;
+
 procedure TBindingManager.HandleSourcePropertyChanged(const Args: TPropertyChangedEventArgs);
 var
   i: Integer;
@@ -541,10 +560,11 @@ begin
     Entry := FBindings[i];
     if (Entry.Source = Source) and (Entry.Target = Target) then
     begin
-      // Unsubscribe from source
-      if Supports(Entry.Source, INotifyPropertyChanged, Observable) then
+      // 仅当该 Source 不再有其它绑定条目时才退订共享 handler（A5-R01）
+      if not HasRemainingBindingForSource(Entry.Source, i) and
+        Supports(Entry.Source, INotifyPropertyChanged, Observable) then
         Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
-      
+
       FBindings.Delete(i);
     end;
   end;
@@ -561,9 +581,11 @@ begin
     Entry := FBindings[i];
     if (Entry.Source = Obj) or (Entry.Target = Obj) then
     begin
-      if Supports(Entry.Source, INotifyPropertyChanged, Observable) then
+      // 同 A5-R01：Obj 作为目标被解绑时，它作为源的其它绑定必须保住订阅
+      if not HasRemainingBindingForSource(Entry.Source, i) and
+        Supports(Entry.Source, INotifyPropertyChanged, Observable) then
         Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
-      
+
       FBindings.Delete(i);
     end;
   end;

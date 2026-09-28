@@ -1,0 +1,30 @@
+program A5R01Verify;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  Test.DeepBase.DataBinding,
+  Test.DeepBase.MVVM,
+  Test.DeepBase.DataBindingUnbindRefCount;
+
+begin
+  try
+    TDUnitX.CheckCommandLine;
+    var LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+    var LResults := LRunner.Execute;
+    if not LResults.AllPassed then
+      System.ExitCode := 1;
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

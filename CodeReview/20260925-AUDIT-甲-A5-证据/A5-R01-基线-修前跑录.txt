@@ -1,0 +1,100 @@
+A5-R01 基线（修前）跑录
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R01）
+日期：2026-09-28
+被测面：Core/DeepBase.DataBinding.pas `TBindingManager.Unbind` / `TBindingManager.UnbindObject`
+判据来源：甲 A4 的 A4-01 探针 S2
+         （CodeReview/20260925-AUDIT-甲-A4-证据/附件/A401_Databinding.dpr.template）
+         + 本单新建回归单元 Tests/Test.DeepBase.DataBindingUnbindRefCount.pas（7 例）
+
+缺陷陈述
+------------------------------------------------------------------------------
+TObservableObject.AddPropertyChangedHandler（Core/DeepBase.DataBinding.pas:265）对同一
+handler 用 Contains 判重 ⇒ 一个 Source 在同一个 TBindingManager 内只登记一份订阅。
+修前的退订是「按绑定条目逐条退订」：解绑同源兄弟绑定中的一条 Unbind(S, T1) 时，
+被 Remove 掉的正是那份共享订阅，存活的 (S, T2) 条目仍留在 FBindings 中
+（BindingCount=1，看起来一切正常），但属性变更不再传播——绑定静默失效，无异常、无日志。
+同一段逻辑的第二条入口是 UnbindObject：它的匹配条件是
+(Entry.Source = Obj) or (Entry.Target = Obj)，因此 Obj 仅作为「目标」被解绑时，
+也会把 Entry.Source 的共享订阅退掉，误杀该源上其它存活的绑定。
+
+纪律 7（回归前置）：改动前先跑既有相关 fixture 子集留基线
+------------------------------------------------------------------------------
+  runner = .tmp/a5r01/A5R0102Baseline.dpr
+  （uses 仅 Test.DeepBase.DataBinding + Test.DeepBase.MVVM = 既有绑定面全部 fixture）
+  编译：26751 lines, 1.25s  EXIT=0
+  运行：Tests Found 64 / Passed 64 / Failed 0 / Errored 0 / Leaked 0
+  ⇒ 基线全绿；本单改动若使其变红即为回归（修后跑录见 A5-R01-修后-判据跑录.txt）。
+
+一、A4-01 探针（主树 HEAD=21cfc4e，缺陷代码原样）
+------------------------------------------------------------------------------
+  编译：846 lines, 0.16s  EXIT=0（6 条 W1036 为探针自身未初始化变量的既存告警，属探针面）
+  运行（.tmp/a5r01/pre-A401.txt 全文）：
+
+--- S1 bind/unbind/free/trigger --- | 
+True S1-bind | BindingCount after Bind = 1
+True S1-unbind | BindingCount after Unbind = 0
+S1-trigger | NO_CRASH after freeing source+target and re-entering bind paths
+--- S2 sibling binding after Unbind --- | 
+S2-after-bind | T1.Text=phase-A T2.Text=phase-A BindingCount=2
+S2-after-unbind-one | BindingCount=1
+False S2-sibling-still-live | surviving binding T2.Text=phase-A (expected phase-B)
+--- S3 write-after-free target --- | 
+S3-address | freed target @-1086714448 reused=True
+True S3-write-after-free | decoy[0].Text=WAF-SENTINEL after source notification (original target already freed)
+--- S4 read-after-free source --- | 
+S4-address | freed source @-1086578880 decoy @-1086578880 same=True
+True S4-read-after-free | target Text=DECOY-VALUE (expected DECOY-VALUE only if the freed source slot was re-read)
+
+A4-01 PROBE DONE, failed-assertions=1
+
+  与甲 A4 交付回执登记的实测结果一致：S2 是唯一与 R01 相关的断言，修前为红
+  （T2 停在 phase-A，说明退订发生在兄弟绑定仍存活时）。
+  S3/S4 是 R02（生命周期/悬垂指针）的现场断言，本基线内未修，仍显示缺陷在场，
+  与 R01 的判据无关；R02 的处置见 A5-R02 停机上报件。
+
+二、新建回归单元在「缺陷代码」上的红基线（隔离 --detach 工作树 @ 21cfc4e）
+------------------------------------------------------------------------------
+  工作树：git worktree add --detach .tmp/a5r01/wt-21cfc4e 21cfc4e
+  仅向工作树拷入本单新建的测试单元与 runner；Core/DeepBase.DataBinding.pas 保持修前原样
+  （确认：工作树内 grep HasRemainingBindingForSource 零命中）。
+  编译：27039 lines, 1.28s  EXIT=0（缺陷代码 + 新用例可编译，红是断言红不是编译红）
+  运行：bin\A5R01Verify.exe --run:Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount
+
+Tests Found   : 7
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 4
+Tests Errored : 0
+
+  Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount.SiblingBinding_StillUpdatesAfterUnbindOfOther
+  Message: Expected [phase-B] but got [] unbinding one binding of a source must not unsubscribe the shared handler the surviving sibling binding still depends on
+
+  Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount.LastBindingForSource_UnsubscribesAndStopsUpdating
+  Message: Expected [phase-B] but got [] after the last binding of the source is removed the source is unsubscribed and no further change may reach the target
+
+  Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount.UnbindObject_TargetSide_KeepsSiblingSubscription
+  Message: Expected [phase-B] but got [] UnbindObject removes bindings in which the object takes part as a target; the sibling binding that keeps the same source must stay subscribed
+
+  Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount.ThreeSiblings_KeepUpdatingUntilTheLastOneIsUnbound
+  Message: Expected [phase-C] but got [] two partial unsubscriptions must not kill the third binding
+
+  读法说明（避免把红基线读成「7 例都能区分修前修后」）：
+  · 4 例红是本缺陷的直接现场：解绑一条后兄弟条目拿到空值（通知根本没到过）。
+    其中 LastBindingForSource_UnsubscribesAndStopsUpdating 是双面用例——它同时断言
+    「最后一条解绑后不再收到更新」；修前它先在正面（phase-B 应到达）失配，因此红，
+    修后两面都成立，才是这条用例的完整语义。
+  · 3 例修前即 pass（UnbindOneSource_LeavesOtherSourcesBindingsLive、
+    TwoManagersOnSameSource_EachKeepsItsOwnSubscription、UnbindAll_StopsEveryNotification）：
+    它们是护栏，钉住「按源计数」这一改动不得波及的邻近语义（不同源互不影响、
+    不同 manager 各持自己的方法指针、UnbindAll 的全清语义必须继续全清）。
+    登记于此，说明它们不用于证明缺陷存在，只用于防止修过头。
+
+三、主树既存红项归属（纪律 6 要求逐件点名）
+------------------------------------------------------------------------------
+  本单未跑全量 DeepBaseTests.dpr（工单纪律 5：全量在 216 例后崩溃属既存问题，禁止当判据）。
+  基线阶段本单改动面为 0，除上述判据外无其他红项；
+  未改 Tests/DeepBaseTests.dpr 与 .dproj 注册，新单元未并网，全量面与本单无因果关系。
+
+结论：判据基线成立——A4-01 探针 failed-assertions=1（S2 红），新建单元在缺陷代码上 4 红 3 绿，
+既有绑定面 64 例基线全绿。

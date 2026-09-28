@@ -1,0 +1,100 @@
+A5-R01 修后判据跑录
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R01）
+日期：2026-09-28
+被测面：Core/DeepBase.DataBinding.pas（TBindingManager 退订路径）
+回归单元：Tests/Test.DeepBase.DataBindingUnbindRefCount.pas（新建，7 例）
+基线件：A5-R01-基线-修前跑录.txt（64 例基线全绿 / A4-01 failed-assertions=1 / 新单元 4 红）
+
+一、修法
+------------------------------------------------------------------------------
+把退订从「按绑定条目」改成「按源引用计数」，判定逻辑只留一处实现：
+
+  private function HasRemainingBindingForSource(ASource: TObject;
+    ASkipIndex: Integer): Boolean;   // 扫描 FBindings，跳过即将删除的第 ASkipIndex 条
+  实现在 Core/DeepBase.DataBinding.pas:457
+
+两处退订入口各加同一门控（只有该 Source 除本次要删的条目之外没有别的条目时，
+才向 Source 退订共享 handler）：
+
+  TBindingManager.Unbind        :552（(Entry.Source = Source) and (Entry.Target = Target)）
+  TBindingManager.UnbindObject  :573（(Entry.Source = Obj) or (Entry.Target = Obj)）
+
+公开签名、调用方、绑定语义均未变；无新增依赖，无 Features/** 联动。
+
+改动面点名（工单把 R01 写在「限 Unbind 一个函数」）：
+  UnbindObject 里是同一段逐条退订逻辑的第二条入口，而且它的匹配条件带 or，
+  Obj 仅作为目标被解绑时同样会误退 Entry.Source 的共享订阅——同一缺陷的第二条触发路径。
+  按「结构性问题用重构解决，禁止特例绕过」与 SSOT（判定只有一处实现）一并收口，
+  没有扩大到其他函数。UnbindAll（:594）故意未改：它的全清语义下逐条 Remove 幂等，
+  不存在「兄弟绑定仍存活」的窗口，加计数反而引入无意义的分支。
+  回退口径：门控判断集中在一个 private 方法内，本单该文件的改动可整体 revert 回到修前语义。
+
+Delphi 短路求值依据：默认 {$B}（Boolean 完全求值）为 OFF，即短路求值，
+`not HasRemainingBindingForSource(...) and Supports(...)` 在有剩余绑定时跳过 Supports；
+Supports 只填充 out 参数、无副作用，跳过不影响正确性。
+
+二、判据（修后主树）
+------------------------------------------------------------------------------
+1) A4-01 探针 S2 转正（工单原文判据：BindingCount=1 且源属性变更后 T2 收到通知）
+   runner = .tmp/a5r01/A401_Databinding.dpr（由 A4 附件改制，未改名入库，防触发 A6-02 反向闸门）
+   编译：868 lines, 0.14s  EXIT=0（6 条 W1036 同基线，属探针面）
+   运行（.tmp/a5r01/post-A401.txt）：
+
+--- S2 sibling binding after Unbind --- | 
+S2-after-bind | T1.Text=phase-A T2.Text=phase-A BindingCount=2
+S2-after-unbind-one | BindingCount=1
+True S2-sibling-still-live | surviving binding T2.Text=phase-B (expected phase-B)
+
+   A4-01 PROBE DONE, failed-assertions=0  ← 基线为 1
+   S1 仍 True/True/NO_CRASH；S3/S4 的 True 是 R02 现场断言（探针断言缺陷在场），
+   本单未触及生命周期面，故维持原样，与 R01 判据无关。
+
+2) 回归单元 + 既有绑定面全绿
+   runner = .tmp/a5r01/A5R01Verify.dpr（uses Test.DeepBase.DataBinding +
+   Test.DeepBase.MVVM + 新建 Test.DeepBase.DataBindingUnbindRefCount）
+   编译：27061 lines, 1.30s  EXIT=0
+   运行（.tmp/a5r01/post-verify.txt）：
+
+Tests Found   : 71
+Tests Ignored : 0
+Tests Passed  : 71
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+   71 = 修前基线 64 + 新建单元 7 ⇒ 既有绑定面零回归，新单元由 4 红转 7 绿。
+   单独跑新单元（--run:Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount）
+   同样 7/7 绿。
+
+3) 用例 → 约束映射
+   SiblingBinding_StillUpdatesAfterUnbindOfOther
+     = A4-01 S2 的 DUnitX 化：Unbind(S,T1) 后 BindingCount=1 且 T2 仍收到 phase-B；
+       附带负面断言「被解绑的 T1 不再收到更新」⇒ 计数退订不等于永不退订。
+   LastBindingForSource_UnsubscribesAndStopsUpdating
+     = 反向半：最后一条被解绑后 Source 必须真的退订（phase-C 不得到达 T2），
+       防止把修复做成「干脆不退订」的假修复。
+   UnbindObject_TargetSide_KeepsSiblingSubscription
+     = UnbindObject 的 or 入口：T1 只作为目标被解绑，同源 (S,T2) 订阅必须保住。
+   ThreeSiblings_KeepUpdatingUntilTheLastOneIsUnbound
+     = 计数正确性：三次部分解绑不得提前杀进程内第三条绑定（phase-C 仍到达 T3）。
+   UnbindOneSource_LeavesOtherSourcesBindingsLive
+     = 边界护栏：计数是「按源」而非「按 manager 全局」，不得波及其他源。
+   TwoManagersOnSameSource_EachKeepsItsOwnSubscription
+     = 边界护栏：两个 manager 在同一源上注册不同方法指针，互不遮蔽。
+   UnbindAll_StopsEveryNotification
+     = 边界护栏：全清语义保持不变（改后仍全退订）。
+
+三、交付树四门（纪律 9）
+------------------------------------------------------------------------------
+  node 09_工程脚本/eol-gate/check_eol.js --root .                      EXIT=0
+  node 09_工程脚本/encoding-gate/check_pas_encoding.js --root .        EXIT=0
+  node 09_工程脚本/mojibake-gate/check_mojibake.js --root .            EXIT=0
+  node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --root .  EXIT=0
+  新建/改动的 .pas 均为 UTF-8 BOM + 纯 CRLF；证据 .txt 为 UTF-8 无 BOM + CRLF；
+  探针一律以 .dpr.template 别名入库（附件/A5R0102Baseline.dpr.template、
+  附件/A5R01Verify.dpr.template；前者程序名带 R0102 是因为它是 R01/R02 同面共用的基线 runner），
+  不落裸 .dpr。
+
+结论：A4-01 failed-assertions 1→0，新建单元 4 红→7 绿，既有绑定面 64 例保持全绿（合计 71/71），
+四门全 EXIT=0。隔离 --detach 工作树字面编译复验见 A5-R01-隔离工作树编译跑录.txt。
