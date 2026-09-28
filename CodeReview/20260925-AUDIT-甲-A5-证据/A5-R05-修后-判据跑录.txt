@@ -1,0 +1,140 @@
+A5-R05 修后判据跑录
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R05）
+日期：2026-09-28
+改动面：Core/DeepBase.IoC.pas（单例双路径收口）+ 新增回归单元
+        Tests/Test.DeepBase.IoCSingletonIdentity.pas（10 例，自建单元，
+        未改 Tests/DeepBaseTests.dpr/.dproj 注册，按工单纪律 5 归主控收口）
+
+三条硬约束 → 实现点 / 用例映射
+------------------------------------------------------------------------------
+约束 1（单一真相源）：抽 TIoCContainer.EnsureSingleton / EnsureSingletonInterface /
+  SingletonObjectView 三个私有过程，ResolveInternal 的 slSingleton 分支与
+  ResolveInterfaceInternal 的 slSingleton 分支全部改为走这两个入口；已建立的一侧
+  视图一定被另一侧复用。ResolveAll<T> 的判据条件由「已有接口视图」改为
+  「Lifetime = slSingleton」，否则会为同一条注册再 CreateInstance 一个野实例。
+  → 用例：ObjectPathFirst / InterfacePathFirst / RegisteredInstance /
+    NamedSingletons / FactorySingleton_*（两种解析序）/ ResolveAll_OnSingletonRegistration
+约束 2（禁止对 refcount-0 单例做持有性 AddRef）：接口→对象一律用
+  `Reg.SingletonInterface as TObject`——编译成 _IntfAsClass，对 ObjCastGUID 做一次
+  QueryInterface，命中类实现时返回对象指针且不做 _AddRef（非持有视图）。
+  选型说明：容器为引用计数实现（TInterfacedObject）建立接口视图后，把
+  OwnsInstance 置 False，让引用计数成为唯一寿命锚；非引用计数实现（普通 TObject
+  直接实现接口，_AddRef/_Release 为空操作）由容器继续持有并释放。
+  TServiceRegistration.Destroy 先摘接口视图再 Free 对象，避免 ARC 字段的隐式
+  _Release 发生在对象已销毁之后。
+  → 用例：InterfaceViewFromObjectSingleton_DoesNotSelfDestructInstance（断言
+    建立并放手接口视图后 Destroyed 仍为 0，即未发生 refcount 0→1→0 自毁）、
+    PlainClassSingleton_ContainerKeepsOwningAndFreesOnce（非引用计数实现只释放一次）
+  → 探针：S1/S2/S3 三条 lifetime 行均 leaked-after-container-free=0
+约束 3（无对象视图时对象路径显式报错）：SingletonObjectView 取不到对象视图时
+  raise EIoCException（含服务名与「请走接口解析」的指路），只兜 EIntfCastError
+  这一个 RTL 异常类，其余异常外抛，不做无条件吞异常。
+  → 用例：InterfaceOnlyWithoutObjectView_ObjectPathRaisesTypedError
+    （WillRaise EIoCException；探针类只放行自身 IID，拒绝对象转换）
+
+判据：A4-04 S1/S2/S3 断言全部转正（failed-assertions 3→0）+ 容器释放后 leaked=0
+------------------------------------------------------------------------------
+
+-- 编译（dcc64 v37.0，仓库根，EXIT=0，DeepBase.IoC.pas 零 hint/warning）--
+  A404_IoC       : 1668 lines, 0.23s
+  A5R05Baseline  : 56873 lines, 2.25s
+  A5R05Broad     : 68384 lines, 3.08s
+  A5R05Verify    : 57407 lines, 2.36s
+
+------------------------------------------------------------------------------
+1. 修后 A4-04 探针 —— failed-assertions=0（基线为 3）
+------------------------------------------------------------------------------
+--- S1 object path first (RegisterSingleton<T,I>) --- | 
+S1-detail | objPath1=000001EFFC9B3AA0(id=1) ifacePath=000001EFFC9B3AC0(id=1) objPath2=000001EFFC9B3AA0(id=1)
+True A4-04-single-instance | one singleton registration must construct exactly 1 instance, got 1
+True A4-04-singleton-identity | object-path and interface-path resolve to the same instance: id 1 vs 1
+S1-lifetime | created=1 destroyed=1 leaked-after-container-free=0
+--- S2 interface path first (control) --- | 
+S2-detail | ifacePath id=2 objPath1=000001EFFC9B39E0(id=2) objPath2=000001EFFC9B39E0(id=2)
+True A4-04-a-first-single-instance | one singleton registration must construct exactly 1 instance, got 1
+True A4-04-a-first-identity | all three resolves return the same instance: id 2 / 2 / 2
+S2-lifetime | created=1 destroyed=1 leaked-after-container-free=0
+--- S3 RegisterSingleton(instance) then both resolve paths --- | 
+S3-detail | registered id=3 ifaceResolve id=3 instances-created=1
+True A4-04-registered-instance-reused | registered instance returned by interface resolve: id 3 vs 3 (instances-created=1)
+S3-detail | objResolve=000001EFFC9B3B20(id=3) instances-created=1
+True A4-04-registered-instance-object-path | registered instance returned by object resolve: id 3 vs registered 3 (instances-created=1)
+S3-lifetime | created=1 destroyed=1 leaked-after-container-free=0
+
+A4-04 PROBE DONE, failed-assertions=0
+------------------------------------------------------------------------------
+2. 新增回归单元（10 例全绿）
+   A5R05Verify.exe --run:Test.DeepBase.IoCSingletonIdentity.TIoCSingletonIdentityTests
+------------------------------------------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R05Verify.exe] - Starting Tests.
+
+....................
+
+Tests Found   : 10
+Tests Ignored : 0
+Tests Passed  : 10
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+------------------------------------------------------------------------------
+3. 零回归对照（与修前同名同计数）
+------------------------------------------------------------------------------
+-- A5R05Baseline.exe：修前 44/44 → 修后 44/44 --
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R05Baseline.exe] - Starting Tests.
+
+........................................................................................
+
+Tests Found   : 44
+Tests Ignored : 0
+Tests Passed  : 44
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+-- A5R05Broad.exe：修前 69/69 → 修后 69/69（Features 侧无需联动）--
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R05Broad.exe] - Starting Tests.
+
+..........................................................................................................................................
+
+Tests Found   : 69
+Tests Ignored : 0
+Tests Passed  : 69
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+------------------------------------------------------------------------------
+4. 中间红一轮（留档：新单元首跑 8 过 1 败 1 错，两处均为按根因修，非兜底）
+------------------------------------------------------------------------------
+a) InterfaceOnlyWithoutObjectView_ObjectPathRaisesTypedError 报
+   Method raised [EIntfCastError] was expecting [EIoCException]
+   → 根因：SingletonObjectView 的 except 子句写的是 EInvalidCast；而 Intf as TObject
+     失败时 RTL 走 System.pas 的 reIntfCastError 分支抛 EIntfCastError（SysUtils 中两类
+     互不继承，只有共同祖先 Exception）。改为点名捕获 EIntfCastError。
+b) PlainClassSingleton_ContainerKeepsOwningAndFreesOnce 报 Access violation
+   → 用 .tmp 独立探针复现：手工 IUnknown 的 QueryInterface 里写 Pointer(Obj) := Self
+     是错的——多接口类的接口指针按 IOffset 偏移（实测 obj=…55D0，接口视图=…55E0），
+     返回对象指针等于交给调用方一个错位的 vtable，方法调用直接飞跳。
+     修正：探针的 QueryInterface 按 RTL 规范形态实现（TInterfacedObject.QueryInterface
+     即 if GetInterface(IID, Obj) then Result := 0）；「无对象视图」这一面则只放行自身
+     IID、对其余（含对象转换查询）返回 E_NOINTERFACE 来达成。
+     —— 容器侧未因此改动：缺陷在测试替身里，容器路径本身按 GetInterface 取视图。
+
+修后：10/10（本文件 §2）。

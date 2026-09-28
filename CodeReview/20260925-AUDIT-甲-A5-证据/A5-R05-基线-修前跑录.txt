@@ -1,0 +1,77 @@
+A5-R05 基线（修前跑录）
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R05）
+日期：2026-09-28
+缺陷：DeepBase.IoC 单例的「对象路径」与「接口路径」各自判空各建实例，
+      仅接口登记的单例走对象路径直接 AV。
+判据来源：CodeReview/20260925-AUDIT-甲-A4-证据/附件/A404_IoC.dpr.template
+          （S1 对象先解析 / S2 接口先解析 / S3 仅接口登记，三种序）
+回归面：Tests/Test.DeepBase.IoC.pas（24 例）、Tests/Test.DeepBase.Services.Registration.pas、
+        Tests/Test.DeepBase.RuntimeContext.pas，另加 Features 侧 IoC 消费面（broad）。
+
+-- 编译（dcc64 v37.0，仓库根，EXIT=0）--
+  A404_IoC   : 1668 lines（Core 单元面）
+  A5R05Baseline / A5R05Broad：runner 见附件 A5R05Baseline.dpr.template / A5R05Broad.dpr.template
+  单元路径：Tests;Tests/Regression;Core;Features;DUnitX/Source（全为绝对路径）
+
+------------------------------------------------------------------------------
+1. 修前 A4-04 探针（HEAD 未改）—— failed-assertions=3
+------------------------------------------------------------------------------
+--- S1 object path first (RegisterSingleton<T,I>) --- | 
+S1-detail | objPath1=000001D8CDD92100(id=1) ifacePath=000001D8CDD92160(id=2) objPath2=000001D8CDD92140(id=2)
+False A4-04-single-instance | one singleton registration must construct exactly 1 instance, got 2
+False A4-04-singleton-identity | object-path and interface-path resolve to the same instance: id 1 vs 2
+S1-lifetime | created=2 destroyed=1 leaked-after-container-free=1
+--- S2 interface path first (control) --- | 
+S2-detail | ifacePath id=3 objPath1=000001D8CDD91FC0(id=3) objPath2=000001D8CDD91FC0(id=3)
+True A4-04-a-first-single-instance | one singleton registration must construct exactly 1 instance, got 1
+True A4-04-a-first-identity | all three resolves return the same instance: id 3 / 3 / 3
+S2-lifetime | created=1 destroyed=1 leaked-after-container-free=0
+--- S3 RegisterSingleton(instance) then both resolve paths --- | 
+S3-detail | registered id=4 ifaceResolve id=4 instances-created=1
+True A4-04-registered-instance-reused | registered instance returned by interface resolve: id 4 vs 4 (instances-created=1)
+S3-EXCEPTION-at-resolve-object | EAccessViolation: Access violation at address 00007FF77028C4FD in module 'A404_IoC.exe' (offset C4FD). Read of address 0000000000000001
+S3-lifetime | created=1 destroyed=0 leaked-after-container-free=1
+
+A4-04 PROBE DONE, failed-assertions=3
+
+------------------------------------------------------------------------------
+2. 修前既有回归基线（HEAD 未改）—— 全绿，作为「修后不得新增红」的对照
+------------------------------------------------------------------------------
+-- A5R05Baseline.exe（Test.DeepBase.IoC + Services.Registration + RuntimeContext）--
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R05Baseline.exe] - Starting Tests.
+
+........................................................................................
+
+Tests Found   : 44
+Tests Ignored : 0
+Tests Passed  : 44
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+-- A5R05Broad.exe（上述三件 + Features 侧 IoC 消费面）--
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A5R05Broad.exe] - Starting Tests.
+
+..........................................................................................................................................
+
+Tests Found   : 69
+Tests Ignored : 0
+Tests Passed  : 69
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+结论：缺陷面在修前坐实 —— S1「一条注册构造 2 个实例、两条路径不同实例、容器释放后遗留 1 个」；
+S3「仅接口登记后对象路径 EAccessViolation（Read of address 0000000000000001）」。
+既有 44/44 与 69/69 全绿，构成修后零回归对照基线。

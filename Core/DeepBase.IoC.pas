@@ -207,10 +207,16 @@ type
     function GetNamedKey(ServiceType: PTypeInfo; const Name: string): string;
     function FindRegistration(ServiceType: PTypeInfo; const Name: string = ''): TServiceRegistration;
     function CreateInstance(Reg: TServiceRegistration; Scope: TIoCScope = nil): TObject;
-    function ResolveInternal(ServiceType: PTypeInfo; Scope: TIoCScope; 
+    function ResolveInternal(ServiceType: PTypeInfo; Scope: TIoCScope;
       const Name: string = ''): TObject;
     function ResolveInterfaceInternal(ServiceType: PTypeInfo; Scope: TIoCScope;
       const Name: string = ''): IInterface;
+    { A5-R05 单例的单一真相源：对象路径与接口路径都必须经这三个过程取实例，
+      任何一侧已建立的视图一定被另一侧复用，不再各自判空各建一个。 }
+    function SingletonObjectView(Reg: TServiceRegistration): TObject;
+    function EnsureSingleton(Reg: TServiceRegistration; Scope: TIoCScope): TObject;
+    function EnsureSingletonInterface(Reg: TServiceRegistration; Scope: TIoCScope;
+      ServiceType: PTypeInfo): IInterface;
     procedure ApplyInterceptors(var Context: TInterceptorContext; IsBefore: Boolean);
     procedure EnterResolving(ServiceType: PTypeInfo; out AlreadyResolving: Boolean);
     procedure LeaveResolving(ServiceType: PTypeInfo);
@@ -403,6 +409,9 @@ end;
 
 destructor TServiceRegistration.Destroy;
 begin
+  // 先摘接口视图再释放对象：ARC 字段的隐式清理发生在 Destroy 返回之后，
+  // 那时对象已经没了，对已释放对象调 _Release 是未定义行为。
+  FSingletonInterface := nil;
   if FOwnsInstance and (FSingletonInstance <> nil) then
     FreeAndNil(FSingletonInstance);
   inherited;
@@ -603,6 +612,123 @@ begin
       [GetTypeName(Reg.ImplementationType)]);
 end;
 
+{ A5-R05 约束 2：接口→对象只取「非持有视图」。
+  Delphi 的 `Intf as TObject` 编译成 _IntfAsClass → 对 ObjCastGUID 做一次 QueryInterface，
+  命中类实现时直接返回对象指针且不做 _AddRef；这与 Supports/QueryInterface 取一个
+  接口引用不同——后者会把按 Create 出来、引用计数仍为 0 的单例抬到 1，调用方一放手
+  引用计数归零对象自毁，容器里缓存的对象指针随之悬垂。
+  取不到对象视图（接口不是类实现的）就显式报错，禁止再走空实现类型 AV。 }
+function TIoCContainer.SingletonObjectView(Reg: TServiceRegistration): TObject;
+begin
+  Result := nil;
+  if Reg.SingletonInterface <> nil then
+  begin
+    try
+      Result := Reg.SingletonInterface as TObject;
+    except
+      // `Intf as TObject` = _IntfAsClass → _IntfCast(ObjCastGUID)：实现方拒绝对象
+      // 转换时 RTL 抛 EIntfCastError（System.pas 的 reIntfCastError 分支）。
+      // 只兜这一个类，其余异常照旧外抛，不做无条件吞异常。
+      on E: EIntfCastError do
+        Result := nil;
+    end;
+  end;
+  if Result = nil then
+    raise EIoCException.CreateFmt(
+      'Service %s is registered as an interface-only singleton: no object view exists. ' +
+      'Resolve it through the interface (Resolve<I...>), not through the object path.',
+      [GetTypeName(Reg.ServiceType)]);
+  Reg.SingletonInstance := Result;
+end;
+
+{ A5-R05 约束 1：单例对象视图的唯一建立点。
+  已经存在的一侧视图（对象视图或接口视图）永远优先复用，只有两侧都还没有时才创建，
+  因此「对象先解析 / 接口先解析 / 仅接口登记」三种顺序都只会构造一个实例。 }
+function TIoCContainer.EnsureSingleton(Reg: TServiceRegistration;
+  Scope: TIoCScope): TObject;
+var
+  Intf: IInterface;
+  Context: TInterceptorContext;
+begin
+  FLock.Enter;
+  try
+    Result := Reg.SingletonInstance;
+    if Result <> nil then
+      Exit;
+
+    if Reg.HasSingletonInterface then
+      Exit(SingletonObjectView(Reg));
+
+    // 只有接口来源（RegisterFactory 登记的接口工厂）：先建接口视图，再派生对象视图
+    if (Reg.ImplementationType = nil) and (not Assigned(Reg.Factory))
+      and Assigned(Reg.InterfaceFactory) then
+    begin
+      Intf := Reg.InterfaceFactory(Self);
+      if Intf = nil then
+        raise EIoCException.CreateFmt('Interface factory returned nil for service: %s',
+          [GetTypeName(Reg.ServiceType)]);
+      Reg.SingletonInterface := Intf;
+      Reg.HasSingletonInterface := True;
+      // 工厂产物由工厂负责生命周期，容器只持有接口引用，不再 Free 对象
+      Reg.OwnsInstance := False;
+      Exit(SingletonObjectView(Reg));
+    end;
+
+    if FInterceptors.Count > 0 then
+    begin
+      Context := TInterceptorContext.Create(Reg.ServiceType, Reg.ImplementationType, nil);
+      ApplyInterceptors(Context, True);
+    end;
+
+    Result := CreateInstance(Reg, Scope);
+
+    if FInterceptors.Count > 0 then
+    begin
+      Context := TInterceptorContext.Create(Reg.ServiceType, Reg.ImplementationType, Result);
+      ApplyInterceptors(Context, False);
+      if Context.Instance <> Result then
+        Result := Context.Instance;
+    end;
+
+    Reg.SingletonInstance := Result;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+{ A5-R05 约束 1/2：单例接口视图的唯一建立点，复用 EnsureSingleton 的规范实例。 }
+function TIoCContainer.EnsureSingletonInterface(Reg: TServiceRegistration;
+  Scope: TIoCScope; ServiceType: PTypeInfo): IInterface;
+var
+  Obj: TObject;
+begin
+  FLock.Enter;
+  try
+    if Reg.HasSingletonInterface and (Reg.SingletonInterface <> nil) then
+      Exit(Reg.SingletonInterface);
+
+    Obj := EnsureSingleton(Reg, Scope);
+    // 仅接口来源的注册：EnsureSingleton 已经把接口视图建立好
+    if Reg.HasSingletonInterface then
+      Exit(Reg.SingletonInterface);
+
+    if not Obj.GetInterface(GetTypeData(ServiceType)^.GUID, Result) then
+      raise EIoCException.CreateFmt('Cannot cast to interface: %s',
+        [GetTypeName(ServiceType)]);
+
+    Reg.SingletonInterface := Result;
+    Reg.HasSingletonInterface := True;
+    // 显式生命周期标注：引用计数实现的单例，容器持有接口引用之后寿命归引用计数负责；
+    // 容器若仍按 OwnsInstance 释放对象，注册析构时就是双重释放。
+    // 非引用计数实现（普通 TObject 直接实现接口）_AddRef/_Release 是空操作，
+    // 容器继续持有并释放对象。
+    if Obj is TInterfacedObject then
+      Reg.OwnsInstance := False;
+  finally
+    FLock.Leave;
+  end;
+end;
+
 function TIoCContainer.ResolveInternal(ServiceType: PTypeInfo; Scope: TIoCScope;
   const Name: string): TObject;
 var
@@ -643,17 +769,8 @@ begin
         Result := CreateInstance(Reg, Scope);
         
       slSingleton:
-        begin
-          FLock.Enter;
-          try
-            if Reg.SingletonInstance = nil then
-              Reg.SingletonInstance := CreateInstance(Reg, Scope);
-            Result := Reg.SingletonInstance;
-          finally
-            FLock.Leave;
-          end;
-        end;
-        
+        Result := EnsureSingleton(Reg, Scope);
+
       slScoped:
         begin
           if Scope = nil then
@@ -666,9 +783,11 @@ begin
           end;
         end;
     end;
-    
-    // Apply interceptors
-    if FInterceptors.Count > 0 then
+
+    // 拦截器只对非单例生效：单例的 Before/After 在 EnsureSingleton 创建时执行一次，
+    // 复用缓存实例时再跑一遍 AfterResolve 会把 Result 换成另一个对象，
+    // 正好复现「同一注册两个实例」这条缺陷。
+    if (FInterceptors.Count > 0) and (Reg.Lifetime <> slSingleton) then
     begin
       Context := TInterceptorContext.Create(ServiceType, Reg.ImplementationType, Result);
       ApplyInterceptors(Context, False); // AfterResolve
@@ -749,26 +868,7 @@ begin
         end;
 
       slSingleton:
-        begin
-          FLock.Enter;
-          try
-            if not Reg.HasSingletonInterface then
-            begin
-              if Assigned(Reg.InterfaceFactory) then
-                Reg.SingletonInterface := Reg.InterfaceFactory(Self)
-              else
-              begin
-                Reg.SingletonInterface := CreateObjectBackedInterface;
-                Reg.SingletonInstance := Instance;
-                Reg.OwnsInstance := False;
-              end;
-              Reg.HasSingletonInterface := True;
-            end;
-            Result := Reg.SingletonInterface;
-          finally
-            FLock.Leave;
-          end;
-        end;
+        Result := EnsureSingletonInterface(Reg, Scope, ServiceType);
 
       slScoped:
         begin
@@ -1165,7 +1265,9 @@ begin
         if Key.StartsWith(GetTypeName(TypeInfo(T))) then
         begin
           Reg := FRegistrations[Key];
-          if Reg.HasSingletonInterface or Assigned(Reg.InterfaceFactory) then
+          // 单例一律走接口路径（内部经 EnsureSingleton 复用规范实例）；
+          // 直接 CreateInstance 会为同一条注册再造一个不属于容器的实例。
+          if (Reg.Lifetime = slSingleton) or Assigned(Reg.InterfaceFactory) then
           begin
             BaseIntf := ResolveInterfaceInternal(TypeInfo(T), nil);
             if Assigned(BaseIntf) and (BaseIntf.QueryInterface(TypeData^.GUID, Intf) = S_OK) then
@@ -1185,7 +1287,7 @@ begin
         if Key.StartsWith(GetTypeName(TypeInfo(T))) then
         begin
           Reg := FNamedRegistrations[Key];
-          if Reg.HasSingletonInterface or Assigned(Reg.InterfaceFactory) then
+          if (Reg.Lifetime = slSingleton) or Assigned(Reg.InterfaceFactory) then
           begin
             BaseIntf := ResolveInterfaceInternal(TypeInfo(T), nil, Reg.Name);
             if Assigned(BaseIntf) and (BaseIntf.QueryInterface(TypeData^.GUID, Intf) = S_OK) then
