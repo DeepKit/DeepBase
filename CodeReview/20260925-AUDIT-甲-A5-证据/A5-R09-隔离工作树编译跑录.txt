@@ -55,7 +55,7 @@ A5-R09 隔离工作树编译跑录（纪律 6）
   cd .tmp/a5r09/wtbuild
   "D:/Program Files (x86)/Embarcadero/Studio/37.0/bin/dcc64.exe" \
     -B -Q -NU./dcu -E./bin \
-    -U<D:/_Progs/02Business/DeepBase/.tmp/a5r09>/staging \
+    -U .tmp/a5r09/staging \
     -U.tmp/a5r09/wt-prefix/Core \
     -U.tmp/a5r09/wt-prefix/Tests \
     -U"D:/ProgramData/delphi/DUnitX/Source" \
@@ -97,15 +97,54 @@ A5-R09 隔离工作树编译跑录（纪律 6）
   1 个 dpk + 2 个新建 .pas）+ 证据件，无第三类改动。
   判据面（A5R09Verify.exe，5 个单元 + 其传递依赖）修后编译 EXIT=0、运行 78/78/0
   ⇒ 本单零新增红；License/KeyManager/TimeSource 及新测试单元的编译告警面
-  在修前修后完全一致（第 3 节列出的 8 条 hint 全在既存单元既存行号上，本单未新增一条）。
+  在修前修后完全一致（第 3 节列出的 9 条 Hint 全在既存单元既存行号上，本单未新增一条）。
   全量套件 216 崩属既存问题（纪律 5 明令禁止当判据），本单未以其作任何结论依据。
 
-  修后侧（对照读数）取自本单 fix 提交 1f3f9dd 的工作副本内容：提交前后该 5 个文件的
-  字节内容一致（提交只改索引，未再触碰工作树），故 43899/78-78-0 即 1f3f9dd 的字面读数。
--- 6. 脚手架归属与拆除 ----------------------------------------------------------
+  修后侧的对照读数不取自主树工作副本：§6 另开一棵 @1f3f9dd 的隔离工作树字面复跑，
+  与主树同为 43899/78-78-0，才构成纪律 6 的「@ 目标 commit EXIT=0」。
+
+-- 6. 修后侧的隔离复跑（纪律 6 要求「@ 目标 commit EXIT=0」，不能只取主树读数）----
+  git worktree add --detach .tmp/a5r09/wt-post 1f3f9dd
+    HEAD is now at 1f3f9ddc fix(core): A5-R09 Core 单一时钟源与 last-seen 水位（WO-20260925-AUDIT-甲-A5）
+    git -C .tmp/a5r09/wt-post status --short | wc -l  ->  0
+  探针同样由入库模板 cp（cmp 一致 -> POST_DPR_SAME），输出落树外 .tmp/a5r09/wtpostbuild/{dcu,bin}。
+  与前两节不同处：本侧不需要 staging 面 -- Core/DeepBase.TimeSource.pas 与
+  Tests/Test.DeepBase.TimeSource.pas 已随 1f3f9dd 入库，工作树自带：
+    -U .tmp/a5r09/wt-post/Core -U .tmp/a5r09/wt-post/Tests -U "D:/ProgramData/delphi/DUnitX/Source"
+  编译 -> POST_COMPILE_EXIT=0
+    Embarcadero Delphi for Win64 compiler version 37.0
+    Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+    43899 lines, 1.69 seconds, 3708684 bytes code, 465400 bytes data.
+  运行 -> POST_RUN_EXIT=0
+    Tests Found 78 / Passed 78 / Ignored 0 / Leaked 0 / Failed 0 / Errored 0
+
+  三侧行数对照（同一份用例，只有源根不同）：
+    43142  = 修前主树 + 四个既存单元（A5R09Baseline，纪律 7 基线）
+    43871  = 修前隔离树 @7549d0c + 五个单元（A5R09Verify，本件 §3）
+    43899  = 修后主树 与 修后隔离树 @1f3f9dd（本件 §6 与修后件 §5，两侧同值）
+  43899 - 43871 = 28 = (29-5) + (11-7) —— 只有两个 Core 单元的净增行参与差异。
+  修后侧不再需要 staging 这一事实本身即纪律 6 的另一重含义：「新单元 + 新用例 + 两单元
+  改动」这一整套在 1f3f9dd 上自洽可编译可跑，不存在依赖主树未提交内容的假绿。
+
+  编译告警面（本单不得新增噪声）：
+    修前 9 条 Hint / 0 Warning，修后 9 条 Hint / 0 Warning；按「文件名(行号) Hint 种类」
+    归一后两个集合逐字相同（diff 无输出）：
+      DeepBase.Logging.pas(411/790/805/819) H2077
+      DeepBase.PluginManager.pas(1125) H2077
+      DeepBase.FormState.pas(409) H2443
+      DeepBase.Manager.Operational.pas(56) H2077
+      DeepBase.Manager.pas(578) H2077
+      DeepBase.Crypto.Hash.pas(599) H2077
+    全部落在既存单元既存行号上；新单元 DeepBase.TimeSource.pas 与新测试单元零 hint、
+    零 warning，改动后的 License/KeyManager 也没把既有 hint 顶到新行号（顶号会表现为
+    集合差异，此处无差异）。
+
+-- 7. 脚手架归属与拆除 ----------------------------------------------------------
   .tmp/a5r09/** 全部落在 .gitignore 的 *.tmp 面内（git check-ignore -v 确认），
-  不入库；.tmp/a5r09/wt-prefix 是本单唯一工作树，收尾后由
+  不入库；本单两棵工作树（.tmp/a5r09/wt-prefix @7549d0c 修前、.tmp/a5r09/wt-post @1f3f9dd 修后）
+  收尾后由：
     git worktree remove --force .tmp/a5r09/wt-prefix
-  拆除，随后 git worktree list 复验只剩主树。
+    git worktree remove --force .tmp/a5r09/wt-post
+  拆除，随后 git worktree list 复验只剩主树与 .tmp/a5r04 的两棵遗留脚手架（后者随 A5 交付收尾拆）。
   历史遗留 .tmp/a5r04/wt-57de33c、.tmp/a5r04/wt-prefix（属 R04/R01 期脚手架）在
   A5 收尾一并拆除，登记在交付回执。
