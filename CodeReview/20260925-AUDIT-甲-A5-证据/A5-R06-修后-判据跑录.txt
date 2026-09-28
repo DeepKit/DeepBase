@@ -1,0 +1,124 @@
+A5-R06 修后判据跑录
+==============================================================================
+工单：WO-20260925-AUDIT-甲-A5-Core域审阅缺陷修复9项（R06）
+日期：2026-09-28
+改动面：Core/DeepBase.LogQuery.pas（TopExceptions 状态往返消除）+ 新增回归单元
+        Tests/Test.DeepBase.LogQuerySourceLifetime.pas（9 例，自建单元，
+        未改 Tests/DeepBaseTests.dpr/.dproj 注册，按工单纪律 5 归主控收口）
+
+修法选型：走工单首选路线「过滤列表参数下传」，不走 SavedSrc/SavedOwns 退路
+------------------------------------------------------------------------------
+缺陷的根因不是「恢复时传错变量」，而是「子集分析借用了有所有权副作用的状态槽」：
+  · SetDataSource 的语义含「先释放旧自有源」（Core/DeepBase.LogQuery.pas:908），
+    所以任何「临时换入」都必须先把旧源释放掉——owned 源在查询中途被销毁；
+  · 换入之后 FDataSource 已指向临时列表，`SetDataSource(FDataSource, FOwnsDataSource)`
+    这个「恢复」写法读的是被自己改过的变量，恒等于自赋值——恢复语义不成立；
+  · finally 释放临时列表后 FDataSource 悬垂，后续任何查询走 UAF。
+退路（局部保存 SavedSrc/SavedOwns + 不触发 Free 的赋值恢复）只是把不可逆状态机
+改成手工配对：所有权仍要在两个变量之间搬运，漏一处配对就回到同一个缺陷，且
+TopErrors/TopExceptions 仍然共享一个可变状态槽。参数下传让聚合过程根本没有状态，
+不可逆性从结构上消失，故取首选。
+
+实现点（Core/DeepBase.LogQuery.pas）
+------------------------------------------------------------------------------
+  · 新增私有 `AggregateTopErrors(ASource: TList<TAggregatedLog>; ATopN)`：
+    聚合算法的唯一实现，只读参数传入的列表，不读也不写 FDataSource；
+  · `TopErrors(ATopN)` 收为薄壳：`Result := AggregateTopErrors(FDataSource, ATopN)`；
+  · `TopExceptions(ATopN)` 收为薄壳：过滤 StackTrace 进局部列表后
+    `Result := AggregateTopErrors(ExceptionLogs, ATopN)`，全程不调用 SetDataSource；
+  · 公开签名 `TopErrors(ATopN: Integer = 10)` / `TopExceptions(ATopN: Integer = 10)`
+    未变，调用方（Core/DeepBase.LogAlert.pas:588、Core/DeepBase.LogDashboard.pas:1125）
+    无需联动；Features/** 未动（工单约束：甲不得改 Features）。
+
+用例 → 约束映射（Tests/Test.DeepBase.LogQuerySourceLifetime.pas）
+------------------------------------------------------------------------------
+  源不被中途销毁 / 所有权语义守恒
+    → OwnedSource_IsNotFreedDuringTopExceptions（析构计数 = 0）
+    → OwnedSource_IsFreedExactlyOnceByAnalyzerDestroy（TopExceptions 后仍 0，
+      Analyzer.Free 后恰为 1；所有权已移交，测试不再 Free，避免双释）
+  恢复语义（原缺陷的正面断言）
+    → OwnedSource_StaysQueryableAfterTopExceptions（GetStats.TotalCount = 4）
+    → BorrowedSource_KeepsOriginalOwnershipAfterTopExceptions（借用源存活且计数正确）
+    → BorrowedSource_StaysLinkedAfterTopExceptions（借用源追加一行后分析器看到 5，
+      即分析器仍绑定在调用方那个活列表上，而非已释放的别名）
+  解耦后取值正确（不是「不崩就行」）
+    → TopExceptions_AggregatesOnlyStackBearingErrors（只聚合带堆栈的错误行，
+      ERR-alpha 计 2；同一数据走 TopErrors 仍是全量 3 条错误，两条路径互不污染）
+    → TopErrors_IsNotAffectedByTopExceptionsCall（调用 TopExceptions 前后 TopErrors 行数不变）
+  幂等
+    → RepeatedTopExceptions_KeepsStateIntact（两次结果一致、源析构 0、TotalCount=4）
+  空源
+    → EmptyAnalyzer_ReturnsEmptyWithoutRaising（未设源时返回空数组，不抛不崩）
+
+-- 编译（dcc64 v37.0，仓库根，EXIT=0，本单两个文件零 hint/warning）--
+  A405_LogQuery :  5457 lines, 0.50s
+  A5R06Baseline : 31610 lines, 1.70s
+  A5R06Verify   : 31926 lines, 1.75s
+  （剩余 3 条 H2077 hint 全部落在 Core/DeepBase.Logging.pas，属既存，与本单无关）
+
+------------------------------------------------------------------------------
+1. 判据一：甲 A4 的 A4-05 探针 —— failed-assertions 4 → 0
+------------------------------------------------------------------------------
+--- case A: analyzer owns data source --- |
+caseA-before | source-count=4 stats-total=4
+caseA-TopExceptions | returned 2 row(s)
+True A4-05-owned-source-freed-mid-query | owned data source destroy count during/after TopExceptions = 0
+True A4-05-restore-after-query | GetStats.TotalCount right after TopExceptions = 4 (expected 4)
+caseA-after-decoy | stats-total=4 top=ERR-beta(1),ERR-alpha(1)
+  [detector] tracked data source destroyed inside analyzer call
+caseA-teardown | analyzer freed without incident
+caseA-teardown | probe skipped Src.Free, destroyed-count=1
+--- case B: caller owns data source --- |
+caseB-before | source-count=4 stats-total=4
+caseB-TopExceptions | returned 2 row(s)
+True A4-05-borrowed-source-alive | GetStats.TotalCount right after TopExceptions = 4 (expected 4, source still alive with 4 rows)
+True A4-05-source-still-linked | GetStats.TotalCount after appending to the live source = 5 (expected 5)
+caseB-after-append | top=ERR-beta(1),ERR-alpha(1)
+caseB-teardown | analyzer freed without incident
+
+A4-05 PROBE DONE, failed-assertions=0
+
+  逐条对照工单判据：
+    · 源不提前释放：case A 的 `[detector]` 行现在只出现在 `analyzer freed` 阶段
+      （destroyed-count=1，且由分析器自己完成），查询期间为 0；
+    · 恢复后可继续查询：两个 case 的 TotalCount 在 TopExceptions 之后均为 4；
+    · 解耦后值正确：`caseA-after-decoy top=ERR-beta(1),ERR-alpha(1)` —— 修前同一位置
+      读的是已被复用的内存（`top=DECOY-SENTINEL`，探针自己塞的哨兵行），
+      现在读到的是原始源里真正的两条错误；
+    · 无 AV：case B 追加后取数正常，修前此处是 `EAccessViolation Read of address 0000002100000000`。
+
+------------------------------------------------------------------------------
+2. 判据二：新建回归单元 9/9（修前同一单元 7 红，见基线文件）
+------------------------------------------------------------------------------
+  bin\A5R06Verify.exe --run:Test.DeepBase.LogQuerySourceLifetime.TLogQuerySourceLifetime
+Tests Found   : 9
+Tests Ignored : 0
+Tests Passed  : 9
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+------------------------------------------------------------------------------
+3. 判据三：零回归（纪律 7 基线 34 例 → 同名同计数）
+------------------------------------------------------------------------------
+  bin\A5R06Verify.exe（既有 Test.DeepBase.LogAggregator 四 fixture + 本单新单元）
+Tests Found   : 43
+Tests Ignored : 0
+Tests Passed  : 43
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+  修前基线 bin\A5R06Baseline.exe 为 34/34；43 = 34 + 9，既有 34 例无一变红。
+
+------------------------------------------------------------------------------
+4. 纪律 9：编码/行尾四门（交付树复跑）
+------------------------------------------------------------------------------
+  node 09_工程脚本/eol-gate/check_eol.js                --root .   EXIT=0
+  node 09_工程脚本/encoding-gate/check_pas_encoding.js  --root .   EXIT=0
+  node 09_工程脚本/mojibake-gate/check_mojibake.js      --root .   EXIT=0
+  node 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --root . EXIT=0
+  新建单元：UTF-8 BOM + 纯 CRLF（lone-LF=0、lone-CR=0）；runner 探针以
+  附件/*.dpr.template 别名入库，不进 .dpr 扫描面。
+
+结论：工单 R06 判据（A4-05 case A/B 全部断言转正）达成，既有面零回归。
+

@@ -224,6 +224,12 @@ type
     FOwnsDataSource: Boolean;
     
     function NormalizeBucket(ATimestamp: TDateTime; ABucket: TTimeBucket): TDateTime;
+
+    { A5-R06 错误聚合的唯一实现：数据源以参数传入，不读也不写 FDataSource。
+      TopErrors 与 TopExceptions 都下传各自的列表，因此子集分析不再需要把临时
+      列表换入容器状态（换入会触发 SetDataSource 的自有源释放并把原源丢掉）。 }
+    function AggregateTopErrors(ASource: TList<TAggregatedLog>;
+      ATopN: Integer): TArray<TTopError>;
   public
     constructor Create;
     destructor Destroy; override;
@@ -1410,7 +1416,8 @@ begin
   end;
 end;
 
-function TLogAnalyzer.TopErrors(ATopN: Integer): TArray<TTopError>;
+function TLogAnalyzer.AggregateTopErrors(ASource: TList<TAggregatedLog>;
+  ATopN: Integer): TArray<TTopError>;
 var
   ErrorMap: TDictionary<string, TTopError>;
   Log: TAggregatedLog;
@@ -1419,18 +1426,18 @@ var
   Pair: TPair<string, TTopError>;
   Results: TList<TTopError>;
 begin
-  if FDataSource = nil then Exit;
-  
+  if ASource = nil then Exit;
+
   ErrorMap := TDictionary<string, TTopError>.Create;
   Results := TList<TTopError>.Create;
   try
-    for Log in FDataSource do
+    for Log in ASource do
     begin
       if not (Log.Level in [llError, llFatal]) then Continue;
-      
+
       // Use first 100 chars as key to group similar errors
       Key := Copy(Log.Message, 1, 100);
-      
+
       if ErrorMap.TryGetValue(Key, Err) then
       begin
         Inc(Err.Count);
@@ -1450,10 +1457,10 @@ begin
         ErrorMap.Add(Key, Err);
       end;
     end;
-    
+
     for Pair in ErrorMap do
       Results.Add(Pair.Value);
-    
+
     // Sort by count descending
     Results.Sort(TComparer<TTopError>.Construct(
       function(const A, B: TTopError): Integer
@@ -1461,15 +1468,20 @@ begin
         Result := B.Count - A.Count;
       end
     ));
-    
+
     if Results.Count > ATopN then
       Results.Count := ATopN;
-    
+
     Result := Results.ToArray;
   finally
     Results.Free;
     ErrorMap.Free;
   end;
+end;
+
+function TLogAnalyzer.TopErrors(ATopN: Integer): TArray<TTopError>;
+begin
+  Result := AggregateTopErrors(FDataSource, ATopN);
 end;
 
 function TLogAnalyzer.TopExceptions(ATopN: Integer): TArray<TTopError>;
@@ -1478,17 +1490,14 @@ var
   ExceptionLogs: TList<TAggregatedLog>;
 begin
   if FDataSource = nil then Exit;
-  
+
   ExceptionLogs := TList<TAggregatedLog>.Create;
   try
     for Log in FDataSource do
       if Log.StackTrace <> '' then
         ExceptionLogs.Add(Log);
-    
-    // Use same logic as TopErrors but on filtered list
-    SetDataSource(ExceptionLogs, False);
-    Result := TopErrors(ATopN);
-    SetDataSource(FDataSource, FOwnsDataSource);
+
+    Result := AggregateTopErrors(ExceptionLogs, ATopN);
   finally
     ExceptionLogs.Free;
   end;
