@@ -19,6 +19,7 @@
 8. **fail-closed 总原则**：异常/失败路径一律显式报错（具体异常类），禁止吞异常、禁止无条件 `Result := True`、禁止兜底默认值掩盖错类型。老板口径「质量优先于兼容，允许 breaking change」。
 9. **编码/行尾**：`.pas` 四门（encoding/eol/mojibake）交付树复跑全 EXIT=0；中文字面量 UTF-8 BOM；探针不入扫描面（`.dpr.template` 别名）。
 10. **派发时文本更正（2026-09-28 主控实测，本单其余内容维持 09-25 原文）**：① R04 缺陷文件是 `Core/DeepBase.Serialization.pas`——`Core/DeepBase.Services.Serialization.pas` 是 80 行门面单元（`rg "IsAllowedType"` 对其命中 0），`TSerializationContext.IsAllowedType` 实测在 `Core\DeepBase.Serialization.pas:630`、白名单 `ALLOWED_TYPES` 在 `:633`、`SameText(...) or ClassName.StartsWith(...)` 绕过臂在 `:647-648`（缺陷仍在）；② R03 符号形态是 `function InitializeEx(out ErrorMsg: string): Boolean`（`:177`/`:655`，非 `procedure`）。本单相关处已同步更正。
+11. **范围修订（2026-09-28 主控裁定，源自乙 B7 停等期发现，结论 `CodeReview/20260928-AUDIT-主控-乙-B7-准备期裁定.md`）**：R09 的 Core 单一时钟源必须同时消除**两处**裸 `Now` 过期判定——`Core/DeepBase.License.pas:192`（原列）与 `Core/DeepBase.KeyManager.pas:320`（`TKeyInfo.IsExpired`，主控实测同形）。只修前者 ⇒ Core 内仍留第二轨时钟，违背 R09 单一时钟源目标；且甲时间源符号须为**可注入形态**（修法-1 已含，现因乙 B7 判据①端到端依赖，回执必须点名符号名 + 签名 + 注入用法）。
 
 ## 一、修单一览
 
