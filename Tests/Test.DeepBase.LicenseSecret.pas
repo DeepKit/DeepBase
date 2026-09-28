@@ -99,4 +99,7 @@ begin
   end;
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TTestLicenseSecretFailClosed);
+
 end.
