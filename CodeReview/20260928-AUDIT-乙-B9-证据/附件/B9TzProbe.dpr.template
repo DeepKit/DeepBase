@@ -1,0 +1,72 @@
+{ B9 诊断探针（一次性，不进任何构建面）：
+  实测 Delphi TryISO8601ToDate 的 AReturnUTC 语义，与生产侧过期判定
+  `ExpiresAt <= TTimeZone.Local.ToUniversalTime(Now)`（Features/DeepBase.Commerce.SafeClient.pas:750-753）
+  所用时间框架是否一致——用「剩余寿命阈值」反证，不靠推理下结论。
+  产物落 .tmp/b9/，本文件如入库须用 .dpr.template 别名（CodeReview/** 禁 .dpr，见 B8-01）。 }
+program B9TzProbe;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  System.DateUtils;
+
+const
+  ProbeHours: array [0 .. 7] of Integer = (-10, -9, -8, -7, -1, 0, 1, 9);
+
+function ProdSaysExpired(const AExpiresIsoUtc: string): Boolean;
+var
+  ExpiresAt: TDateTime;
+  NowAsUtcBare: TDateTime;
+begin
+  // 逐字复刻生产侧两行：解析用 AReturnUTC=False，比较基准用 ToUniversalTime(Now)
+  if not TryISO8601ToDate(AExpiresIsoUtc, ExpiresAt, False) then
+    raise Exception.Create('parse failed: ' + AExpiresIsoUtc);
+  NowAsUtcBare := TTimeZone.Local.ToUniversalTime(Now);
+  Result := ExpiresAt <= NowAsUtcBare;
+end;
+
+function IsoUtc(AUtcBare: TDateTime): string;
+begin
+  // 服务端口径：UTC 瞬时，形如 2026-09-28T12:34:56Z
+  Result := FormatDateTime('yyyy"-"mm"-"dd"T"hh":"nn":"ss"Z"', AUtcBare);
+end;
+
+var
+  H: Integer;
+  HourLabel: string;
+  NowUtcBare: TDateTime;
+  ExpiryIso: string;
+begin
+  NowUtcBare := TTimeZone.Local.ToUniversalTime(Now);
+  Writeln('Now (local bare)       = ', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now));
+  Writeln('ToUniversalTime(Now)   = ', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', NowUtcBare));
+  Writeln('UtcOffsetHours (实测差值) = ',
+    (Now - NowUtcBare) * 24:0:2);
+  Writeln;
+
+  Writeln('== 同一个 UTC 瞬时字符串，TryISO8601ToDate 两种 AReturnUTC 的返回值 ==');
+  ExpiryIso := IsoUtc(NowUtcBare);
+  Writeln('  input                    = ', ExpiryIso);
+  Writeln('  AReturnUTC = True        = ',
+    FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', ISO8601ToDate(ExpiryIso, True)));
+  Writeln('  AReturnUTC = False       = ',
+    FormatDateTime('yyyy-mm-dd"T"hh:nn:ss", local"', ISO8601ToDate(ExpiryIso, False)));
+  Writeln;
+
+  Writeln('== 生产判定的「剩余寿命 H → 是否判过期」阈值扫描（输入按服务端 UTC 口径构造）==');
+  for H := Low(ProbeHours) to High(ProbeHours) do
+  begin
+    if ProbeHours[H] >= 0 then
+      HourLabel := '+' + IntToStr(ProbeHours[H])
+    else
+      HourLabel := IntToStr(ProbeHours[H]);
+    ExpiryIso := IsoUtc(IncHour(NowUtcBare, ProbeHours[H]));
+    Writeln('  H=', HourLabel, ' h   expires_at=', ExpiryIso,
+      '   ProdSaysExpired=', BoolToStr(ProdSaysExpired(ExpiryIso), True));
+  end;
+  Writeln;
+  Writeln('== 判读 ==');
+  Writeln('  H>0 表示快照尚未到期。若 H=+1/+4/+7 被判 Expired 而 H=+9 不判，');
+  Writeln('  ⇒ 比较双方框架不一致，判过期时刻被提前了约 (2 x UtcOffset - 裕量) 小时。');
+end.

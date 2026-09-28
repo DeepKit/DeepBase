@@ -1,0 +1,27 @@
+Now (local bare)       = 2026-09-28T22:35:59
+ToUniversalTime(Now)   = 2026-09-28T14:35:59
+UtcOffsetHours (实测差值) = 8.00
+
+== 同一个 UTC 瞬时字符串，TryISO8601ToDate 两种 AReturnUTC 的返回值 ==
+  input                    = 2026-09-28T14:35:59Z
+  AReturnUTC = True        = 2026-09-28T14:35:59
+  AReturnUTC = False       = 2026-09-28T22:35:59, local
+
+== 生产判定的「剩余寿命 H → 是否判过期」阈值扫描（输入按服务端 UTC 口径构造）==
+  H=-10 h   expires_at=2026-09-28T04:35:59Z   ProdSaysExpired=True
+  H=-9 h   expires_at=2026-09-28T05:35:59Z   ProdSaysExpired=True
+  H=-8 h   expires_at=2026-09-28T06:35:59Z   ProdSaysExpired=True
+  H=-7 h   expires_at=2026-09-28T07:35:59Z   ProdSaysExpired=False
+  H=-1 h   expires_at=2026-09-28T13:35:59Z   ProdSaysExpired=False
+  H=+0 h   expires_at=2026-09-28T14:35:59Z   ProdSaysExpired=False
+  H=+1 h   expires_at=2026-09-28T15:35:59Z   ProdSaysExpired=False
+  H=+9 h   expires_at=2026-09-28T23:35:59Z   ProdSaysExpired=False
+
+== 判读 ==
+  H>0 表示快照尚未到期。若 H=+1/+4/+7 被判 Expired 而 H=+9 不判，
+  ⇒ 比较双方框架不一致，判过期时刻被提前了约 (2 x UtcOffset - 裕量) 小时。
+== 复现命令（探针源件在 附件/B9TzProbe.dpr.template，编译产物落 .tmp，不入库）==
+  cp 附件/B9TzProbe.dpr.template .tmp/b9/B9TzProbe.dpr
+  dcc64 -B B9TzProbe.dpr -U"$BDS/lib/Win64/release" -NS"System;Winapi"  → BUILD_EXIT=0
+  ./B9TzProbe.exe
+
