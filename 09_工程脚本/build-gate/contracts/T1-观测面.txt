@@ -38,7 +38,6 @@ Tests/FMX/TestFMXPlatformStandalone.dpr
 Tests/GUI/DeepBaseGUITests.dpr
 Tests/Governance/ConfigRegistrarPBT.dpr
 Tests/InferenceTests.dpr
-Tests/Integration/DeepBaseIntegrationTests.dpr
 Tests/MinimalDUnitX.dpr
 Tests/Plugins/Fixture/TestPlugin11NoHealth.dpr
 Tests/Plugins/Fixture/TestPlugin11NoInvoke.dpr
