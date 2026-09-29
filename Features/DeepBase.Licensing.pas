@@ -49,9 +49,17 @@ uses
   DeepBase.Commerce.UpgradeFlow,
   DeepBase.Commerce.JsonUtil,
   DeepBase.Unlock,
-  DeepBase.TimeGuard;
+  DeepBase.TimeGuard,
+  DeepBase.TimeSource;
 
 type
+  /// <summary>
+  /// Raised when a corrected time reading is requested while the clock is not
+  /// verified or is detected as rewound. Fail-closed by design: time-sensitive
+  /// callers must not silently fall back to the raw wall clock.
+  /// </summary>
+  EDeepBaseLicensingTimeUntrusted = class(EDeepBaseCommerceError);
+
   /// <summary>License tier: Free or Pro.</summary>
   TLicensingTier = (ltFree, ltPro);
 
@@ -128,6 +136,7 @@ type
     function HasAnyProEntitlement: Boolean;
     function GetConfigStr(const Key, ADefault: string): string;
     procedure SetConfigStr(const Key, AValue: string);
+    function VerifyTimeGuard: TTimeGuardResult;
   public
     constructor Create(const AConfig: TDeepLicensingProductConfig);
     destructor Destroy; override;
@@ -225,18 +234,23 @@ type
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Run time verification against the server. Call during initialization
-    /// to detect clock manipulation. Safe to call multiple times.
+    /// Run time verification against the server and feed the trusted reading into
+    /// the Core single clock source. Call during initialization to detect clock
+    /// manipulation. Safe to call multiple times.
     /// </summary>
     function VerifyTime: TTimeGuardResult;
 
     /// <summary>
-    /// Get the current time corrected for server offset.
-    /// Use this for time-sensitive operations (trial expiry, etc.).
+    /// Current time as read from the Core single clock source. Raises
+    /// EDeepBaseLicensingTimeUntrusted when the clock is not verified or was
+    /// detected as rewound; it never falls back to the raw wall clock.
     /// </summary>
     function GetCorrectedNow: TDateTime;
 
-    /// <summary>Returns True if the local clock appears trustworthy.</summary>
+    /// <summary>
+    /// Returns True only when a time guard has verified the clock and reports it
+    /// trustworthy. Unverified or rewound clocks are untrusted (fail-closed).
+    /// </summary>
     function IsTimeTrusted: Boolean;
 
     // -------------------------------------------------------------------------
@@ -536,16 +550,26 @@ begin
   if not FConfig.ProductCode.IsEmpty then
     FUnlock := TDeepBaseUnlock.Create(FConfig.ProductCode);
 
-  // 7. Build feature index (fast lookup table)
+  // 7. Verify the clock before any time-based judgement is reachable, so trial
+  //    and licence expiry read a clock whose integrity is known.
+  VerifyTimeGuard;
+
+  // 8. Build feature index (fast lookup table)
   FFeatureIndex.Clear;
   for var Def in FConfig.FeatureDefs do
     if not Def.Code.IsEmpty then
       FFeatureIndex.AddOrSetValue(Def.Code.ToLower, Def);
 
-  // 8. Resolve initial tier
-  RefreshCachedTier;
-
+  // 9. The initialization flag is set before the tier is resolved: resolving it
+  //    reads the offline grace through the public accessor, which gates on this
+  //    flag. Everything the judgement needs — device id, SafeClient, guard,
+  //    feature index — is already in place here, so leaving the flag false made
+  //    every offline start raise out of Initialize and the offline snapshot
+  //    fallback unreachable.
   FIsInitialized := True;
+
+  // 10. Resolve initial tier
+  RefreshCachedTier;
 end;
 
 // -----------------------------------------------------------------------------
@@ -678,6 +702,11 @@ begin
   if not SameText(GetConfigStr(CFG_TRIAL_STARTED, ''), 'true') then
     Exit;
 
+  // Fail-closed: an unverified or rewound clock must not be used to grant trial
+  // days, because the whole point of the check is that this reading can be faked.
+  if not IsTimeTrusted then
+    Exit(0);
+
   var ExpiresStr := GetConfigStr(CFG_TRIAL_EXPIRES, '');
   if ExpiresStr.IsEmpty then
     Exit(-1);
@@ -686,11 +715,15 @@ begin
   if not TryISO8601ToDate(ExpiresStr, ExpiresAt, False) then
     Exit(-1);
 
-  var NowUtc := TTimeZone.Local.ToUniversalTime(Now);
-  if ExpiresAt <= NowUtc then
+  // Both sides of the comparison are naive-local values: the stored instant is
+  // parsed without UTC conversion, and TDeepBaseTimeSource is the same clock the
+  // Core licence and key expiry checks read. Converting the wall clock to UTC
+  // before comparing would mix two time frameworks.
+  var NowLocal := TDeepBaseTimeSource.Shared.Now;
+  if ExpiresAt <= NowLocal then
     Exit(0);
 
-  Result := DaysBetween(NowUtc, ExpiresAt);
+  Result := DaysBetween(NowLocal, ExpiresAt);
 end;
 
 // -----------------------------------------------------------------------------
@@ -821,28 +854,38 @@ end;
 function TDeepLicensing.VerifyTime: TTimeGuardResult;
 begin
   EnsureInitialized;
+  Result := VerifyTimeGuard;
+end;
+
+function TDeepLicensing.VerifyTimeGuard: TTimeGuardResult;
+begin
   if FTimeGuard = nil then
   begin
     FTimeGuard := TTimeGuard.Create(FConfig.AppID + '.timeguard');
     FTimeGuard.SetServerUrl(FConfig.ServerBaseURL);
   end;
   Result := FTimeGuard.Verify;
+
+  // The guard's corrected reading is merged into the Core clock through the
+  // watermark, which only ever moves forward: a server-side or tampered-ahead
+  // reading can shorten the remaining licence window but can never extend it,
+  // and MajorSkew/Rewound readings are never trusted enough to be seeded.
+  if Result in [tgOk, tgSkewMinor] then
+    TDeepBaseTimeSource.Shared.SeedWatermark(FTimeGuard.GetCorrectedNow);
 end;
 
 function TDeepLicensing.GetCorrectedNow: TDateTime;
 begin
-  if (FTimeGuard <> nil) and FTimeGuard.Verified then
-    Result := FTimeGuard.GetCorrectedNow
-  else
-    Result := Now;
+  if not IsTimeTrusted then
+    raise EDeepBaseLicensingTimeUntrusted.Create(
+      'Licensing clock is not verified or was rewound; corrected time refused');
+  Result := TDeepBaseTimeSource.Shared.Now;
 end;
 
 function TDeepLicensing.IsTimeTrusted: Boolean;
 begin
-  if (FTimeGuard <> nil) and FTimeGuard.Verified then
-    Result := FTimeGuard.IsTimeTrusted
-  else
-    Result := True;  // Trust by default if not verified
+  Result := (FTimeGuard <> nil) and FTimeGuard.Verified
+    and FTimeGuard.IsTimeTrusted;
 end;
 
 // -----------------------------------------------------------------------------
