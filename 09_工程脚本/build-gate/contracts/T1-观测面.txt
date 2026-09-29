@@ -2,7 +2,9 @@
 # 语义：清单内每一个工程都编、都判并如实记录 BUILD_EXIT，但红不阻断提交（阻断语义只属于 T0）。
 # 语法：每行一个仓内相对路径，或整面选择子 all-dpr / all-dpk；# 起注释。清单只做加法，没有排除行——
 #       「范围内跳过谁」是门禁 bypass，禁止；要把某个工程移出观测面，就把它改登到 T2 或删除该行。
-# 归面规则：全部已跟踪 .dpr − T0 的 Tests/DeepBaseTests.dpr − T2 在册件（甲-D6 段3 后 T2 为 0 件，见 T2 文件）。
+# 归面规则：全部已跟踪 .dpr − T0 在册 .dpr（现 2 件：Tests/DeepBaseTests.dpr、
+#       Tests/Integration/DeepBaseIntegrationTests.dpr；甲-A7-03 迁行后 T0 由 1 件 .dpr 增为 2 件）− T2 在册件
+#       （甲-D6 段3 后 T2 为 0 件，见 T2 文件）。
 # 派生自 git ls-files -- "*.dpr"（机械取差集，无手工增删；基线 ae1638d，甲-D6 段3 同步后复算零漂移，
 #       复算口径与结果见 CodeReview/20260923-AUDIT-甲-D6-证据/）。
 #       新增 .dpr 须显式归面；--all 全量面始终是超集，任何工程都跑不掉编译判定。

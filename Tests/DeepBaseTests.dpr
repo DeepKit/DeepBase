@@ -59,6 +59,7 @@ uses
   Test.DeepBase.Hotkeys in 'Test.DeepBase.Hotkeys.pas',
   Test.DeepBase.Theme in 'Test.DeepBase.Theme.pas',
   Test.DeepBase.License in 'Test.DeepBase.License.pas',
+  Test.DeepBase.LicensingTimeSource in 'Test.DeepBase.LicensingTimeSource.pas',
   Test.DeepBase.Updater in 'Test.DeepBase.Updater.pas',
   Test.DeepBase.Unlock in 'Test.DeepBase.Unlock.pas',
   // MAINT: Core infra tests
