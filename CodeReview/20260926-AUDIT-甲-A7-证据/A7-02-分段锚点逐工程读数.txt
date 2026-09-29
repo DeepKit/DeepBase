@@ -1,0 +1,30 @@
+##### 树 wt-base
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=225 WARN=17
+编译门禁统计：编译噪声 Hint=225 Warning=17 按码=H2443=118,H2077=80,H2219=19,H2164=8,W1074=6,W1000=5,W1036=2,W1010=1,W1024=1,W1050=1,W1073=1
+[dpk 1/1] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=15 WARN=0
+编译门禁统计：编译噪声 Hint=15 Warning=0 按码=H2077=10,H2164=3,H2219=2
+##### 树 wt-347b1265
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=233 WARN=17
+编译门禁统计：编译噪声 Hint=233 Warning=17 按码=H2443=122,H2077=84,H2219=19,H2164=8,W1074=6,W1000=5,W1036=2,W1010=1,W1024=1,W1050=1,W1073=1
+[dpk 1/1] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=19 WARN=0
+编译门禁统计：编译噪声 Hint=19 Warning=0 按码=H2077=14,H2164=3,H2219=2
+##### 树 wt-c5d66586
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=1 HINT=46 WARN=2
+编译门禁统计：编译噪声 Hint=46 Warning=2 按码=H2443=24,H2077=13,H2219=7,H2164=2,W1050=1,W1073=1
+[dpk 1/1] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=19 WARN=0
+编译门禁统计：编译噪声 Hint=19 Warning=0 按码=H2077=14,H2164=3,H2219=2
+##### 树 wt-d80671ec
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=238 WARN=17
+编译门禁统计：编译噪声 Hint=238 Warning=17 按码=H2443=123,H2077=87,H2219=19,H2164=8,W1074=6,W1000=5,W1036=2,H2269=1,W1010=1,W1024=1,W1050=1,W1073=1
+[dpk 1/1] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=19 WARN=0
+编译门禁统计：编译噪声 Hint=19 Warning=0 按码=H2077=14,H2164=3,H2219=2
+##### 树 wt-a68264ab
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=238 WARN=17
+编译门禁统计：编译噪声 Hint=238 Warning=17 按码=H2443=123,H2077=87,H2219=19,H2164=8,W1074=6,W1000=5,W1036=2,H2269=1,W1010=1,W1024=1,W1050=1,W1073=1
+[dpk 1/1] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=18 WARN=0
+编译门禁统计：编译噪声 Hint=18 Warning=0 按码=H2077=13,H2164=3,H2219=2
+##### 树 wt-head
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=238 WARN=17
+编译门禁统计：编译噪声 Hint=238 Warning=17 按码=H2443=123,H2077=87,H2219=19,H2164=8,W1074=6,W1000=5,W1036=2,H2269=1,W1010=1,W1024=1,W1050=1,W1073=1
+[dpk 1/1] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=18 WARN=0
+编译门禁统计：编译噪声 Hint=18 Warning=0 按码=H2077=13,H2164=3,H2219=2

@@ -1,0 +1,36 @@
+===== A2 并网注册笔 (base -> 347b1265) =====
+dpr  base(242) -> 347b1265(250)  净 +8  变化单元×码 = 3
+   H2077 +4  Core/DeepBase.Logging.pas
+   H2443 +3  Test.DeepBase.ConfigRegistrarDefaultMode.pas
+   H2443 +1  Features/DeepBase.LLM.HTTP.pas
+core  base(15) -> 347b1265(19)  净 +4  变化单元×码 = 1
+   H2077 +4  Core/DeepBase.Logging.pas
+
+===== B2 并网 13 件 + 搜索面修复 (347b1265 -> d80671ec) =====
+dpr  347b1265(250) -> d80671ec(255)  净 +5  变化单元×码 = 3
+   H2077 +3  doQry/uDoQryLegacy.pas
+   H2269 +1  VCL/DeepBase.VCL.MVVMControls.pas
+   H2443 +1  Test.DeepBase.DeepFlow.ContextResolve.pas
+core  347b1265(19) -> d80671ec(19)  净 +0  变化单元×码 = 0
+
+===== A5/A8 段 (d80671ec -> a68264ab) =====
+dpr  d80671ec(255) -> a68264ab(255)  净 +0  变化单元×码 = 0
+core  d80671ec(19) -> a68264ab(18)  净 -1  变化单元×码 = 1
+   H2077 -1  Core/DeepBase.Export.PDF.pas
+
+===== A9 段 (a68264ab -> head) =====
+dpr  a68264ab(255) -> head(255)  净 +0  变化单元×码 = 0
+core  a68264ab(18) -> head(18)  净 +0  变化单元×码 = 0
+
+===== 基线→交付态合计 (base -> head) =====
+dpr  base(242) -> head(255)  净 +13  变化单元×码 = 6
+   H2077 +4  Core/DeepBase.Logging.pas
+   H2077 +3  doQry/uDoQryLegacy.pas
+   H2269 +1  VCL/DeepBase.VCL.MVVMControls.pas
+   H2443 +3  Test.DeepBase.ConfigRegistrarDefaultMode.pas
+   H2443 +1  Features/DeepBase.LLM.HTTP.pas
+   H2443 +1  Test.DeepBase.DeepFlow.ContextResolve.pas
+core  base(15) -> head(18)  净 +3  变化单元×码 = 2
+   H2077 +4  Core/DeepBase.Logging.pas
+   H2077 -1  Core/DeepBase.Export.PDF.pas
+
