@@ -1,0 +1,9 @@
+== 编译一次性 runner（单元: Test.DeepBase.Exceptions） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23602 lines, 1.11 seconds, 2533584 bytes code, 359680 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Exceptions）--hidebanner ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2

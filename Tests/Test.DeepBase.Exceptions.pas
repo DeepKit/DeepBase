@@ -74,4 +74,7 @@ begin
   LE.Free;
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TTestENotImplemented);
+
 end.
