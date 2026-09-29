@@ -1,0 +1,25 @@
+===== Tests/Test.DeepBase.Commerce.pas =====
+BUILD_EXIT=0
+Tests Found   : 62
+Tests Passed  : 62
+Tests Failed  : 0
+Tests Errored : 0
+RUN_EXIT=0
+===== Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas =====
+BUILD_EXIT=0
+Tests Found   : 10
+Tests Passed  : 10
+Tests Failed  : 0
+Tests Errored : 0
+RUN_EXIT=0
+===== Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas =====
+BUILD_EXIT=0
+Tests Found   : 3
+Tests Passed  : 3
+Tests Failed  : 0
+Tests Errored : 0
+RUN_EXIT=0
+===== 41例负样本 =====
+✓ 反向闸门正对照㉞ .dpr.template 别名不触发 => EXIT=0（含 DPR总数=1）
+✓ 反向闸门对照㉟未跟踪 .dpr 走既有通道 => EXIT=2（含 未跟踪但存在的 .dpr）
+NEGATIVE-TEST: PASS

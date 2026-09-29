@@ -1,0 +1,79 @@
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/var NowLocal := TDeepBaseTimeSource\.Shared\.Now;/var NowLocal := System.SysUtils.Now;/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -719,7 +719,7 @@
+   // parsed without UTC conversion, and TDeepBaseTimeSource is the same clock the
+   // Core licence and key expiry checks read. Converting the wall clock to UTC
+   // before comparing would mix two time frameworks.
+-  var NowLocal := TDeepBaseTimeSource.Shared.Now;
++  var NowLocal := System.SysUtils.Now;
+   if ExpiresAt <= NowLocal then
+     Exit(0);
+ 
+---- 变异后真跑（应红） ----
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_TrialDays_FollowInjectedCoreClockNotWallClock
+  Message: Expected [7] but got [1624] Trial days must be computed from the injected Core clock
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_RewoundClockAfterWatermark_ExpiredTrialStaysExpired
+  Message: Expected [0] but got [1624] Trial must read as expired once the clock passed its expiry
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_MinorSkewClock_StillTrusted_TrialDaysUnchanged
+  Message: Expected [7] but got [1624] A tolerated skew must not shorten the trial verdict
+
+
+RUNNER_STATS fixtureCount=1 testCount=7 pass=4 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
