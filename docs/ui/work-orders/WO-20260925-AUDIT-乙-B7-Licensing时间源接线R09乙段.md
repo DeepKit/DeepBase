@@ -51,3 +51,5 @@
 - 衔接纪律：甲 A5-R09 未落地不得开工；开工先核符号；B2 收尾验收前不得开工。
 
 *主控 · 2026-09-25 签发 · **2026-09-28 正式派出**（重锚 HEAD `2dcd1ae`，前置①已达成、前置②维持硬门槛：只读准备可、动手待 A5-R09 符号）；本单为 A4-R09 跨层拆分的乙段，范围收敛为 Licensing 单文件，越界改动一律打回*
+
+> **2026-09-28 主控复核解门（前置②已达成）**：甲 A5-R09 已交付（`1f3f9dd`），`TDeepBaseTimeSource` HEAD 在册（`Core/DeepBase.TimeSource.pas`：`Shared` / `Now` / `SetNowFunc` / `SeedWatermark` / `Reset` / `LastSeen` / `RollbackCount` / `MaxRollbackSeconds`），且 `Core/DeepBase.License.pas:194/201/367/488`、`Core/DeepBase.KeyManager.pas:324/332/359/380/402/564` 已接线（`TDeepBaseTimeSource.Shared.Now` / `SeedWatermark`）——Core 侧判时点裸 `Now` 已消。乙按 §〇-2 开工第一步 `rg` 核对甲回执点名的符号名与签名，核对通过才可动手；核对不上 ⇒ 停机上报，禁止按猜的符号硬接。B10（Commerce 时区修复）排本单之后。
