@@ -1,14 +1,23 @@
 {
-  "generated": "2026-09-24T04:44:21.719Z",
-  "generatedFrom": "git HEAD 79670b96ce66fc41e557c77408b55eecc38ea932 清单来源=manifest:T0-生产契约面.txt 已跟踪=90",
+  "generated": "2026-09-29T00:00:00.000Z",
+  "generatedFrom": "git HEAD 08bf186e71c88d79f41e6a7e731af10fcbee9fa4 清单来源=manifest:T0-生产契约面.txt 已跟踪=90",
   "surface": "manifest:T0-生产契约面.txt",
   "_comment": "DeepBase 编译噪声基线（WO-20260924-AUDIT-甲-D9 段4 / DB-006）。noise=各 Hint/Warning 码在【surface 记录的判定面】上的出现次数，门禁只拦增长不拦存量；比对要求当前判定面与 surface 一致（跨面计数不可比）。",
+  "_manualUpdate": {
+    "by": "主控",
+    "date": "2026-09-29",
+    "channel": "gate-emit-guard.js 守卫文案自指的人工通道（守卫一拒非合法扫描根 / 守卫二「只减不增」无抬升通道，故 --emit-baseline 自动路径在本面必然 EXIT=1；按守卫文案「须先修复或人工评审改基线 / 新增须人工写入并给出 reason 说明」由主控人工落笔）",
+    "measuredAt": "isolated --detach worktree @ 08bf186e71c88d79f41e6a7e731af10fcbee9fa4，T0-生产契约面.txt 27/27 编译全 BUILD_EXIT=0（DPR 2/2 + DPK 25/25），按码实测 H2077=425,H2443=175,H2219=141,H2269=5，Hint=793 Warning=155",
+    "reason": "甲 A7-03（Tests/Integration/DeepBaseIntegrationTests.dpr 由 T1 迁入 T0，A7-02 归因表逐码闭合：Hint 709→793 的 +84 = 甲 A2-12 +12 / 乙 B2-10+B2-13+B2-14 历史已 ACCEPT 交付增量 / 甲 A5-R09 −1 / 迁面 +68，零不明增量）。抬升码均经主控独立隔离树复算逐码相等后采信。",
+    "delta": "H2077 401→425(+24) / H2443 118→175(+57) / H2219 139→141(+2) / H2269 4→5(+1) / totals.hints 709→793(+84) / totals.warnings 155 不变 / 其余 11 码不动",
+    "dprWiringNote": "本基线已含 B7-R09 新单元 Test.DeepBase.LicensingTimeSource 并入 Tests/DeepBaseTests.dpr（同笔 08bf186）后的实测：并网前后 DeepBaseTests.dpr HINT=238 WARN=17 逐码相同，新单元零噪声增量"
+  },
   "noise": {
-    "H2077": 401,
+    "H2077": 425,
     "H2164": 47,
-    "H2219": 139,
-    "H2269": 4,
-    "H2443": 118,
+    "H2219": 141,
+    "H2269": 5,
+    "H2443": 175,
     "W1000": 17,
     "W1010": 13,
     "W1024": 8,
@@ -21,7 +30,7 @@
     "W1074": 6
   },
   "totals": {
-    "hints": 709,
+    "hints": 793,
     "warnings": 155
   }
 }
