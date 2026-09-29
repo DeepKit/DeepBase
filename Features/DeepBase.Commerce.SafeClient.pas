@@ -747,9 +747,12 @@ begin
   if ASnapshot.SchemaVersion <= 0 then
     raise EDeepBaseCommerceValidationError.Create('License snapshot has invalid schema_version');
 
-  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False) then
+  // 快照的 expires_at 是服务端 UTC 瞬时：解析必须用 AReturnUTC=True，才能与
+  // CommerceNowUtc（同为 UTC 裸值）比较；用 False 会把 UTC 瞬时换算成本地裸值，
+  // 在本机 UTC+8 上等于把放行窗口放宽 8 小时（实测见 B10 探针）。
+  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, True) then
     raise EDeepBaseCommerceValidationError.Create('License snapshot expires_at is invalid');
-  if ExpiresAt <= TTimeZone.Local.ToUniversalTime(Now) then
+  if ExpiresAt <= CommerceNowUtc then
     raise EDeepBaseCommerceValidationError.Create('License snapshot has expired');
 
   PayloadAppId := SnapshotJsonField(ASnapshot.Payload, SCommerceFieldAppId);

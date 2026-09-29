@@ -297,7 +297,9 @@ var
   Entitlement: TCommerceEntitlementData;
   ValidUntil, LastValidated, GraceExpiry, NowUtc: TDateTime;
 begin
-  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+  // 两侧同框架口径见 DeepBase.Commerce.Types 的 wire convention 注释：
+  // 解析用 AReturnUTC=True，「现在」取自 CommerceNowUtc。
+  NowUtc := CommerceNowUtc;
   Items := FClient.ListEntitlements(FAppId);
   for Entitlement in Items do
   begin
@@ -307,12 +309,12 @@ begin
       Continue;
     if Entitlement.ValidUntilISO = '' then
       Continue;
-    if not TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, False) then
+    if not TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, True) then
       Continue;
     if ValidUntil > NowUtc then
       Exit(True);
     if (Entitlement.LastValidatedISO <> '') and
-       TryISO8601ToDate(Entitlement.LastValidatedISO, LastValidated, False) then
+       TryISO8601ToDate(Entitlement.LastValidatedISO, LastValidated, True) then
     begin
       GraceExpiry := LastValidated + Entitlement.OfflineGraceDays;
       if GraceExpiry > NowUtc then

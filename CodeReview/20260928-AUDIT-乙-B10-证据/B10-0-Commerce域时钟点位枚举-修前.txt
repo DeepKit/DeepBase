@@ -1,0 +1,53 @@
+== WO-20260928-AUDIT-乙-B10 B10-0 Commerce 域时钟点位枚举（修前） ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 命令: git grep -n -e TryISO8601ToDate -e 'TTimeZone\.Local\.ToUniversalTime' -e DateToISO8601 -e '\bNow\b' -- 'Features/DeepBase.Commerce.*.pas'（四段见内文分段标题） ==
+== 说明: 采集于本单改动落地之前（工作树当时与 HEAD 一致），故为修前原貌 ==
+== 采集时刻(UTC): 2026-09-29T07:36:05Z ==
+
+$ git rev-parse HEAD = 7e2ba25baa2f3289bb1df98bb6982a507c0be860
+
+######## 解析侧 ########
+$ grep -n "TryISO8601ToDate" Features/DeepBase.Commerce.*.pas
+Features/DeepBase.Commerce.Permissions.pas:310:    if not TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, False) then
+Features/DeepBase.Commerce.Permissions.pas:315:       TryISO8601ToDate(Entitlement.LastValidatedISO, LastValidated, False) then
+Features/DeepBase.Commerce.SafeClient.pas:750:  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False) then
+Features/DeepBase.Commerce.Types.pas:499:  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+Features/DeepBase.Commerce.Types.pas:505:     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, False) then
+
+######## 墙钟侧 ########
+$ grep -n "TTimeZone\.Local\.ToUniversalTime" Features/DeepBase.Commerce.*.pas
+Features/DeepBase.Commerce.Idempotency.pas:119:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:150:    LRec.CreatedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:170:      LRec.CompletedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Permissions.pas:300:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.SafeClient.pas:752:  if ExpiresAt <= TTimeZone.Local.ToUniversalTime(Now) then
+Features/DeepBase.Commerce.Service.pas:367:// ValidFrom/ValidUntil are UTC ISO-8601; comparisons use TTimeZone.Local.ToUniversalTime(Now).
+Features/DeepBase.Commerce.Service.pas:383:  ValidFrom := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:248:  UTCNow := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:484:  N := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:501:  if ValidUntil > TTimeZone.Local.ToUniversalTime(Now) then
+Features/DeepBase.Commerce.Types.pas:508:    Result := GraceExpiry > TTimeZone.Local.ToUniversalTime(Now);
+
+######## 写侧（ISO 产出）########
+$ grep -n "DateToISO8601" Features/DeepBase.Commerce.*.pas
+Features/DeepBase.Commerce.PaymentBridge.pas:261:    Result.PaidAtISO := DateToISO8601(SDKNotif.PaidAt, False)
+Features/DeepBase.Commerce.Service.pas:390:  Entitlement.ValidFromISO := DateToISO8601(ValidFrom, False);
+Features/DeepBase.Commerce.Service.pas:392:    Entitlement.ValidUntilISO := DateToISO8601(
+Features/DeepBase.Commerce.Service.pas:401:  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, False);
+Features/DeepBase.Commerce.Types.pas:249:  Result := DateToISO8601(UTCNow, False);
+
+######## 裸钟 Now（对照，含非判时点）########
+$ grep -n "\bNow\b" Features/DeepBase.Commerce.*.pas
+Features/DeepBase.Commerce.Idempotency.pas:119:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:144:      FormatDateTime('yyyymmddhhnnsszzz', Now) + '-' +
+Features/DeepBase.Commerce.Idempotency.pas:150:    LRec.CreatedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:170:      LRec.CompletedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Permissions.pas:300:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.SafeClient.pas:646:  // concurrent callers do not retry in lockstep. Math.random/Now are avoided
+Features/DeepBase.Commerce.SafeClient.pas:752:  if ExpiresAt <= TTimeZone.Local.ToUniversalTime(Now) then
+Features/DeepBase.Commerce.Service.pas:367:// ValidFrom/ValidUntil are UTC ISO-8601; comparisons use TTimeZone.Local.ToUniversalTime(Now).
+Features/DeepBase.Commerce.Service.pas:383:  ValidFrom := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:248:  UTCNow := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:484:  N := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:501:  if ValidUntil > TTimeZone.Local.ToUniversalTime(Now) then
+Features/DeepBase.Commerce.Types.pas:508:    Result := GraceExpiry > TTimeZone.Local.ToUniversalTime(Now);

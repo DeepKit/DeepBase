@@ -1,0 +1,47 @@
+== WO-20260928-AUDIT-乙-B10 B10-5 静态自证：判时点两侧同框架、裸墙钟残留仅剩非判时点（判据 4） ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 命令: git grep -n -e TryISO8601ToDate -e CommerceNowUtc -e 'TTimeZone\.Local\.ToUniversalTime(Now)' -e DateToISO8601 -- 'Features/DeepBase.Commerce.*.pas' 'Tests/Test.DeepBase.Commerce.pas' ==
+== 说明: 第三段（残留裸墙钟）命中 4 处全部为非判时点，逐条理由见交付回执 §三 ==
+== 采集时刻(UTC): 2026-09-29T07:36:05Z ==
+
+$ git rev-parse HEAD = 7e2ba25baa2f3289bb1df98bb6982a507c0be860
+
+######## 判时点终态：读侧 ########
+Features/DeepBase.Commerce.Permissions.pas:312:    if not TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, True) then
+Features/DeepBase.Commerce.Permissions.pas:317:       TryISO8601ToDate(Entitlement.LastValidatedISO, LastValidated, True) then
+Features/DeepBase.Commerce.SafeClient.pas:753:  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, True) then
+Features/DeepBase.Commerce.Types.pas:258:  // 换算成 UTC 裸值后才能和 DateToISO8601(..., True) 产出、TryISO8601ToDate(..., True) 读回的
+Features/DeepBase.Commerce.Types.pas:519:  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, True) then
+Features/DeepBase.Commerce.Types.pas:525:     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, True) then
+
+######## 「现在」侧取值口 ########
+Features/DeepBase.Commerce.Permissions.pas:301:  // 解析用 AReturnUTC=True，「现在」取自 CommerceNowUtc。
+Features/DeepBase.Commerce.Permissions.pas:302:  NowUtc := CommerceNowUtc;
+Features/DeepBase.Commerce.SafeClient.pas:751:  // CommerceNowUtc（同为 UTC 裸值）比较；用 False 会把 UTC 瞬时换算成本地裸值，
+Features/DeepBase.Commerce.SafeClient.pas:755:  if ExpiresAt <= CommerceNowUtc then
+Features/DeepBase.Commerce.Service.pas:368:// compared against CommerceNowUtc. See the wire convention in DeepBase.Commerce.Types.
+Features/DeepBase.Commerce.Service.pas:384:  ValidFrom := CommerceNowUtc;
+Features/DeepBase.Commerce.Types.pas:229:function CommerceNowUtc: TDateTime;
+Features/DeepBase.Commerce.Types.pas:255:function CommerceNowUtc: TDateTime;
+Features/DeepBase.Commerce.Types.pas:267:  Result := DateToISO8601(CommerceNowUtc, True);
+Features/DeepBase.Commerce.Types.pas:518:  NowUtc := CommerceNowUtc;
+Tests/Test.DeepBase.Commerce.pas:2424:  Assert.IsTrue(Abs(Parsed - CommerceNowUtc) * 86400000 < 1,
+Tests/Test.DeepBase.Commerce.pas:2458:  Assert.IsTrue(Abs(Parsed - CommerceNowUtc) * 86400000 < 1,
+Tests/Test.DeepBase.Commerce.pas:2463:  Assert.IsTrue(Abs(Parsed - CommerceNowUtc) * 86400000 < 1,
+
+######## 残留裸墙钟（判时点须为空） ########
+Features/DeepBase.Commerce.Idempotency.pas:119:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:150:    LRec.CreatedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:170:      LRec.CompletedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:502:  N := TTimeZone.Local.ToUniversalTime(Now);
+
+######## 写侧 ISO 产出 ########
+Features/DeepBase.Commerce.PaymentBridge.pas:261:    Result.PaidAtISO := DateToISO8601(SDKNotif.PaidAt, False)
+Features/DeepBase.Commerce.Service.pas:367:// ValidFrom/ValidUntil are UTC instants: emitted Zulu via DateToISO8601(V, True) and
+Features/DeepBase.Commerce.Service.pas:391:  Entitlement.ValidFromISO := DateToISO8601(ValidFrom, True);
+Features/DeepBase.Commerce.Service.pas:393:    Entitlement.ValidUntilISO := DateToISO8601(
+Features/DeepBase.Commerce.Service.pas:402:  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, True);
+Features/DeepBase.Commerce.Types.pas:222:  // (DateToISO8601(V, True)); readers must parse with AReturnUTC=True so both sides
+Features/DeepBase.Commerce.Types.pas:226:// Commerce 域「现在」的唯一取值口，返回 UTC 裸值（与 DateToISO8601(V, True) 产出的
+Features/DeepBase.Commerce.Types.pas:258:  // 换算成 UTC 裸值后才能和 DateToISO8601(..., True) 产出、TryISO8601ToDate(..., True) 读回的
+Features/DeepBase.Commerce.Types.pas:267:  Result := DateToISO8601(CommerceNowUtc, True);

@@ -1,0 +1,703 @@
+== WO-20260928-AUDIT-乙-B10 B10-4 反事实三步判定（判据 3） ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh Tests/Test.DeepBase.Commerce.pas <SUT> '<perl -pe 表达式>' ==
+== 说明: 每笔变异独立一次调用；表达式一律不带 ^…$ 锚点（CRLF 源文件带锚点会静默不匹配＝假绿）；脚本自带 trap 还原 ==
+== 采集时刻(UTC): 2026-09-29T07:36:05Z ==
+
+############################################################################
+## M1
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/TryISO8601ToDate\(ASnapshot\.ExpiresAtISO, ExpiresAt, True\)/TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -750,7 +750,7 @@
+   // 快照的 expires_at 是服务端 UTC 瞬时：解析必须用 AReturnUTC=True，才能与
+   // CommerceNowUtc（同为 UTC 裸值）比较；用 False 会把 UTC 瞬时换算成本地裸值，
+   // 在本机 UTC+8 上等于把放行窗口放宽 8 小时（实测见 B10 探针）。
+-  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, True) then
++  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False) then
+     raise EDeepBaseCommerceValidationError.Create('License snapshot expires_at is invalid');
+   if ExpiresAt <= CommerceNowUtc then
+     raise EDeepBaseCommerceValidationError.Create('License snapshot has expired');
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.............................................................................................................................F..........
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 67
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_LicenseSnapshot_ExpiryJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is False when True expected. [A snapshot expiring one second before the injected clock must be refused]
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=67 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.SafeClient.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.SafeClient.pas ==
+
+---- M1 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M2
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/TryISO8601ToDate\(AEntitlement\.ValidUntilISO, ValidUntil, True\)/TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -516,7 +516,7 @@
+     Exit(True);
+   // 只取一次「现在」：两次读数之间水位被推进会让宽限期判定与可用性判定用到不同瞬时
+   NowUtc := CommerceNowUtc;
+-  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, True) then
++  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+     Exit(False);
+   if ValidUntil > NowUtc then
+     Exit(True);
+---- 变异后真跑（应红） ----
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 66
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementValidityJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. An entitlement whose valid_until passed one second ago must be unusable
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. Offline grace expired one second ago must not keep the entitlement usable
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=66 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+---- M2 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M3
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/NowUtc := CommerceNowUtc;/NowUtc := TTimeZone.Local.ToUniversalTime(Now);/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -515,7 +515,7 @@
+   if AEntitlement.ValidUntilISO = '' then
+     Exit(True);
+   // 只取一次「现在」：两次读数之间水位被推进会让宽限期判定与可用性判定用到不同瞬时
+-  NowUtc := CommerceNowUtc;
++  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+   if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, True) then
+     Exit(False);
+   if ValidUntil > NowUtc then
+---- 变异后真跑（应红） ----
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 66
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementValidityJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. An entitlement whose valid_until passed one second ago must be unusable
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. Offline grace expired one second ago must not keep the entitlement usable
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=66 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+---- M3 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M4
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/DateToISO8601\(CommerceNowUtc, True\)/DateToISO8601(CommerceNowUtc, False)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -264,7 +264,7 @@
+ begin
+   // AUTCDate=True 才会写 'Z'：RTL 的 False 分支只是给数值补上本地偏移后缀，并不换算，
+   // 用它包裹 UTC 裸值会让字符串指向比本意早一个偏移量的瞬时（实测见 B10 探针）。
+-  Result := DateToISO8601(CommerceNowUtc, True);
++  Result := DateToISO8601(CommerceNowUtc, False);
+ end;
+ 
+ function NormalizeGuidText(const AText: string): string;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....................................................................................................................................F..
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 67
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_CommerceNowISO_RoundTripsThroughProductionParserWithoutDrift
+  Message: Condition is False when True expected. [CommerceNowISO must round-trip to the same UTC bare value (got 2031-03-01T04:00:00.000+08:00)]
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=67 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+---- M4 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M5
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/TryISO8601ToDate\(AEntitlement\.LastValidatedISO, LastValidated, True\)/TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, False)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -522,7 +522,7 @@
+     Exit(True);
+   if (AEntitlement.OfflineGraceDays > 0) and
+      (AEntitlement.LastValidatedISO <> '') and
+-     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, True) then
++     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, False) then
+   begin
+     GraceExpiry := LastValidated + AEntitlement.OfflineGraceDays;
+     Result := GraceExpiry > NowUtc;
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.................................................................................................................................F......
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 67
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. Offline grace expired one second ago must not keep the entitlement usable
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=67 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+---- M5 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M6
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/DateToISO8601\(ValidFrom, True\)/DateToISO8601(ValidFrom, False)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -388,7 +388,7 @@
+   Entitlement.ProductId := AOrder.ProductId;
+   Entitlement.Code := Product.EntitlementCode;
+   Entitlement.Status := cesActive;
+-  Entitlement.ValidFromISO := DateToISO8601(ValidFrom, True);
++  Entitlement.ValidFromISO := DateToISO8601(ValidFrom, False);
+   if Product.EntitlementDurationDays > 0 then
+     Entitlement.ValidUntilISO := DateToISO8601(
+       IncDay(ValidFrom, Product.EntitlementDurationDays), True)
+@@ -399,7 +399,7 @@
+   Entitlement.Tier := Product.Tier;
+   Entitlement.MaxDevices := Product.MaxDevices;
+   Entitlement.OfflineGraceDays := Product.OfflineGraceDays;
+-  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, True);
++  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, False);
+   FStorage.UpsertEntitlement(Entitlement);
+ end;
+ 
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......................................................................................................................................F
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 67
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_GrantEntitlement_WritesTimestampsRoundTrippingToInjectedClock
+  Message: Condition is False when True expected. [Granted valid_from must round-trip to the injected clock (got 2031-03-01T04:00:00.000+08:00)]
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=67 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Service.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Service.pas ==
+
+---- M6 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M7
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/NowUtc := CommerceNowUtc;/NowUtc := TTimeZone.Local.ToUniversalTime(Now);/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -299,7 +299,7 @@
+ begin
+   // 两侧同框架口径见 DeepBase.Commerce.Types 的 wire convention 注释：
+   // 解析用 AReturnUTC=True，「现在」取自 CommerceNowUtc。
+-  NowUtc := CommerceNowUtc;
++  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+   Items := FClient.ListEntitlements(FAppId);
+   for Entitlement in Items do
+   begin
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+...................................................................................................................................F....
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 67
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_PermissionClientOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. Permission client must not report grace once it passed one second ago
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=67 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Permissions.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Permissions.pas ==
+
+---- M7 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+
+############################################################################
+## M8
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/TryISO8601ToDate\(Entitlement\.ValidUntilISO, ValidUntil, True\)/TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, False)/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -309,7 +309,7 @@
+       Continue;
+     if Entitlement.ValidUntilISO = '' then
+       Continue;
+-    if not TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, True) then
++    if not TryISO8601ToDate(Entitlement.ValidUntilISO, ValidUntil, False) then
+       Continue;
+     if ValidUntil > NowUtc then
+       Exit(True);
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+...................................................................................................................................F....
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 67
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_PermissionClientOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is True when False expected. Permission client must not report grace once it passed one second ago
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=67 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Permissions.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Permissions.pas ==
+
+---- M8 变异红掉的用例名（自 step2_mutated 原文） ----
+Failing Tests
+
+

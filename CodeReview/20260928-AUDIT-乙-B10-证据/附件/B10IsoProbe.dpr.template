@@ -1,0 +1,110 @@
+﻿{ B10 诊断探针（一次性，不进任何构建面）：
+  实测 Delphi RTL 的 ISO-8601 换算语义，用于确定 Commerce 域「写侧」
+  DateToISO8601(TTimeZone.Local.ToUniversalTime(Now), False)
+  （Features/DeepBase.Commerce.Types.pas:248-249、Service.pas:390/392/401）
+  与「读侧」TryISO8601ToDate(..., False)（Types.pas:499/505、Permissions.pas:310/315、
+  SafeClient.pas:750）往返后落在哪个时间框架，以及两侧各改成 True 后是否仍自洽。
+  产物落 .tmp/b10/，入库须用 .dpr.template 别名（CodeReview/** 禁 .dpr，见 B8-01）。 }
+program B10IsoProbe;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  System.DateUtils;
+
+const
+  OffsetHours: array [0 .. 5] of Integer = (-10, -1, 0, 1, 8, 14);
+
+function Bare(const ADT: TDateTime): string;
+begin
+  Result := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', ADT);
+end;
+
+procedure ShowRoundTrip(const ATag: string; AValue: TDateTime);
+var
+  S: string;
+  Back: TDateTime;
+  Mode: Boolean;
+begin
+  S := DateToISO8601(AValue, False);
+  Writeln('  [', ATag, ', AUTCDate=False] 写侧值=', Bare(AValue), ' 字符串=', S);
+  for Mode := False to True do
+  begin
+    if TryISO8601ToDate(S, Back, Mode) then
+      Writeln('      parse AReturnUTC=', Mode, ' => ', Bare(Back),
+        '  与写侧值差(分钟)=', Round((Back - AValue) * MinsPerDay))
+    else
+      Writeln('      parse AReturnUTC=', Mode, ' => 解析失败');
+  end;
+  S := DateToISO8601(AValue, True);
+  Writeln('  [', ATag, ', AUTCDate=True ] 写侧值=', Bare(AValue), ' 字符串=', S);
+  for Mode := False to True do
+  begin
+    if TryISO8601ToDate(S, Back, Mode) then
+      Writeln('      parse AReturnUTC=', Mode, ' => ', Bare(Back),
+        '  与写侧值差(分钟)=', Round((Back - AValue) * MinsPerDay))
+    else
+      Writeln('      parse AReturnUTC=', Mode, ' => 解析失败');
+  end;
+end;
+
+var
+  NowLocalBare, NowUtcBare, Value: TDateTime;
+  H: Integer;
+  Written: string;
+  LocRaw, UtcRaw: TDateTime;
+begin
+  NowLocalBare := Now;
+  NowUtcBare := TTimeZone.Local.ToUniversalTime(Now);
+  Writeln('Now (local bare)              = ', Bare(NowLocalBare));
+  Writeln('ToUniversalTime(Now)          = ', Bare(NowUtcBare));
+  Writeln('本机 UtcOffsetHours (实测差值) = ', (NowLocalBare - NowUtcBare) * 24:0:2);
+  Writeln('TTimeZone.Local.UtcOffset     = ',
+    TTimeZone.Local.UtcOffset.TotalMinutes:0:0, ' 分钟');
+  Writeln;
+
+  Writeln('== 1. 写侧 DateToISO8601 两个分支输出什么，读侧两种模式取回什么 ==');
+  ShowRoundTrip('写侧入参=UTC 裸值', NowUtcBare);
+  ShowRoundTrip('写侧入参=本地裸值', NowLocalBare);
+  Writeln;
+
+  Writeln('== 2. 对端发 Zulu 时的过期判定阈值扫描（H=真实剩余小时数）==');
+  Writeln('   现产:   parse(False) 与 ToUniversalTime(Now) 比较（两侧框架不同）');
+  Writeln('   修法A:  parse(True)  与 ToUniversalTime(Now) 比较（两侧同 UTC 裸值）');
+  Writeln('   修法B:  parse(False) 与 Now 比较（两侧同本地裸值）');
+  for H := Low(OffsetHours) to High(OffsetHours) do
+  begin
+    Value := IncHour(NowUtcBare, OffsetHours[H]);
+    Written := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Value);
+    // 先算好再打印，避免 Format 实参求值顺序污染结论
+    TryISO8601ToDate(Written, LocRaw, False);
+    TryISO8601ToDate(Written, UtcRaw, True);
+    Writeln('  H=', IntToStr(OffsetHours[H]), ' h  expires_at=', Written,
+      '  parse(False)=', Bare(LocRaw), '  parse(True)=', Bare(UtcRaw),
+      '  现产判过期=', BoolToStr(LocRaw <= NowUtcBare, True),
+      '  修法A判过期=', BoolToStr(UtcRaw <= NowUtcBare, True),
+      '  修法B判过期=', BoolToStr(LocRaw <= NowLocalBare, True));
+  end;
+  Writeln;
+
+  Writeln('== 3. 仓内自托管写侧 -> 读侧往返（Service.GrantEntitlementForOrder 现产口径）==');
+  Written := DateToISO8601(NowUtcBare, False);
+  Writeln('   现产写侧字符串 = ', Written);
+  TryISO8601ToDate(Written, LocRaw, False);
+  TryISO8601ToDate(Written, UtcRaw, True);
+  Writeln('   parse(False) = ', Bare(LocRaw), '  距 UTC 裸值(分钟) = ',
+    Round((LocRaw - NowUtcBare) * MinsPerDay));
+  Writeln('   parse(True)  = ', Bare(UtcRaw), '  距 UTC 裸值(分钟) = ',
+    Round((UtcRaw - NowUtcBare) * MinsPerDay));
+  Writeln;
+  Writeln('== 4. 写侧改 AUTCDate=True（Zulu）后同一读侧两种模式 ==');
+  Written := DateToISO8601(NowUtcBare, True);
+  Writeln('   改后写侧字符串 = ', Written);
+  TryISO8601ToDate(Written, LocRaw, False);
+  TryISO8601ToDate(Written, UtcRaw, True);
+  Writeln('   parse(False) = ', Bare(LocRaw), '  距本地裸值(分钟) = ',
+    Round((LocRaw - NowLocalBare) * MinsPerDay));
+  Writeln('   parse(True)  = ', Bare(UtcRaw), '  距 UTC 裸值(分钟) = ',
+    Round((UtcRaw - NowUtcBare) * MinsPerDay));
+end.

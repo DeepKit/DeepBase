@@ -364,7 +364,8 @@ begin
   Result := ConfirmPayment(Notification);
 end;
 
-// ValidFrom/ValidUntil are UTC ISO-8601; comparisons use TTimeZone.Local.ToUniversalTime(Now).
+// ValidFrom/ValidUntil are UTC instants: emitted Zulu via DateToISO8601(V, True) and
+// compared against CommerceNowUtc. See the wire convention in DeepBase.Commerce.Types.
 procedure TDeepBaseCommerceService.GrantEntitlementForOrder(
   const AOrder: TCommerceOrderData);
 var
@@ -380,17 +381,17 @@ begin
     if SameText(Entitlements[I].SourceOrderId, AOrder.OrderId) then
       Exit;
 
-  ValidFrom := TTimeZone.Local.ToUniversalTime(Now);
+  ValidFrom := CommerceNowUtc;
   Entitlement.EntitlementId := TCommerceIds.NewId('ent');
   Entitlement.UserId := AOrder.UserId;
   Entitlement.AppId := AOrder.AppId;
   Entitlement.ProductId := AOrder.ProductId;
   Entitlement.Code := Product.EntitlementCode;
   Entitlement.Status := cesActive;
-  Entitlement.ValidFromISO := DateToISO8601(ValidFrom, False);
+  Entitlement.ValidFromISO := DateToISO8601(ValidFrom, True);
   if Product.EntitlementDurationDays > 0 then
     Entitlement.ValidUntilISO := DateToISO8601(
-      IncDay(ValidFrom, Product.EntitlementDurationDays), False)
+      IncDay(ValidFrom, Product.EntitlementDurationDays), True)
   else
     Entitlement.ValidUntilISO := '';
   Entitlement.RemainingQuota := Product.InitialQuota;
@@ -398,7 +399,7 @@ begin
   Entitlement.Tier := Product.Tier;
   Entitlement.MaxDevices := Product.MaxDevices;
   Entitlement.OfflineGraceDays := Product.OfflineGraceDays;
-  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, False);
+  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, True);
   FStorage.UpsertEntitlement(Entitlement);
 end;
 

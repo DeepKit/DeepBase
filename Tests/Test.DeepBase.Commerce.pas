@@ -4,11 +4,13 @@ interface
 
 uses
   System.SysUtils,
+  System.DateUtils,
   System.Generics.Collections,
   System.Net.URLClient,
   DUnitX.TestFramework,
   DeepBase.Net.Transport,
   DeepBase.Net.Transport.ICS,
+  DeepBase.TimeSource,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.Backend.Contract,
   DeepBase.Commerce.Backend.Http,
@@ -214,6 +216,24 @@ type
     procedure Test_CloseOrder_RejectsTerminalState;
     [Test]
     procedure Test_ConsumeEntitlement_RejectsNonPositiveCount;
+
+    [Test]
+    procedure Test_LicenseSnapshot_ExpiryJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+
+    [Test]
+    procedure Test_EntitlementValidityJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+
+    [Test]
+    procedure Test_EntitlementOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+
+    [Test]
+    procedure Test_PermissionClientOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+
+    [Test]
+    procedure Test_CommerceNowISO_RoundTripsThroughProductionParserWithoutDrift;
+
+    [Test]
+    procedure Test_GrantEntitlement_WritesTimestampsRoundTrippingToInjectedClock;
   end;
 
 implementation
@@ -282,6 +302,64 @@ begin
       Result := (APayload <> '') and (ASignature = 'sig_001') and
         (AKeyId = 'v1');
     end;
+end;
+
+{ B10 时间框架夹具。
+  注入给 Core 时钟的读数与生产缺省读数同框架（naive-local 裸值），而对端送来的 ISO
+  是 UTC 瞬时，所以测试一律经 TTimeZone.Local.ToUniversalTime 换算后写成 Zulu ——
+  与生产读侧 TryISO8601ToDate(..., True) 用同一套 RTL 语义，测试不自造时间口径。 }
+function FixedAnchorLocal: TDateTime;
+begin
+  // 绝对日期在此只是哨兵值：用例里的「现在」由注入时钟给出，故不随真实日期漂移
+  // （B9 修掉的那类日期炸弹不复发）。
+  Result := EncodeDate(2031, 3, 1) + EncodeTime(12, 0, 0, 0);
+end;
+
+procedure InjectFixedClock(const ALocalBare: TDateTime);
+begin
+  TDeepBaseTimeSource.Shared.Reset;
+  TDeepBaseTimeSource.Shared.SetNowFunc(
+    function: TDateTime
+    begin
+      Result := ALocalBare;
+    end);
+end;
+
+function UtcIso(const ALocalBare: TDateTime): string;
+begin
+  Result := DateToISO8601(TTimeZone.Local.ToUniversalTime(ALocalBare), True);
+end;
+
+function SnapshotJsonExpiringAt(const AExpiresLocalBare: TDateTime): string;
+begin
+  Result := '{"snapshot_id":"lic_b10","issued_at":"' +
+    UtcIso(IncDay(AExpiresLocalBare, -30)) + '","expires_at":"' +
+    UtcIso(AExpiresLocalBare) +
+    '","payload":{"app_id":"deepbase_desktop","device_id":"dev_001","tier":"pro"},' +
+    '"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":0}';
+end;
+
+function ActiveEntitlementExpiringAt(const AValidUntilLocalBare: TDateTime;
+  AGraceDays: Integer = 0;
+  ALastValidatedLocalBare: TDateTime = 0): TCommerceEntitlementData;
+begin
+  Result.EntitlementId := 'ent_b10';
+  Result.UserId := 'usr_001';
+  Result.AppId := 'deepbase_desktop';
+  Result.ProductId := 'pro_monthly';
+  Result.Code := 'pro_full';
+  Result.Status := cesActive;
+  Result.RemainingQuota := -1;
+  Result.MaxDevices := -1;
+  Result.OfflineGraceDays := AGraceDays;
+  Result.Tier := 'pro';
+  Result.SourceOrderId := 'ord_b10';
+  Result.ValidFromISO := UtcIso(IncDay(AValidUntilLocalBare, -30));
+  Result.ValidUntilISO := UtcIso(AValidUntilLocalBare);
+  if ALastValidatedLocalBare > 0 then
+    Result.LastValidatedISO := UtcIso(ALastValidatedLocalBare)
+  else
+    Result.LastValidatedISO := '';
 end;
 
 function TFakePaymentGateway.CreatePaymentIntent(const AOrder: TCommerceOrderData;
@@ -443,6 +521,11 @@ end;
 
 procedure TCommerceServiceTests.TearDown;
 begin
+  // TDeepBaseTimeSource 是进程级单例：注入的假时钟若泄漏到同进程其余用例，
+  // 会让别人的过期判定读到 2031 年的读数（假红或假绿）。[TearDown] 在断言失败
+  // 路径上同样执行，是唯一可靠的还原点。
+  TDeepBaseTimeSource.Shared.SetNowFunc(nil);
+  TDeepBaseTimeSource.Shared.Reset;
   FService.Free;
   FService := nil;
   FStorage := nil;
@@ -2204,6 +2287,182 @@ begin
       Raised := True;
   end;
   Assert.IsTrue(Raised, 'ConsumeEntitlement must reject non-positive count');
+end;
+
+procedure TCommerceServiceTests.Test_LicenseSnapshot_ExpiryJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+var
+  Anchor: TDateTime;
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Snapshot: TDeepKitLicenseSnapshot;
+  Expired: Boolean;
+  ExpiredMessage: string;
+  Accepted: Boolean;
+begin
+  Anchor := FixedAnchorLocal;
+  InjectFixedClock(Anchor);
+  Transport := TFakeCommerceTransport.Create;
+  // 第 1 次响应：到期瞬时 = 注入「现在」− 1 秒 ⇒ 必须判过期
+  Transport.QueueResponse(200, SnapshotJsonExpiringAt(IncSecond(Anchor, -1)));
+  // 第 2 次响应：到期瞬时 = 注入「现在」+ 1 秒 ⇒ 必须放行
+  Transport.QueueResponse(200, SnapshotJsonExpiringAt(IncSecond(Anchor, 1)));
+  Client := TDeepKitSafeClient.Create(CreateSnapshotVerifiedConfig, Transport);
+  try
+    Expired := False;
+    ExpiredMessage := '';
+    try
+      Client.RefreshLicenseSnapshot('deepbase_desktop', 'dev_001');
+    except
+      on E: EDeepBaseCommerceValidationError do
+      begin
+        Expired := True;
+        ExpiredMessage := E.Message;
+      end;
+    end;
+    Assert.IsTrue(Expired,
+      'A snapshot expiring one second before the injected clock must be refused');
+    Assert.AreEqual('License snapshot has expired', ExpiredMessage);
+
+    Accepted := True;
+    try
+      Snapshot := Client.RefreshLicenseSnapshot('deepbase_desktop', 'dev_001');
+    except
+      Accepted := False;
+    end;
+    Assert.IsTrue(Accepted,
+      'A snapshot expiring one second after the injected clock must be accepted');
+    Assert.AreEqual('lic_b10', Snapshot.SnapshotId);
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_EntitlementValidityJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+var
+  Anchor: TDateTime;
+begin
+  Anchor := FixedAnchorLocal;
+  InjectFixedClock(Anchor);
+  // 两侧同框架的代数性质：正偏移机器上「已过 1 秒」会被混用形态放行，
+  // 负偏移机器上「还差 1 秒」会被混用形态误拒 —— 两条合起来才在任何时区下咬人。
+  Assert.IsFalse(
+    IsCommerceEntitlementUsable(ActiveEntitlementExpiringAt(IncSecond(Anchor, -1))),
+    'An entitlement whose valid_until passed one second ago must be unusable');
+  Assert.IsTrue(
+    IsCommerceEntitlementUsable(ActiveEntitlementExpiringAt(IncSecond(Anchor, 1))),
+    'An entitlement expiring one second from now must be usable');
+end;
+
+procedure TCommerceServiceTests.Test_EntitlementOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+var
+  Anchor: TDateTime;
+  PastExpiry: TDateTime;
+begin
+  Anchor := FixedAnchorLocal;
+  InjectFixedClock(Anchor);
+  // 有效期已整体过去 2 小时，只剩 OfflineGraceDays=1 天的离线宽限期；
+  // last_validated 取「恰好把宽限期推到边界两侧 1 秒」两个值。
+  PastExpiry := IncHour(Anchor, -2);
+  Assert.IsFalse(
+    IsCommerceEntitlementUsable(
+      ActiveEntitlementExpiringAt(PastExpiry, 1, IncSecond(IncDay(Anchor, -1), -1))),
+    'Offline grace expired one second ago must not keep the entitlement usable');
+  Assert.IsTrue(
+    IsCommerceEntitlementUsable(
+      ActiveEntitlementExpiringAt(PastExpiry, 1, IncSecond(IncDay(Anchor, -1), 1))),
+    'One second left inside the offline grace must keep the entitlement usable');
+end;
+
+procedure TCommerceServiceTests.Test_PermissionClientOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide;
+const
+  GraceEntitlementJson =
+    '{"items":[{"entitlement_id":"ent_b10","user_id":"usr_001",' +
+    '"app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full",' +
+    '"status":"active","valid_until":"%s","offline_grace_days":1,' +
+    '"last_validated":"%s","remaining_quota":-1}]}';
+var
+  Anchor, PastExpiry: TDateTime;
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Permissions: TDeepKitPermissionClient;
+begin
+  Anchor := FixedAnchorLocal;
+  InjectFixedClock(Anchor);
+  PastExpiry := IncHour(Anchor, -2);
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200, Format(GraceEntitlementJson,
+    [UtcIso(PastExpiry), UtcIso(IncSecond(IncDay(Anchor, -1), -1))]));
+  Transport.QueueResponse(200, Format(GraceEntitlementJson,
+    [UtcIso(PastExpiry), UtcIso(IncSecond(IncDay(Anchor, -1), 1))]));
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test', 'atk_001'),
+    Transport);
+  Permissions := TDeepKitPermissionClient.Create(Client, 'deepbase_desktop',
+    'dev_001', True);
+  try
+    Assert.IsFalse(Permissions.IsOfflineGraceActive,
+      'Permission client must not report grace once it passed one second ago');
+    Assert.IsTrue(Permissions.IsOfflineGraceActive,
+      'Permission client must report grace while one second is left');
+    Assert.AreEqual<Integer>(2, Transport.RequestCount);
+  finally
+    Permissions.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_CommerceNowISO_RoundTripsThroughProductionParserWithoutDrift;
+var
+  Iso: string;
+  Parsed: TDateTime;
+begin
+  InjectFixedClock(FixedAnchorLocal);
+  Iso := CommerceNowISO;
+  Assert.IsTrue(TryISO8601ToDate(Iso, Parsed, True),
+    'The production reader must parse what the production writer emits');
+  // 写侧若用 DateToISO8601(V, False)，RTL 只补本地偏移后缀、不换算数值，字符串指向的
+  // 瞬时会比本意早一个偏移量；往返差用毫秒判定，任何非零时区都会咬住。
+  Assert.IsTrue(Abs(Parsed - CommerceNowUtc) * 86400000 < 1,
+    'CommerceNowISO must round-trip to the same UTC bare value (got ' + Iso + ')');
+end;
+
+procedure TCommerceServiceTests.Test_GrantEntitlement_WritesTimestampsRoundTrippingToInjectedClock;
+var
+  User: TCommerceUserData;
+  Order: TCommerceOrderData;
+  Notification: TCommercePaymentNotification;
+  Entitlements: TCommerceEntitlementArray;
+  Parsed: TDateTime;
+begin
+  InjectFixedClock(FixedAnchorLocal);
+  RegisterProduct('pro_year', 'desktop.pro', 9900);
+  FService.RegisterPaymentGateway(cppWeChatPay, TFakePaymentGateway.Create);
+  User := EnsureUser;
+  Order := FService.CreateOrder(User.UserId, 'desktop_tool', 'pro_year');
+  FService.BeginPayment(Order.OrderId, cppWeChatPay, cpcMiniProgram, 'openid_001');
+  Notification.Provider := cppWeChatPay;
+  Notification.OutTradeNo := Order.OutTradeNo;
+  Notification.ProviderTradeNo := 'wx_trade_b10';
+  Notification.AmountMinor := Order.AmountMinor;
+  Notification.Currency := Order.Currency;
+  Notification.Success := True;
+  Notification.PaidAtISO := CommerceNowISO;
+  Notification.RawPayload := '{}';
+  FService.ConfirmPayment(Notification);
+
+  // 授权链写出的时间戳是自家读侧接下来要吃的输入：写侧退回 DateToISO8601(V, False) 时
+  // RTL 只补本地偏移后缀不换算数值，字符串指向的瞬时比本意早一个偏移量，往返差即混用量。
+  Entitlements := FService.ListEntitlements(User.UserId, 'desktop_tool');
+  Assert.AreEqual<Integer>(1, Length(Entitlements));
+  Assert.IsTrue(TryISO8601ToDate(Entitlements[0].ValidFromISO, Parsed, True),
+    'Granted valid_from must parse through the production reader');
+  Assert.IsTrue(Abs(Parsed - CommerceNowUtc) * 86400000 < 1,
+    'Granted valid_from must round-trip to the injected clock (got ' +
+    Entitlements[0].ValidFromISO + ')');
+  Assert.IsTrue(TryISO8601ToDate(Entitlements[0].LastValidatedISO, Parsed, True),
+    'Granted last_validated must parse through the production reader');
+  Assert.IsTrue(Abs(Parsed - CommerceNowUtc) * 86400000 < 1,
+    'Granted last_validated must round-trip to the injected clock (got ' +
+    Entitlements[0].LastValidatedISO + ')');
 end;
 
 initialization

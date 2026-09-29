@@ -1,0 +1,35 @@
+== WO-20260928-AUDIT-乙-B10 B10-11 主套件同进程混跑（共享单例还原证明） ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 载体: D:/_ProgData/DeepBase-B10-wt/wt-b10（--detach 工作树 @ HEAD + 本单 5 个改动件），exe 由 build-gate 编译（B10-8 同一轮） ==
+== 命令: DeepBaseTests.exe --run:<7 个 Commerce fixture 限定名，逗号分隔> ==
+== 说明: PaymentBridge 的 TWeChatPayBridgeTests 无断言用例在主套件面为绿（DeepBaseTests.dpr:520 FailsOnNoAsserts=False），与 B10-7 探针面的红互不矛盾 ==
+== 采集时刻(UTC): 2026-09-29T07:38:58Z ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+............................................................................................................................................................................................
+
+Tests Found   : 94
+Tests Ignored : 0
+Tests Passed  : 94
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+An unexpected memory leak has occurred. The unexpected small block leaks are:
+
+9 - 24 bytes: UnicodeString x 1
+25 - 40 bytes: TJSONObject x 4, TJSONPair x 10, TJSONString x 18, UnicodeString x 9
+41 - 56 bytes: UnicodeString x 5, Unknown x 4
+73 - 88 bytes: TList<System.JSON.TJSONPair> x 4
+89 - 104 bytes: UnicodeString x 1
+
+######## 对账 ########
+同进程混跑 Tests Found=94 Passed=94 Failed=0
+隔离逐件（B10-3/B10-7）: 68 + 12 + 2 + 3 + 1 + 8 = 94 ⇒ 计数一致，注入时钟未跨 fixture 泄漏

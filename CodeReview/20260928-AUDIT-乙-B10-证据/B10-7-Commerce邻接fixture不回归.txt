@@ -1,0 +1,269 @@
+== WO-20260928-AUDIT-乙-B10 B10-7 Commerce 邻接 fixture 全限定不回归 ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/<单元>.pas（逐单元） ==
+== 说明: PaymentBridge 需 DEEPBASE_EXTRA_U 追加 ThirdParty/Payment（原生盘符路径），其 1 红为既存无断言用例，见文末对照段 ==
+== 采集时刻(UTC): 2026-09-29T07:36:05Z ==
+
+### Test.DeepBase.Commerce.Service.PBT ###
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.Service.PBT） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+25177 lines, 1.25 seconds, 3023032 bytes code, 406656 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.Service.PBT） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+....
+
+Tests Found   : 2
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=2 pass=2 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+UNIT_RUN_EXIT=0
+### Test.DeepBase.Commerce.Enum.PBT ###
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.Enum.PBT） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24128 lines, 1.12 seconds, 2611352 bytes code, 366816 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.Enum.PBT） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+......
+
+Tests Found   : 3
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=3 pass=3 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+UNIT_RUN_EXIT=0
+### Test.DeepBase.Commerce.Adapter.PBT ###
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.Adapter.PBT） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23309 lines, 1.17 seconds, 2692828 bytes code, 375328 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.Adapter.PBT） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..
+
+Tests Found   : 1
+Tests Ignored : 0
+Tests Passed  : 1
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=1 pass=1 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+UNIT_RUN_EXIT=0
+### Test.DeepBase.Commerce.Adapter.Firebase ###
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.Adapter.Firebase） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+25392 lines, 1.41 seconds, 3528140 bytes code, 452352 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.Adapter.Firebase） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................
+
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=8 pass=8 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+UNIT_RUN_EXIT=0
+### Test.DeepBase.Config.PBT ###
+== 编译一次性 runner（单元: Test.DeepBase.Config.PBT） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+36556 lines, 1.59 seconds, 2826960 bytes code, 386912 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Config.PBT） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+....
+
+Tests Found   : 2
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=2 pass=2 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+UNIT_RUN_EXIT=0
+### Test.DeepBase.Speech ###
+== 编译一次性 runner（单元: Test.DeepBase.Speech） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Speech.ASR.Baidu.pas(414) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+34609 lines, 1.78 seconds, 3760696 bytes code, 474704 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Speech） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+UNIT_RUN_EXIT=0
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.PaymentBridge） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(625) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(662) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1045) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(194) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(228) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(431) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+47947 lines, 2.02 seconds, 3882860 bytes code, 484688 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.PaymentBridge） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......................F
+
+Tests Found   : 12
+Tests Ignored : 0
+Tests Passed  : 11
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.PaymentBridge.TWeChatPayBridgeTests.Test_RegisterVerifier_WithService
+  Message: No assertions were made during the test
+
+
+RUNNER_STATS fixtureCount=1 testCount=12 pass=11 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+######## 既存红的取证：HEAD 版本同一用例体内零断言（非本单引入） ########
+$ git show HEAD:Tests/Test.DeepBase.Commerce.PaymentBridge.pas | sed -n '/Test_RegisterVerifier_WithService/,/^end;/p'
+procedure TWeChatPayBridgeTests.Test_RegisterVerifier_WithService;
+var
+  Storage: ICommerceStorage;
+  Service: TDeepBaseCommerceService;
+  Verifier: ICommerceNotificationVerifier;
+begin
+  Storage := TInMemoryCommerceStorage.Create;
+  Service := TDeepBaseCommerceService.Create(Storage);
+  try
+    Verifier := CreateWeChatPayNotificationVerifier(
+      'wx_test', 'mch_test', 'key_01234567890123456789012345', '');
+    // Should not raise
+    Service.RegisterNotificationVerifier(cppWeChatPay, Verifier);
+  finally
+    Service.Free;
+  end;
+end;
+
+######## 探针面口径 ########
+一次性 runner 模板 FailsOnNoAsserts=True（CodeReview/20260925-AUDIT-乙-B2-证据/附件/B2FixtureRunner.dpr.template:28）
+主套件 Tests/DeepBaseTests.dpr:520 为 FailsOnNoAsserts=False ⇒ 该红只在探针面出现，属假覆盖债（无断言用例），不随本单变化

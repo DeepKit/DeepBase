@@ -217,8 +217,16 @@ type
     class function NewOutTradeNo(const APrefix: string = 'UB'): string; static;
   end;
 
-  // All ISO timestamps (CreatedAtISO, PaidAtISO, etc.) are UTC. Use CommerceNowISO to generate.
+  // Wire convention: all ISO timestamps (CreatedAtISO, PaidAtISO, valid_until,
+  // expires_at, ...) denote UTC instants and are emitted with the Zulu "Z" suffix
+  // (DateToISO8601(V, True)); readers must parse with AReturnUTC=True so both sides
+  // of every comparison carry the same bare-value framework.
 function CommerceNowISO: string;
+
+// Commerce 域「现在」的唯一取值口，返回 UTC 裸值（与 DateToISO8601(V, True) 产出的
+// Zulu 字符串同一框架）。读数取自 Core 的 TDeepBaseTimeSource（进程内单调、测试可注入），
+// 不再散着取裸墙钟：过期/宽限判定必须能被假时钟驱动，且回拨不能续命。
+function CommerceNowUtc: TDateTime;
 function CommerceAuthProviderToStr(AProvider: TCommerceAuthProvider): string;
 function CommercePaymentProviderToStr(AProvider: TCommercePaymentProvider): string;
 function CommerceOrderStatusToStr(AStatus: TCommerceOrderStatus): string;
@@ -233,6 +241,9 @@ function StrToCommerceEntitlementStatus(const S: string): TCommerceEntitlementSt
 
 implementation
 
+uses
+  DeepBase.TimeSource;
+
 { EDeepBaseCommerceOrphanedOrderError }
 
 constructor EDeepBaseCommerceOrphanedOrderError.Create(const AOrderId, AMessage: string);
@@ -241,12 +252,19 @@ begin
   OrderId := AOrderId;
 end;
 
-function CommerceNowISO: string;
-var
-  UTCNow: TDateTime;
+function CommerceNowUtc: TDateTime;
 begin
-  UTCNow := TTimeZone.Local.ToUniversalTime(Now);
-  Result := DateToISO8601(UTCNow, False);
+  // TimeSource 的读数按 naive-local 框架给出（缺省即 System.SysUtils.Now，注入值同框架），
+  // 换算成 UTC 裸值后才能和 DateToISO8601(..., True) 产出、TryISO8601ToDate(..., True) 读回的
+  // 值落在同一框架里比较。
+  Result := TTimeZone.Local.ToUniversalTime(TDeepBaseTimeSource.Shared.Now);
+end;
+
+function CommerceNowISO: string;
+begin
+  // AUTCDate=True 才会写 'Z'：RTL 的 False 分支只是给数值补上本地偏移后缀，并不换算，
+  // 用它包裹 UTC 裸值会让字符串指向比本意早一个偏移量的瞬时（实测见 B10 探针）。
+  Result := DateToISO8601(CommerceNowUtc, True);
 end;
 
 function NormalizeGuidText(const AText: string): string;
@@ -488,7 +506,7 @@ end;
 
 function IsCommerceEntitlementUsable(const AEntitlement: TCommerceEntitlementData): Boolean;
 var
-  ValidUntil, LastValidated, GraceExpiry: TDateTime;
+  ValidUntil, LastValidated, GraceExpiry, NowUtc: TDateTime;
 begin
   if AEntitlement.Status <> cesActive then
     Exit(False);
@@ -496,16 +514,18 @@ begin
     Exit(False);
   if AEntitlement.ValidUntilISO = '' then
     Exit(True);
-  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+  // 只取一次「现在」：两次读数之间水位被推进会让宽限期判定与可用性判定用到不同瞬时
+  NowUtc := CommerceNowUtc;
+  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, True) then
     Exit(False);
-  if ValidUntil > TTimeZone.Local.ToUniversalTime(Now) then
+  if ValidUntil > NowUtc then
     Exit(True);
   if (AEntitlement.OfflineGraceDays > 0) and
      (AEntitlement.LastValidatedISO <> '') and
-     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, False) then
+     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, True) then
   begin
     GraceExpiry := LastValidated + AEntitlement.OfflineGraceDays;
-    Result := GraceExpiry > TTimeZone.Local.ToUniversalTime(Now);
+    Result := GraceExpiry > NowUtc;
   end
   else
     Result := False;

@@ -1,0 +1,45 @@
+== WO-20260928-AUDIT-乙-B10 B10-1 RTL ISO-8601 双向语义实测探针 ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 命令: dcc64 编译 附件/B10IsoProbe.dpr.template 实体化件 → 运行 → iconv -f GBK -t UTF-8 ==
+== 说明: 机器时区 UTC+8；Delphi 控制台重定向输出为 cp936，入证据库前必须转 UTF-8，否则证据编码门判非法 ==
+== 采集时刻(UTC): 2026-09-29T07:36:05Z ==
+
+Now (local bare)              = 2026-09-29T14:59:56
+ToUniversalTime(Now)          = 2026-09-29T06:59:56
+本机 UtcOffsetHours (实测差值) = 8.00
+TTimeZone.Local.UtcOffset     = 480 分钟
+
+== 1. 写侧 DateToISO8601 两个分支输出什么，读侧两种模式取回什么 ==
+  [写侧入参=UTC 裸值, AUTCDate=False] 写侧值=2026-09-29T06:59:56 字符串=2026-09-29T06:59:56.747+08:00
+      parse AReturnUTC=FALSE => 2026-09-29T06:59:56  与写侧值差(分钟)=0
+      parse AReturnUTC=TRUE => 2026-09-28T22:59:56  与写侧值差(分钟)=-480
+  [写侧入参=UTC 裸值, AUTCDate=True ] 写侧值=2026-09-29T06:59:56 字符串=2026-09-29T06:59:56.747Z
+      parse AReturnUTC=FALSE => 2026-09-29T14:59:56  与写侧值差(分钟)=480
+      parse AReturnUTC=TRUE => 2026-09-29T06:59:56  与写侧值差(分钟)=0
+  [写侧入参=本地裸值, AUTCDate=False] 写侧值=2026-09-29T14:59:56 字符串=2026-09-29T14:59:56.747+08:00
+      parse AReturnUTC=FALSE => 2026-09-29T14:59:56  与写侧值差(分钟)=0
+      parse AReturnUTC=TRUE => 2026-09-29T06:59:56  与写侧值差(分钟)=-480
+  [写侧入参=本地裸值, AUTCDate=True ] 写侧值=2026-09-29T14:59:56 字符串=2026-09-29T14:59:56.747Z
+      parse AReturnUTC=FALSE => 2026-09-29T22:59:56  与写侧值差(分钟)=480
+      parse AReturnUTC=TRUE => 2026-09-29T14:59:56  与写侧值差(分钟)=0
+
+== 2. 对端发 Zulu 时的过期判定阈值扫描（H=真实剩余小时数）==
+   现产:   parse(False) 与 ToUniversalTime(Now) 比较（两侧框架不同）
+   修法A:  parse(True)  与 ToUniversalTime(Now) 比较（两侧同 UTC 裸值）
+   修法B:  parse(False) 与 Now 比较（两侧同本地裸值）
+  H=-10 h  expires_at=2026-09-28T20:59:56Z  parse(False)=2026-09-29T04:59:56  parse(True)=2026-09-28T20:59:56  现产判过期=True  修法A判过期=True  修法B判过期=True
+  H=-1 h  expires_at=2026-09-29T05:59:56Z  parse(False)=2026-09-29T13:59:56  parse(True)=2026-09-29T05:59:56  现产判过期=False  修法A判过期=True  修法B判过期=True
+  H=0 h  expires_at=2026-09-29T06:59:56Z  parse(False)=2026-09-29T14:59:56  parse(True)=2026-09-29T06:59:56  现产判过期=False  修法A判过期=True  修法B判过期=True
+  H=1 h  expires_at=2026-09-29T07:59:56Z  parse(False)=2026-09-29T15:59:56  parse(True)=2026-09-29T07:59:56  现产判过期=False  修法A判过期=False  修法B判过期=False
+  H=8 h  expires_at=2026-09-29T14:59:56Z  parse(False)=2026-09-29T22:59:56  parse(True)=2026-09-29T14:59:56  现产判过期=False  修法A判过期=False  修法B判过期=False
+  H=14 h  expires_at=2026-09-29T20:59:56Z  parse(False)=2026-09-30T04:59:56  parse(True)=2026-09-29T20:59:56  现产判过期=False  修法A判过期=False  修法B判过期=False
+
+== 3. 仓内自托管写侧 -> 读侧往返（Service.GrantEntitlementForOrder 现产口径）==
+   现产写侧字符串 = 2026-09-29T06:59:56.747+08:00
+   parse(False) = 2026-09-29T06:59:56  距 UTC 裸值(分钟) = 0
+   parse(True)  = 2026-09-28T22:59:56  距 UTC 裸值(分钟) = -480
+
+== 4. 写侧改 AUTCDate=True（Zulu）后同一读侧两种模式 ==
+   改后写侧字符串 = 2026-09-29T06:59:56.747Z
+   parse(False) = 2026-09-29T14:59:56  距本地裸值(分钟) = 0
+   parse(True)  = 2026-09-29T06:59:56  距 UTC 裸值(分钟) = 0

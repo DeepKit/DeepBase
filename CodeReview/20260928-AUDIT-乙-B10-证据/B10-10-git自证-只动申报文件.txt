@@ -1,0 +1,36 @@
+== WO-20260928-AUDIT-乙-B10 B10-10 提交范围自证（判据 6） ==
+== 基准 commit: 7e2ba25baa2f3289bb1df98bb6982a507c0be860 ==
+== 命令: git status --porcelain=v1（tracked 面） + git diff --name-only + git diff --stat ==
+== 说明: 禁动区（Licensing/TimeGuard/contracts/Tests/Integration/DeepBaseTests.dpr|.dproj/TestResults）零命中 ==
+== 采集时刻(UTC): 2026-09-29T07:36:05Z ==
+
+---- tracked 改动清单 ----
+ M Features/DeepBase.Commerce.Permissions.pas
+ M Features/DeepBase.Commerce.SafeClient.pas
+ M Features/DeepBase.Commerce.Service.pas
+ M Features/DeepBase.Commerce.Types.pas
+ M Tests/Test.DeepBase.Commerce.pas
+
+---- git diff --name-only ----
+Features/DeepBase.Commerce.Permissions.pas
+Features/DeepBase.Commerce.SafeClient.pas
+Features/DeepBase.Commerce.Service.pas
+Features/DeepBase.Commerce.Types.pas
+Tests/Test.DeepBase.Commerce.pas
+
+---- git diff --stat ----
+ Features/DeepBase.Commerce.Permissions.pas |   8 +-
+ Features/DeepBase.Commerce.SafeClient.pas  |   7 +-
+ Features/DeepBase.Commerce.Service.pas     |  11 +-
+ Features/DeepBase.Commerce.Types.pas       |  40 +++--
+ Tests/Test.DeepBase.Commerce.pas           | 259 +++++++++++++++++++++++++++++
+ 5 files changed, 305 insertions(+), 20 deletions(-)
+
+---- 禁动区命中检查（应全为 0） ----
+Features/DeepBase.Licensing.pas = 0
+Features/DeepBase.TimeGuard.pas = 0
+contracts = 0
+Tests/DeepBaseTests.dpr = 0
+Tests/DeepBaseTests.dproj = 0
+Tests/Integration = 0
+TestResults = 0
