@@ -239,4 +239,4 @@ E3 双重编码命中 240 行 / 21 件（存量登记 21 件封顶，逐条 路�
   CodeReview/_audit_recheck/乙-R3-gate-output.txt:9: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?M1, M2 杩濊锛? 鎵樼鎷疯礉闂ㄧ澶辫触锛岃繚瑙?3 椤? M1 Move/鎵樼绫诲瀷瑁告嫹璐? src/Bad_M1.pas:7 M2 鏈瘎瀹＄殑瑁稿唴瀛?Move 璋冪敤 (褰撳墠 1 > 鍩虹 → 门禁输出（预期包�?M1, M2 违规�? 托管拷贝门禁失败，违�?3 �? M1 Move/托管类型裸拷�? src/Bad_M1.pas:7 M2 未评审的裸内�?Move 调用 (当前 1 > 基线 0): src/Bad_M1.pa（替换符 6/63）
   CodeReview/_audit_recheck/乙-R3-gate-output.txt:13: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1384 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1384 个文件（.pas CRLF / .md LF�?（替换符 1/15）
   CodeReview/_audit_recheck/乙-R3-gate-output.txt:17: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤? L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md L1 .pas 婧愮爜闈為鏈熺函 LF → 门禁输出（预期包�?L1, L2, L3 违规�? 行尾门禁失败，违�?3 �? L2 .md 文档非预期包�?CRLF (要求 LF): docs/Bad_CRLF.md L1 .pas 源码非预期纯 LF (要求 CRLF): src/（替换符 6/44）
-证据编码门禁通过：扫描 938 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+证据编码门禁通过：扫描 950 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
