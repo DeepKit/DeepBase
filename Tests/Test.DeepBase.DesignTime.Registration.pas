@@ -161,4 +161,7 @@ begin
     'Design-time package dclDeepBaseFMX.dpk should exist');
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TDesignTimeRegistrationTests);
+
 end.

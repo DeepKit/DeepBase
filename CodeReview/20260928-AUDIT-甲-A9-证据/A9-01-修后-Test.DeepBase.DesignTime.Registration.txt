@@ -1,0 +1,20 @@
+== 编译一次性 runner（单元: Test.DeepBase.DesignTime.Registration） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23359 lines, 1.08 seconds, 2563600 bytes code, 361584 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DesignTime.Registration）--hidebanner ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
