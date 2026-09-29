@@ -155,4 +155,7 @@ begin
   end;
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TBUG330_SQLiteReaderSchemaCacheTest);
+
 end.
