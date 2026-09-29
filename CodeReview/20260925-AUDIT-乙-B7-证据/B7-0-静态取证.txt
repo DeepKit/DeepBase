@@ -1,0 +1,95 @@
+# B7-R09 停等期只读取证：工单 §一「代码事实」逐项实测复算（2026-09-28 · HEAD 59a1a24）
+
+## 1) 前置②核对：甲 A5-R09 Core 侧时间源符号是否在 HEAD
+$ rg -n "GetCorrectedNow|VerifyTime|TTimeSource|TimeSource|SetTimeSource|IClock|NowFunc|TimeProvider" Core/
+  => 命中 0：Core 侧无任何时间源注入符号
+$ git log --all --oneline --grep="A5-R09"
+  => 命中 0：任何 ref 均无 A5-R09 提交
+$ rg -n "\bNow\b" Core/DeepBase.License.pas
+192:  Result := (ExpiresAt > 0) and (Now > ExpiresAt);
+199:  else if Now > ExpiresAt then
+202:    Result := DaysBetween(Now, ExpiresAt);
+366:    JsonObj.AddPair('i', TJSONNumber.Create(DateTimeToUnix(Now)));
+  => Core 侧仍裸 Now（IsExpired 未接时间源）⇒ 甲段未落地实锤
+
+## 2) 目标文件漂移核对
+$ git log -1 -- Features/DeepBase.Licensing.pas
+dfa6b130 2026-07-15 fix: REVIEW5-R2/R3 审阅修复闭环 + 异常悬垂(BUG-438/439) + 编译健康(BUG-446~448) + LLM 模板提取
+$ git diff --stat 2dcd1ae HEAD -- Features/
+  => 空 ⇒ 自工单重锚点起 Features/ 零漂移，行号仍可信
+
+## 3) Licensing.pas 全文 \bNow\b 清单（工单记 4 处）
+$ rg -n "\bNow\b" Features/DeepBase.Licensing.pas
+689:  var NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+837:    Result := Now;
+968:  var StartTime := Now;
+974:    if SecondsBetween(StartTime, Now) >= TimeoutSec then
+
+## 4) fail-open 三点实测
+--- Licensing.pas:832-846 ---
+function TDeepLicensing.GetCorrectedNow: TDateTime;
+begin
+  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+    Result := FTimeGuard.GetCorrectedNow
+  else
+    Result := Now;
+end;
+
+function TDeepLicensing.IsTimeTrusted: Boolean;
+begin
+  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+    Result := FTimeGuard.IsTimeTrusted
+  else
+    Result := True;  // Trust by default if not verified
+end;
+--- TimeGuard.pas:462-470（只读登记，本单不改）---
+function TTimeGuard.GetCorrectedNow: TDateTime;
+begin
+  if FVerified and (FServerTimeOffset <> 0) then
+    Result := Now + FServerTimeOffset
+  else
+    Result := Now;
+end;
+
+function TTimeGuard.IsTimeTrusted: Boolean;
+
+## 5) VerifyTime 是否入链（工单称未接入任何过期判定链）
+$ rg -n "GetCorrectedNow|IsTimeTrusted|VerifyTime|FTimeGuard" Features/DeepBase.Licensing.pas
+115:    FTimeGuard: TTimeGuard;
+231:    function VerifyTime: TTimeGuardResult;
+237:    function GetCorrectedNow: TDateTime;
+240:    function IsTimeTrusted: Boolean;
+310:    property TimeGuard: TTimeGuard read FTimeGuard;
+394:  FTimeGuard.Free;
+821:function TDeepLicensing.VerifyTime: TTimeGuardResult;
+824:  if FTimeGuard = nil then
+826:    FTimeGuard := TTimeGuard.Create(FConfig.AppID + '.timeguard');
+827:    FTimeGuard.SetServerUrl(FConfig.ServerBaseURL);
+829:  Result := FTimeGuard.Verify;
+832:function TDeepLicensing.GetCorrectedNow: TDateTime;
+834:  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+835:    Result := FTimeGuard.GetCorrectedNow
+840:function TDeepLicensing.IsTimeTrusted: Boolean;
+842:  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+843:    Result := FTimeGuard.IsTimeTrusted
+  => VerifyTime/GetCorrectedNow/IsTimeTrusted 只在 TimeGuard 段落内自洽，:689 判时点与 :837 之外无任何调用方 ⇒ 未入链属实
+
+## 6) 引用面（全仓谁在用 TimeGuard / Licensing）
+$ rg -ln "DeepBase\.TimeGuard" 各面
+.\DeepBaseCommerce.dpk
+.\Features\DeepBase.Licensing.pas
+.\Features\DeepBase.TimeGuard.pas
+$ rg -ln "DeepBase\.Licensing" 各面
+.\DeepBaseCommerce.dpk
+.\Features\DeepBase.Licensing.pas
+  => 实际消费方只有 DeepBaseCommerce.dpk；工单 §修法-4 点名的 VCL/FMX/Studio/Unlock/FullDemo 全部只引用 Core 的 DeepBase.License，不引用 Features 的 DeepBase.Licensing ⇒ 本单爆炸面比工单描述更小
+
+## 7) 回拨防护的测试注入面（TimeGuard 已有 seam）
+$ rg -n "SetHttpTransport|SetSecretStore|property Verified|LastVerifyResult" Features/DeepBase.TimeGuard.pas
+129:    procedure SetHttpTransport(const ATransport: ITimeGuardHttpTransport);
+132:    procedure SetSecretStore(const AStore: ITimeGuardSecretStore);
+161:    property LastVerifyResult: TTimeGuardResult read FLastVerifyResult;
+170:    property Verified: Boolean read FVerified;
+337:procedure TTimeGuard.SetHttpTransport(const ATransport: ITimeGuardHttpTransport);
+342:procedure TTimeGuard.SetSecretStore(const AStore: ITimeGuardSecretStore);
+  => TimeGuard 侧可注入；TDeepLicensing 侧 FTimeGuard 为私有且只在 VerifyTime 内懒建 ⇒ 单测无法从 Licensing 外部控制时钟

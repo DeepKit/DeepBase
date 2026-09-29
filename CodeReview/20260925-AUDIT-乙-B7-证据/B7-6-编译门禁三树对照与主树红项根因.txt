@@ -1,0 +1,53 @@
+== WO-20260925-AUDIT-乙-B7 B7-6 编译门禁（T0 生产契约面）三树对照 + 主树红项根因 ==
+基准 commit 全部为 604d05a1e7289c5fb5069fcce66c25cfc2258cf7
+命令（各树树根）：
+  export DEEPBASE_BDS="D:/Program Files (x86)/Embarcadero/Studio/37.0"
+  export DEEPBASE_DUNITX_SOURCE="D:/ProgramData/delphi/DUnitX/Source"
+  node 09_工程脚本/build-gate/check_build.js --manifest 09_工程脚本/build-gate/contracts/T0-生产契约面.txt
+
+| 树 | 内容 | 结果 |
+|---|---|---|
+| A 主工作树 | HEAD + 本单改动（含未跟踪 TestResults/dcp64、BuildOutput/** 等本地缓存） | 绿 8 / 红 19，红项同一处：Core\DeepBase.Security.DPAPI.pas(554) E2251 Ambiguous overloaded call to 'SecureZeroMemory' |
+| B 仓外干净树 wt-604d05a | HEAD 原样（无本地缓存，无本单改动） | 27/27 BUILD_EXIT=0（EXIT=1 仅因噪声基线增长，见 §3） |
+| C 仓外干净树 wt-mine | HEAD + 本单两个文件（Features/DeepBase.Licensing.pas、Tests/Test.DeepBase.LicensingTimeSource.pas） | 27/27 BUILD_EXIT=0；噪声计数 Hint=793 Warning=155 与 B **逐码相同** ⇒ 本单零编译影响、零噪声增量 |
+
+## 1. 主树 19 件红的根因（正/反对照，全部在仓外树做，主树未被写）
+正对照：把主树的未跟踪目录 TestResults/dcp64（内含 2026-09-14 20:09 的 DeepBaseCore.dcp 等 16 个 .dcp）
+        整份复制进干净树 C，再跑同一张 T0 清单 ⇒ 结果 绿 8 / 红 19，红项与主树同一处同一码（E2251×38 行）。
+        ⇒ 唯一变量是这份陈旧包描述符缓存，源码与本单改动都不是变量。
+机制（读码，非猜）：
+  - DeepBaseServices.dproj 自带 <DCC_UnitSearchPath>TestResults\dcp32 / TestResults\dcp64；
+  - check_build.js:619  `searchPaths: [...dirs, env.searchPaths]` —— 工程自己声明的目录排在
+    本轮新鲜输出面 outRoot/dcp 之前 ⇒ 陈旧 .dcp 抢先解析；
+  - 于是 requires 侧拿到 9-14 的旧接口，而 DPAPI.pas 当前源码 uses Winapi.Windows(:39)
+    + DeepBase.SecureMemory(:215)，后者现有两个 overload（Core/DeepBase.SecureMemory.pas:19/:22，
+    均为 1 参），与旧接口里的同名声明并置 ⇒ :554 裸调用判为 ambiguous；
+  - 单编一个单元（不含该 .dproj 搜索路径）时同一文件 EXIT=0，与上述一致：
+      bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Core/DeepBase.Security.DPAPI.pas → BUILD_EXIT=0
+反证（同面同码，缺依赖时的红形态不同）：只跑 --dpk DeepBaseServices.dpk 且无任何 Core.dcp 时
+  报的是 DeepBaseCore.dpk(27) Fatal: E2225 Never-build package 'rtl' must be recompiled —— 与污染态不同，
+  说明污染态不是「缺依赖」而是「依赖解析到了旧接口」。
+
+## 2. 结论与归属
+- 主树 T0 的 19 件红**不是代码断裂**，也不是本单引入：同一份本单改动在干净树 C 上 27/27 绿。
+- 缺陷面（登记，不属 B7，B7 §〇-3 禁动 Core 与门禁面）：
+  ① 把输出目录当输入路径（.dproj 的 TestResults\dcp*）＝ 输入面 SSOT 破口，陈旧产物可把干净代码判红；
+  ② 门禁排序让工程自带路径优先于本轮输出面，等于给陈旧缓存让路；
+  ③ 判定面对本地未跟踪缓存敏感 ⇒ 同一 commit 在两台机器可得不同结论（可复现性缺口）。
+  处置建议（交主控裁定，本单不代改）：门禁侧把本轮 outRoot/dcp 排在工程自带路径之前，
+  或在校验阶段拒绝 .dproj 把输出目录声明为输入路径；本地清缓存属可逆动作但需属线确认。
+
+## 3. 与前例的关系（本单的增量＝把归因钉到机制）
+  - `CodeReview/20260925-AUDIT-甲-A2-交付回执.md` §二「主树 dirty 污染留证」把同码红归因于
+    「他人未提交的 Features/DeepBase.Updater.pas 在树内」（脏 tracked 文件）；
+  - `CodeReview/20260924-AUDIT-主控-封版记录.md` 把同码红归因为「本机陈旧 DCU 污染」。
+  - 本次增量：主树除本单两个文件外 tracked 面干净（git status 为证）仍红 19 件，
+    而把 `TestResults/dcp64` 一份拷进干净树即可复现同一 8/19 ⇒ 污染源是**未跟踪的陈旧 .dcp
+    （包描述符）经工程自带搜索路径进入输入面**，不是脏 tracked 文件，也不只是 .dcu。
+    归因修正与处置建议见 §2，供门禁属线取用。
+
+## 4. 既存噪声基线增长（两棵干净树 B/C 相同，与本单无关）
+  H2077: 当前 425 > 基线 401    H2219: 当前 141 > 基线 139
+  H2443: 当前 175 > 基线 118    H2269: 当前 5 > 基线 4
+  ⇒ T0 门在 HEAD 上即 EXIT=1（噪声口径），非本单引入；登记给噪声基线属线重发（--emit-baseline 须来自真实修复后）。
+  噪声逐码归因的 SSOT 在甲 A7-02（`CodeReview/20260926-AUDIT-甲-A7-证据/A7-02-归因表-码x工程x单元x条数.md`），此处不重述。

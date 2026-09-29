@@ -1,0 +1,19 @@
+== WO-20260925-AUDIT-乙-B7 B7-8 静态自证：判时点裸时钟读数清零 ==
+基准 commit: 344746967273f809f5bf0c0501e40a3f3a988280 + 本单工作树改动
+
+$ grep -nE '\bNow\b' Features/DeepBase.Licensing.pas
+722:  var NowLocal := TDeepBaseTimeSource.Shared.Now;
+882:  Result := TDeepBaseTimeSource.Shared.Now;
+1011:  var StartTime := Now;
+1017:    if SecondsBetween(StartTime, Now) >= TimeoutSec then
+
+$ grep -nE '\bDate\b|TodayDate|UnixToDateTime|DateTimeToUnix|LocalTimeTo|UTCToLocal|SecondsBetween|DaysBetween|MillisecondsBetween' Features/DeepBase.Licensing.pas
+37:  Date: 2026-06-16
+726:  Result := DaysBetween(NowLocal, ExpiresAt);
+1017:    if SecondsBetween(StartTime, Now) >= TimeoutSec then
+
+$ grep -n 'TDeepBaseTimeSource' Features/DeepBase.Licensing.pas
+719:  // parsed without UTC conversion, and TDeepBaseTimeSource is the same clock the
+722:  var NowLocal := TDeepBaseTimeSource.Shared.Now;
+874:    TDeepBaseTimeSource.Shared.SeedWatermark(FTimeGuard.GetCorrectedNow);
+882:  Result := TDeepBaseTimeSource.Shared.Now;

@@ -1,0 +1,277 @@
+== WO-20260925-AUDIT-乙-B7 B7-3 反事实（变异）探针：三处判定式逐个改回错误行为 ==
+基准 commit: 604d05a1e7289c5fb5069fcce66c25cfc2258cf7（工作树含本单改动）
+SUT: Features/DeepBase.Licensing.pas   测试单元: Tests/Test.DeepBase.LicensingTimeSource.pas
+命令（每次一笔变异，脚本自带 trap 还原 + 三步判定 fail-closed：基线必须绿/变异必须红/还原必须绿，否则 EXIT=4）：
+  ROOT=$(pwd)
+  MSYS2_ARG_CONV_EXCL='*' PATH="$ROOT/Tests:$PATH"     bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_counterfactual.sh       Tests/Test.DeepBase.LicensingTimeSource.pas Features/DeepBase.Licensing.pas '<perl -pe>'
+（脚本内 clean() 会把含非 ASCII 的行从步骤产物里剔除，故本证据中的跑录为纯 ASCII 行；中文断言消息原文见 B7-2）
+
+############################################################################
+## M1 判时点退回裸墙钟（双轨时钟复现）
+## perl 表达式: s/var NowLocal := TDeepBaseTimeSource\.Shared\.Now;/var NowLocal := System.SysUtils.Now;/
+############################################################################
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/var NowLocal := TDeepBaseTimeSource\.Shared\.Now;/var NowLocal := System.SysUtils.Now;/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -719,7 +719,7 @@
+   // parsed without UTC conversion, and TDeepBaseTimeSource is the same clock the
+   // Core licence and key expiry checks read. Converting the wall clock to UTC
+   // before comparing would mix two time frameworks.
+-  var NowLocal := TDeepBaseTimeSource.Shared.Now;
++  var NowLocal := System.SysUtils.Now;
+   if ExpiresAt <= NowLocal then
+     Exit(0);
+ 
+---- 变异后真跑（应红） ----
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_TrialDays_FollowInjectedCoreClockNotWallClock
+  Message: Expected [7] but got [1624] Trial days must be computed from the injected Core clock
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_RewoundClockAfterWatermark_ExpiredTrialStaysExpired
+  Message: Expected [0] but got [1624] Trial must read as expired once the clock passed its expiry
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_MinorSkewClock_StillTrusted_TrialDaysUnchanged
+  Message: Expected [7] but got [1624] A tolerated skew must not shorten the trial verdict
+
+
+RUNNER_STATS fixtureCount=1 testCount=7 pass=4 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+
+############################################################################
+## M2 fail-closed 门整体摘除（回到 trust-by-default）
+## perl 表达式: s/if not IsTimeTrusted then/if False then/g
+############################################################################
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if not IsTimeTrusted then/if False then/g ====
+---- 变异 diff（相对还原基线） ----
+@@ -704,7 +704,7 @@
+ 
+   // Fail-closed: an unverified or rewound clock must not be used to grant trial
+   // days, because the whole point of the check is that this reading can be faked.
+-  if not IsTimeTrusted then
++  if False then
+     Exit(0);
+ 
+   var ExpiresStr := GetConfigStr(CFG_TRIAL_EXPIRES, '');
+@@ -876,7 +876,7 @@
+ 
+ function TDeepLicensing.GetCorrectedNow: TDateTime;
+ begin
+-  if not IsTimeTrusted then
++  if False then
+     raise EDeepBaseLicensingTimeUntrusted.Create(
+       'Licensing clock is not verified or was rewound; corrected time refused');
+   Result := TDeepBaseTimeSource.Shared.Now;
+---- 变异后真跑（应红） ----
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_ClockRewoundByGuard_TrialRejectedAndCorrectedNowRefused
+  Message: Expected [0] but got [397] A rewound clock must not grant trial days
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_NeverVerifiedFacade_ReportsUntrustedAndRefusesCorrectedNow
+  Message: Method did not throw any exceptions.
+GetCorrectedNow must fail closed before any clock was verified
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_MajorSkewClock_RefusedAndNotSeededIntoCoreClock
+  Message: Expected [0] but got [397] A major skew clock must not grant trial days
+
+
+RUNNER_STATS fixtureCount=1 testCount=7 pass=4 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+
+############################################################################
+## M3 水位播种条件取反（受信不播、被拒反播）
+## perl 表达式: s/if Result in \[tgOk, tgSkewMinor\] then/if not (Result in [tgOk, tgSkewMinor]) then/
+############################################################################
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/if Result in \[tgOk, tgSkewMinor\] then/if not (Result in [tgOk, tgSkewMinor]) then/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -870,7 +870,7 @@
+   // watermark, which only ever moves forward: a server-side or tampered-ahead
+   // reading can shorten the remaining licence window but can never extend it,
+   // and MajorSkew/Rewound readings are never trusted enough to be seeded.
+-  if Result in [tgOk, tgSkewMinor] then
++  if not (Result in [tgOk, tgSkewMinor]) then
+     TDeepBaseTimeSource.Shared.SeedWatermark(FTimeGuard.GetCorrectedNow);
+ end;
+ 
+---- 变异后真跑（应红） ----
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+...........F..
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_MajorSkewClock_RefusedAndNotSeededIntoCoreClock
+  Message: Condition is False when True expected. [A refused reading must not seed the monotonic watermark]
+
+
+RUNNER_STATS fixtureCount=1 testCount=7 pass=6 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Licensing.pas ==
+
+
+== 汇总 ==
+M1 ⇒ 3 红（Test_TrialDays_FollowInjectedCoreClockNotWallClock / Test_RewoundClockAfterWatermark_ExpiredTrialStaysExpired / Test_MinorSkewClock_StillTrusted_TrialDaysUnchanged）
+M2 ⇒ 3 红（Test_ClockRewoundByGuard_TrialRejectedAndCorrectedNowRefused / Test_NeverVerifiedFacade_ReportsUntrustedAndRefusesCorrectedNow / Test_MajorSkewClock_RefusedAndNotSeededIntoCoreClock）
+M3 ⇒ 1 红（Test_MajorSkewClock_RefusedAndNotSeededIntoCoreClock）
+三笔 EXIT 均为 0（基线绿 / 变异红 / 还原绿），SUT 终局 git diff = 本单申报改动，无变异残留。

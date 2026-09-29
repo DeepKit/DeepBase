@@ -1,0 +1,43 @@
+== WO-20260925-AUDIT-乙-B7 B7-5 既存红项根因：单 fixture runner 的链接面，非本单改动 ==
+实验全部在仓外隔离工作树 D:/_ProgData/DeepBase-B7-wt/wt-604d05a（@604d05a，不含本单改动）内做，
+主工作树 Tests/ 未被触碰（实验后 git status -- Tests/ 仅本单新单元一项）。
+
+1) 现象（修前树与修后树同集合，见 B7-4）
+   Test.DeepBase.Unlock.Test_ApplyCode_PersistsLevelAndCode
+     Expected [1] but got [0] StoredLevel should be ulFollow
+   Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_WrongPassword_FailsFast
+   Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_ForeignMachineBinding_FailsClosed
+     No assertions were made during the test
+
+2) 定位链（读代码，非猜）
+   TDeepBaseUnlock.SetStoredLevel -> DeepBase.Config.SetConfig(Key, Value, 'Unlock')
+   unit 级 SetConfig/GetConfig 全部经 UBConfig（= DeepBase.Manager.DeepBase.Config）；
+   TDeepBaseConfig.WriteToDB / ReadFromDB 在 FStorage = nil 时静默 no-op / 静默返回 Default：
+     Core/DeepBase.Config.pas:  if Assigned(FStorage) then FStorage.WriteValue(...)
+   FStorage 由 TConnectionStorageFactory<IConfigStorage> 建立，工厂注册在
+   Persistence/DeepBase.Persistence.Config.FireDAC.pas 的 initialization 里；
+   而 Tests/Test.DeepBase.Unlock.pas 的 uses 面只有 DeepBase.Manager + DeepBase.Unlock。
+   => 单 fixture runner 只链本 fixture 单元时，Persistence 面缺席：
+      InitializeWithDB 失败或 config 存储为空壳，而测试 Setup 不检查其返回值
+      （DeepBase.Manager.InitializeWithDB 返回 Boolean，Setup 直接丢弃），
+      于是写入静默 no-op，断言只能读到默认值 'Free'。
+
+3) 复现实验（隔离树内逐步补链接面，同命令重跑）
+   步 A: 只补 DeepBase.Persistence.Manager.FireDAC
+     $ ... b2_run_fixture.sh Tests/Test.DeepBase.Unlock.pas
+     RUNNER_STATS testCount=5 pass=4 failure=1  （仍红：缺 SQLite driver link）
+   步 B: 再补 FireDAC.Phys.SQLite + FireDAC.Phys.SQLiteDef
+     $ ... b2_run_fixture.sh Tests/Test.DeepBase.Unlock.pas
+     RUNNER_STATS testCount=5 pass=5 failure=0 error=0 / RUN_EXIT=0   （转绿）
+   旁证：本单新单元 Tests/Test.DeepBase.LicensingTimeSource.pas 从一开始就把这三件单元
+   写进 implementation uses，并在 Setup 里 Assert.IsTrue(InitializeWithDB(...), LastError)，
+   同 runner 下 7/7 绿（B7-2），说明红项确实由链接面 + 未检查返回值造成。
+   旁证2：Tests/DeepBaseTests.dpr:378 已链接 DeepBase.Persistence.Manager.FireDAC，
+   全量测试二进制里这些用例不缺依赖 —— 红只出现在“单 fixture 一次性 runner”这条取证面上。
+
+4) 归属与处置（不属 B7 范围，只登记不顺手改）
+   - 缺陷面：既有测试的 Setup 丢弃 InitializeWithDB 返回值 ⇒ 环境缺依赖时用例退化为
+     对空壳存储做断言（甲 A9 / 乙 B9 同族的“假覆盖”形态）。修法归各测试单元属线 +
+     主控 dpr 注册收口，B7 §〇-3/§一④ 明令本单不碰 Unlock/其他测试单元。
+   - 取证面处置：本单用单 fixture runner 做不回归对照时，把上述三件红项按“链接面产物”
+     点名登记，不当作本单引入的红，也不用它们给本单加减分。

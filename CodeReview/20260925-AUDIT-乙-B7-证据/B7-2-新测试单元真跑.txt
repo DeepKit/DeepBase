@@ -1,0 +1,33 @@
+== WO-20260925-AUDIT-乙-B7 B7-2 新测试单元真跑（假时钟注入，7 用例） ==
+$ git rev-parse HEAD = 604d05a1e7289c5fb5069fcce66c25cfc2258cf7
+命令:
+  ROOT=$(pwd)
+  MSYS2_ARG_CONV_EXCL='*' PATH="$ROOT/Tests:$PATH" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.LicensingTimeSource.pas
+（sqlite3.dll 走 Tests/ 目录进 PATH；runner 用 附件/B2FixtureRunner.dpr.template 每次重建，只注册本单元）
+
+== 编译一次性 runner（单元: Test.DeepBase.LicensingTimeSource） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+50807 lines, 2.11 seconds, 6649080 bytes code, 737504 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.LicensingTimeSource） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

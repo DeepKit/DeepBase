@@ -1,0 +1,80 @@
+# B7-R09 停等期只读准备：既有 License 相关 fixture 子集修前基线（真跑原始输出）
+# 采集时间 2026-09-28 · 采集时 HEAD 59a1a24 · 探针 CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh
+# 用途：甲 A5-R09 符号落地后，本单不回归判据的比对基线（工单 §一 判据-不回归）。本文件属停等期只读准备，未提交。
+
+## 0) 清单来源：rg -ln "License" Tests/*.pas
+Tests/Test.DeepBase.Commerce.pas
+Tests/Test.DeepBase.DB.Upsert.PBT.pas
+Tests/Test.DeepBase.LicenseSecret.pas
+Tests/Test.DeepBase.License.pas
+Tests/Integration/Test.Integration.CommerceE2E.pas
+
+######## Tests/Test.DeepBase.License.pas ########
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(566) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+38963 lines, 1.56 seconds, 3551736 bytes code, 451712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.License）--hidebanner ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................................
+
+Tests Found   : 16
+Tests Ignored : 0
+Tests Passed  : 16
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=16 pass=16 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## Tests/Test.DeepBase.Commerce.pas ########
+Features\DeepBase.Commerce.SafeClient.pas(1036) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1060) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1061) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+39399 lines, 1.72 seconds, 4292856 bytes code, 523784 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce）--hidebanner ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............................................................................................................................
+
+Tests Found   : 62
+Tests Ignored : 0
+Tests Passed  : 62
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=62 pass=62 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## Tests/Integration/Test.Integration.CommerceE2E.pas （需 DEEPBASE_EXTRA_U=Tests/Integration）########
+Tests Found   : 1
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 1
+
+Tests With Errors
+
+  Test.Integration.CommerceE2E.TCommerceDesktopE2ETests.Test_FreeUser_UpgradeToPro_UnlocksFeatureAndPaidUpdateChannel
+  Message: License snapshot has expired
+
+
+RUNNER_STATS fixtureCount=1 testCount=1 pass=0 failure=0 error=1 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+######## Tests/Test.DeepBase.LicenseSecret.pas ########
+26698 lines, 1.16 seconds, 2549552 bytes code, 360552 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.LicenseSecret）--hidebanner ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2

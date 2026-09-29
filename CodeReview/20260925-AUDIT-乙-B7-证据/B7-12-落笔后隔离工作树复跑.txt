@@ -1,0 +1,49 @@
+== WO-20260925-AUDIT-乙-B7 B7-12 落笔后隔离 --detach 工作树复跑（交付 commit 自证，§〇-6）==
+目标 commit: eb93e2385d969f24cd21ba5090b7fce0a95e97bc（本单代码笔，= Features/DeepBase.Licensing.pas + Tests/Test.DeepBase.LicensingTimeSource.pas）
+建树（仓外，不动主树）：
+  $ git worktree add --detach D:/_ProgData/DeepBase-B7-wt/wt-eb93e23 eb93e23
+  HEAD is now at eb93e238 ...   git status --short 输出为空（干净检出，无本单外的任何改动）
+运行期依赖：Tests/sqlite3.dll 未被跟踪（R6-N2 面），按主树原件复制进隔离树，非本单改动。
+探针：CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh 与 b2_run_fixture.sh（附件/B2FixtureRunner.dpr.template 每次重建，只挂指定单元；FailsOnNoAsserts=True）
+
+######## 1) 单件编译（两文件逐件喂 dcc64）########
+$ MSYS2_ARG_CONV_EXCL='*' bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_unit_compile.sh Features/DeepBase.Licensing.pas Tests/Test.DeepBase.LicensingTimeSource.pas
+  == Features/DeepBase.Licensing.pas                     : 24368 lines, 1.49 s  BUILD_EXIT=0
+  == Tests/Test.DeepBase.LicensingTimeSource.pas          : 49569 lines, 2.05 s  BUILD_EXIT=0
+  == 探针汇总（任一非 0 ⇒ 总 EXIT=1）                      : 0
+
+######## 2) 本单新单元全限定真跑 ########
+$ b2_run_fixture.sh Tests/Test.DeepBase.LicensingTimeSource.pas
+BUILD_EXIT=0
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## 3) 直接下游族不回归复跑（同 commit、同命令）########
+$ b2_run_fixture.sh Tests/Test.DeepBase.License.pas
+Tests Found   : 16
+Tests Passed  : 16
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=16 pass=16 failure=0 error=0 ignored=0
+RUN_EXIT=0
+$ b2_run_fixture.sh Tests/Test.DeepBase.Commerce.pas
+Tests Found   : 62
+Tests Passed  : 62
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=62 pass=62 failure=0 error=0 ignored=0
+RUN_EXIT=0
+
+判定：交付 commit 的隔离检出面上，本单生产单元与新测试单元单件编译均 BUILD_EXIT=0，
+新单元 7/7 绿（RUN_EXIT=0），License 子集 16/16 绿、Commerce 子集 62/62 绿（RUN_EXIT=0）
+⇒ 与 B7-4「修前/修后失败集合逐一同一」的对照在同一棵树上复现，落笔未引入新红。
+Unlock（4 pass/1 fail）与 KeyManager（39 pass/2 fail）两件的红是单 fixture runner 链接面产物，
+根因与复现已在 B7-5 定位（Setup 丢弃 InitializeWithDB 返回值 + Persistence 面缺席），
+其修前/修后同集合的对照见 B7-4，本节不重复跑同一实验。

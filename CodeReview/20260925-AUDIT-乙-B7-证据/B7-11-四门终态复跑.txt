@@ -1,0 +1,32 @@
+== WO-20260925-AUDIT-乙-B7 B7-11 四道静态门禁终态复跑（§〇-8 · 交付树含代码笔 eb93e23 + 回执 + 全证据件 + 台账行）==
+命令（主树树根）：node 09_工程脚本/<门>/check_*.js --root .   （逐道取 $? 为判定，不看自报）
+退出码：encoding=0 eol=0 mojibake=0 evidence-encoding=0（4/4）
+
+######## encoding-gate/check_pas_encoding.js ########
+结论行：
+编码门禁通过：1013 个 .pas + 741 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+
+######## eol-gate/check_eol.js ########
+结论行：
+行尾门禁通过：检查了 1601 个文件（.pas CRLF / .md LF），跳过目录 11
+
+######## mojibake-gate/check_mojibake.js ########
+结论行：
+丙类损坏门禁通过：扫描 1011 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+
+######## evidence-encoding-gate/check_evidence_encoding.js ########
+结论行：
+  CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt:5: 琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1425 涓枃浠讹紙.pas CRLF / .md LF锛? → 行尾门禁通过：检查了 1425 个文件（.pas CRLF / .md LF�?（替换符 1/15）
+证据编码门禁通过：扫描 950 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+
+与 B7-7（中途态）对照的计数变化，逐处可解释、非本单引入的损坏：
+  .pas 计数 1010 → 1011（mojibake 门扫描面）＝本单新测试单元 `Tests/Test.DeepBase.LicensingTimeSource.pas` 落笔入册——
+    该门按 `git ls-files -z -- *.pas` 的**跟踪面**计数（`check_mojibake.js:61 trackedPas()`），B7-7 时该件尚未提交故不计；
+    encoding 门按工作树计数，故两次都是 1013，两门口径差异属既存、非本单引入；
+  扩展面 739 → 741＝台账 `docs/ui/work-orders/00-主控派单总表.md` 与回执 `CodeReview/20260925-AUDIT-乙-B7-交付回执.md` 进入扫描面；
+  CodeReview 证据件 936 → 950＝本单 B7-2…B7-12 证据件；E3 命中行数 240 与存量清单 21 件封顶不变（本单证据件零 E3）。
+evidence 门输出里的提示行（`CodeReview/_audit_recheck/乙-R3-gate-output.txt`、`CodeReview/20260920-AUDIT-甲-证据/R7/R7-gates-run.txt` 等）
+均为存量清单 21 件内的既存豁免项（UTF-8 双重编码历史件，D6/R4 线登记），非本单引入。
+
+本文件自身（B7-11）由本次跑录落盘，按仓内证据件口径为 LF + UTF-8 无 BOM；
+下一轮任何工单的 evidence 门复跑都会把它纳入扫描面，本节结论不含它自己这一件，特此声明以免自证。

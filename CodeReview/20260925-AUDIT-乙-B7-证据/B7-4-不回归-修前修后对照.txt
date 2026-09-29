@@ -1,0 +1,35 @@
+== WO-20260925-AUDIT-乙-B7 B7-4 不回归：既有时间相关 fixture 子集 修前/修后同法对照 ==
+两树同一基准 commit: 604d05a1e7289c5fb5069fcce66c25cfc2258cf7
+
+修前树 = 仓外隔离 --detach 工作树（不含本单任何改动）
+  $ git worktree add --detach D:/_ProgData/DeepBase-B7-wt/wt-604d05a 604d05a
+  取证1: grep -n "TDeepBaseTimeSource" Features/DeepBase.Licensing.pas  -> 0 命中（该树未接 Core 时间源）
+  取证2: :845  Result := True;  // Trust by default if not verified      -> 修前 fail-open 原样在位
+  运行期依赖 Tests/sqlite3.dll 未被跟踪，按主树原件复制进隔离树（非本单改动）
+
+修后树 = 主工作树（含 Features/DeepBase.Licensing.pas 的本单改动 + 新测试单元）
+
+两侧逐 fixture 同命令（各自树根执行）：
+  ROOT=$(pwd)
+  MSYS2_ARG_CONV_EXCL='*' PATH="$ROOT/Tests:$PATH"     bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/<单元>.pas
+
+| fixture | 修前 @604d05a | 修后 @工作树 |
+|---|---|---|
+| Test.DeepBase.License | 16 pass / 0 fail | 16 pass / 0 fail |
+| Test.DeepBase.LicenseSecret | 2 pass / 0 fail | 2 pass / 0 fail |
+| Test.DeepBase.Commerce | 62 pass / 0 fail | 62 pass / 0 fail |
+| Test.DeepBase.Unlock | 4 pass / 1 fail | 4 pass / 1 fail |
+| Test.DeepBase.KeyManager | 39 pass / 2 fail | 39 pass / 2 fail |
+
+红项逐件点名（两树同一集合，非本单引入）：
+  Test.DeepBase.Unlock.TTestDeepBaseUnlock.Test_ApplyCode_PersistsLevelAndCode
+    Message: Expected [1] but got [0] StoredLevel should be ulFollow
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_WrongPassword_FailsFast
+    Message: No assertions were made during the test
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_ForeignMachineBinding_FailsClosed
+    Message: No assertions were made during the test
+  —— 三件均为单 fixture 一次性 runner 的链接面产物，根因与复现见 B7-5；
+     在 Products/Tests/DeepBaseTests.dpr 全量链接面下 Persistence 单元在位（dpr :378）。
+
+判定：修前/修后失败集合逐一同一，**零新增红**；本单不回归结论成立。
+A2 验收结论 §一 的「基线红名单」是编译门口径（7 件 .dpr），本节是测试门口径，两者互不替代。

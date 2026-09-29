@@ -1,0 +1,66 @@
+== WO-20260925-AUDIT-乙-B7 B7-9 开工第一步：甲 A5-R09 交付符号核对（§〇-2 硬门槛）==
+核对时 HEAD = 1f6d125（甲 A5-R09 交付笔 1f3f9dd 已在祖先链：yes）
+
+$ grep -n 'TDeepBaseTimeSource\|function Now\|SeedWatermark\|SetNowFunc\|RollbackCount\|MaxRollbackSeconds\|LastSeen\|procedure Reset\|class function Shared' Core/DeepBase.TimeSource.pas
+10:  - 水位可被外部推进（SeedWatermark，只升不降），用于把许可证里持久化的
+32:  TDeepBaseTimeSource = class
+36:    FLastSeen: TDateTime;
+37:    FRollbackCount: Integer;
+38:    FMaxRollbackSeconds: Int64;
+39:    function GetLastSeen: TDateTime;
+40:    function GetRollbackCount: Integer;
+41:    function GetMaxRollbackSeconds: Int64;
+47:    function Now: TDateTime;
+50:    procedure SetNowFunc(const ANowFunc: TDeepBaseNowFunc);
+53:    procedure SeedWatermark(const ALastSeen: TDateTime);
+56:    procedure Reset;
+58:    property LastSeen: TDateTime read GetLastSeen;
+59:    property RollbackCount: Integer read GetRollbackCount;
+60:    property MaxRollbackSeconds: Int64 read GetMaxRollbackSeconds;
+63:    class function Shared: TDeepBaseTimeSource; static;
+69:  SharedTimeSource: TDeepBaseTimeSource;
+71:{ TDeepBaseTimeSource }
+73:constructor TDeepBaseTimeSource.Create;
+78:  FLastSeen := 0;
+79:  FRollbackCount := 0;
+80:  FMaxRollbackSeconds := 0;
+83:destructor TDeepBaseTimeSource.Destroy;
+89:function TDeepBaseTimeSource.GetLastSeen: TDateTime;
+93:    Result := FLastSeen;
+99:function TDeepBaseTimeSource.GetRollbackCount: Integer;
+103:    Result := FRollbackCount;
+109:function TDeepBaseTimeSource.GetMaxRollbackSeconds: Int64;
+113:    Result := FMaxRollbackSeconds;
+119:function TDeepBaseTimeSource.Now: TDateTime;
+132:    if Reading < FLastSeen then
+135:      Inc(FRollbackCount);
+136:      RollbackSeconds := SecondsBetween(FLastSeen, Reading);
+137:      if RollbackSeconds > FMaxRollbackSeconds then
+138:        FMaxRollbackSeconds := RollbackSeconds;
+139:      Result := FLastSeen;
+143:      FLastSeen := Reading;
+151:procedure TDeepBaseTimeSource.SetNowFunc(const ANowFunc: TDeepBaseNowFunc);
+161:procedure TDeepBaseTimeSource.SeedWatermark(const ALastSeen: TDateTime);
+163:  if ALastSeen <= 0 then
+169:    if ALastSeen > FLastSeen then
+170:      FLastSeen := ALastSeen;
+176:procedure TDeepBaseTimeSource.Reset;
+181:    FLastSeen := 0;
+182:    FRollbackCount := 0;
+183:    FMaxRollbackSeconds := 0;
+189:class function TDeepBaseTimeSource.Shared: TDeepBaseTimeSource;
+195:  SharedTimeSource := TDeepBaseTimeSource.Create;
+
+$ grep -n 'TDeepBaseTimeSource' Core/DeepBase.License.pas Core/DeepBase.KeyManager.pas
+Core/DeepBase.License.pas:194:  Result := (ExpiresAt > 0) and (TDeepBaseTimeSource.Shared.Now > ExpiresAt);
+Core/DeepBase.License.pas:201:  EffectiveNow := TDeepBaseTimeSource.Shared.Now;
+Core/DeepBase.License.pas:367:  IssuedNow := TDeepBaseTimeSource.Shared.Now;
+Core/DeepBase.License.pas:488:    TDeepBaseTimeSource.Shared.SeedWatermark(LastSeenValue);
+Core/DeepBase.KeyManager.pas:324:  Result := (ExpiresAt > 0) and (TDeepBaseTimeSource.Shared.Now > ExpiresAt);
+Core/DeepBase.KeyManager.pas:332:    Result := DaysBetween(TDeepBaseTimeSource.Shared.Now, ExpiresAt);
+Core/DeepBase.KeyManager.pas:359:  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
+Core/DeepBase.KeyManager.pas:380:  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
+Core/DeepBase.KeyManager.pas:402:  FCreatedAt := TDeepBaseTimeSource.Shared.Now;
+Core/DeepBase.KeyManager.pas:564:    Key.FExpiresAt := IncDay(TDeepBaseTimeSource.Shared.Now, AExpiryDays);
+
+结论：工单 §修法-1 要求接入的 Core 侧时间源符号在 HEAD 全部在册，签名与本单用法（Shared / Now / SeedWatermark(TDateTime) / Reset）逐一对上 ⇒ 前置②达成，可动手；无按猜的符号硬接。
