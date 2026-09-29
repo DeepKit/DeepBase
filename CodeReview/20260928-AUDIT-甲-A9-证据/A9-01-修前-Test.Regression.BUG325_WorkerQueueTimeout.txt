@@ -1,0 +1,11 @@
+== 编译一次性 runner（单元: Test.Regression.BUG325_WorkerQueueTimeout） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Core\DeepBase.WorkerQueue.pas(1961) Hint: H2077 Value assigned to 'LElapsed' never used
+26680 lines, 1.30 seconds, 2676472 bytes code, 372048 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.Regression.BUG325_WorkerQueueTimeout）--hidebanner ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2

@@ -232,4 +232,7 @@ begin
     'Error message should be from handler, not timeout');
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TBUG325_WorkerQueueTimeoutTest);
+
 end.
