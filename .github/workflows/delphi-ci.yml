@@ -91,6 +91,9 @@ jobs:
       - name: Compile-noise gate negative sample test (噪声解析/比对/跨面跳过与基线 fail-closed，WO-20260924-AUDIT-甲-D9 段4)
         run: node .\09_工程脚本\build-gate\test_noise.js
 
+      - name: Build gate negative sample test (编译门禁输入面/真编译/判定不恒真反例全套，WO-20260926-AUDIT-甲-A7-01)
+        run: node .\09_工程脚本\build-gate\test_negative_sample.js
+
   package-gate:
     name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]

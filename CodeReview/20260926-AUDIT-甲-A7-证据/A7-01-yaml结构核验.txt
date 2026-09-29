@@ -1,0 +1,9 @@
+bytes=8530 sha256=5a71f5e46f45e8a409dad0518a15a363ab92d69776e9c9182c868cc5480faa44
+jobs=encoding-gate,package-gate,architecture-checks,unit-tests,integration-tests,db-integration-tests,examples-build
+encoding-gate steps=17，末尾 4 步：
+  - Consumer contract gate (稳定单元存在且单份 + stable 公开签名不漂移，WO-20260924-AUDIT-甲-D9 段2)
+  - Consumer contract gate negative sample test
+  - Compile-noise gate negative sample test (噪声解析/比对/跨面跳过与基线 fail-closed，WO-20260924-AUDIT-甲-D9 段4)
+  - Build gate negative sample test (编译门禁输入面/真编译/判定不恒真反例全套，WO-20260926-AUDIT-甲-A7-01)
+  run= node .\09_工程脚本\build-gate\test_negative_sample.js
+YAML 解析通过（safe_load 无异常）
