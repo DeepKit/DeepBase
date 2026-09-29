@@ -113,4 +113,7 @@ begin
   Assert.IsTrue(LCaught, 'EExternalDBInvalidIdentifier should be catchable');
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TBUG331_SafeQueryIdentifierValidationTest);
+
 end.

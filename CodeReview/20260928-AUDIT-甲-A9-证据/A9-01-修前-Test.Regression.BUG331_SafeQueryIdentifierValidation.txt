@@ -1,0 +1,11 @@
+== 编译一次性 runner（单元: Test.Regression.BUG331_SafeQueryIdentifierValidation） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Tests\Regression\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used
+23974 lines, 1.25 seconds, 2546512 bytes code, 359888 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.Regression.BUG331_SafeQueryIdentifierValidation）--hidebanner ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2

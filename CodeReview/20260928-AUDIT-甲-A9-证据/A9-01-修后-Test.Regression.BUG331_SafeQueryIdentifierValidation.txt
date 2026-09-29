@@ -1,0 +1,22 @@
+== 编译一次性 runner（单元: Test.Regression.BUG331_SafeQueryIdentifierValidation） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Tests\Regression\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used
+23977 lines, 1.06 seconds, 2553968 bytes code, 360552 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.Regression.BUG331_SafeQueryIdentifierValidation）--hidebanner ==
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+......
+
+Tests Found   : 3
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=3 pass=3 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
