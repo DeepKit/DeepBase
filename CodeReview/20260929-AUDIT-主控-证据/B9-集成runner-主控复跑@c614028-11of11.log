@@ -1,0 +1,136 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: E:\temp\db-a7-m1
+Test Type: Integration
+Platform: Win64
+CI Mode: True
+Skip Compile: False
+No Rebuild: False
+Output: E:\temp\db-a7-m1\TestResults
+DCU Output: E:\temp\db-a7-m1\TestResults\build\dcu\Win64
+
+
+==============================================
+        Integration Tests
+==============================================
+Compiling Integration Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+E:\temp\db-a7-m1\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+E:\temp\db-a7-m1\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+E:\temp\db-a7-m1\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+E:\temp\db-a7-m1\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+E:\temp\db-a7-m1\Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+E:\temp\db-a7-m1\Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+E:\temp\db-a7-m1\Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+E:\temp\db-a7-m1\Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(180) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(182) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(175) Hint: H2077 Value assigned to 'TFireDACDiagnoseStorage.TableExists' never used
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(220) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(222) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(215) Hint: H2077 Value assigned to 'TFireDACDiagnoseStorage.IndexExists' never used
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(241) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.ORM.FireDAC.pas(115) Hint: H2443 Inline function 'TFDParams.GetItem' has not been expanded because unit 'System.Classes' is not specified in USES list
+E:\temp\db-a7-m1\Persistence\DeepBase.Persistence.ORM.FireDAC.pas(115) Hint: H2443 Inline function 'TFDParam.SetAsVariant' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+E:\temp\db-a7-m1\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+E:\temp\db-a7-m1\Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+E:\temp\db-a7-m1\Features\DeepBase.LLM.Providers.pas(177) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.LLM.Providers.pas(234) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Core\DeepBase.LLM.pas(624) Hint: H2077 Value assigned to 'TDeepBaseLLM.DoHttpRequest' never used
+DeepBase.IntegrationTest.pas(918) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(919) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(920) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(921) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(922) Hint: H2443 Inline function 'TFDParam.SetAsInteger' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(943) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(944) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(945) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(968) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(969) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(970) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(1613) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+DeepBase.IntegrationTest.pas(194) Hint: H2219 Private symbol 'GetRandomInt' declared but never used
+DeepBase.IntegrationTest.pas(195) Hint: H2219 Private symbol 'GetRandomDate' declared but never used
+Test.Integration.Core.pas(206) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+Test.Integration.Core.pas(350) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+Test.Integration.Core.pas(379) Hint: H2077 Value assigned to 'ChangeDetected' never used
+E:\temp\db-a7-m1\Features\DeepBase.Net.pas(617) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Net.pas(1472) Hint: H2077 Value assigned to 'TNetworkUtils.CanReach' never used
+E:\temp\db-a7-m1\Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.SafeClient.pas(1035) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.SafeClient.pas(1036) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.SafeClient.pas(1060) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+E:\temp\db-a7-m1\Features\DeepBase.Commerce.SafeClient.pas(1061) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+75615 lines, 5.41 seconds, 11291328 bytes code, 1097464 bytes data.
+SUCCESS: Integration Tests compiled
+SQLite vendor copied: E:\temp\db-a7-m1\Tests\sqlite3.dll -> E:\temp\db-a7-m1\Tests\Integration\sqlite3.dll
+
+Running Integration Tests...
+----------------------------------------------
+===============================================
+     DeepBase Integration Tests
+===============================================
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseIntegrationTests.exe] - Starting Tests.
+
+......................
+
+Tests Found   : 11
+Tests Ignored : 0
+Tests Passed  : 11
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+===============================================
+              TEST SUMMARY
+===============================================
+Total:    11
+Passed:   11
+Failed:   0
+Errors:   0
+Pass Rate: 100.0%
+===============================================
+
+
+SUCCESS: All Integration Tests tests passed
+Temporary sqlite3.dll removed from Integration directory.
+
+==============================================
+           Final Summary
+==============================================
+Integration Tests: PASSED
+==============================================
+
+All tests passed!
