@@ -1,0 +1,9 @@
+== 编译一次性 runner（单元: Test.DeepBase.Speech.Intent.LLMBackend） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24195 lines, 1.25 seconds, 2565664 bytes code, 362416 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Speech.Intent.LLMBackend）--hidebanner ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2

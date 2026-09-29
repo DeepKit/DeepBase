@@ -281,4 +281,7 @@ begin
     'Source should still be "llm" (backend was invoked)');
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TTestIntentLLMBackend);
+
 end.
