@@ -184,4 +184,7 @@ begin
   Conn.Release;
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TBUG333_RecycleAllConnectionsUAFTest);
+
 end.

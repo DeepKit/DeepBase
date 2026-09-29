@@ -1,0 +1,27 @@
+== 编译一次性 runner（单元: Test.Regression.BUG333_RecycleAllConnectionsUAF） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Persistence\DeepBase.SQLLogger.pas(665) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(666) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(667) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(668) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(671) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(672) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(673) Hint: H2443 Inline function 'TFDParam.SetAsDateTime' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(674) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(675) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(685) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.DB.DoQry.pas(1896) Hint: H2077 Value assigned to 'SkippedInUse' never used
+Persistence\DeepBase.DB.DoQry.pas(1889) Hint: H2077 Value assigned to 'SkippedInUse' never used
+Persistence\DeepBase.DB.Pool.pas(758) Hint: H2077 Value assigned to 'LDoReleaseStats' never used
+31580 lines, 1.56 seconds, 5391056 bytes code, 614312 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.Regression.BUG333_RecycleAllConnectionsUAF）--hidebanner ==
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2
