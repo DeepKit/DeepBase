@@ -1,4 +1,10 @@
-# IDecisionModel 语言中立契约草案 (Language-Neutral Contract DRAFT)
+# IDecisionModel 语言中立契约草案 (工程镜像与引用说明)
+
+> **SSOT 唯一权威源声明**：  
+> 本文件为**工程参考镜像 (Implementation Reference / Mirror Notice)**。  
+> **唯一规范性权威源 (Authoritative Source of Truth)** 位于理论仓：  
+> [`D:\_Progs\一元论\IDecisionModel-Language-Neutral-Contract-DRAFT.md`](file:///D:/_Progs/%E4%B8%80%E5%85%83%E8%AE%BA/IDecisionModel-Language-Neutral-Contract-DRAFT.md)  
+> 任何对语言中立契约与 Schema 的修订，必须以一元论仓母稿为准，严禁在工程仓独立分叉编辑。
 
 > **文档状态声明**：  
 > **DRAFT / FUTURE CAPABILITY / NON-PRODUCTION / NO IMPLEMENTATION COMMITMENT**  

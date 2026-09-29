@@ -43,7 +43,7 @@ EHAI 体系（L1～L8）是经过工程实证、严格冻结的跨语言人机�
 
 | 序号 | HACI 工程概念 | EHAI 冻结规范法源条款 | 跨语言与 Delphi 载体承接 | 工程实施约束与红线 |
 | :---: | :--- | :--- | :--- | :--- |
-| **1** | **Shared Object**<br>(共同认识对象) | **L1 §1.2 共同认知场**<br>**L4 §6.1 上下文锚定** | `TEhaiContextBinding`<br>• `ContextId`<br>• `ContextTitle`<br>• `ObservableObjectRef` | 严禁全空 Default 泄露；<br>实体语义由 Binding 层动态构造；<br>AsWish Models 保持语言无关。 |
+| **1** | **Shared Object**<br>(共同认识对象) | **L1 §1.2 共同认知场**<br>**L4 §6.1 上下文锚定** | `TEhaiContextBinding`<br>• `ContextId`<br>• `ContextTitle`<br>• `ObservableObjectRef` | 严禁全空 Default 泄露；<br>实体语义由 Binding 层动态构造；<br>AsWish Models 保持语言无关。<br>ScopeBoundary 实现取 Node.Scope、兜底 'AsWish'，较工单建议的 TreeType/NotDoing 更贴近授权边界语义（取舍留痕）。 |
 | **2** | **Candidate-first**<br>(候选优先协商) | **L4 §4.1 候选完备性**<br>**L4 §4.3 认知收敛** | `TEhaiCandidateSpace`<br>• 有界空间 $\le 7$<br>• `THbChoiceDeck.Items`<br>• Key 1 推荐标记 | 严禁凑数伪造选项；<br>推荐标记绝不自动执行；<br>允许“无可靠候选”空状态。 |
 | **3** | **Decision Mechanism**<br>(协同判断模型) | **L2 §2.1 AI作为增强而非裁决**<br>**L6 §2.2 机器语义边界** | 语言中立 `IDecisionModel` 草案<br>• `Binary` / `Choice` / `Ordinal`<br>• `selected_signal` | **Probability $\ne$ Authority**；<br>模型输出判断信号，人类与策略决定外部授权；本轮严禁代码。 |
 | **4** | **Human Authority**<br>(终局主权与逃逸) | **L3 §3.2 终局责任不移交**<br>**L3 §3.4 覆写逃逸权** | `9 Human Override`<br>• `emaReframe`<br>• `TSpecDecision` 人工裁决<br>• AXIS F0 门禁校验 | 终局责任永远不移交；<br>严禁超时自动代选；<br>9 号键具备逃逸最高优先级。 |
