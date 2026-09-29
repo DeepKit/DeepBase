@@ -1,0 +1,46 @@
+# A9-02 注册实验（一次性，未进任何交付面）
+
+实验位置：隔离工作树 .tmp/a9/wt-pre（--detach @ 锚点 a68264a），实验后该树已拆除。
+实验做法：只在 scratch 树内给 Tests/Integration/DeepBase.IntegrationTest.pas 追加
+  initialization TDUnitX.RegisterTestFixture(TIntegrationTestBase);
+一次性 runner 只挂 DeepBase.IntegrationTest（+FireDAC.Phys.SQLite/SQLiteDef 驱动链 + Tests/sqlite3.dll），
+FailsOnNoAsserts := False（与官方 DeepBaseIntegrationTests.dpr 同口径）。sqlite3.dll 为跑件临时拷贝，未入仓。
+
+## 编译
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Integration\DeepBase.IntegrationTest.pas(918) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(919) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(920) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(921) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(922) Hint: H2443 Inline function 'TFDParam.SetAsInteger' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(943) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(944) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(945) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(968) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(969) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(970) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(1613) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Tests\Integration\DeepBase.IntegrationTest.pas(194) Hint: H2219 Private symbol 'GetRandomInt' declared but never used
+Tests\Integration\DeepBase.IntegrationTest.pas(195) Hint: H2219 Private symbol 'GetRandomDate' declared but never used
+24978 lines, 1.24 seconds, 5131172 bytes code, 598784 bytes data.
+
+## 真跑
+DUnitX - [A902BaseOnly.exe] - Starting Tests.
+
+
+
+Tests Found   : 0
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=0 testCount=0 pass=0 failure=0 error=0 ignored=0
+RUNNER_VERDICT: NO_TEST_EXECUTED
+
+## 读数
+RUN_EXIT=2（探针自身的 NO_TEST_EXECUTED 判据）
+⇒ 注册 TIntegrationTestBase 后 fixtureCount=0 / testCount=0：DUnitX 不会因为 [TestFixture] 属性
+   而挂载一个没有任何 [Test] 方法的类，SetupFixture 也未执行（实验后 %TEMP%/DeepBaseTests 目录不存在）。
+⇒ 结论：本件「补注册」是无意义的空动作，甲不动代码，交由主控裁定（建议见回执 §四）。

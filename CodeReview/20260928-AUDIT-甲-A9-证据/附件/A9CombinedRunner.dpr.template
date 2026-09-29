@@ -1,0 +1,72 @@
+{ A9 合并真跑 runner 模板（9 件收口面 + 既存在册对照面同挂一个 runner）。
+  为什么需要：单单元探针只证明「各自注册后绿」，不证明 9 件同时执行时互不干扰
+  （BUG328 走 TMetrics 全局注册表、BUG333 走连接池、BUG324/325 起线程）。
+  后 5 件是 A5/A8 已在册集，用作「只增不减」的零回归对照面。
+  fail-closed 与 B2FixtureRunner 模板同口径：0 用例不算绿。实体化后落 gitignored 的 .tmp，不进构建面。 }
+program A9CombinedRunner;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  Test.Regression.BUG324_WorkerQueueCallbackSafety,
+  Test.Regression.BUG325_WorkerQueueTimeout,
+  Test.Regression.BUG328_MetricsConcurrentInit,
+  Test.Regression.BUG330_SQLiteReaderSchemaCache,
+  Test.Regression.BUG331_SafeQueryIdentifierValidation,
+  Test.Regression.BUG333_RecycleAllConnectionsUAF,
+  Test.DeepBase.DesignTime.Registration,
+  Test.DeepBase.Exceptions,
+  Test.DeepBase.Speech.Intent.LLMBackend,
+  Test.DeepBase.License,
+  Test.DeepBase.LicenseSecret,
+  Test.DeepBase.KeyManager,
+  Test.DeepBase.KeyManagerFormat,
+  Test.DeepBase.TimeSource;
+
+var
+  LRunner  : ITestRunner;
+  LResults : IRunResults;
+  LLogger  : ITestLogger;
+
+begin
+  ReportMemoryLeaksOnShutdown := False;
+  try
+    TDUnitX.CheckCommandLine;
+
+    LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := True;
+
+    LLogger := TDUnitXConsoleLogger.Create(True);
+    LRunner.AddLogger(LLogger);
+
+    LResults := LRunner.Execute;
+    Writeln(Format('RUNNER_STATS fixtureCount=%d testCount=%d pass=%d failure=%d error=%d ignored=%d',
+      [LResults.FixtureCount, LResults.TestCount, LResults.PassCount,
+       LResults.FailureCount, LResults.ErrorCount, LResults.IgnoredCount]));
+
+    if LResults.TestCount = 0 then
+    begin
+      Writeln('RUNNER_VERDICT: NO_TEST_EXECUTED');
+      System.ExitCode := 2;
+      Exit;
+    end;
+
+    if not LResults.AllPassed then
+    begin
+      Writeln('RUNNER_VERDICT: FAILED');
+      System.ExitCode := 1;
+      Exit;
+    end;
+    Writeln('RUNNER_VERDICT: PASSED');
+  except
+    on E: Exception do
+    begin
+      Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

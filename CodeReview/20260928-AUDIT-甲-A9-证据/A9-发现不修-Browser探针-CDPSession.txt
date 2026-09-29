@@ -1,0 +1,26 @@
+== 编译一次性 runner（单元: Test.DeepBase.Browser.CDPSession） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Tests\Test.DeepBase.Browser.CDPSession.pas(63) Error: E2029 Identifier expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.pas(63) Error: E2029 Declaration expected but ':' found
+Tests\Test.DeepBase.Browser.CDPSession.pas(66) Error: E2029 Expression expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.pas(66) Error: E2029 'END' expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.pas(66) Error: E2029 Declaration expected but ')' found
+Tests\Test.DeepBase.Browser.CDPSession.pas(30) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.Setup'
+Tests\Test.DeepBase.Browser.CDPSession.pas(32) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.Teardown'
+Tests\Test.DeepBase.Browser.CDPSession.pas(36) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestConnectionEstablishmentToChrome'
+Tests\Test.DeepBase.Browser.CDPSession.pas(38) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestConnectionFailureToInvalidPort'
+Tests\Test.DeepBase.Browser.CDPSession.pas(40) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestIsConnectedPropertyAfterDisconnect'
+Tests\Test.DeepBase.Browser.CDPSession.pas(44) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestNavigateToValidURL'
+Tests\Test.DeepBase.Browser.CDPSession.pas(46) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestNavigateToInvalidURLHandling'
+Tests\Test.DeepBase.Browser.CDPSession.pas(48) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestGetURLAfterNavigation'
+Tests\Test.DeepBase.Browser.CDPSession.pas(52) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestExecuteScriptBasicExpression'
+Tests\Test.DeepBase.Browser.CDPSession.pas(54) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestScreenshotCaptureReturnsValidData'
+Tests\Test.DeepBase.Browser.CDPSession.pas(58) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestWaitForLoadStateTimeout'
+Tests\Test.DeepBase.Browser.CDPSession.pas(59) Error: E2065 Unsatisfied forward or external declaration: 'TTestCDPSession.TestWaitForLoadStateSuccess'
+.tmp\b2\runner\Test.DeepBase.Browser.CDPSession\B2FixtureRunner.dpr(13) Fatal: F2063 Could not compile used unit 'Test.DeepBase.Browser.CDPSession.pas'
+BUILD_EXIT=1
+== runner 编译未过 ⇒ 判据不成立 ==

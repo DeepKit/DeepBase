@@ -1,0 +1,135 @@
+# A9-01 逐笔 diff 自证（9 笔，每笔 = 1 个测试单元 + 该单元修前/修后跑录）
+
+### 6d4f4a7f fix(tests): A9 Test.DeepBase.Exceptions 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 8e20944c fix(tests): A9 Test.Regression.BUG330_SQLiteReaderSchemaCache 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 8a323872 fix(tests): A9 Test.Regression.BUG328_MetricsConcurrentInit 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 8fb5ebf2 fix(tests): A9 Test.Regression.BUG331_SafeQueryIdentifierValidation 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 21e016cf fix(tests): A9 Test.DeepBase.DesignTime.Registration 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### d94a48a6 fix(tests): A9 Test.Regression.BUG333_RecycleAllConnectionsUAF 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 6400a170 fix(tests): A9 Test.DeepBase.Speech.Intent.LLMBackend 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 86cc9ce5 fix(tests): A9 Test.Regression.BUG325_WorkerQueueTimeout 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+### 20ef250b fix(tests): A9 Test.Regression.BUG324_WorkerQueueCallbackSafety 补 initialization 注册消假覆盖（WO-20260928-AUDIT-甲-A9）
+
+```
+diff --git a/Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas b/Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas
+index 4d02f693..99419269 100644
+--- a/Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas
++++ b/Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas
+@@ -483,4 +483,7 @@ begin
+     'FOnCompletion AResult should contain handler exception Message, got: ' + LCompletionMsg);
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TBUG324_WorkerQueueCallbackSafetyTest);
++
+ end.
+diff --git a/Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas b/Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas
+index e27751eb..169f5667 100644
+--- a/Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas
++++ b/Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas
+@@ -232,4 +232,7 @@ begin
+     'Error message should be from handler, not timeout');
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TBUG325_WorkerQueueTimeoutTest);
++
+ end.
+diff --git a/Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas b/Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas
+index db7d12a9..3ee63b35 100644
+--- a/Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas
++++ b/Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas
+@@ -221,4 +221,7 @@ begin
+     'Registry should return the same instance (singleton)');
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TBUG328_MetricsConcurrentInitTest);
++
+ end.
+diff --git a/Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas b/Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas
+index e70edbc4..96779082 100644
+--- a/Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas
++++ b/Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas
+@@ -155,4 +155,7 @@ begin
+   end;
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TBUG330_SQLiteReaderSchemaCacheTest);
++
+ end.
+diff --git a/Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas b/Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas
+index 36d283a1..430cf84b 100644
+--- a/Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas
++++ b/Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas
+@@ -113,4 +113,7 @@ begin
+   Assert.IsTrue(LCaught, 'EExternalDBInvalidIdentifier should be catchable');
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TBUG331_SafeQueryIdentifierValidationTest);
++
+ end.
+diff --git a/Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas b/Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas
+index d0e92967..3eb4e80c 100644
+--- a/Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas
++++ b/Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas
+@@ -184,4 +184,7 @@ begin
+   Conn.Release;
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TBUG333_RecycleAllConnectionsUAFTest);
++
+ end.
+diff --git a/Tests/Test.DeepBase.DesignTime.Registration.pas b/Tests/Test.DeepBase.DesignTime.Registration.pas
+index 18cd4ca6..65c47829 100644
+--- a/Tests/Test.DeepBase.DesignTime.Registration.pas
++++ b/Tests/Test.DeepBase.DesignTime.Registration.pas
+@@ -161,4 +161,7 @@ begin
+     'Design-time package dclDeepBaseFMX.dpk should exist');
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TDesignTimeRegistrationTests);
++
+ end.
+diff --git a/Tests/Test.DeepBase.Exceptions.pas b/Tests/Test.DeepBase.Exceptions.pas
+index 468b493d..cfdae0e2 100644
+--- a/Tests/Test.DeepBase.Exceptions.pas
++++ b/Tests/Test.DeepBase.Exceptions.pas
+@@ -74,4 +74,7 @@ begin
+   LE.Free;
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TTestENotImplemented);
++
+ end.
+diff --git a/Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas b/Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas
+index 731b0ecb..92eef8ab 100644
+--- a/Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas
++++ b/Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas
+@@ -281,4 +281,7 @@ begin
+     'Source should still be "llm" (backend was invoked)');
+ end;
+ 
++initialization
++  TDUnitX.RegisterTestFixture(TTestIntentLLMBackend);
++
+ end.
+```
+
+## 计数自证
+ Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas  | 3 +++
+ Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas         | 3 +++
+ Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas      | 3 +++
+ Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas    | 3 +++
+ .../Test.Regression.BUG331_SafeQueryIdentifierValidation.pas           | 3 +++
+ Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas   | 3 +++
+ Tests/Test.DeepBase.DesignTime.Registration.pas                        | 3 +++
+ Tests/Test.DeepBase.Exceptions.pas                                     | 3 +++
+ Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas                       | 3 +++
+ 9 files changed, 27 insertions(+)
+⇒ 9 件 × +3 行 = 27 新增 0 删除；无 .dpr/.dproj/.dpk 面（git diff --stat a68264a HEAD -- Tests/DeepBaseTests.dpr Tests/DeepBaseTests.dproj Tests/Integration/DeepBaseIntegrationTests.dpr = 空）。

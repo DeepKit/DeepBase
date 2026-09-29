@@ -1,0 +1,21 @@
+== 编译一次性 runner（单元: Test.DeepBase.Browser.CDPSession.Impl） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(60) Error: E2029 Identifier expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(60) Error: E2029 Declaration expected but ':' found
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(62) Error: E2029 Declaration expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(225) Error: E2003 Undeclared identifier: 'Greater'
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(232) Error: E2532 Couldn't infer generic type argument from different argument types for method 'AreEqual'
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(233) Error: E2532 Couldn't infer generic type argument from different argument types for method 'AreEqual'
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(234) Error: E2532 Couldn't infer generic type argument from different argument types for method 'AreEqual'
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(258) Error: E2003 Undeclared identifier: 'GetTickCount64'
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(263) Error: E2003 Undeclared identifier: 'Less'
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(291) Error: E2029 Expression expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(291) Error: E2029 'END' expected but 'IMPLEMENTATION' found
+Tests\Test.DeepBase.Browser.CDPSession.Impl.pas(291) Error: E2029 Declaration expected but ')' found
+.tmp\b2\runner\Test.DeepBase.Browser.CDPSession.Impl\B2FixtureRunner.dpr(13) Fatal: F2063 Could not compile used unit 'Test.DeepBase.Browser.CDPSession.Impl.pas'
+BUILD_EXIT=1
+== runner 编译未过 ⇒ 判据不成立 ==

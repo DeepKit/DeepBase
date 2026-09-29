@@ -1,0 +1,139 @@
+HEAD 384188e
+scope: git ls-files *.pas (whole repo, not only Tests/**)
+units with [TestFixture] and >=1 fixture class lacking RegisterTestFixture: 17
+---
+unit      : DeepFlow/Tests/Test.DeepFlow.Engine.pas
+fixtures  : TDeepFlowEngineTests
+registered: (none)
+MISSING   : TDeepFlowEngineTests
+[Test]    : 4
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Integration/DeepBase.IntegrationTest.pas
+fixtures  : TIntegrationTestBase
+registered: (none)
+MISSING   : TIntegrationTestBase
+[Test]    : 0
+mainDpr   : -
+integDpr  : in'...'
+---
+unit      : Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas
+fixtures  : TBUG324_WorkerQueueCallbackSafetyTest
+registered: (none)
+MISSING   : TBUG324_WorkerQueueCallbackSafetyTest
+[Test]    : 10
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas
+fixtures  : TBUG325_WorkerQueueTimeoutTest
+registered: (none)
+MISSING   : TBUG325_WorkerQueueTimeoutTest
+[Test]    : 5
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas
+fixtures  : TBUG328_MetricsConcurrentInitTest
+registered: (none)
+MISSING   : TBUG328_MetricsConcurrentInitTest
+[Test]    : 3
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas
+fixtures  : TBUG330_SQLiteReaderSchemaCacheTest
+registered: (none)
+MISSING   : TBUG330_SQLiteReaderSchemaCacheTest
+[Test]    : 3
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas
+fixtures  : TBUG331_SafeQueryIdentifierValidationTest
+registered: (none)
+MISSING   : TBUG331_SafeQueryIdentifierValidationTest
+[Test]    : 3
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas
+fixtures  : TBUG333_RecycleAllConnectionsUAFTest
+registered: (none)
+MISSING   : TBUG333_RecycleAllConnectionsUAFTest
+[Test]    : 3
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Browser.CDPSession.Impl.pas
+fixtures  : TTestCDPSessionImpl
+registered: Implementation
+MISSING   : TTestCDPSessionImpl
+[Test]    : 10
+mainDpr   : -
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Browser.CDPSession.pas
+fixtures  : TTestCDPSession
+registered: Implementation
+MISSING   : TTestCDPSession
+[Test]    : 9
+mainDpr   : -
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Browser.Session.Impl.pas
+fixtures  : TTestBrowserSessionImpl
+registered: Implementation
+MISSING   : TTestBrowserSessionImpl
+[Test]    : 16
+mainDpr   : -
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Browser.WebElement.Impl.pas
+fixtures  : TTestWebWebElementImpl
+registered: Implementation
+MISSING   : TTestWebWebElementImpl
+[Test]    : 13
+mainDpr   : -
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Browser.WebElement.pas
+fixtures  : TTestWebWebElement
+registered: Implementation
+MISSING   : TTestWebWebElement
+[Test]    : 9
+mainDpr   : -
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.DesignTime.Registration.pas
+fixtures  : TDesignTimeRegistrationTests
+registered: (none)
+MISSING   : TDesignTimeRegistrationTests
+[Test]    : 7
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Exceptions.pas
+fixtures  : TTestENotImplemented
+registered: (none)
+MISSING   : TTestENotImplemented
+[Test]    : 3
+mainDpr   : in'...'
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Governance.Validation.SkeletonRules.pas
+fixtures  : TSkeletonRuleTests
+registered: (none)
+MISSING   : TSkeletonRuleTests
+[Test]    : 3
+mainDpr   : -
+integDpr  : -
+---
+unit      : Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas
+fixtures  : TTestIntentLLMBackend
+registered: (none)
+MISSING   : TTestIntentLLMBackend
+[Test]    : 9
+mainDpr   : in'...'
+integDpr  : -

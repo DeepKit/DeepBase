@@ -1,0 +1,49 @@
+# A9-03 孤儿件诊断实验（一次性，未进任何交付面）
+
+实验位置：隔离工作树 .tmp/a9/wt-pre（--detach @ 锚点 a68264a），实验后拆除；主树本件零改动。
+做法：只在 scratch 树内给 Tests/Test.DeepBase.Governance.Validation.SkeletonRules.pas
+  追加 initialization TDUnitX.RegisterTestFixture(TSkeletonRuleTests); 后一次性编译运行。
+
+## 溯源
+dfa6b130 2026-07-15 fix: REVIEW5-R2/R3 审阅修复闭环 …（本单元创建笔）
+649b1e07 2026-09-19 WO-20260919-AUDIT-乙 B1-B5（只加 UTF-8 BOM，1 行）
+git log -S SkeletonRules -- 两个 dpr ⇒ 空：从未进过任何 uses 面（不是「被排除」，是「从未登记」）。
+
+## 编译
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Governance\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used
+Governance\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used
+Governance\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used
+Governance\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used
+Governance\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used
+Governance\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used
+Governance\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used
+Governance\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used
+24923 lines, 1.20 seconds, 2738212 bytes code, 378288 bytes data.
+
+## 真跑
+DUnitX - [A903Probe.exe] - Starting Tests.
+
+.....F
+
+Tests Found   : 3
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Governance.Validation.SkeletonRules.TSkeletonRuleTests.CanRelease_WorksWithOnlyP0Rules
+  Message: Condition is False when True expected. [CanRelease should work correctly with only P0 rules registered]
+
+
+RUNNER_STATS fixtureCount=1 testCount=3 pass=2 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+
+## 红因初判
+用例 CanRelease_WorksWithOnlyP0Rules 断言 TGateValidationEngine.CanRelease=True（只注册 P0 规则 + 一个字段齐备的 L2 Action），实测 False。
+属「注册即红」，按工单纪律 3 甲不动手；生产面本单零改动（git diff --stat a68264a HEAD -- Governance Core Features VCL FMX Persistence = 空），
+故该读数对开工 HEAD 同样成立。

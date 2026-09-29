@@ -1,0 +1,2 @@
+行尾门禁失败，违规 1 项:
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.LicensingTimeSource.pas

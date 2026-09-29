@@ -1,0 +1,23 @@
+# 段0 差异核对：Test.DeepBase.DiagnosticLogger 为主控枚举口径误列（工单 §一 A9-01 表第 8 项）
+
+## 命令 1：rg -n "TestFixture|= class" Tests/Test.DeepBase.DiagnosticLogger.pas
+25:  TDunitXDiagnosticLogger = class(TDUnitXNullLogger)
+34:    procedure OnStartTestFixture(const threadId: TThreadID; const fixture: ITestFixtureInfo); override;
+41:    procedure OnEndTestFixture(const threadId: TThreadID; const results: IFixtureResult); override;
+86:procedure TDunitXDiagnosticLogger.OnStartTestFixture(const threadId: TThreadID;
+87:  const fixture: ITestFixtureInfo);
+135:procedure TDunitXDiagnosticLogger.OnEndTestFixture(const threadId: TThreadID;
+
+## 命令 2：该单元内是否有 [TestFixture] 属性行（左括号紧邻属性名的形态）
+0
+
+## 命令 3：dpr 在册形态与用途（裸名逗号 + AddLogger 挂载点）
+19:  Test.DeepBase.DiagnosticLogger,
+526:      var LDiagLogger: ITestLogger := TDunitXDiagnosticLogger.Create(
+
+## 结论
+全文唯一的 TestFixture 字样是 ITestLogger 的回调方法名 OnStartTestFixture/OnEndTestFixture 与
+ITestFixtureInfo 参数类型，没有任何 [TestFixture] 属性、没有夹具类可登记 ⇒ 「有 [TestFixture] 无注册」的
+判据对本单元不成立，甲不改动本单元（工单纪律 3 的 fail-closed 也无从触发：无可注册对象）。
+主控首轮枚举若按「串含 TestFixture」粗匹配会把 logger 实现类单元算进来，本件属口径误列，
+故 A9-01 实修面为 9 件而非 10 件。

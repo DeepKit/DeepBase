@@ -1,0 +1,55 @@
+== 编译合并 runner（ROOT=D:/_Progs/02Business/DeepBase） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Core\DeepBase.WorkerQueue.pas(1961) Hint: H2077 Value assigned to 'LElapsed' never used
+Tests\Regression\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Persistence\DeepBase.SQLLogger.pas(665) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(666) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(667) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(668) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(671) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(672) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(673) Hint: H2443 Inline function 'TFDParam.SetAsDateTime' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(674) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(675) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.SQLLogger.pas(685) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.DB.DoQry.pas(1896) Hint: H2077 Value assigned to 'SkippedInUse' never used
+Persistence\DeepBase.DB.DoQry.pas(1889) Hint: H2077 Value assigned to 'SkippedInUse' never used
+Persistence\DeepBase.DB.Pool.pas(758) Hint: H2077 Value assigned to 'LDoReleaseStats' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+57896 lines, 2.34 seconds, 6809296 bytes code, 742024 bytes data.
+BUILD_EXIT=0
+
+== 真跑（合并 14 单元）--hidebanner ==
+DUnitX - [A9CombinedRunner.exe] - Starting Tests.
+
+.................................................................F.F........................................................................................................................................................................................
+
+Tests Found   : 126
+Tests Ignored : 0
+Tests Passed  : 124
+Tests Leaked  : 0
+Tests Failed  : 2
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_WrongPassword_FailsFast
+  Message: No assertions were made during the test
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_ForeignMachineBinding_FailsClosed
+  Message: No assertions were made during the test
+
+
+RUNNER_STATS fixtureCount=1 testCount=126 pass=124 failure=2 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
