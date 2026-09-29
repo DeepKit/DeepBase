@@ -483,4 +483,7 @@ begin
     'FOnCompletion AResult should contain handler exception Message, got: ' + LCompletionMsg);
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TBUG324_WorkerQueueCallbackSafetyTest);
+
 end.
