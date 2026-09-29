@@ -221,4 +221,7 @@ begin
     'Registry should return the same instance (singleton)');
 end;
 
+initialization
+  TDUnitX.RegisterTestFixture(TBUG328_MetricsConcurrentInitTest);
+
 end.
