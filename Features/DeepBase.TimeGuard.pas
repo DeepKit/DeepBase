@@ -79,7 +79,9 @@ type
 
   /// <summary>
   /// Secret store interface for persisting last known good time.
-  /// Minimal interface — DeepBase.Security.SecretStore implements this.
+  /// Persistence port of this guard: DeepBase.TimeGuard.SecretStore adapts it
+  /// onto Core's ISecretStore, and TTimeGuard falls back to that adapter itself
+  /// when the caller injects no store.
   /// </summary>
   ITimeGuardSecretStore = interface
     ['{C3D4E5F6-A7B8-9012-CDEF-123456789012}']
@@ -176,7 +178,8 @@ function TimeGuardResultToStr(AResult: TTimeGuardResult): string;
 implementation
 
 uses
-  System.StrUtils;
+  System.StrUtils,
+  DeepBase.TimeGuard.SecretStore;
 
 { ---- HTTP Date parsing ---- }
 
@@ -354,6 +357,16 @@ end;
 function TTimeGuard.GetSecretStore: ITimeGuardSecretStore;
 begin
   Result := FSecretStore;
+  if Result = nil then
+  begin
+    // Default wiring: without a persistence port the watermark never survives a
+    // process restart, so both rewind branches of Verify stayed unreachable in
+    // production. The result is cached including the nil case, because Verify
+    // reads the watermark on every call and must not rebuild (and refail) the
+    // platform store each time.
+    Result := CreateTimeGuardSecretStore;
+    FSecretStore := Result;
+  end;
 end;
 
 procedure TTimeGuard.SaveLastKnownGoodTime(ATime: TDateTime);
