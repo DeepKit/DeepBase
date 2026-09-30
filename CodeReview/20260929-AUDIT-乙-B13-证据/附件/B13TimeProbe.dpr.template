@@ -1,0 +1,126 @@
+﻿{ B13 诊断探针（一次性，不进任何构建面）：
+  实测 Delphi RTL 的 Unix 时间戳与固定偏移换算语义，用于确定支付适配层三个
+  线格式写出口的正确框架：
+    B13-01 Features/DeepBase.Commerce.PaymentBridge.pas:261  PaidAtISO
+    B13-02 ThirdParty/Payment/DeepBase.Payment.Stripe.pas:313  expires_at
+    B13-03 ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:751  time_expire
+  产物落 .tmp/b13/，入库用 .dpr.template 别名（CodeReview/** 禁 .dpr，见 B8-01）。 }
+program B13TimeProbe;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  System.DateUtils;
+
+const
+  AnchorISO_Zulu = '2031-03-01T04:00:00.000Z';
+  WeChatFmt = 'yyyy-mm-dd"T"hh:nn:ss"+08:00"';
+  Epoch1970 = 719529; { EncodeDateTime(1970,1,1,0,0,0,0) 的 TDateTime 天数基准，仅用于打印核对 }
+
+var
+  AnchorUtcBare, AnchorLocalBare, NowLocal, Parsed, Decoded: TDateTime;
+  OracleUnix, NowViaTrue, NowViaFalse, BothWrong: Int64;
+  F: Boolean;
+  Mixed, FixedSide, BadShape, ViaIncHour: string;
+  Offset: Integer;
+
+function Bare(const ADT: TDateTime): string;
+begin
+  Result := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', ADT);
+end;
+
+procedure Hdr(const ATitle: string);
+begin
+  Writeln;
+  Writeln('==================== ', ATitle, ' ====================');
+end;
+
+begin
+  Offset := TTimeZone.Local.UtcOffset.Hours;
+  Writeln('本机偏移(小时)=', Offset, '   时区ID=', TTimeZone.Local.ID,
+    '   EncodeDateTime(1970,1,1)=', FloatToStr(EncodeDateTime(1970, 1, 1, 0, 0, 0, 0)),
+    '   常量核对=', Epoch1970);
+
+  Hdr('0 基准瞬时（不依赖 DateTimeToUnix 自身）');
+  if not TryISO8601ToDate(AnchorISO_Zulu, AnchorUtcBare, True) then
+  begin
+    Writeln('锚点解析失败');
+    Halt(1);
+  end;
+  OracleUnix := Round((AnchorUtcBare - EncodeDateTime(1970, 1, 1, 0, 0, 0, 0)) * 86400);
+  AnchorLocalBare := TTimeZone.Local.ToLocalTime(AnchorUtcBare);
+  Writeln('UTC 裸值           = ', Bare(AnchorUtcBare));
+  Writeln('本地裸值           = ', Bare(AnchorLocalBare));
+  Writeln('独立算出的 Unix 秒 = ', OracleUnix, '   （UTC 裸值 - 1970-01-01，与时区无关）');
+
+  Hdr('1 DateTimeToUnix(AReturnUTC) 语义');
+  for F := False to True do
+  begin
+    Writeln('  输入=本地裸值  AReturnUTC=', F, ' => ', DateTimeToUnix(AnchorLocalBare, F),
+      '  与基准差(秒)= ', DateTimeToUnix(AnchorLocalBare, F) - OracleUnix);
+    Writeln('  输入=UTC 裸值  AReturnUTC=', F, ' => ', DateTimeToUnix(AnchorUtcBare, F),
+      '  与基准差(秒)= ', DateTimeToUnix(AnchorUtcBare, F) - OracleUnix);
+  end;
+
+  Hdr('2 UnixToDateTime(AReturnUTC) 往返');
+  for F := False to True do
+  begin
+    Decoded := UnixToDateTime(OracleUnix, F);
+    Writeln('  UnixToDateTime(', OracleUnix, ', ', F, ') = ', Bare(Decoded),
+      '   == 本地裸值? ', SameText(Bare(Decoded), Bare(AnchorLocalBare)),
+      '   == UTC 裸值? ', SameText(Bare(Decoded), Bare(AnchorUtcBare)));
+  end;
+
+  Hdr('3 仓内惯例复现（WeChatPay:535 / Stripe:680 用 DateTimeToUnix(Now, False)）');
+  NowLocal := Now;
+  NowViaFalse := DateTimeToUnix(NowLocal, False);
+  NowViaTrue := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(NowLocal), True);
+  BothWrong := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(NowLocal), False);
+  Writeln('  A  DateTimeToUnix(Now, False)                      = ', NowViaFalse);
+  Writeln('  B  DateTimeToUnix(ToUniversalTime(Now), True)      = ', NowViaTrue);
+  Writeln('  A-B 差(秒) = ', NowViaFalse - NowViaTrue, '   （0 => 两写法等价）');
+  Writeln('  C  双重换算 DateTimeToUnix(ToUniversalTime(Now), False) = ', BothWrong,
+    '  C-A 差(秒)= ', BothWrong - NowViaFalse, '   （= -本机偏移秒数 => 双重换算即缺陷）');
+
+  Hdr('4 PaidAtISO 写出口（B13-01）');
+  Mixed := DateToISO8601(AnchorLocalBare, False);
+  FixedSide := DateToISO8601(TTimeZone.Local.ToUniversalTime(AnchorLocalBare), True);
+  Writeln('  修前 DateToISO8601(本地裸值, False)                 = ', Mixed);
+  Writeln('  修后 DateToISO8601(ToUniversalTime(本地裸值), True) = ', FixedSide);
+  if TryISO8601ToDate(Mixed, Parsed, True) then
+    Writeln('    修前串按 True 读回 = ', Bare(Parsed), '  与锚点 UTC 裸值差(小时)= ',
+      Round((Parsed - AnchorUtcBare) * 24));
+  if TryISO8601ToDate(FixedSide, Parsed, True) then
+    Writeln('    修后串按 True 读回 = ', Bare(Parsed), '  与锚点 UTC 裸值差(小时)= ',
+      Round((Parsed - AnchorUtcBare) * 24));
+
+  Hdr('5 time_expire（B13-03）');
+  BadShape := FormatDateTime(WeChatFmt, AnchorLocalBare);
+  ViaIncHour := FormatDateTime(WeChatFmt, IncHour(AnchorUtcBare, 8));
+  Writeln('  修前（本机本地 + 硬编码 +08:00）        = ', BadShape);
+  Writeln('  修法 A（ToUniversalTime 后 IncHour(+8)） = ', ViaIncHour);
+  if TryISO8601ToDate(BadShape, Parsed, True) then
+    Writeln('    修前串读回 UTC 裸值 = ', Bare(Parsed), '  与锚点差(小时)= ',
+      Round((Parsed - AnchorUtcBare) * 24));
+  if TryISO8601ToDate(ViaIncHour, Parsed, True) then
+    Writeln('    修法 A 串读回 UTC 裸值 = ', Bare(Parsed), '  与锚点差(小时)= ',
+      Round((Parsed - AnchorUtcBare) * 24));
+  Writeln('  修法 B（TTimeZoneRegistry.Find(''Asia/Shanghai'')）：本机 dcc64 编译面 E2003 Undeclared identifier');
+  Writeln('    （System.TimeZones 单元不在默认搜索面，TTimeZone 经 System.DateUtils 可见而 TTimeZoneRegistry 不可见，');
+  Writeln('      取证见 附件/TzAvailProbe + TzUnitProbe 编译输出）=> 选型只能走修法 A。');
+
+  Hdr('6 expires_at（B13-02）');
+  Writeln('  修前 DateTimeToUnix(本地裸值)  [默认 True]            = ',
+    DateTimeToUnix(AnchorLocalBare), '  差(秒)= ',
+    DateTimeToUnix(AnchorLocalBare) - OracleUnix);
+  Writeln('  工单修法 DateTimeToUnix(ToUniversalTime(本地裸值))    = ',
+    DateTimeToUnix(TTimeZone.Local.ToUniversalTime(AnchorLocalBare)), '  差(秒)= ',
+    DateTimeToUnix(TTimeZone.Local.ToUniversalTime(AnchorLocalBare)) - OracleUnix);
+  Writeln('  同形写法 DateTimeToUnix(本地裸值, False)              = ',
+    DateTimeToUnix(AnchorLocalBare, False), '  差(秒)= ',
+    DateTimeToUnix(AnchorLocalBare, False) - OracleUnix);
+  Writeln('  对照 双重换算 DateTimeToUnix(ToUniversalTime(本地裸值), False) = ',
+    DateTimeToUnix(TTimeZone.Local.ToUniversalTime(AnchorLocalBare), False), '  差(秒)= ',
+    DateTimeToUnix(TTimeZone.Local.ToUniversalTime(AnchorLocalBare), False) - OracleUnix);
+end.

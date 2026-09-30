@@ -368,18 +368,85 @@ begin
 end;
 
 procedure TWeChatPayBridgeTests.Test_RegisterVerifier_WithService;
+const
+  RawBody = '{"resource":{"ciphertext":"stub"}}';
 var
   Storage: ICommerceStorage;
   Service: TDeepBaseCommerceService;
   Verifier: ICommerceNotificationVerifier;
+  Callback: TFunc<string, TArray<TPair<string, string>>, TCommercePaymentNotification>;
+  DispatchCount: Integer;
+  ForwardedBody: string;
+  UnregisteredError: string;
+  DispatchedError: string;
+  ReplacedError: string;
 begin
+  // The verifier registry exposes no getter, so registration is only observable
+  // through the service: an unregistered provider has to fail closed, and once a
+  // verifier is registered that same instance has to be the one dispatched with the
+  // payload forwarded. This is what pins the gateway key used on both sides.
   Storage := TInMemoryCommerceStorage.Create;
   Service := TDeepBaseCommerceService.Create(Storage);
+  DispatchCount := 0;
+  ForwardedBody := '';
   try
+    try
+      Service.VerifyAndConfirmPayment(cppWeChatPay, RawBody, []);
+    except
+      on E: EDeepBaseCommercePaymentError do
+        UnregisteredError := E.Message;
+    end;
+    Assert.IsTrue(UnregisteredError.Contains('not registered'),
+      'An unregistered provider must fail closed, got: ' + UnregisteredError);
+
+    Callback :=
+      function(ARawBody: string;
+        AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification
+      begin
+        Inc(DispatchCount);
+        ForwardedBody := ARawBody;
+        raise EDeepBaseCommercePaymentError.Create('registered verifier dispatched');
+      end;
+    Verifier := TCallbackNotificationVerifier.Create(Callback);
+    Service.RegisterNotificationVerifier(cppWeChatPay, Verifier);
+
+    try
+      Service.VerifyAndConfirmPayment(cppWeChatPay, RawBody, []);
+    except
+      on E: EDeepBaseCommercePaymentError do
+        DispatchedError := E.Message;
+    end;
+    Assert.IsTrue(DispatchedError.Contains('registered verifier dispatched'),
+      'The service must dispatch the verifier that was registered, got: ' + DispatchedError);
+    Assert.AreEqual(1, DispatchCount,
+      'One notification must reach the registered verifier exactly once');
+    Assert.AreEqual(RawBody, ForwardedBody,
+      'The raw notification body must reach the verifier unchanged');
+
+    // Re-registering replaces the entry for that provider; the previous instance
+    // must not stay in play. The factory verifier is used here because it is the
+    // object this fixture is about.
     Verifier := CreateWeChatPayNotificationVerifier(
       'wx_test', 'mch_test', 'key_01234567890123456789012345', '');
-    // Should not raise
     Service.RegisterNotificationVerifier(cppWeChatPay, Verifier);
+
+    try
+      Service.VerifyAndConfirmPayment(cppWeChatPay, '', []);
+    except
+      on E: EDeepBaseCommercePaymentError do
+        ReplacedError := E.Message;
+    end;
+    Assert.IsFalse(ReplacedError.Contains('not registered'),
+      'The factory verifier must have taken over the registration, got: ' + ReplacedError);
+    Assert.AreEqual(1, DispatchCount,
+      'A replaced verifier must no longer be dispatched');
+
+    Assert.WillRaiseWithMessage(
+      procedure begin
+        Service.RegisterNotificationVerifier(cppWeChatPay, nil);
+      end,
+      EDeepBaseCommerceValidationError, 'Notification verifier is required',
+      'Registering a nil verifier must be refused');
   finally
     Service.Free;
   end;

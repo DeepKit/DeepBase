@@ -1,0 +1,98 @@
+== B13 前置取证：本工具链 RTL 时间语义 / TTimeZoneRegistry 与 SetNowFunc 可用性 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T04:18:12Z ==
+== 命令原件: 附件/build_probe.sh（dcc64 37.0 Win64 → 一次性 exe → stdout 用 iconv -f cp936 -t utf-8 解码）==
+== 源码: 附件/*.dpr.template（含中文字面量的探针源均为 UTF-8 BOM；无 BOM 时 dcc64 按 ANSI 码页读源，见文末口径说明）==
+
+---- 探针 1：RTL 时间语义实测（B13TimeProbe，BUILD_EXIT=0 / RUN_EXIT=0）----
+
+本机偏移(小时)=8   时区ID=中国标准时间   EncodeDateTime(1970,1,1)=25569   常量核对=719529
+
+==================== 0 基准瞬时（不依赖 DateTimeToUnix 自身） ====================
+UTC 裸值           = 2031-03-01T04:00:00
+本地裸值           = 2031-03-01T12:00:00
+独立算出的 Unix 秒 = 1930104000   （UTC 裸值 - 1970-01-01，与时区无关）
+
+==================== 1 DateTimeToUnix(AReturnUTC) 语义 ====================
+  输入=本地裸值  AReturnUTC=FALSE => 1930104000  与基准差(秒)= 0
+  输入=UTC 裸值  AReturnUTC=FALSE => 1930075200  与基准差(秒)= -28800
+  输入=本地裸值  AReturnUTC=TRUE => 1930132800  与基准差(秒)= 28800
+  输入=UTC 裸值  AReturnUTC=TRUE => 1930104000  与基准差(秒)= 0
+
+==================== 2 UnixToDateTime(AReturnUTC) 往返 ====================
+  UnixToDateTime(1930104000, FALSE) = 2031-03-01T12:00:00   == 本地裸值? TRUE   == UTC 裸值? FALSE
+  UnixToDateTime(1930104000, TRUE) = 2031-03-01T04:00:00   == 本地裸值? FALSE   == UTC 裸值? TRUE
+
+==================== 3 仓内惯例复现（WeChatPay:535 / Stripe:680 用 DateTimeToUnix(Now, False)） ====================
+  A  DateTimeToUnix(Now, False)                      = 1790741871
+  B  DateTimeToUnix(ToUniversalTime(Now), True)      = 1790741871
+  A-B 差(秒) = 0   （0 => 两写法等价）
+  C  双重换算 DateTimeToUnix(ToUniversalTime(Now), False) = 1790713071  C-A 差(秒)= -28800   （= -本机偏移秒数 => 双重换算即缺陷）
+
+==================== 4 PaidAtISO 写出口（B13-01） ====================
+  修前 DateToISO8601(本地裸值, False)                 = 2031-03-01T12:00:00.000+08:00
+  修后 DateToISO8601(ToUniversalTime(本地裸值), True) = 2031-03-01T04:00:00.000Z
+    修前串按 True 读回 = 2031-03-01T04:00:00  与锚点 UTC 裸值差(小时)= 0
+    修后串按 True 读回 = 2031-03-01T04:00:00  与锚点 UTC 裸值差(小时)= 0
+
+==================== 5 time_expire（B13-03） ====================
+  修前（本机本地 + 硬编码 +08:00）        = 2031-03-01T12:00:00+08:00
+  修法 A（ToUniversalTime 后 IncHour(+8)） = 2031-03-01T12:00:00+08:00
+    修前串读回 UTC 裸值 = 2031-03-01T04:00:00  与锚点差(小时)= 0
+    修法 A 串读回 UTC 裸值 = 2031-03-01T04:00:00  与锚点差(小时)= 0
+  修法 B（TTimeZoneRegistry.Find('Asia/Shanghai')）：本机 dcc64 编译面 E2003 Undeclared identifier
+    （System.TimeZones 单元不在默认搜索面，TTimeZone 经 System.DateUtils 可见而 TTimeZoneRegistry 不可见，
+      取证见 附件/TzAvailProbe + TzUnitProbe 编译输出）=> 选型只能走修法 A。
+
+==================== 6 expires_at（B13-02） ====================
+  修前 DateTimeToUnix(本地裸值)  [默认 True]            = 1930132800  差(秒)= 28800
+  工单修法 DateTimeToUnix(ToUniversalTime(本地裸值))    = 1930104000  差(秒)= 0
+  同形写法 DateTimeToUnix(本地裸值, False)              = 1930104000  差(秒)= 0
+  对照 双重换算 DateTimeToUnix(ToUniversalTime(本地裸值), False) = 1930075200  差(秒)= -28800
+
+---- 探针 2：TTimeZoneRegistry 符号面可用性（TzAvailProbe：uses 仅 System.SysUtils, System.DateUtils，BUILD_EXIT=1）----
+
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b13\TzAvailProbe.dpr(4) Error: E2003 Undeclared identifier: 'TTimeZoneRegistry'
+.tmp\b13\TzAvailProbe.dpr(7) Error: E2066 Missing operator or semicolon
+.tmp\b13\TzAvailProbe.dpr(7) Error: E2029 ',' or ')' expected but identifier 'Find' found
+.tmp\b13\TzAvailProbe.dpr(7) Error: E2015 Operator not applicable to this operand type
+
+---- 探针 3：System.TimeZones 单元面可用性（TzUnitProbe：显式 uses System.TimeZones，BUILD_EXIT=1）----
+
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b13\TzUnitProbe.dpr(3) Fatal: F2613 Unit 'System.TimeZones' not found.
+
+---- 探针 4：SetNowFunc / GetNowFunc 全局时钟打桩可用性（NowFuncProbe，BUILD_EXIT=1）----
+
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b13\NowFuncProbe.dpr(9) Error: E2003 Undeclared identifier: 'SetNowFunc'
+.tmp\b13\NowFuncProbe.dpr(14) Error: E2003 Undeclared identifier: 'GetNowFunc'
+.tmp\b13\NowFuncProbe.dpr(14) Error: E2015 Operator not applicable to this operand type
+
+---- 探针 5：System.GetNowFunc 显式限定名形态（NowFuncProbe2，BUILD_EXIT=1）----
+
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+.tmp\b13\NowFuncProbe2.dpr(8) Error: E2003 Undeclared identifier: 'GetNowFunc'
+
+---- 结论（对应工单 §〇-4 修法选型与回执 §六-1 偏差申报）----
+1. DateTimeToUnix(本地裸值, False) ≡ DateTimeToUnix(ToUniversalTime(本地裸值), True)（探针 1 第 3 节 A-B=0）
+   ⇒ 仓内既有惯例本身正确；缺陷形态是「ToUniversalTime 之后再按 False 换算」（C-A = -28800 秒）。
+2. 基准不由被测函数自证：锚点 1930104000 = 「UTC 裸值 - 1970-01-01」（探针 1 第 0 节）。
+3. DateToISO8601(本地裸值, False) 落 +08:00 形态，DateToISO8601(ToUniversalTime(本地裸值), True) 落 Z 形态，
+   两串按 True 读回同一 UTC 瞬时（探针 1 第 4 节）⇒ B13-01 改的是写出口框架，不动判定链。
+4. TTimeZoneRegistry 两条路都堵：符号面 E2003（探针 2）、单元面 F2613（探针 3）；且
+   lib/win64/release 下有 System.TimeSpan.dcu 而无 System.TimeZones.dcu
+   ⇒ B13-03 只能走 ToUniversalTime + IncHour(+8)（与 Alipay.pas:181 同形）。
+5. SetNowFunc/GetNowFunc 在本工具链不存在（探针 4；显式限定名同样 E2003：探针 5）
+   ⇒ 假时钟改为「接缝吃注入瞬时 + 桥接层可注入 client」，未触碰生产签名。
+
+---- 采集口径与首轮作废说明 ----
+首轮（同日 04:01 UTC）探针源无 UTF-8 BOM：dcc64 以 ANSI 码页读源，中文字面量在编译期即错位，解码件残留双重编码
+形态，被证据编码门 E3 判为本单新增违规。本轮补 BOM 后重编重跑，输出全为合法 UTF-8（U+FFFD=0）。
+另：字面量中的「⇒」在本机 ANSI 码页写 stdout 时不可逆降为「?」，故探针源改用「=>」，本轮无字符损失。
+探针 1 第 3 节使用 Now()，A/B/C 的绝对秒数随采集时刻变化；判据只看 A-B 与 C-A 的差值。

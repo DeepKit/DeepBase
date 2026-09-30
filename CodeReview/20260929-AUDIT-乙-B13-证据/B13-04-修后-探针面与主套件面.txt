@@ -1,0 +1,81 @@
+== B13-04 零断言用例补真后双脸复跑 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T04:01:49Z ==
+== 命令: DEEPBASE_EXTRA_U="$(pwd -W)/ThirdParty/Payment" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/<单元>.pas ; 主套件面 = build-gate 产出 DeepBaseTests.exe --run:<3 个夹具限定名> ==
+== 探针面 FailsOnNoAsserts=True（B2FixtureRunner.dpr.template:28）⇒ 修前该用例即唯一红；主套件面 DeepBaseTests.dpr:520 为 False ==
+
+---- 探针面 14/14（载体：wt-final 同源码工作树）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.PaymentBridge） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+48192 lines, 2.08 seconds, 3893612 bytes code, 485392 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.PaymentBridge） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............................
+
+Tests Found   : 14
+Tests Ignored : 0
+Tests Passed  : 14
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=14 pass=14 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+---- 主套件面 --run: 三夹具 17/17 RUN_EXIT=0 ----
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+..................................
+
+Tests Found   : 17
+Tests Ignored : 0
+Tests Passed  : 17
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+An unexpected memory leak has occurred. The unexpected small block leaks are:
+
+9 - 24 bytes: UnicodeString x 1
+25 - 40 bytes: TJSONObject x 4, TJSONString x 18, TJSONPair x 10, UnicodeString x 9
+41 - 56 bytes: UnicodeString x 5, Unknown x 4
+73 - 88 bytes: TList<System.JSON.TJSONPair> x 4
+89 - 104 bytes: UnicodeString x 1
+RUN_EXIT=0

@@ -1,0 +1,81 @@
+== B13-0 开工取证：本单起点 HEAD 与在途改动 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T04:01:15Z ==
+== 命令: git log --oneline -6 ; git status --short ==
+
+-- git log --oneline -6 --
+850f49b fix(payment): B13-03 WeChatPay time_expire 显式转 UTC+8（WO-20260929-AUDIT-乙-B13）
+becdad1 fix(payment): B13-02 Stripe expires_at 发出 UTC Unix 时间戳（WO-20260929-AUDIT-乙-B13）
+e7deb59 fix(commerce): B13-01 PaidAtISO 写出口统一到 Zulu UTC（WO-20260929-AUDIT-乙-B13）
+6264d17 docs(A11): 回执 §六 提交清单落全 SHA 并声明补笔性质（WO-20260929-AUDIT-甲-A11）
+7ca12a8 docs(A11): 补齐判据⑤ 三件修前基线原件（WO-20260929-AUDIT-甲-A11）
+dc9dc43 docs(A11): 甲 A11 判据②同源性逐字节自证（WO-20260929-AUDIT-甲-A11）
+
+-- git status --short（工作树在途件，非本单申报） --
+ M Tests/DeepBaseTests.dpr
+ M Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+?? .workbuddy/memory/2026-08-29.md
+?? .workbuddy/memory/2026-09-14.md
+?? .workbuddy/memory/2026-09-15.md
+?? .workbuddy/memory/2026-09-16.md
+?? .workbuddy/memory/2026-09-17.md
+?? .workbuddy/memory/2026-09-18.md
+?? .workbuddy/memory/2026-09-22.md
+?? .workbuddy/memory/2026-09-23.md
+?? .workbuddy/memory/2026-09-24.md
+?? .workbuddy/memory/2026-09-25.md
+?? CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Authorization.pas.log
+?? CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Crypto.AES.pas.log
+?? CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.KeyManager.pas.log
+?? CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Reflection.pas.log
+?? CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Template.pas.log
+?? CodeReview/20260919-AUDIT-甲-证据/R2-run-tests.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-action-executor.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-autoupdate.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-config-registrar.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-crypto-aes.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-crypto-rsa.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-gate-verdict.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-manifest-verifier.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-plugin-manager.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-review-queue.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-test-a8-inflight.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-test-bug340.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-test-crypto.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-test-manifest-verifier.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-test-updater.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-uia-engine.log
+?? CodeReview/20260919-AUDIT-甲-证据/build-updater.log
+?? CodeReview/20260919-AUDIT-甲-证据/run-tests-a6a8.log
+?? CodeReview/20260921-AUDIT-乙-P0-HEAD编译断裂修复-请求审核报告.md
+?? CodeReview/20260921-AUDIT-乙-P1-证据/p1-reporoot.xml
+?? CodeReview/20260921-AUDIT-乙-P1-证据/p1-wrongcwd.xml
+?? CodeReview/20260921-AUDIT-乙-P2b-AV诊断报告.md
+?? CodeReview/20260929-AUDIT-主控-甲-A11-证据/
+?? CodeReview/20260929-AUDIT-乙-B13-证据/
+?? docs/DeepBase-MoE端侧流式推理下沉基础架构讨论包-20260925.md
+?? docs/WO-20260829-0230-开发甲-VCL-HB-视觉层全面修复交付报告.md
+?? docs/WO-20260830-003-审核-交付验收报告.md
+?? docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md
+?? docs/WO-20260830-004-审核-最终裁决.md
+?? docs/WO-20260830-004-开发甲-HB审计文档整理交付报告.md
+?? docs/WO-20260830-005-审核-最终裁决.md
+?? docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度交付报告.md
+?? docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度工单.md
+?? docs/WO-20260830-005-开发甲-HB审计统计口径纠偏交付报告.md
+?? docs/WO-20260830-HB-交付报告纠偏-审核-最终裁决.md
+?? docs/WO-20260830-审核-交付验收-最终裁决.md
+?? docs/WO-20260830-文档整理-开发甲-交付报告.md
+?? docs/WO-20260830-最终验证-开发甲-交付报告.md
+?? docs/brief-WO-20260905-003-开发甲.md
+?? docs/brief-WO-20260905-004-开发甲.md
+?? docs/brief-WO-20260905-005-开发甲.md
+?? docs/evidence-dcc64-hb-005-34units.txt
+?? docs/evidence-dcc64-hb-32units.txt
+?? docs/ui/HB-HACI-Visual-Alignment.md
+?? docs/ui/work-orders/WO-20260929-AUDIT-甲-A13-TimeGuard服务器读数链框架收口.md
+?? 封版人：主控（沈予安）
+?? 版本：
+?? 范围：2026-09-18
+
+结论：B13-01 首笔 e7deb59 的父提交 = 6264d17（甲 A11 文档笔），即本单开工代码基线；终态噪声对照树一律取 6264d17（见 B13-9）。

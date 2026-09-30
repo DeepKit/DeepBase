@@ -1,0 +1,10 @@
+﻿program NowFuncProbe2;
+{$APPTYPE CONSOLE}
+uses
+  System.SysUtils, System.DateUtils, System.TimeSpan;
+var
+  F: TFunc<TDateTime>;
+begin
+  F := System.GetNowFunc;
+  Writeln(IntToStr(Round(F * 1)));
+end.

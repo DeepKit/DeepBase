@@ -1,0 +1,104 @@
+== B13 修前基线：受影响两夹具（一次性 runner，FailsOnNoAsserts=True 探针面） ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T04:01:15Z ==
+== 命令: DEEPBASE_EXTRA_U="$(pwd -W)/ThirdParty/Payment" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/<单元>.pas ==
+
+---- Test.DeepBase.Commerce.PaymentBridge（12/11/1，唯一红 = B13-04 目标零断言用例）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Commerce.PaymentBridge） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(625) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(662) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1045) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(194) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(228) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(431) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+47947 lines, 1.99 seconds, 3882860 bytes code, 484688 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce.PaymentBridge） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......................F
+
+Tests Found   : 12
+Tests Ignored : 0
+Tests Passed  : 11
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.PaymentBridge.TWeChatPayBridgeTests.Test_RegisterVerifier_WithService
+  Message: No assertions were made during the test
+
+
+RUNNER_STATS fixtureCount=1 testCount=12 pass=11 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+---- Test.DeepBase.Payment（21/21）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(625) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(662) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1045) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+45463 lines, 1.80 seconds, 3678336 bytes code, 464352 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..........................................
+
+Tests Found   : 21
+Tests Ignored : 0
+Tests Passed  : 21
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=21 pass=21 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

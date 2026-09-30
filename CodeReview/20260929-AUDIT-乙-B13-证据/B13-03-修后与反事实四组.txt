@@ -1,0 +1,339 @@
+== B13-03 修后同面全绿 + 反事实四组（接缝偏移/调用点换算 × WeChat/Stripe） ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T04:01:49Z ==
+== 命令: DEEPBASE_EXTRA_U="$(pwd -W)/ThirdParty/Payment" bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/<单元>.pas ==
+== CF-A 去接缝 IncHour(...,8)；CF-B 测试侧把调用点读数换回本地裸值（模拟调用点漏 ToUniversalTime）；CF-C Stripe 接缝改回 False；CF-D Stripe 侧同 CF-B ==
+
+---- 修后 25/25（补两条组合用例前）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+46309 lines, 2.28 seconds, 3682376 bytes code, 464640 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..................................................
+
+Tests Found   : 25
+Tests Ignored : 0
+Tests Passed  : 25
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=25 pass=25 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+---- 修后 27/27（含调用点接线组合用例，最终态）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+46355 lines, 2.50 seconds, 3683784 bytes code, 464712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+......................................................
+
+Tests Found   : 27
+Tests Ignored : 0
+Tests Passed  : 27
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=27 pass=27 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+---- CF-A（27 / 24 / 3）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+Tests\Test.DeepBase.Payment.pas(640) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+Tests\Test.DeepBase.Payment.pas(659) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+46354 lines, 2.03 seconds, 3683736 bytes code, 464712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+...........................................F.F.F......
+
+Tests Found   : 27
+Tests Ignored : 0
+Tests Passed  : 24
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_IsBeijingWireOfInjectedClock
+  Message: Expected [2031-03-01T12:30:00+08:00] but got [2031-03-01T04:30:00+08:00] time_expire must be the Beijing representation of the injected instant, independent of the machine timezone
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_RoundTripsToExpireInstant
+  Message: Expected [0] but got [-28800] time_expire must read back as the expire instant it names
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_KeepsInstantThroughCallSiteConversion
+  Message: Expected [2031-03-01T13:30:00+08:00] but got [2031-03-01T05:30:00+08:00] time_expire must name the same instant the local clock reading denotes
+
+
+RUNNER_STATS fixtureCount=1 testCount=27 pass=24 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+---- CF-B（27 / 26 / 1）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+46355 lines, 2.12 seconds, 3683736 bytes code, 464712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+...............................................F......
+
+Tests Found   : 27
+Tests Ignored : 0
+Tests Passed  : 26
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_KeepsInstantThroughCallSiteConversion
+  Message: Expected [2031-03-01T13:30:00+08:00] but got [2031-03-01T21:30:00+08:00] time_expire must name the same instant the local clock reading denotes
+
+
+RUNNER_STATS fixtureCount=1 testCount=27 pass=26 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+---- CF-C（27 / 24 / 3）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+Tests\Test.DeepBase.Payment.pas(640) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+Tests\Test.DeepBase.Payment.pas(659) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+46354 lines, 2.20 seconds, 3683752 bytes code, 464712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....................................F.F.F............
+
+Tests Found   : 27
+Tests Ignored : 0
+Tests Passed  : 24
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_IsUtcSecondsOfInjectedClock
+  Message: Expected [1930105800] but got [1930077000] expires_at must name the UTC instant of the injected clock reading plus the ttl
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_RoundTripsToExpireInstant
+  Message: Expected [0] but got [-28800] expires_at must read back as the expire instant it names
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_KeepsInstantThroughCallSiteConversion
+  Message: Expected [1930109400] but got [1930080600] expires_at must name the same UTC instant the local clock reading denotes
+
+
+RUNNER_STATS fixtureCount=1 testCount=27 pass=24 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+---- CF-D（27 / 26 / 1）----
+
+== 编译一次性 runner（单元: Test.DeepBase.Payment） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(640) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(677) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1060) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(208) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(242) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+ThirdParty\Payment\DeepBase.Payment.Stripe.pas(446) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+Tests\Test.DeepBase.Payment.pas(640) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+Tests\Test.DeepBase.Payment.pas(659) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+46354 lines, 2.02 seconds, 3683720 bytes code, 464712 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Payment） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.........................................F............
+
+Tests Found   : 27
+Tests Ignored : 0
+Tests Passed  : 26
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_KeepsInstantThroughCallSiteConversion
+  Message: Expected [1930109400] but got [1930138200] expires_at must name the same UTC instant the local clock reading denotes
+
+
+RUNNER_STATS fixtureCount=1 testCount=27 pass=26 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

@@ -1,0 +1,8 @@
+﻿program TzAvailProbe;
+{$APPTYPE CONSOLE}
+uses System.SysUtils, System.DateUtils;
+var Z: TTimeZone; R: TTimeZoneRegistry;
+begin
+  Z := TTimeZone.Local; Writeln(Z.ID);
+  R := TTimeZoneRegistry.Instance; Writeln(R.Find('China Standard Time') <> nil);
+end.

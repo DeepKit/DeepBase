@@ -1,0 +1,22 @@
+# B13-01 判据④：TCommercePaymentNotification.PaidAtISO 的全部消费点（是否参与判定/比较）
+
+$ grep -rn --include=*.pas "Notification.PaidAtISO\|ANotification.PaidAtISO" Features Tests
+
+Features/DeepBase.Commerce.Service.pas:322:      Payment.PaidAtISO := ANotification.PaidAtISO;
+Tests/Test.DeepBase.Commerce.pas:641:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:671:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:703:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:1167:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:2263:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:2448:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:197:    Assert.IsTrue(Copy(Notification.PaidAtISO, Length(Notification.PaidAtISO), 1) = 'Z',
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:198:      'PaidAtISO must leave the bridge in Zulu form, got ' + Notification.PaidAtISO);
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:199:    Assert.IsTrue(TryISO8601ToDate(Notification.PaidAtISO, Parsed, True),
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:218:    Assert.AreEqual('', Notification.PaidAtISO,
+
+$ grep -rn --include=*.pas -E "PaidAtISO\s*(<|>|=|<>)|SameText\(.*PaidAtISO|CompareText\(.*PaidAtISO" Features Core
+
+Features/DeepBase.Commerce.Adapter.Supabase.pas:397:  if AOrder.PaidAtISO <> '' then
+Features/DeepBase.Commerce.Adapter.Supabase.pas:413:  if APayment.PaidAtISO <> '' then
+Features/DeepBase.Commerce.Service.pas:323:      if Payment.PaidAtISO = '' then
+(以上仅赋值比较，无判定链引用则计数为 0 或仅为持久化字段搬运)

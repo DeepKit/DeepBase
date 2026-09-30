@@ -1,0 +1,125 @@
+== B13-12 git 自证：只动申报文件 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T04:22:00Z ==
+== 基准: 开工 HEAD = 6264d17（原件见 B13-0-开工取证-HEAD漂移.txt）==
+
+一、申报清单（工单 §〇-1 H15 + 回执 §一）
+--------------------------------------------------------------------------------
+  B13-01  Features/DeepBase.Commerce.PaymentBridge.pas
+          Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+  B13-02  ThirdParty/Payment/DeepBase.Payment.Stripe.pas
+          Tests/Test.DeepBase.Payment.pas
+  B13-03  ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
+          Tests/Test.DeepBase.Payment.pas
+  B13-04  Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+          CodeReview/20260929-AUDIT-乙-B13-交付回执.md
+          CodeReview/20260929-AUDIT-乙-B13-证据/**
+  范围收敛（工单 §〇-3）：Features/DeepBase.Commerce.PaymentBridge.pas + ThirdParty/Payment/**
+  ⇒ 测试件与证据件是 §〇-5「TDD + 原始输出存档」要求的落点，不算扩面。
+
+二、已落三笔的逐笔文件清单（git log --numstat 6264d17..HEAD 原始输出）
+--------------------------------------------------------------------------------
+### e7deb59b fix(commerce): B13-01 PaidAtISO 写出口统一到 Zulu UTC（WO-20260929-AUDIT-乙-B13）
+3       1       Features/DeepBase.Commerce.PaymentBridge.pas
+146     0       Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+### becdad16 fix(payment): B13-02 Stripe expires_at 发出 UTC Unix 时间戳（WO-20260929-AUDIT-乙-B13）
+50      0       Tests/Test.DeepBase.Payment.pas
+16      1       ThirdParty/Payment/DeepBase.Payment.Stripe.pas
+### 850f49b6 fix(payment): B13-03 WeChatPay time_expire 显式转 UTC+8（WO-20260929-AUDIT-乙-B13）
+82      0       Tests/Test.DeepBase.Payment.pas
+17      2       ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
+
+聚合面（git diff --name-only 6264d17..HEAD）：
+  Features/DeepBase.Commerce.PaymentBridge.pas
+  Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+  Tests/Test.DeepBase.Payment.pas
+  ThirdParty/Payment/DeepBase.Payment.Stripe.pas
+  ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
+⇒ 五件全在 §一 申报清单内；Stripe 的组合用例落在 B13-03 笔（偏差已在回执 §一 申报）。
+
+三、禁动区零触碰（对 6264d17..HEAD 的聚合面跑禁动区正则）
+--------------------------------------------------------------------------------
+  git diff --name-only 6264d17..HEAD
+    | grep -E '^(contracts/|Tests/DeepBaseTests\.(dpr|dproj)|Tests/Integration/|TestResults/|Core/|Features/DeepBase\.Licensing\.pas|Features/DeepBase\.TimeGuard\.pas|noise-baseline\.json)'
+    | wc -l
+  => 0
+  v1.1.0 标签 / EHAI 冻结面 / 新旧 PluginManager 轨：本单未产出任何提交，标签面不变
+  git branch -r --contains 850f49b6 => 空（见 §五）
+
+四、台账状态槽未写 + 非本单在途件的处置
+--------------------------------------------------------------------------------
+  git diff --name-only 6264d17..HEAD -- docs/ui/00-主控派单总表.md  => 空
+  git status --short  -- docs/ui/00-主控派单总表.md                  => 空
+  ⇒ 本单三笔 + 第四笔均未写台账（改写权归主控，B10 立规）。
+
+  Tests/DeepBaseTests.dpr（禁动区）在本单开工期间被他人改动，非本单所改，本单不 stage、不还原、不 rebase：
+    git diff --stat Tests/DeepBaseTests.dpr => 1 file changed, 1 insertion(+)
+    +  Test.DeepBase.TimeGuardSecretStore in 'Test.DeepBase.TimeGuardSecretStore.pas',
+      （@@ -60,6 +60,7 @@ uses，位于 Test.DeepBase.LicensingTimeSource 之后）
+    该单元文件在 HEAD 已跟踪（8a60036 fix(commerce): A11-02 ...）
+  ⇒ 已在回执 §八-3 登记报主控；主控随后自行并网该 1 行：
+    30fabb81 tests(A11): 新测试单元 Test.DeepBase.TimeGuardSecretStore 并网 1 行（WO-20260929-AUDIT-甲-A11）
+    ⇒ 本单全程未 stage、未还原、未改写该禁动区文件。
+
+五、未 push 自证
+--------------------------------------------------------------------------------
+  git rev-parse --abbrev-ref master@{upstream}  => fatal: no upstream configured for branch 'master'
+  git rev-list --left-right --count origin/master...HEAD => 0  424（本地领先 424，落后 0）
+  git branch -r --contains 850f49b6             => 空（无任何远端分支包含本单提交）
+  git reflog | grep -i "update by push"         => 空
+六、本笔（B13-04 交付笔）add 面自证（提交前采集）
+--------------------------------------------------------------------------------
+  本单条目 23 件（新增 22 + 修改 1），取自 git diff --cached --name-status 过滤本单 pathspec：
+    A  CodeReview/20260929-AUDIT-乙-B13-交付回执.md
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-0-开工取证-HEAD漂移.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-01-PaidAtISO不入判定链-rg自证.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-01-PaidAt写点枚举-rg自证.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-01-修后与反事实.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-02-修后与反事实.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-03-仓内时间惯例-rg自证.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-03-修后与反事实四组.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-04-修后-探针面与主套件面.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-04-反事实-登记口两组.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-1-RTL时间语义实测探针.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-10-T0-生产契约面终态门禁.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-11-四道静态门禁终态复跑.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-12-git自证-只动申报文件.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-2-修前基线-两夹具探针面跑录.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/B13-9-编译门禁三树对照.txt
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/附件/B13TimeProbe.dpr.template
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/附件/NowFuncProbe.dpr.template
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/附件/NowFuncProbe2.dpr.template
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/附件/TzAvailProbe.dpr.template
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/附件/TzUnitProbe.dpr.template
+    A  CodeReview/20260929-AUDIT-乙-B13-证据/附件/build_probe.sh
+    M  Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+  ⇒ 代码面只有 Tests/Test.DeepBase.Commerce.PaymentBridge.pas 一件修改，其余全在本单回执与证据目录内；
+    §一 申报清单逐条都在面内，面内也没有一条 §一 之外的本单条目。
+
+  未入索引的工作树改动 3 件（本笔不携带）：
+    CodeReview/20260929-AUDIT-乙-B13-交付回执.md
+    CodeReview/20260929-AUDIT-乙-B13-证据/B13-11-四道静态门禁终态复跑.txt
+    CodeReview/20260929-AUDIT-乙-B13-证据/B13-12-git自证-只动申报文件.txt
+    ⇒ 全部为本单证据件 B13-11 / B13-12：二者内容在 add 之后继续收尾（终态门数与并发事实），只改内容不改件数；
+      因此 §六 计数与 证据/B13-11 的 R3 扫描面一致，无漂移。
+
+  并发写入事实（本笔落笔方式的依据）：
+    本单 add 之后、落笔之前，同一 index 一度被主控 A11 线写入 11 条非本单条目；主控随后用两笔独立提交带走：
+      4fd0ca64 docs(A11): 主控零信任验收结论 ACCEPTED 1/1 + 主控亲跑证据 10 件（WO-20260929-AUDIT-甲-A11）
+      bdc81f7f docs(派单): A11 验收派生甲 A13（TimeGuard 服务器读数链框架收口 P1）+ 台账回填（WO-20260929-AUDIT-甲-A11）
+    交叉自证（本单条目未被他人提交携带）：
+      git show --name-only 4fd0ca6 | grep -c B13  => 0
+      git show --name-only bdc81f7 | grep -c B13  => 0
+    落笔时刻 index 内非本单条目：0 件
+    ⇒ 多会话共享同一工作树与 index ⇒ 「index == 本单申报面」不能由本单在提交瞬间独立保证，
+      故本笔用 `git commit --only -- <显式 pathspec>`（B0-2 先例）：提交面只取点名 pathspec 的工作树内容，
+      既不携带他人在途条目，也不丢弃它们。
+
+七、笔数纪律与落笔后反查（供主控亲跑）
+--------------------------------------------------------------------------------
+  工单 §〇-1：4 项 = 最多 4 笔独立提交，message 分别带 B13-01/B13-02/B13-03/B13-04。
+  本笔为第 4 笔，也是本单唯一含回执与证据件的一笔；前三笔为纯代码笔，未 amend、未 rebase、未 push（§五）。
+  本件写于落笔之前 ⇒ 不自我指认本笔 SHA。落笔后反查三条：
+    git show --name-status HEAD                 # 断言：只含 §六 本单 23 件
+    git show --numstat --format='' HEAD         # 逐件增删行数与本件对照
+    git status --short --untracked-files=no     # 断言：他人在途件与台账未被本笔携带

@@ -1,0 +1,8 @@
+﻿program TzUnitProbe;
+{$APPTYPE CONSOLE}
+uses System.SysUtils, System.TimeZones;
+var R: TTimeZoneRegistry;
+begin
+  R := TTimeZoneRegistry.Instance;
+  Writeln(R.Find(Asia/Shanghai) <> nil);
+end.

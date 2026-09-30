@@ -1,0 +1,65 @@
+# B13-01 判据① 枚举自证：ThirdParty/Payment + Features 全部 PaidAt 写点（HEAD 850f49b 之前的工作树，命令原文）
+
+$ grep -rn --include=*.pas -E "PaidAt[^a-zA-Z]*(:=|:)" ThirdParty/Payment Features Core | grep -v PaidAtISO
+
+ThirdParty/Payment/DeepBase.Payment.pas:124:    PaidAt: TDateTime;
+ThirdParty/Payment/DeepBase.Payment.pas:167:    PaidAt: TDateTime;
+ThirdParty/Payment/DeepBase.Payment.pas:374:  PaidAt := 0;
+ThirdParty/Payment/DeepBase.Payment.pas:429:  PaidAt := 0;
+ThirdParty/Payment/DeepBase.Payment.PayPal.pas:574:        Result.PaidAt := Now;
+ThirdParty/Payment/DeepBase.Payment.PayPal.pas:810:        ANotification.PaidAt := Now;
+
+$ grep -rn --include=*.pas "PaidAtISO" Features ThirdParty Tests
+
+Features/DeepBase.Commerce.Adapter.Firebase.pas:394:  Result.PaidAtISO := StrField(Fields, 'paid_at');
+Features/DeepBase.Commerce.Adapter.Firebase.pas:408:  Result.PaidAtISO := StrField(Fields, 'paid_at');
+Features/DeepBase.Commerce.Adapter.Firebase.pas:469:  Result.AddPair('paid_at', WrapValue(AOrder.PaidAtISO));
+Features/DeepBase.Commerce.Adapter.Firebase.pas:485:  Result.AddPair('paid_at', WrapValue(APayment.PaidAtISO));
+Features/DeepBase.Commerce.Adapter.Supabase.pas:322:  Result.PaidAtISO := Str(Obj, 'paid_at');
+Features/DeepBase.Commerce.Adapter.Supabase.pas:336:  Result.PaidAtISO := Str(Obj, 'paid_at');
+Features/DeepBase.Commerce.Adapter.Supabase.pas:397:  if AOrder.PaidAtISO <> '' then
+Features/DeepBase.Commerce.Adapter.Supabase.pas:398:    Result.AddPair('paid_at', AOrder.PaidAtISO);
+Features/DeepBase.Commerce.Adapter.Supabase.pas:413:  if APayment.PaidAtISO <> '' then
+Features/DeepBase.Commerce.Adapter.Supabase.pas:414:    Result.AddPair('paid_at', APayment.PaidAtISO);
+Features/DeepBase.Commerce.JsonUtil.pas:392:  Result.PaidAtISO := JsonValueAsString(AJson, SCommerceFieldPaidAt, '');
+Features/DeepBase.Commerce.JsonUtil.pas:409:  Result.AddPair(SCommerceFieldPaidAt, AOrder.PaidAtISO);
+Features/DeepBase.Commerce.JsonUtil.pas:427:  Result.PaidAtISO := JsonValueAsString(AJson, SCommerceFieldPaidAt, '');
+Features/DeepBase.Commerce.JsonUtil.pas:444:  Result.AddPair(SCommerceFieldPaidAt, APayment.PaidAtISO);
+Features/DeepBase.Commerce.PaymentBridge.pas:263:    Result.PaidAtISO := DateToISO8601(TTimeZone.Local.ToUniversalTime(SDKNotif.PaidAt), True)
+Features/DeepBase.Commerce.PaymentBridge.pas:265:    Result.PaidAtISO := '';
+Features/DeepBase.Commerce.SafeClient.pas:116:    PaidAtISO: string;
+Features/DeepBase.Commerce.SafeClient.pas:263:  Result.PaidAtISO := JsonValueAsString(AJson, SCommerceFieldPaidAt, '');
+Features/DeepBase.Commerce.Service.pas:202:  Result.PaidAtISO := '';
+Features/DeepBase.Commerce.Service.pas:254:      Payment.PaidAtISO := '';
+Features/DeepBase.Commerce.Service.pas:308:      Payment.PaidAtISO := '';
+Features/DeepBase.Commerce.Service.pas:322:      Payment.PaidAtISO := ANotification.PaidAtISO;
+Features/DeepBase.Commerce.Service.pas:323:      if Payment.PaidAtISO = '' then
+Features/DeepBase.Commerce.Service.pas:324:        Payment.PaidAtISO := CommerceNowISO;
+Features/DeepBase.Commerce.Service.pas:328:      Result.PaidAtISO := Payment.PaidAtISO;
+Features/DeepBase.Commerce.Types.pas:126:    PaidAtISO: string;
+Features/DeepBase.Commerce.Types.pas:139:    PaidAtISO: string;
+Features/DeepBase.Commerce.Types.pas:163:    PaidAtISO: string;
+Features/DeepBase.Commerce.Types.pas:220:  // Wire convention: all ISO timestamps (CreatedAtISO, PaidAtISO, valid_until,
+Tests/Test.DeepBase.Commerce.pas:641:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:671:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:703:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:829:  Order.PaidAtISO := '';
+Tests/Test.DeepBase.Commerce.pas:866:  Order.PaidAtISO := '';
+Tests/Test.DeepBase.Commerce.pas:906:  Order.PaidAtISO := '';
+Tests/Test.DeepBase.Commerce.pas:917:  Payment.PaidAtISO := '';
+Tests/Test.DeepBase.Commerce.pas:971:  Order.PaidAtISO := '';
+Tests/Test.DeepBase.Commerce.pas:982:  Payment.PaidAtISO := '';
+Tests/Test.DeepBase.Commerce.pas:1167:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:2263:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.pas:2448:  Notification.PaidAtISO := CommerceNowISO;
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:50:    procedure Test_PaidAtISO_IsZuluInstantOfLocalBarePaidAt;
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:53:    procedure Test_PaidAtISO_EmptyWhenProviderSuppliesNoPaidAt;
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:182:procedure TPaidAtWireConventionTests.Test_PaidAtISO_IsZuluInstantOfLocalBarePaidAt;
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:197:    Assert.IsTrue(Copy(Notification.PaidAtISO, Length(Notification.PaidAtISO), 1) = 'Z',
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:198:      'PaidAtISO must leave the bridge in Zulu form, got ' + Notification.PaidAtISO);
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:199:    Assert.IsTrue(TryISO8601ToDate(Notification.PaidAtISO, Parsed, True),
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:200:      'PaidAtISO must parse back as an ISO-8601 UTC instant');
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:202:      'PaidAtISO must round-trip to the UTC instant of the clock reading the provider sent');
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:208:procedure TPaidAtWireConventionTests.Test_PaidAtISO_EmptyWhenProviderSuppliesNoPaidAt;
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas:218:    Assert.AreEqual('', Notification.PaidAtISO,
+Tests/Test.DeepBase.Commerce.Service.PBT.pas:373:      LOrder.PaidAtISO := '';

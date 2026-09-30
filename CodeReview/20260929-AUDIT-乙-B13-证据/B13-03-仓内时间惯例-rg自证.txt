@@ -1,0 +1,43 @@
+# B13-03/B13-02 选型自证：仓内既有时间框架写法（命令原文，工作树 @6264d17+本单三笔）
+
+$ grep -rn --include=*.pas -E "IncHour\(TTimeZone.Local.ToUniversalTime|ToUniversalTime\(Now" ThirdParty Features Core
+
+ThirdParty/Cloud/DeepBase.Cloud.Storage.pas:492:  AmzDate := FormatDateTime('yyyymmdd"T"hhnnss"Z"', TTimeZone.Local.ToUniversalTime(Now));
+ThirdParty/Cloud/DeepBase.Cloud.Storage.pas:493:  DateStamp := FormatDateTime('yyyymmdd', TTimeZone.Local.ToUniversalTime(Now));
+ThirdParty/Cloud/DeepBase.Cloud.Storage.pas:635:  AmzDate := FormatDateTime('yyyymmdd"T"hhnnss"Z"', TTimeZone.Local.ToUniversalTime(Now));
+ThirdParty/Cloud/DeepBase.Cloud.Storage.pas:636:  DateStamp := FormatDateTime('yyyymmdd', TTimeZone.Local.ToUniversalTime(Now));
+ThirdParty/Cloud/DeepBase.Cloud.Storage.pas:705:    TTimeZone.Local.ToUniversalTime(Now), TFormatSettings.Create('en-US'));
+ThirdParty/Cloud/DeepBase.Cloud.Storage.pas:838:    TTimeZone.Local.ToUniversalTime(Now), TFormatSettings.Create('en-US'));
+ThirdParty/Payment/DeepBase.Payment.Alipay.pas:181:    IncHour(TTimeZone.Local.ToUniversalTime(Now), 8)));
+ThirdParty/Payment/DeepBase.Payment.Stripe.pas:328:        StripeExpiresAtUnix(TTimeZone.Local.ToUniversalTime(Now), AOrder.ExpireMinutes)));
+ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:767:        WeChatTimeExpire(TTimeZone.Local.ToUniversalTime(Now), AOrder.ExpireMinutes));
+Features/DeepBase.Commerce.Idempotency.pas:119:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:150:    LRec.CreatedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:170:      LRec.CompletedAt := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Types.pas:502:  N := TTimeZone.Local.ToUniversalTime(Now);
+Core/DeepBase.HB.Dialogs.Types.pas:195:    Obj.AddPair('timestamp_utc', TJSONNumber.Create(DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000));
+Core/DeepBase.HB.Lifecycle.pas:115:    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Runtime.pas:151:    Rec.RegisteredAtUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:150:  FLastFlushUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:195:    ANowUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:247:    FLastFlushUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:291:  Reg.RegisteredAtUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:366:          FilteredEv.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:382:          FilteredEv.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+Core/DeepBase.HB.Touchpoint.Engine.pas:404:  NowUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+
+$ grep -rn --include=*.pas -E "\+08:00" ThirdParty Features Core
+
+ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:457:  Result := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"+08:00"',
+Core/DeepBase.AutoFix.ErrorRecorder.pas:343:      var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
+Core/DeepBase.AutoFix.HealthSignal.pas:150:        .Append(FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now)).Append('"')
+Core/DeepBase.AutoFix.ScenarioRunner.pas:214:  var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
+Core/DeepBase.AutoFix.SelfTerminator.pas:200:        .Append(FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now)).Append('"')
+
+$ grep -rn --include=*.pas -E "DateTimeToUnix\(|UnixToDateTime\(" ThirdParty/Payment Features
+
+ThirdParty/Payment/DeepBase.Payment.Stripe.pas:122:  Result := DateTimeToUnix(ANowUtcBare + AExpireMinutes / 1440);
+ThirdParty/Payment/DeepBase.Payment.Stripe.pas:695:  CurrentTime := DateTimeToUnix(Now, False);
+ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:550:  Timestamp := DateTimeToUnix(Now, False);
+ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:959:  Timestamp := DateTimeToUnix(Now, False);
+ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:991:  Timestamp := DateTimeToUnix(Now, False);
