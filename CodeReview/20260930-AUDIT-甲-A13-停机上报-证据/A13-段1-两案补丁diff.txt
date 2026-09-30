@@ -1,0 +1,53 @@
+== A13 段1：两案候选补丁（隔离树实测用，未进主树） ==
+== 基线锚点 89ba4a87c11a118bba6512bc35d9ced5b5c0a165；三树均 git worktree add --detach ==
+
+----- 案 A（wt-A）：ParseRfc822Date 末尾把 GMT 编码值换算本地裸值 -----
+diff --git a/Features/DeepBase.TimeGuard.pas b/Features/DeepBase.TimeGuard.pas
+index 9e34277..a22f22b 100644
+--- a/Features/DeepBase.TimeGuard.pas
++++ b/Features/DeepBase.TimeGuard.pas
+@@ -263,7 +263,7 @@ begin
+   if (LDay > 0) and (LMonth > 0) and (LYear > 0) and LTimeParsed then
+   begin
+     try
+-      Result := EncodeDateTime(LYear, LMonth, LDay, LHour, LMin, LSec, 0);
++      Result := TTimeZone.Local.ToLocalTime(EncodeDateTime(LYear, LMonth, LDay, LHour, LMin, LSec, 0));
+     except
+       Result := 0;
+     end;
+
+----- 案 B（wt-B）：Verify 两侧统一 UTC 框架 + 水位写读改 Zulu -----
+diff --git a/Features/DeepBase.TimeGuard.pas b/Features/DeepBase.TimeGuard.pas
+index 9e34277..63ecbc9 100644
+--- a/Features/DeepBase.TimeGuard.pas
++++ b/Features/DeepBase.TimeGuard.pas
+@@ -378,7 +378,7 @@ begin
+   if LStore = nil then
+     Exit;
+   try
+-    LISO := DateToISO8601(ATime, False);  // UTC
++    LISO := DateToISO8601(ATime, True);
+     LStore.SaveSecret(FStorageKey, LISO);
+   except
+     // Storage failure is non-fatal
+@@ -397,7 +397,7 @@ begin
+   try
+     LISO := LStore.LoadSecret(FStorageKey);
+     if LISO <> '' then
+-      TryISO8601ToDate(LISO, Result, False);
++      TryISO8601ToDate(LISO, Result, True);
+   except
+     Result := 0;
+   end;
+@@ -410,7 +410,7 @@ var
+   LLastGood: TDateTime;
+ begin
+   FVerified := True;
+-  LLocalNow := Now;
++  LLocalNow := TTimeZone.Local.ToUniversalTime(Now);
+ 
+   // Load last known good time
+   LLastGood := LoadLastKnownGoodTime;
+
+----- wt-pre：零改动对照树（git status 应为空） -----
+(以上无输出 ⇒ wt-pre 生产面零改动，只增探针单元)

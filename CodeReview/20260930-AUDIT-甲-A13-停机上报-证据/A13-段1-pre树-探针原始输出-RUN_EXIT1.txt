@@ -1,0 +1,56 @@
+== 编译一次性 runner（单元: Test.DeepBase.A13TimeFraming） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Tests\Test.DeepBase.A13TimeFraming.pas(132) Hint: H2443 Inline function 'TTimeZone.GetUtcOffset' has not been expanded because unit 'System.TimeSpan' is not specified in USES list
+38047 lines, 1.72 seconds, 3985932 bytes code, 503008 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.A13TimeFraming） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.[A13] P1 | offset_hours=8.0000 | result=MajorSkew | trusted=0 | server_offset_hours=-8.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T07:52:05.148+08:00
+F.[A13] P2 | offset_hours=8.0000 | result=OK | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=0.0000 | LKG_minus_utcnow_hours=8.0000 | watermark_raw=2026-09-30T15:52:05.148+08:00
+..[A13] P3 wire Date=Wed, 30 Sep 2026 07:52:05 GMT | true UTC now as numbers=2026-09-30 07:52:05 | server local clock=2026-09-30 15:52:05
+[A13] P3 | offset_hours=8.0000 | result=MajorSkew | trusted=0 | server_offset_hours=-8.0000 | LKG_minus_now_hours=-8.0001 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T07:52:05.000+08:00
+F.[A13] P4.step1 | offset_hours=8.0000 | result=MajorSkew | trusted=0 | server_offset_hours=-7.0001 | LKG_minus_now_hours=-7.0001 | LKG_minus_utcnow_hours=0.9999 | watermark_raw=2026-09-30T08:52:05.000+08:00
+[A13] P4.step2 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-7.0001 | LKG_minus_utcnow_hours=0.9999 | watermark_raw=2026-09-30T08:52:05.000+08:00
+F.[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T07:52:05.189+08:00
+.
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 3
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.A13TimeFraming.TA13TimeFramingTests.P1_FakeTransportCarryingGmtNumbers_IsTrusted
+  Message: Expected [0] but got [2] A server reading at the true instant must not be classified as skew, got MajorSkew
+
+  Test.DeepBase.A13TimeFraming.TA13TimeFramingTests.P3_RealTransportAgainstTruthfulServer_IsTrusted
+  Message: Expected [0] but got [2] An honest server over the real parser must classify as tgOk, got MajorSkew
+
+  Test.DeepBase.A13TimeFraming.TA13TimeFramingTests.P4_RewindSmallerThanUtcOffset_IsDetected
+  Message: Expected [3] but got [4] A wall clock one hour behind the persisted watermark must be refused as rewound, got Offline
+
+
+RUNNER_STATS fixtureCount=1 testCount=5 pass=2 failure=3 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

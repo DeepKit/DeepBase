@@ -1,0 +1,106 @@
+== A13 段0：前提复核 @89ba4a87c11a118bba6512bc35d9ced5b5c0a165（主树只读，未做任何改动） ==
+UTC 2026-09-30T07:56:50Z
+主树 git status --porcelain（受跟踪面）：
+(空 ⇒ 受跟踪面干净)
+
+----- 工单 §一 点名行逐行复验（实际行号:内容） -----
+65:    function FetchServerTime(const AUrl: string): TDateTime;
+77:    function FetchServerTime(const AUrl: string): TDateTime;
+186:function ParseRfc822Date(const S: string): TDateTime;
+266:      Result := EncodeDateTime(LYear, LMonth, LDay, LHour, LMin, LSec, 0);
+381:    LISO := DateToISO8601(ATime, False);  // UTC
+400:      TryISO8601ToDate(LISO, Result, False);
+413:  LLocalNow := Now;
+424:      LServerTime := GetHttpTransport.FetchServerTime(FServerUrl);
+433:    if (LLastGood > 0) and (LLocalNow < LLastGood) then
+447:  FServerTimeOffset := LServerTime - LLocalNow;
+451:  if (LLastGood > 0) and (LLocalNow < LLastGood - (FMaxDriftMinutes / MinsPerDay)) then
+465:  if LDriftMinutes <= FMaxDriftMinutes then
+
+----- 关键前提一：解析器是 implementation 私有，传输接口返回 TDateTime -----
+178: implementation
+179: 
+180: uses
+181:   System.StrUtils,
+182:   DeepBase.TimeGuard.SecretStore;
+183: 
+184: { ---- HTTP Date parsing ---- }
+185: 
+186: function ParseRfc822Date(const S: string): TDateTime;
+187: var
+传输契约：
+59:   ITimeGuardHttpTransport = interface
+60:     ['{B2C3D4E5-F6A7-8901-BCDE-F12345678901}']
+61:     /// <summary>
+62:     /// Send a HEAD or GET request and return the server's Date header as TDateTime.
+63:     /// Returns 0 if the request fails or Date header is missing.
+64:     /// </summary>
+65:     function FetchServerTime(const AUrl: string): TDateTime;
+66:   end;
+默认传输实现（原始 Date 头字符串 → 私有解析器，全部发生在传输实现内部）：
+296:       if Assigned(LResponse) and (LResponse.StatusCode < 400) then
+297:       begin
+298:         LHeaders := LResponse.Headers;
+299:         for I := 0 to Length(LHeaders) - 1 do
+300:         begin
+301:           if SameText(LHeaders[I].Name, 'Date') then
+302:           begin
+303:             LDateStr := LHeaders[I].Value;
+304:             Break;
+305:           end;
+306:         end;
+307:         if LDateStr <> '' then
+308:           Result := ParseRfc822Date(LDateStr);
+309:       end;
+
+⇒ 结论：SetHttpTransport 注入的 fake 直接返回 TDateTime，不经过 ParseRfc822Date。
+  因此「fake transport 返回 GMT 数值」只能测到 Verify 侧框架，测不到解析侧框架（本案实测见矩阵）。
+
+----- 关键前提二：消费面（只读，本单不碰） -----
+874:    TDeepBaseTimeSource.Shared.SeedWatermark(FTimeGuard.GetCorrectedNow);
+875-end;
+876-
+877-function TDeepLicensing.GetCorrectedNow: TDateTime;
+--
+885:function TDeepLicensing.IsTimeTrusted: Boolean;
+886-begin
+887-  Result := (FTimeGuard <> nil) and FTimeGuard.Verified
+888-    and FTimeGuard.IsTimeTrusted;
+31:    var CorrectedTime := TG.GetCorrectedNow;
+100:  ///   5. Use GetCorrectedNow for time-sensitive operations
+154:    function GetCorrectedNow: TDateTime;
+475:function TTimeGuard.GetCorrectedNow: TDateTime;
+478:    Result := Now + FServerTimeOffset
+
+----- 仓内时间框架惯例（工单 §一 修法要求先 rg） -----
+ToUniversalTime / ToLocalTime 命中文件数与生产面样例：
+18
+Features/DeepBase.Commerce.Types.pas:222:  // (DateToISO8601(V, True)); readers must parse with AReturnUTC=True so both sides
+Features/DeepBase.Commerce.Types.pas:226:// Commerce 域「现在」的唯一取值口，返回 UTC 裸值（与 DateToISO8601(V, True) 产出的
+Features/DeepBase.Commerce.Types.pas:258:  // 换算成 UTC 裸值后才能和 DateToISO8601(..., True) 产出、TryISO8601ToDate(..., True) 读回的
+Features/DeepBase.Commerce.Types.pas:260:  Result := TTimeZone.Local.ToUniversalTime(TDeepBaseTimeSource.Shared.Now);
+Features/DeepBase.Commerce.Types.pas:267:  Result := DateToISO8601(CommerceNowUtc, True);
+Features/DeepBase.Commerce.Types.pas:502:  N := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:119:  NowUtc := TTimeZone.Local.ToUniversalTime(Now);
+Features/DeepBase.Commerce.Idempotency.pas:150:    LRec.CreatedAt := TTimeZone.Local.ToUniversalTime(Now);
+测试面 Zulu 口径注释（B10 立的 SSOT）：
+305: end;
+306: 
+307: { B10 时间框架夹具。
+308:   注入给 Core 时钟的读数与生产缺省读数同框架（naive-local 裸值），而对端送来的 ISO
+309:   是 UTC 瞬时，所以测试一律经 TTimeZone.Local.ToUniversalTime 换算后写成 Zulu ——
+310:   与生产读侧 TryISO8601ToDate(..., True) 用同一套 RTL 语义，测试不自造时间口径。 }
+311: function FixedAnchorLocal: TDateTime;
+312: begin
+313:   // 绝对日期在此只是哨兵值：用例里的「现在」由注入时钟给出，故不随真实日期漂移
+314:   // （B9 修掉的那类日期炸弹不复发）。
+315:   Result := EncodeDate(2031, 3, 1) + EncodeTime(12, 0, 0, 0);
+316: end;
+317: 
+318: procedure InjectFixedClock(const ALocalBare: TDateTime);
+
+----- localhost HTTP 测试先例（判据1 若改走真实解析路径的可行性） -----
+633:  LServer: TIdHTTPServer;
+641:  LServer := TIdHTTPServer.Create(nil);
+646:    LBinding.Port := 18080;
+647:    LServer.OnCommandGet := HandleRedirect302;

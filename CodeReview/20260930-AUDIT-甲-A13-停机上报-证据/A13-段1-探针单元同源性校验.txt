@@ -1,0 +1,14 @@
+== A13 段1：探针单元同源性校验（判据要求「同一份测试源码，唯一变量是修的那处」） ==
+
+DeepBase-A13-wt/probe                                      sha256=579d6075d6fb1af8 bytes=12764 first3bytes=efbbbf CR行数=390
+wt-pre/Tests                                               sha256=579d6075d6fb1af8 bytes=12764 first3bytes=efbbbf CR行数=390
+wt-A/Tests                                                 sha256=579d6075d6fb1af8 bytes=12764 first3bytes=efbbbf CR行数=390
+wt-B/Tests                                                 sha256=579d6075d6fb1af8 bytes=12764 first3bytes=efbbbf CR行数=390
+
+⇒ 四路径逐字节相同（同一 sha256、同 BOM、同 CRLF），三树唯一差异是 Features/DeepBase.TimeGuard.pas 的那 1 处（案 A）/ 3 处（案 B），见 A13-段1-两案补丁diff.txt
+
+复跑命令（各树根目录执行；主树无此单元，勿在主树跑）：
+  cd /d/_ProgData/DeepBase-A13-wt/wt-pre && bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh Tests/Test.DeepBase.A13TimeFraming.pas
+  同法换 wt-A / wt-B；A11 六例换 Tests/Test.DeepBase.TimeGuardSecretStore.pas
+  三树均需 Tests/sqlite3.dll（gitignored，本段手工拷入）
+  探针单元源件同时存档于本目录 附件/Test.DeepBase.A13TimeFraming.pas.template

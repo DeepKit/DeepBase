@@ -1,0 +1,77 @@
+== A13 段1：三树实测矩阵（同一份探针源码，唯一变量是修的那处） ==
+树：D:/_ProgData/DeepBase-A13-wt/{wt-pre,wt-A,wt-B}，均 --detach @89ba4a8
+wt-pre = 零改动对照；wt-A = 案 A（ParseRfc822Date 末尾 ToLocalTime）；wt-B = 案 B（Verify 统一 UTC + 水位 Zulu）
+本机实测 UTC 偏移 = +8h（offset_hours=8.0000，探针自证）
+
+探针用例（判据对应）                 wt-pre(修前) wt-A(案A)     wt-B(案B)    
+----------------------------------------------------------------------------------------------------------------                                             
+P1 fake=GMT 数值 ⇒ tgOk（工单判据1 原文） FAIL MajorSkew FAIL MajorSkew PASS OK       
+P2 fake=本地数值 ⇒ 可信（A11 已验收的注入值与断言） PASS OK        PASS OK        FAIL MajorSkew
+P3 真实传输+诚实服务器 ⇒ tgOk（缺陷现场） FAIL MajorSkew PASS OK        PASS OK       
+P4 回拨 1h < 一个偏移量 ⇒ ClockRewound（判据2） FAIL Offline   PASS Rewound   PASS Rewound  
+P5 旧框架水位串读回 ⇒ 不误判 rewound（存量键） PASS Offline   PASS Offline   PASS Offline  
+Test.DeepBase.TimeGuardSecretStore 六例（判据3） 6/6 RUN_EXIT=0 6/6 RUN_EXIT=0 5/6 RUN_EXIT=1
+
+----- 互斥结论（实测，非推理） -----
+判据1 要求「fake transport 返回 GMT 数值 ⇒ 修后 Verify = tgOk」。实测该值只有落在 Verify 侧
+（案 B，把传输输出按 UTC 框架处理）才可能为绿；而案 B 一旦这样定义传输契约，A11 已验收单元
+BackendFailures_DoNotEscapeThroughVerify 的注入值 System.SysUtils.Now（本地框架）即成为违约读数，
+wt-B 实测 5/6 红，红点逐字：
+  Message: Condition is False when True expected. [Without a watermark there is nothing to compare against, got MajorSkew]
+这与 §〇-3「既有断言（含 A11 新单元 6 例）一字不改」和判据3「TimeGuardSecretStore 6/6 零新增红」直接冲突。
+反之案 A 保住 A11 6/6，但判据1 的红点在案 A 下无法转绿（fake transport 绕过私有解析器，见段0 关键前提一）。
+
+----- 附加实测（工单未预判到的三点） -----
+1) 存量水位键：两案都读回「偏旧」，不产生工单 §一 必答所担心的误判 rewound。案 B 首读比案 A 更旧一个偏移量
+   （案 B 用 True 读旧 +08:00 串：number−8h；案 A 用 False 读：number 原样），下次在线 Verify 均自愈覆盖；
+   据此「②版本化键名」在两案下都不必要，「①容忍一次松弛」在两案下都成立（P5 原始输出为证）。
+F.[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T07:52:05.189+08:00
+..[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T07:53:00.370+08:00
+..[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-16.0000 | LKG_minus_utcnow_hours=-8.0000 | watermark_raw=2026-09-30T07:53:01.397+08:00
+
+2) 案 A 的长期副作用（工单两案对比未列）：水位与比较都落在本地裸值框架 ⇒ 用户跨时区向西旅行或进入
+   有 DST 的时区时，OS 把墙钟拨回一小时以上即 LLocalNow < LLastGood，且 :451 的回拨分支在 :461 写水位
+   之前 Exit ⇒ 水位永不更新 ⇒ tgClockRewound 永久锁死（IsTimeTrusted=False → 试用不发放、GetCorrectedNow 抛）。
+   案 B 全链 UTC 框架，旅行/DST 不改变 UTC ⇒ 无此类假阳性。
+
+3) 消费面不受两案差异影响：GetCorrectedNow = Now + FServerTimeOffset，偏移量是同框架相减的差值，
+   案 A/案 B 都返回本地框架读数 ⇒ Features/DeepBase.Licensing.pas:874 SeedWatermark 的读入框架不变（只读复核）。
+478:    Result := Now + FServerTimeOffset
+
+----- 原始输出（逐件存档于本目录，未做任何编辑） -----
+· A13-段1-pre树-探针*.txt
+Tests Passed  : 2
+Tests Failed  : 3
+RUNNER_STATS fixtureCount=1 testCount=5 pass=2 failure=3 error=0 ignored=0
+RUN_EXIT=1
+
+· A13-段1-pre树-A11六例*.txt
+Tests Passed  : 6
+Tests Failed  : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUN_EXIT=0
+
+· A13-段1-案A树-探针*.txt
+Tests Passed  : 4
+Tests Failed  : 1
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUN_EXIT=1
+
+· A13-段1-案A树-A11六例*.txt
+Tests Passed  : 6
+Tests Failed  : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUN_EXIT=0
+
+· A13-段1-案B树-探针*.txt
+Tests Passed  : 4
+Tests Failed  : 1
+RUNNER_STATS fixtureCount=1 testCount=5 pass=4 failure=1 error=0 ignored=0
+RUN_EXIT=1
+
+· A13-段1-案B树-A11六例*.txt
+Tests Passed  : 5
+Tests Failed  : 1
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUN_EXIT=1
+
