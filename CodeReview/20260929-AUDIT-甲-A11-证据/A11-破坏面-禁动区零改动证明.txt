@@ -1,0 +1,29 @@
+== A11 §五 破坏面自证 @ 2026-09-30T03:02:58Z  交付 HEAD: 8a60036841efc0d79df8c364bfba117ff3345930（甲两笔 = ee0e180..HEAD）==
+
+$ git diff --stat b8a8347..HEAD -- Core Features/DeepBase.Licensing.pas contracts 09_工程脚本/build-gate/noise-baseline.json Tests/DeepBaseTests.dpr Tests/DeepBaseTests.dproj
+(上面为空输出 ⇒ 禁动区零改动)
+
+$ git diff --numstat ee0e180..HEAD（本单交付的全部文件，无过滤）
+23	0	CodeReview/20260929-AUDIT-甲-A11-证据/A11-commit1单件编译-BUILD_EXIT0.txt
+42	0	CodeReview/20260929-AUDIT-甲-A11-证据/A11-判据2-修前对照fixture-5绿1红-RUN_EXIT1.txt
+35	0	CodeReview/20260929-AUDIT-甲-A11-证据/A11-判据2-修后fixture-6绿-RUN_EXIT0.txt
+61	0	CodeReview/20260929-AUDIT-甲-A11-证据/A11-段0-前提取证@b8a8347.txt
+52	0	CodeReview/20260929-AUDIT-甲-A11-证据/A11-段23-三件单件编译-BUILD_EXIT0.txt
+2	1	DeepBaseCommerce.dpk
+92	0	Features/DeepBase.TimeGuard.SecretStore.pas
+15	2	Features/DeepBase.TimeGuard.pas
+379	0	Tests/Test.DeepBase.TimeGuardSecretStore.pas
+
+$ 工单 §〇-2 逐面点名（应为 0）
+  Core/ => 0
+  Features/DeepBase.Licensing.pas => 0
+  contracts/ => 0
+  TestResults/ => 0
+  DeepBase.Plugins. => 0
+  Tests/DeepBaseTests.dpr => 0
+  Tests/DeepBaseTests.dproj => 0
+  noise-baseline.json => 0
+  docs/ui/work-orders/00-主控派单总表.md => 0
+
+$ v1.1.0 标签指向未变（`git rev-parse v1.1.0^{commit}`）
+92c14d13933eb9a81c7c1e8d1bb3722d768c071f
