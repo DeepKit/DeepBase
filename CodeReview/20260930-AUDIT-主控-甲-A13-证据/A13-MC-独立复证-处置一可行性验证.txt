@@ -1,0 +1,148 @@
+== A13-MC 独立复证三：处置一可行性验证（案B + 主控授权范围 9 行夹具重架） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 主控独立复证（不采信甲自报） ==
+== 采集时刻(UTC): 2026-09-30T09:0x（本机 UTC+8，offset=+08:00） ==
+== 环境: 仓库外隔离树 wt-MC（--detach @89ba4a8），非甲自建树、非主树 ==
+== 命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh <单元>（三道 fail-closed） ==
+
+==== 主控在 wt-MC 落地的改动（生产 3 行 + 夹具 9 行，断言零改动）====
+Features/DeepBase.TimeGuard.pas（案B 3 行，与甲 wt-B diff 逐字一致）：
+  :381  LISO := DateToISO8601(ATime, True);      （原 False，原注释 // UTC 失实）
+  :400  TryISO8601ToDate(LISO, Result, True);    （原 False）
+  :413  LLocalNow := TTimeZone.Local.ToUniversalTime(Now);  （原 Now）
+
+Tests/Test.DeepBase.TimeGuardSecretStore.pas（A11 夹具 1 行 arrange 重架）：
+  :229  LGuard.SetHttpTransport(TFakeTimeServer.Create(
+          TTimeZone.Local.ToUniversalTime(System.SysUtils.Now)));
+
+Tests/Test.DeepBase.LicensingTimeSource.pas（B7 夹具 8 行：helper 2 + 水位预设 1 + 注入点 6）：
+  新增 function UtcOf(const ALocalValue: TDateTime): TDateTime;  // = TTimeZone.Local.ToUniversalTime
+  :167  FStore.Value := DateToISO8601(UtcOf(ALastKnownGood), True);
+  :214/:231  InstallGuardWith(UtcOf(System.SysUtils.Now), 0);
+  :261  InstallGuardWith(0, UtcOf(IncDay(System.SysUtils.Now, 40)));
+  :309  InstallGuardWith(UtcOf(IncMinute(System.SysUtils.Now, 7)), 0);
+  :328  InstallGuardWith(UtcOf(IncDay(System.SysUtils.Now, 3)), 0);
+  :360  InstallGuardWith(UtcOf(WallNow), 0);
+  （六处 Assert.* 断言文字与条件一律未动；git diff 已核只有上述 +helper）
+
+######## 探针 5 例（P1-P5） ########
+== 真跑（Test.DeepBase.A13TimeFraming） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.[A13] P1 | offset_hours=8.0000 | result=OK | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T09:06:01.949Z
+..[A13] P2 | offset_hours=8.0000 | result=OK | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T09:06:01.949Z
+..[A13] P3 wire Date=Wed, 30 Sep 2026 09:06:01 GMT | true UTC now as numbers=2026-09-30 09:06:01 | server local clock=2026-09-30 17:06:01
+[A13] P3 | offset_hours=8.0000 | result=OK | trusted=-1 | server_offset_hours=-0.0003 | LKG_minus_now_hours=-8.0003 | LKG_minus_utcnow_hours=-0.0003 | watermark_raw=2026-09-30T09:06:01.000Z
+..[A13] P4.step1 | offset_hours=8.0000 | result=MajorSkew | trusted=0 | server_offset_hours=0.9997 | LKG_minus_now_hours=-7.0003 | LKG_minus_utcnow_hours=0.9997 | watermark_raw=2026-09-30T10:06:01.000Z
+[A13] P4.step2 | offset_hours=8.0000 | result=ClockRewound | trusted=0 | server_offset_hours=0.0000 | LKG_minus_now_hours=-7.0003 | LKG_minus_utcnow_hours=0.9997 | watermark_raw=2026-09-30T10:06:01.000Z
+..[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-16.0000 | LKG_minus_utcnow_hours=-8.0000 | watermark_raw=2026-09-30T09:06:01.984+08:00
+.
+
+Tests Found   : 5
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=5 pass=5 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## A11 夹具 6 例 ########
+== 真跑（Test.DeepBase.TimeGuardSecretStore） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## B7 夹具 7 例 ########
+== 真跑（Test.DeepBase.LicensingTimeSource） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## 判据3 License 16 例 ########
+== 真跑（Test.DeepBase.License） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................................
+
+Tests Found   : 16
+Tests Ignored : 0
+Tests Passed  : 16
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=16 pass=16 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+######## 判据3 Commerce 68 例 ########
+== 真跑（Test.DeepBase.Commerce） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 主控可行性结论 ====
+案B + 授权范围 9 行夹具重架 + 探针 P2 镜像同步  =>  五个夹具全绿：
+  探针 5/5（P1 判据1 成立、P3 缺陷现场修复、P4 判据2 成立、P5 存量键不误判）
+  A11 6/6  ·  B7 Licensing 7/7  ·  License 16/16  ·  Commerce 68/68
+=> 处置一「案B + 授权夹具重架」实测可行；甲自述的「1 行」不足以收口，须按本件 9 行执行。

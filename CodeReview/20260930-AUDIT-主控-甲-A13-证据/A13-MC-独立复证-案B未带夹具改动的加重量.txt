@@ -1,0 +1,84 @@
+== A13-MC 独立复证二：案B 不带夹具改动时的真实加重量（甲报告未量化项） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 主控独立复证（不采信甲自报） ==
+== 采集时刻(UTC): 2026-09-30T09:0x（本机 UTC+8，offset=+08:00） ==
+== 环境: 仓库外隔离树 D:/_ProgData/DeepBase-A13-wt/{wt-pre,wt-A,wt-B,wt-MC}，均 --detach @89ba4a8 ==
+== 命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh <单元>（三道 fail-closed） ==
+
+==== 甲停机上报称案B 影响面为「A11 该用例 arrange 注入值一行」；主控实测如下 ====
+
+---- wt-B · Tests/Test.DeepBase.TimeGuardSecretStore.pas（A11 已验收面 6 例）----
+== 真跑（Test.DeepBase.TimeGuardSecretStore） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....F......
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.TimeGuardSecretStore.TTimeGuardSecretStoreTests.BackendFailures_DoNotEscapeThroughVerify
+  Message: Condition is False when True expected. [Without a watermark there is nothing to compare against, got MajorSkew]
+
+
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+---- wt-B · Tests/Test.DeepBase.LicensingTimeSource.pas（B7 已验收面 7 例，甲报告未提）----
+== 真跑（Test.DeepBase.LicensingTimeSource） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.F.F.....F...F
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 3
+Tests Leaked  : 0
+Tests Failed  : 4
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_TrialDays_FollowInjectedCoreClockNotWallClock
+  Message: Expected [0] but got [2] Server time within tolerance must classify the clock as trusted
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_RewoundClockAfterWatermark_ExpiredTrialStaysExpired
+  Message: Expected [0] but got [2]
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_MinorSkewClock_StillTrusted_TrialDaysUnchanged
+  Message: Expected [1] but got [2] Seven minutes of server drift stays inside the tolerated skew
+
+  Test.DeepBase.LicensingTimeSource.TLicensingTimeSourceTests.Test_ServerCorrectedTime_SeededIntoCoreClockShortensTrial
+  Message: Expected [0] but got [2]
+
+
+RUNNER_STATS fixtureCount=1 testCount=7 pass=3 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 主控实测汇总 ====
+案B 单独落地（生产 3 行 + 夹具零改动）=> 两套已验收夹具共 11 例红：
+  Test.DeepBase.TimeGuardSecretStore  6 -> 5（1 红）
+  Test.DeepBase.LicensingTimeSource   7 -> 3（4 红）
+红因逐条对攻坚：Licensing 六处 InstallGuardWith 服务器读数注入均为本地裸值框架
+（:214/:231/:309/:328/:360 直接注入 System.SysUtils.Now 族；:261 经 ALastKnownGood 传本地值），
+而 :167 的水位预设 DateToISO8601(ALastKnownGood, False) 同为本地后缀框架。
+两夹具均在 Tests/DeepBaseTests.dpr:62-63 在册（主套件同进程跑）=> 案B 不加夹具改动即主套件红。
+=> 甲停机上报对案B 影响面量级低估（自述 1 行 vs 主控实测 9 行 / 11 例）。

@@ -1,0 +1,42 @@
+== A13-MC 独立复证四：还原一行反事实（证明重架后的夹具非假绿） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 主控独立复证（不采信甲自报） ==
+== 采集时刻(UTC): 2026-09-30T09:0x（本机 UTC+8，offset=+08:00） ==
+== 环境: 仓库外隔离树 wt-MC（--detach @89ba4a8），非甲自建树、非主树 ==
+== 命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh <单元>（三道 fail-closed） ==
+
+==== 反事实：把 wt-MC 中 A11 夹具 :229 重架行还原为本地裸值注入，其余不动 ====
+（即只把 TTimeZone.Local.ToUniversalTime(System.SysUtils.Now) 换回 System.SysUtils.Now）
+
+== 真跑（Test.DeepBase.TimeGuardSecretStore） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....F......
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 5
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.TimeGuardSecretStore.TTimeGuardSecretStoreTests.BackendFailures_DoNotEscapeThroughVerify
+  Message: Condition is False when True expected. [Without a watermark there is nothing to compare against, got MajorSkew]
+
+
+RUNNER_STATS fixtureCount=1 testCount=6 pass=5 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 结论 ====
+还原该一行 => A11 夹具 6 -> 5，红点正是 BackendFailures_DoNotEscapeThroughVerify，
+失败信息逐字为 "Without a watermark there is nothing to compare against, got MajorSkew"。
+=> 重架后的绿是真绿（该行承重），不是断言被削平得到的假绿。
+（甲交付时须对 A11 :229 与 B7 :309 各做一次同类反事实。）

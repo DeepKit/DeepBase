@@ -1,0 +1,32 @@
+== A13-MC 独立复证五：RTL 偏移后缀语义（源码 + 本机实测，证伪甲的决定性论据） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 主控独立复证（不采信甲自报） ==
+== 采集时刻(UTC): 2026-09-30T09:0x（本机 UTC+8，offset=+08:00） ==
+
+==== 要审的事实 ====
+甲停机上报推荐处置一（案B）的决定性理由：「案A 把水位锁在本地裸值框架，向西跨时区或进 DST 时区
+即触发 tgClockRewound，而回拨分支在写水位之前 Exit => 永不自愈，只能靠用户改回时区解锁」。
+若该论据为真，则案A 有真实自愈缺陷，处置二/三 应被排除；若为假，则选型理由须重新立。
+
+==== 源码路径（Embarcadero Studio 37.0 RTL，非仓内代码）====
+System.DateUtils.pas:3529  Value := AdjustDateTime(Value, LHasTZ, LHourOffset, LMinuteOffset, AOptions);
+System.DateUtils.pas:3126-3192  function AdjustDateTime(...)
+  关键分支（AReturnUTC=False 即 ioReturnUTC 不在 AOptions，且串带 +HH:MM 后缀）：
+    BiasLocal := Trunc(TTimeZone.Local.GetUTCOffset(Result).Negate.TotalMinutes);   <- 取「当前」时区
+    BiasTime  := (AHourOffset * MinsPerHour) + AMinuteOffset;                      <- 取「串里写的」偏移
+    if (BiasLocal + BiasTime) = 0 then Exit;                                      <- 同偏移则数值不变
+    ... 否则按两者之差平移
+=> TryISO8601ToDate(s, r, False) 认字符串里的偏移后缀，并把结果重基到「读取时」的当前时区。
+
+==== 本机实测（一次性控制台程序 tzcheck.dpr，dcc64 编译后运行；本机 offset=+08:00）====
+suffix +08:00, False -> ok=TRUE local bare=2031-03-01 12:00:00
+suffix -05:00, False -> ok=TRUE local bare=2031-03-02 01:00:00
+suffix Z     , False -> ok=TRUE local bare=2031-03-01 20:00:00
+suffix +08:00, True  -> ok=TRUE utc   bare=2031-03-01 04:00:00
+machine utc offset hours=8.00
+
+==== 对案A 的推论 ====
+案A 写入侧：SaveLastKnownGoodTime 收到的是 ToLocalTime(GMT 数值)（写时当前时区下的本地裸值），
+           再 DateToISO8601(v, False) 带上「写时」偏移后缀 => 该串正确命名了它要记的瞬时。
+案A 读取侧：TryISO8601ToDate(..., False) 认该后缀并按「读时」当前时区重基 => 换时区后仍取回同一瞬时。
+两侧比较的都是「正确的瞬时」=> 案A 的水位链自洽，跨时区/DST 不会锁死。
+甲「案A 时区/DST 永久锁死」论据：不成立（上述源码 + 本机实测为证）。

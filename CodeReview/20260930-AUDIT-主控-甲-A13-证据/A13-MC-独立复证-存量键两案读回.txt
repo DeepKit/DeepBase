@@ -1,0 +1,25 @@
+== A13-MC 独立复证六：存量水位键在两案下的读回（工单「存量键必答」的实测依据） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 主控独立复证（不采信甲自报） ==
+== 采集时刻(UTC): 2026-09-30T09:0x（本机 UTC+8，offset=+08:00） ==
+
+==== 工单要求 ====
+旧框架写入的 +08:00 串在案B 下首次读回差一个偏移量，须择一：① 容忍一次松弛并说明
+SaveLastKnownGoodTime 下一次在线写入即覆盖；② 版本化键名弃旧读新；③ 其他。不允许静默不处理。
+
+==== 主控自跑 P5（预置修前形态水位串，三棵树同一份探针源码）====
+  F.[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T08:51:55.596+08:00
+  ..[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-8.0000 | LKG_minus_utcnow_hours=0.0000 | watermark_raw=2026-09-30T08:52:02.841+08:00
+  ..[A13] P5 | offset_hours=8.0000 | result=Offline | trusted=-1 | server_offset_hours=0.0000 | LKG_minus_now_hours=-16.0000 | LKG_minus_utcnow_hours=-8.0000 | watermark_raw=2026-09-30T08:52:10.574+08:00
+
+==== 主控实测汇总 ====
+  wt-pre(修前) P5 verdict=Offline，LKG 相对本地 now 偏旧 8.0000h
+  wt-A  (案A)  P5 verdict=Offline，LKG 相对本地 now 偏旧 8.0000h
+  wt-B  (案B)  P5 verdict=Offline，LKG 相对 UTC  now 偏旧 8.0000h
+三树 verdict 均为 Offline、均非 ClockRewound ⇒ 存量键在读回侧只造成「一次性偏旧 8h」，
+工单担心的「修后首次 Verify 误判 rewound」实测不发生（回拨分支要求 LLocalNow < LLastGood-容差，
+偏旧方向永不相交）。
+
+=> 主控裁定存量键采工单选项①：容忍一次松弛，不版本化键名、不迁移。
+   理由：偏旧不影响任何判定正确性（水位只用于拦住「时区向西/回拨」，偏旧只会少拦一次），
+   且 Verify 走在线分支后 :461 SaveLastKnownGoodTime 立即以新框架覆盖该键。
+   附带登记：用户可见效果 = 升级后首次后台 Verify 少一次回拨拦截，之后即恢复。

@@ -1,0 +1,25 @@
+== A13-MC 独立复证一：主控自跑三树探针 + A11 夹具（与甲自报矩阵逐格对照） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 主控独立复证（不采信甲自报） ==
+== 采集时刻(UTC): 2026-09-30T09:0x（本机 UTC+8，offset=+08:00） ==
+== 环境: 仓库外隔离树 D:/_ProgData/DeepBase-A13-wt/{wt-pre,wt-A,wt-B,wt-MC}，均 --detach @89ba4a8 ==
+== 命令: bash CodeReview/20260925-AUDIT-乙-B2-证据/b2_run_fixture.sh <单元>（三道 fail-closed） ==
+
+树        夹具               found   pass   fail   exit  verdict  RUNNER_STATS
+wt-pre   探针 5 例               5      2      3      1  FAILED   fixtureCount=1
+wt-pre   A11 夹具 6 例           6      6      0      0  PASSED   fixtureCount=1
+wt-A     探针 5 例               5      4      1      1  FAILED   fixtureCount=1
+wt-A     A11 夹具 6 例           6      6      0      0  PASSED   fixtureCount=1
+wt-B     探针 5 例               5      4      1      1  FAILED   fixtureCount=1
+wt-B     A11 夹具 6 例           6      5      1      1  FAILED   fixtureCount=1
+
+逐探针判定（主控自跑原始输出，非甲转录）：
+  wt-pre   P1=PASS  P2=FAIL  P4.step1=FAIL  P5=FAIL
+  wt-A     P1=PASS  P2=FAIL  P4.step1=PASS  P5=PASS
+  wt-B     P1=PASS  P2=PASS  P4.step1=PASS  P5=PASS
+
+主控结论（与甲停机上报矩阵逐格一致，无差异）：
+  wt-pre(修前): P1/P3/P4 红，P2/P5 绿 ⇒ 缺陷现场与两判据的修前形态均在
+  wt-A(案A)  : P1 红（判据1 不成立），P2/P3/P4/P5 绿
+  wt-B(案B)  : P2 红（A11 arrange 注入行不成立），P1/P3/P4/P5 绿
+  A11 夹具   : wt-pre 6/6、wt-A 6/6、wt-B 5/6（红点 BackendFailures_DoNotEscapeThroughVerify）
+=> 「判据1 与 A11 既有 arrange 结构性互斥」由主控自跑坐实，非甲自报。
