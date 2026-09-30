@@ -1,0 +1,61 @@
+# A11 段0 前提取证（树：.tmp/a11/wt-t0pre @b8a8347，工作树零改动）
+
+$ git rev-parse HEAD
+b8a8347a2ca08ffe38603cf3e93e72481fb2fae8
+
+# 1) 全仓 SetSecretStore / ITimeGuardSecretStore 命中（生产侧零调用、实现类数=0）
+$ grep -rn 'SetSecretStore|ITimeGuardSecretStore' --include=*.pas .（排除 .tmp）
+Features/DeepBase.TimeGuard.pas:84:  ITimeGuardSecretStore = interface
+Features/DeepBase.TimeGuard.pas:109:    FSecretStore: ITimeGuardSecretStore;
+Features/DeepBase.TimeGuard.pas:113:    function GetSecretStore: ITimeGuardSecretStore;
+Features/DeepBase.TimeGuard.pas:132:    procedure SetSecretStore(const AStore: ITimeGuardSecretStore);
+Features/DeepBase.TimeGuard.pas:342:procedure TTimeGuard.SetSecretStore(const AStore: ITimeGuardSecretStore);
+Features/DeepBase.TimeGuard.pas:354:function TTimeGuard.GetSecretStore: ITimeGuardSecretStore;
+Features/DeepBase.TimeGuard.pas:361:  LStore: ITimeGuardSecretStore;
+Features/DeepBase.TimeGuard.pas:377:  LStore: ITimeGuardSecretStore;
+Tests/Test.DeepBase.LicensingTimeSource.pas:37:  TFakeTimeGuardStore = class(TInterfacedObject, ITimeGuardSecretStore)
+Tests/Test.DeepBase.LicensingTimeSource.pas:172:  FLicensing.TimeGuard.SetSecretStore(FStore);
+
+# 2) TimeGuard:82 失实注释 + GetSecretStore 现形
+79-
+80-  /// <summary>
+81-  /// Secret store interface for persisting last known good time.
+82:  /// Minimal interface — DeepBase.Security.SecretStore implements this.
+83-  /// </summary>
+84-  ITimeGuardSecretStore = interface
+354:function TTimeGuard.GetSecretStore: ITimeGuardSecretStore;
+355-begin
+356-  Result := FSecretStore;
+357-end;
+358-
+
+# 3) Verify 的两条回拨分支（离线 :420 / 在线 :438）均以 LLastGood > 0 为前提
+420:    if (LLastGood > 0) and (LLocalNow < LLastGood) then
+438:  if (LLastGood > 0) and (LLocalNow < LLastGood - (FMaxDriftMinutes / MinsPerDay)) then
+
+# 4) 生产唯一构造点：Features/DeepBase.Licensing.pas
+864:    FTimeGuard := TTimeGuard.Create(FConfig.AppID + '.timeguard');
+
+# 5) 底座 ISecretStore 与工厂：Core/DeepBase.Security.SecretStore.pas
+11:    var LStore := TSecretStoreFactory.CreatePlatformStore;
+24:  ESecretStoreUnavailable = class(Exception);
+30:  ISecretStore = interface
+32:    function TryGet(const AKey: string; out AValue: string): Boolean;
+33:    procedure Put(const AKey: string; const AValue: string);
+45:    class function CreatePlatformStore: ISecretStore; static;
+65:    function TryGet(const AKey: string; out AValue: string): Boolean;
+66:    procedure Put(const AKey: string; const AValue: string);
+82:    function TryGet(const AKey: string; out AValue: string): Boolean;
+83:    procedure Put(const AKey: string; const AValue: string);
+90:class function TSecretStoreFactory.CreatePlatformStore: ISecretStore;
+
+# 6) 底座所在包与 Commerce 的 requires 关系
+33:  DeepBase.Security.SecretStore in 'Core\DeepBase.Security.SecretStore.pas',
+31:requires
+32-  rtl,
+33-  DeepBaseCore,
+34-  DeepBaseServices;
+35-
+
+# 7) 适配单元在修前不存在
+ls: cannot access 'Features/DeepBase.TimeGuard.SecretStore.pas': No such file or directory
