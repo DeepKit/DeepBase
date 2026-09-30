@@ -1,0 +1,19 @@
+== B13-MC Core/ 同族「本机本地 + 硬编码 +08:00」四点复证（乙回执 §八-1） ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== rg -n '"+08:00"' Core/DeepBase.AutoFix.*.pas ==
+
+D:/_Progs/02Business/DeepBase/Core/DeepBase.AutoFix.ErrorRecorder.pas:343:      var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
+D:/_Progs/02Business/DeepBase/Core/DeepBase.AutoFix.ScenarioRunner.pas:214:  var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
+D:/_Progs/02Business/DeepBase/Core/DeepBase.AutoFix.HealthSignal.pas:150:        .Append(FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now)).Append('"')
+D:/_Progs/02Business/DeepBase/Core/DeepBase.AutoFix.SelfTerminator.pas:200:        .Append(FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now)).Append('"')
+
+⇒ 四点全部复核属实，行号与乙点名逐一对上：
+    Core/DeepBase.AutoFix.HealthSignal.pas:150（.Append 链）
+    Core/DeepBase.AutoFix.ErrorRecorder.pas:343（var LTs :=）
+    Core/DeepBase.AutoFix.SelfTerminator.pas:200（.Append 链）
+    Core/DeepBase.AutoFix.ScenarioRunner.pas:214（var LTs :=）
+形态与 B13-03 修前完全同族：FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now)（本机本地数值 + 固定 +08:00 后缀）。
+非 UTC+8 部署下这四个时间串各自偏差本机偏移量；Core/** 属禁动区，本单零改动（git diff 6264d17..89ba4a8 -- Core/ 为空）。
+处置见验收结论 §二（已立项派单）。

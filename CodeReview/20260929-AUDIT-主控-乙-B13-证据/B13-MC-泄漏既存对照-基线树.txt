@@ -1,0 +1,62 @@
+== B13-MC 泄漏既存对照（主套件面报告的泄漏是否本单引入） ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== 隔离树 @89ba4a8 vs 隔离树 @6264d17（B13 开工锚点）同 --run 过滤跑 DeepBaseTests.exe ==
+
+==== 修后树 @89ba4a8：TWeChatPayBridgeTests（9 例，B13-04 只改其中 1 例的用例体）====
+Tests Found   : 9
+Tests Ignored : 0
+Tests Passed  : 9
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+9 - 24 bytes: UnicodeString x 1
+25 - 40 bytes: TJSONObject x 4, TJSONString x 18, TJSONPair x 10, UnicodeString x 9
+41 - 56 bytes: UnicodeString x 5, Unknown x 4
+73 - 88 bytes: TList<System.JSON.TJSONPair> x 4
+89 - 104 bytes: UnicodeString x 1
+
+==== 逐条切分（@89ba4a8）：只有两条旧用例自带泄漏 ====
+  Test_Factory_CreatesVerifier leak=
+  Test_Factory_VerifierIsFunctional leak=
+  Test_VerifyNotification_RejectsEmptyBody leak=
+  Test_VerifyNotification_RejectsMalformedJson leak=
+  Test_VerifyNotification_RejectsMissingResource leak=
+  Test_VerifyNotification_RejectsEmptyCiphertext leak=1
+  Test_VerifyNotification_RejectsBadAesGcmCiphertext leak=1
+  Test_VerifyNotification_RejectsEmptySignatureHeaders leak=
+  Test_RegisterVerifier_WithService leak=
+
+==== B13 新增夹具 @89ba4a8（TPaidAtWireConventionTests 2 例）单独跑 ====
+Tests Found   : 2
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+==== 基线树 @6264d17（B13 开工锚点，同一 exe 口令）====
+$ node 09_工程脚本/build-gate/check_build.js --root . --dpr Tests/DeepBaseTests.dpr
+[dpr 1/1] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=238 WARN=17
+编译门禁通过：1 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）
+BASE_DPR_EXIT=0
+Tests Found   : 9
+Tests Passed  : 9
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+9 - 24 bytes: UnicodeString x 1
+25 - 40 bytes: TJSONObject x 4, TJSONString x 18, TJSONPair x 10, UnicodeString x 9
+41 - 56 bytes: UnicodeString x 5, Unknown x 4
+73 - 88 bytes: TList<System.JSON.TJSONPair> x 4
+89 - 104 bytes: UnicodeString x 1
+BASE Test_VerifyNotification_RejectsEmptyCiphertext leak=1
+BASE Test_VerifyNotification_RejectsBadAesGcmCiphertext leak=1
+
+==== 主控结论 ====
+同一夹具、同一过滤口令下，@6264d17 与 @89ba4a8 的泄漏明细逐类同数（UnicodeString/TJSONObject/TJSONString/TJSONPair/TList<TJSONPair>）；
+自带泄漏的两条都是 B13-04 未触碰的旧用例（RejectsEmptyCiphertext / RejectsBadAesGcmCiphertext，走 WeChat AES-GCM 解密失败路径）；
+B13-04 改写的 Test_RegisterVerifier_WithService 单独跑零泄漏；B13-01 新增 TPaidAtWireConventionTests 单独跑零泄漏。
+⇒ 该泄漏为 HEAD 既存（修前即存），非本单引入，登记为既存项，不构成本单缺陷。

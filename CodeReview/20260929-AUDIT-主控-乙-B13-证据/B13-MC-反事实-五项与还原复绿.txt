@@ -1,0 +1,118 @@
+== B13-MC-反事实 主控自做五项（甲 A11 同范：换回旧形态 ⇒ 新断言必须真变红） ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== bash /d/_ProgData/DeepBase-MC-B13/cf.sh（逐项 perl 改生产/测试件 → fixture 跑 → git checkout 还原 → 工作树干净核验） ==
+== 本件明细段于采集后重提：原 summary() 对新写日志立即 rg 遇文件可见延迟(os error 3)，逐项原文如下 ==
+
+######## CF-1 B13-01：写出口换回 DateToISO8601(SDKNotif.PaidAt, False) ########
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Commerce.PaymentBridge） ==
+Tests Found   : 14
+Tests Passed  : 13
+Tests Failed  : 1
+RUNNER_STATS fixtureCount=1 testCount=14 pass=13 failure=1 error=0 ignored=0
+Failing Tests
+  Test.DeepBase.Commerce.PaymentBridge.TPaidAtWireConventionTests.Test_PaidAtISO_IsZuluInstantOfLocalBarePaidAt
+  Message: Condition is False when True expected. [PaidAtISO must leave the bridge in Zulu form, got 2031-03-01T12:00:00.000+08:00]
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+== 还原核验：工作树干净 ==
+
+######## CF-2 B13-02：接缝改回按本地解释 DateTimeToUnix(v, False) ########
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Payment） ==
+Tests Found   : 27
+Tests Passed  : 24
+Tests Failed  : 3
+RUNNER_STATS fixtureCount=1 testCount=27 pass=24 failure=3 error=0 ignored=0
+Failing Tests
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_IsUtcSecondsOfInjectedClock
+  Message: Expected [1930105800] but got [1930077000] expires_at must name the UTC instant of the injected clock reading plus the ttl
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_RoundTripsToExpireInstant
+  Message: Expected [0] but got [-28800] expires_at must read back as the expire instant it names
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_KeepsInstantThroughCallSiteConversion
+  Message: Expected [1930109400] but got [1930080600] expires_at must name the same UTC instant the local clock reading denotes
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+== 还原核验：工作树干净 ==
+
+######## CF-3 B13-03：接缝去掉 IncHour(...,8)（换回不换算的 +08:00 形态）########
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Payment） ==
+Tests Found   : 27
+Tests Passed  : 24
+Tests Failed  : 3
+RUNNER_STATS fixtureCount=1 testCount=27 pass=24 failure=3 error=0 ignored=0
+Failing Tests
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_IsBeijingWireOfInjectedClock
+  Message: Expected [2031-03-01T12:30:00+08:00] but got [2031-03-01T04:30:00+08:00] time_expire must be the Beijing representation of the injected instant, independent of the machine timezone
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_RoundTripsToExpireInstant
+  Message: Expected [0] but got [-28800] time_expire must read back as the expire instant it names
+  Test.DeepBase.Payment.TPaymentWireTimeTests.Test_WeChat_TimeExpire_KeepsInstantThroughCallSiteConversion
+  Message: Expected [2031-03-01T13:30:00+08:00] but got [2031-03-01T05:30:00+08:00] time_expire must name the same instant the local clock reading denotes
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+== 还原核验：工作树干净 ==
+
+######## CF-4 B13-04：换回 850f49b 的零断言用例（探针面须红 1 例）########
+（取件方式：git show 850f49b:Tests/Test.DeepBase.Commerce.PaymentBridge.pas > 同路径文件，字节级换回修前形态）
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Commerce.PaymentBridge） ==
+Tests Found   : 14
+Tests Passed  : 13
+Tests Failed  : 1
+RUNNER_STATS fixtureCount=1 testCount=14 pass=13 failure=1 error=0 ignored=0
+Failing Tests
+  Test.DeepBase.Commerce.PaymentBridge.TWeChatPayBridgeTests.Test_RegisterVerifier_WithService
+  Message: No assertions were made during the test
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+== 还原核验：工作树干净 ==
+
+######## CF-5 调用点盲区自证：两处生产调用点换回裸 Now（接缝不动）########
+（perl 改 WeChatPay.pas / Stripe.pas 两处调用点 WeChatTimeExpire(Now,...) / StripeExpiresAtUnix(Now,...)）
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Payment） ==
+Tests Found   : 27
+Tests Passed  : 27
+Tests Failed  : 0
+RUNNER_STATS fixtureCount=1 testCount=27 pass=27 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 还原核验：工作树干净 ==
+
+######## 还原后同面复跑（两项夹具须回到全绿）########
+（PaymentBridge）
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Commerce.PaymentBridge） ==
+Tests Found   : 14
+Tests Passed  : 14
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=14 pass=14 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+（Payment）
+BUILD_EXIT=0
+== 真跑（Test.DeepBase.Payment） ==
+Tests Found   : 27
+Tests Passed  : 27
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=27 pass=27 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 还原核验：工作树干净 ==
+
+==== 反事实结论 ====
+CF-1 B13-01 写出口换回 DateToISO8601(SDKNotif.PaidAt, False)：14 例 1 红 ⇒ 红点即新增 Zulu 往返用例，且失败信息正是「got +08:00」（判据③成立）
+CF-2 B13-02 接缝改回按本地解释 DateTimeToUnix(v, False)：27 例 3 红，三笔均差 28800 秒（判据②成立）
+CF-3 B13-03 接缝去掉 IncHour(...,8)：27 例 3 红，wire 串差 8 小时（判据②成立）
+CF-4 B13-04 换回 850f49b 零断言用例：14 例 1 红「No assertions were made during the test」⇒ 探针面（FailsOnNoAsserts=True）确能抓零断言，反证 89ba4a8 补真是有效修复而非纸面
+CF-5 两处生产调用点换回裸 Now（接缝不动）：27/27 全绿 ⇒ 坐实乙回执 §六.2 自述的调用点运行时不可观测盲区（如实登记为移交项，不放行为验收通过项）
+CF-1..CF-4 四项均「换回即红」，且红点精确落在本单新增断言上，非无关用例连带失败
+还原后两项夹具均回全绿 ⇒ 反事实未污染终态，工作树逐项还原核验干净
+CF 脚本原文见本目录 附件/B13MCCounterfactual.sh

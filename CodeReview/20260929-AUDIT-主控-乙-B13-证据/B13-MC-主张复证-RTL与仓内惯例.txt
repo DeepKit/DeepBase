@@ -1,0 +1,52 @@
+== B13-MC 乙回执两项工具链主张 + B13-03 选型同形惯例，主控独立复证 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== ls/rg 实扫 Delphi 37 RTL 源；rg 仓内调用点 ==
+
+==== 主张 1：System.TimeZones 在本工具链不存在（F2613）====
+$ ls "D:/Program Files (x86)/Embarcadero/Studio/37.0/source/rtl/common/System.TimeZones.pas"
+ls: cannot access '/d/Program Files (x86)/Embarcadero/Studio/37.0/source/rtl/common/System.TimeZones.pas': No such file or directory
+$ ls ".../source/rtl/sys/System.TimeZones.pas"
+ls: cannot access '/d/Program Files (x86)/Embarcadero/Studio/37.0/source/rtl/sys/System.TimeZones.pas': No such file or directory
+$ ls ".../source/rtl/common/" | rg -i 'timezone|DateUtils'
+System.DateUtils.dcu
+System.DateUtils.pas
+⇒ RTL 源树确无 System.TimeZones.pas（同目录只有 System.DateUtils）⇒ F2613 主张成立，修法 B 在本机编译面确不可用。
+
+==== 主张 2：SetNowFunc/GetNowFunc 在本工具链不存在（E2003）====
+$ rg -l --no-messages "function GetNowFunc" "D:/Program Files (x86)/Embarcadero/Studio/37.0/source"
+[空 = 全 Studio 源树无该符号]
+⇒ E2003 主张成立。另注：仓内可注入时钟是 Core/DeepBase.TimeSource.pas 的 TDeepBaseTimeSource.SetNowFunc（类方法，非 RTL 符号）；
+   而 ThirdParty/Payment 两处调用点读的是 RTL Now，并非 TDeepBaseTimeSource.Shared.Now ⇒ 即便打桩 Core 时间源也驱动不到这两个调用点，
+   乙改走「接缝吃注入瞬时」是唯一等价达成判据意图的路径（且未改生产签名）。
+
+==== B13-03 选型同形惯例（乙称与仓内既有同形）====
+$ sed -n '178,184p' ThirdParty/Payment/DeepBase.Payment.Alipay.pas
+  // to UTC first, then add 8 hours to get consistent Beijing time regardless
+  // of the system's local timezone.
+  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd hh:nn:ss',
+    IncHour(TTimeZone.Local.ToUniversalTime(Now), 8)));
+  Result.Add('version', '1.0');
+end;
+
+$ rg -n ToUniversalTime ThirdParty/Cloud/DeepBase.Cloud.Storage.pas | head -4
+492|  AmzDate := FormatDateTime('yyyymmdd"T"hhnnss"Z"', TTimeZone.Local.ToUniversalTime(Now));
+493|  DateStamp := FormatDateTime('yyyymmdd', TTimeZone.Local.ToUniversalTime(Now));
+635|  AmzDate := FormatDateTime('yyyymmdd"T"hhnnss"Z"', TTimeZone.Local.ToUniversalTime(Now));
+636|  DateStamp := FormatDateTime('yyyymmdd', TTimeZone.Local.ToUniversalTime(Now));
+⇒ Alipay:181 正是 IncHour(TTimeZone.Local.ToUniversalTime(Now), 8)，与 B13-03 接缝同形（SSOT 不引入第二种时区表达）。
+
+==== 接缝唯一调用点（rg 自证，工单判据③「其余字段不变」的边界证据）====
+D:/_Progs/02Business/DeepBase/ThirdParty/Payment/DeepBase.Payment.Stripe.pas:107:function StripeExpiresAtUnix(const ANowUtcBare: TDateTime;
+D:/_Progs/02Business/DeepBase/ThirdParty/Payment/DeepBase.Payment.Stripe.pas:119:function StripeExpiresAtUnix(const ANowUtcBare: TDateTime;
+D:/_Progs/02Business/DeepBase/ThirdParty/Payment/DeepBase.Payment.Stripe.pas:328:        StripeExpiresAtUnix(TTimeZone.Local.ToUniversalTime(Now), AOrder.ExpireMinutes)));
+D:/_Progs/02Business/DeepBase/ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:114:function WeChatTimeExpire(const ANowUtcBare: TDateTime;
+D:/_Progs/02Business/DeepBase/ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:454:function WeChatTimeExpire(const ANowUtcBare: TDateTime;
+D:/_Progs/02Business/DeepBase/ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas:767:        WeChatTimeExpire(TTimeZone.Local.ToUniversalTime(Now), AOrder.ExpireMinutes));
+⇒ 每个接缝恰 3 处命中：interface 声明 + implementation 定义 + 唯一调用点（调用点均带 TTimeZone.Local.ToUniversalTime(Now)）。
+
+==== 生产类型复用（B13-04 未新增测试专用类型）====
+34|  TCallbackNotificationVerifier = class(TInterfacedObject, ICommerceNotificationVerifier)
+357|        'Notification verifier not registered for provider: %s',
+⇒ TCallbackNotificationVerifier 是生产类型；Service 的 not registered 消息即新断言所依赖的 fail-closed 落点。

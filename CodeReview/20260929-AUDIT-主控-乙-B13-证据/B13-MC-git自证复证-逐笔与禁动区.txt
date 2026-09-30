@@ -1,0 +1,79 @@
+== B13-MC-git 自证复证（逐笔件数 + 禁动区零命中 + 未 push） ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== git show --name-only --format= <SHA> 逐笔；git log 6264d17..HEAD -- <台账>；git branch -r --contains 89ba4a8 ==
+
+---- e7deb59 ----
+  fix(commerce): B13-01 PaidAtISO 写出口统一到 Zulu UTC（WO-20260929-AUDIT-乙-B13）
+
+Features/DeepBase.Commerce.PaymentBridge.pas
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+
+---- becdad1 ----
+  fix(payment): B13-02 Stripe expires_at 发出 UTC Unix 时间戳（WO-20260929-AUDIT-乙-B13）
+
+Tests/Test.DeepBase.Payment.pas
+ThirdParty/Payment/DeepBase.Payment.Stripe.pas
+
+---- 850f49b ----
+  fix(payment): B13-03 WeChatPay time_expire 显式转 UTC+8（WO-20260929-AUDIT-乙-B13）
+
+Tests/Test.DeepBase.Payment.pas
+ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
+
+---- 89ba4a8 ----
+  test(commerce): B13-04 零断言用例补真为登记契约用例 + 交付回执与证据 22 件（WO-20260929-AUDIT-乙-B13）
+
+CodeReview/20260929-AUDIT-乙-B13-交付回执.md
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-0-开工取证-HEAD漂移.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-01-PaidAtISO不入判定链-rg自证.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-01-PaidAt写点枚举-rg自证.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-01-修后与反事实.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-02-修后与反事实.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-03-仓内时间惯例-rg自证.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-03-修后与反事实四组.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-04-修后-探针面与主套件面.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-04-反事实-登记口两组.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-1-RTL时间语义实测探针.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-10-T0-生产契约面终态门禁.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-11-四道静态门禁终态复跑.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-12-git自证-只动申报文件.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-2-修前基线-两夹具探针面跑录.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/B13-9-编译门禁三树对照.txt
+CodeReview/20260929-AUDIT-乙-B13-证据/附件/B13TimeProbe.dpr.template
+CodeReview/20260929-AUDIT-乙-B13-证据/附件/NowFuncProbe.dpr.template
+CodeReview/20260929-AUDIT-乙-B13-证据/附件/NowFuncProbe2.dpr.template
+CodeReview/20260929-AUDIT-乙-B13-证据/附件/TzAvailProbe.dpr.template
+CodeReview/20260929-AUDIT-乙-B13-证据/附件/TzUnitProbe.dpr.template
+CodeReview/20260929-AUDIT-乙-B13-证据/附件/build_probe.sh
+Tests/Test.DeepBase.Commerce.PaymentBridge.pas
+
+---- 禁动区核对（四笔合计应全空）----
+Core/**      : [空]
+contracts/** : [空]
+Scripts/**   : [空]
+Tests/DeepBaseTests.dpr|.dproj : Tests/DeepBaseTests.dpr [本单零改动；该件 +1 行系主控并网笔 30fabb8]
+Tests/Integration/** : [空]
+Features/DeepBase.Licensing.pas / Features/DeepBase.TimeGuard.pas : [空]
+noise-baseline.json / eol_baseline.json : [空]
+
+---- 台账自证口径复跑（乙 §一 移办事项）----
+$ git diff --name-only 6264d17..HEAD -- docs/ui/work-orders/00-主控派单总表.md
+docs/ui/work-orders/00-主控派单总表.md
+$ git log --oneline 6264d17..HEAD -- docs/ui/work-orders/00-主控派单总表.md
+bdc81f7 docs(派单): A11 验收派生甲 A13（TimeGuard 服务器读数链框架收口 P1）+ 台账回填（WO-20260929-AUDIT-甲-A11）
+⇒ 范围命中 1 件，且唯一来源是主控自己的 bdc81f7（A13 工单 + A11 台账回填）；乙四笔台账命中均为 0，与乙自证一致。
+
+---- 未 push 复证 ----
+$ git branch -r --contains 89ba4a8
+[空 = 任何远端分支均不含 89ba4a8]
+$ git rev-list --left-right --count origin/master...HEAD
+0	428
+⇒ 右值 428 = 本地领先 428、落后 0。
+
+---- 交付态账实 ----
+$ git status --short（tracked 面）
+[空 = tracked 干净]
+$ git diff --cached --name-only | wc -l
+0

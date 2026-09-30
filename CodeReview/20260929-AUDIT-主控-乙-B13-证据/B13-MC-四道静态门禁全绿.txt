@@ -1,0 +1,24 @@
+== B13-MC-四道静态门禁隔离树亲跑 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== node 09_工程脚本/<eol-gate/check_eol | encoding-gate/check_pas_encoding | mojibake-gate/check_mojibake | evidence-encoding-gate/check_evidence_encoding>.js ==
+
+######## eol-gate/check_eol ########
+行尾门禁通过：检查了 1598 个文件（.pas CRLF / .md LF），跳过目录 3
+GATE_EXIT=0
+######## encoding-gate/check_pas_encoding ########
+编码门禁通过：1013 个 .pas + 738 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 3）
+GATE_EXIT=0
+######## mojibake-gate/check_mojibake ########
+丙类损坏门禁通过：扫描 1013 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+GATE_EXIT=0
+######## evidence-encoding-gate/check_evidence_encoding ########
+证据编码门禁通过：扫描 1070 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+GATE_EXIT=0
+
+==== 主控核对 ====
+四门 4/4 EXIT=0。行尾 1598 / 编码 1013+738 / 丙类 1013 / 证据 1070（本树为干净 checkout：无主树那批未跟踪件，故扫描计数低于主树一次跑录）。
+证据编码门 E3 命中 240 行 / 存量 21 件封顶，净增 0 ⇒ 乙本单新增 22 件证据零双重编码命中；
+NUL 违规 0。本件刻意只留各门末行总结、不复刻 E3 明细行（明细含存量双重编码原文，
+照抄会撑爆 21 件封顶——甲 A11 验收时同一坑，B13-MC 沿用剔除做法）。

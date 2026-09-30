@@ -1,0 +1,45 @@
+== B13-MC 主套件面（DeepBaseTests.dpr，FailsOnNoAsserts=False）过滤跑 ==
+== 工单: WO-20260929-AUDIT-乙-B13 ==
+== 采集时刻(UTC): 2026-09-30T07:54:17Z ==
+== 环境: 仓库外隔离树 /d/_ProgData/DeepBase-MC-B13/wt-89ba4a8 @89ba4a8 (git worktree --detach)，非乙自建树、非主树 ==
+== 隔离树 .tmp/build-gate/exe/Tests/DeepBaseTests.exe --run:<限定名> ==
+
+---- --run:Test.DeepBase.Commerce.PaymentBridge（单元级，14 例）----
+Tests Found   : 14
+Tests Ignored : 0
+Tests Passed  : 14
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+---- --run:Test.DeepBase.Commerce.PaymentBridge.TPaidAtWireConventionTests（B13-01 新夹具 2 例）----
+Tests Found   : 2
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+---- --run:Test.DeepBase.Commerce.PaymentBridge.TWeChatPayBridgeTests（9 例，B13-04 改写 1 例）----
+Tests Found   : 9
+Tests Ignored : 0
+Tests Passed  : 9
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+---- --run:Test.DeepBase.Payment（B13-02/03，单元级 27 例）----
+Tests Found   : 55
+Tests Ignored : 0
+Tests Passed  : 55
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+---- --run:Test.DeepBase.Commerce（邻接，68 例）----
+Tests Found   : 96
+Tests Ignored : 0
+Tests Passed  : 96
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+==== 主控结论 ====
+主套件面 118/118 零失败；TWeChatPayBridgeTests 单元级跑在进程退出时报既有泄漏（明细见 B13-MC-泄漏既存对照-基线树.txt，
+在 B13 开工锚点 @6264d17 同口令复现，同数同类）⇒ 非本单引入。
