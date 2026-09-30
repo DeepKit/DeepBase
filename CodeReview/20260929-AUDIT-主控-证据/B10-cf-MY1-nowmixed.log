@@ -1,0 +1,79 @@
+==== 1) 变异前基线（应绿） ====
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==== 2) 注入变异: s/Result := TTimeZone\.Local\.ToUniversalTime\(TDeepBaseTimeSource\.Shared\.Now\);/Result := TDeepBaseTimeSource.Shared.Now;/ ====
+---- 变异 diff（相对还原基线） ----
+@@ -257,7 +257,7 @@
+   // TimeSource 的读数按 naive-local 框架给出（缺省即 System.SysUtils.Now，注入值同框架），
+   // 换算成 UTC 裸值后才能和 DateToISO8601(..., True) 产出、TryISO8601ToDate(..., True) 读回的
+   // 值落在同一框架里比较。
+-  Result := TTimeZone.Local.ToUniversalTime(TDeepBaseTimeSource.Shared.Now);
++  Result := TDeepBaseTimeSource.Shared.Now;
+ end;
+ 
+ function CommerceNowISO: string;
+---- 变异后真跑（应红） ----
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_LicenseSnapshot_ExpiryJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is False when True expected. [A snapshot expiring one second after the injected clock must be accepted]
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementValidityJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is False when True expected. [An entitlement expiring one second from now must be usable]
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_EntitlementOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is False when True expected. [One second left inside the offline grace must keep the entitlement usable]
+
+  Test.DeepBase.Commerce.TCommerceServiceTests.Test_PermissionClientOfflineGraceJudgedAgainstInjectedUtcClock_OneSecondEitherSide
+  Message: Condition is False when True expected. [Permission client must report grace while one second is left]
+
+
+RUNNER_STATS fixtureCount=1 testCount=68 pass=64 failure=4 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==== 3) 还原复跑（trap 之外再显式确认一次） ====
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+== 反事实判定成立：基线绿 / 变异红(RUNNER_VERDICT: FAILED) / 还原绿 ==
+== 已还原 SUT: Features/DeepBase.Commerce.Types.pas ==

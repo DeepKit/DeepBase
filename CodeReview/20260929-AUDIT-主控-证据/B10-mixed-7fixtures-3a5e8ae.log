@@ -1,0 +1,24 @@
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+............................................................................................................................................................................................
+
+Tests Found   : 94
+Tests Ignored : 0
+Tests Passed  : 94
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+An unexpected memory leak has occurred. The unexpected small block leaks are:
+
+9 - 24 bytes: UnicodeString x 1
+25 - 40 bytes: TJSONObject x 4, TJSONPair x 10, TJSONString x 18, UnicodeString x 9
+41 - 56 bytes: UnicodeString x 5, Unknown x 4
+73 - 88 bytes: TList<System.JSON.TJSONPair> x 4
+89 - 104 bytes: UnicodeString x 1
