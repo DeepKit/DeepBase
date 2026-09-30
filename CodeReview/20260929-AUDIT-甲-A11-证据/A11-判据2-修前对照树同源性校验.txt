@@ -1,0 +1,18 @@
+== A11 判据② 双向对照的「同一份测试源码」自证 @ 2026-09-30T03:08:20Z ==
+== 修前对照树 .tmp/a11/wt-pre（HEAD=b8a8347a2ca08ffe38603cf3e93e72481fb2fae8，tracked 零改动）==
+
+$ git -C .tmp/a11/wt-pre diff --stat（tracked 面，应为空）
+$ git -C .tmp/a11/wt-pre status --porcelain --untracked-files=all
+?? Features/DeepBase.TimeGuard.SecretStore.pas
+?? Tests/Test.DeepBase.TimeGuardSecretStore.pas
+
+$ 该树 Features/DeepBase.TimeGuard.pas 的 GetSecretStore 现形（修前）
+function TTimeGuard.GetSecretStore: ITimeGuardSecretStore;
+begin
+  Result := FSecretStore;
+end;
+
+
+$ 两件新单元与交付 HEAD 的逐字节比较（sha256 同一 ⇒ 双向对照唯一变量就是 TimeGuard 那一处）
+  Features/DeepBase.TimeGuard.SecretStore.pas  pre=dc11ab8b1e32b53d2ccca97bf19c2dc1f46fa4e039c17dae4bef5c8564dc4577  delivered=dc11ab8b1e32b53d2ccca97bf19c2dc1f46fa4e039c17dae4bef5c8564dc4577  same=yes
+  Tests/Test.DeepBase.TimeGuardSecretStore.pas  pre=251122a896311cc557e6bf2d0cffe762e55d12685435cc0770616f7334c19b46  delivered=251122a896311cc557e6bf2d0cffe762e55d12685435cc0770616f7334c19b46  same=yes
