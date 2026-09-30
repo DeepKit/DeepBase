@@ -257,8 +257,10 @@ begin
   else
     Result.AmountMinor := Round(SDKNotif.Amount * 100);
   Result.Success := SDKNotif.Status = psSuccess;
+  // ThirdParty fills PaidAt with a local bare Now (see DeepBase.Payment.PayPal),
+  // while the wire convention is a Zulu UTC instant: normalise to UTC before emitting.
   if SDKNotif.PaidAt > 0 then
-    Result.PaidAtISO := DateToISO8601(SDKNotif.PaidAt, False)
+    Result.PaidAtISO := DateToISO8601(TTimeZone.Local.ToUniversalTime(SDKNotif.PaidAt), True)
   else
     Result.PaidAtISO := '';
   Result.RawPayload := SDKNotif.RawData;

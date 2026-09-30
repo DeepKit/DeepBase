@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils,
+  System.DateUtils,
   System.Generics.Collections,
   DUnitX.TestFramework,
   DeepBase.Commerce.Types,
@@ -15,6 +16,43 @@ uses
   DeepBase.Payment.PayPal;
 
 type
+  /// <summary>
+  /// Provider stand-in that fills PaidAt with a local bare clock reading, the way
+  /// the ThirdParty SDK does, so the bridge write convention is observable without
+  /// any provider network call.
+  /// </summary>
+  TLocalClockPaymentClient = class(TInterfacedObject, IPaymentClient)
+  private
+    FPaidAt: TDateTime;
+    function GetProvider: TPaymentProvider;
+  public
+    constructor Create(const APaidAt: TDateTime);
+    function CreateOrder(const AOrder: TPaymentOrder): TPaymentResult;
+    function QueryOrder(const AOrderNo: string): TPaymentQueryResult;
+    function CloseOrder(const AOrderNo: string): Boolean;
+    function Refund(const ARequest: TRefundRequest): TRefundResult;
+    function QueryRefund(const ARefundNo: string): TRefundResult;
+    function VerifyNotification(const ARawData: string;
+      out ANotification: TPaymentNotification): Boolean;
+    function GetNotificationResponse(ASuccess: Boolean): string;
+    property Provider: TPaymentProvider read GetProvider;
+  end;
+
+  /// <summary>
+  /// Tests for the PaidAt wire convention of TSDKNotificationVerifier: the local
+  /// bare clock reading a provider supplies must leave the bridge as the Zulu UTC
+  /// instant of that same moment.
+  /// </summary>
+  [TestFixture]
+  TPaidAtWireConventionTests = class
+  public
+    [Test]
+    procedure Test_PaidAtISO_IsZuluInstantOfLocalBarePaidAt;
+
+    [Test]
+    procedure Test_PaidAtISO_EmptyWhenProviderSuppliesNoPaidAt;
+  end;
+
   /// <summary>
   /// Tests for CreateWeChatPayNotificationVerifier factory and the
   /// TSDKNotificationVerifier WeChat Pay V3 callback verification path.
@@ -76,6 +114,113 @@ type
   end;
 
 implementation
+
+{ TLocalClockPaymentClient }
+
+constructor TLocalClockPaymentClient.Create(const APaidAt: TDateTime);
+begin
+  inherited Create;
+  FPaidAt := APaidAt;
+end;
+
+function TLocalClockPaymentClient.GetProvider: TPaymentProvider;
+begin
+  Result := ppAlipay;
+end;
+
+function TLocalClockPaymentClient.CreateOrder(
+  const AOrder: TPaymentOrder): TPaymentResult;
+begin
+  Result := TPaymentResult.Fail('NOT_IMPLEMENTED', 'Stub provider client');
+end;
+
+function TLocalClockPaymentClient.QueryOrder(
+  const AOrderNo: string): TPaymentQueryResult;
+begin
+  Result.Clear;
+  Result.Success := False;
+  Result.ErrorCode := 'NOT_IMPLEMENTED';
+end;
+
+function TLocalClockPaymentClient.CloseOrder(const AOrderNo: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TLocalClockPaymentClient.Refund(
+  const ARequest: TRefundRequest): TRefundResult;
+begin
+  Result := TRefundResult.Fail('NOT_IMPLEMENTED', 'Stub provider client');
+end;
+
+function TLocalClockPaymentClient.QueryRefund(
+  const ARefundNo: string): TRefundResult;
+begin
+  Result := TRefundResult.Fail('NOT_IMPLEMENTED', 'Stub provider client');
+end;
+
+function TLocalClockPaymentClient.VerifyNotification(const ARawData: string;
+  out ANotification: TPaymentNotification): Boolean;
+begin
+  ANotification.Clear;
+  ANotification.Provider := ppAlipay;
+  ANotification.OrderNo := 'ORDER_PAIDAT_WIRE';
+  ANotification.Status := psSuccess;
+  ANotification.Amount := 12.34;
+  ANotification.PaidAt := FPaidAt;
+  ANotification.RawData := ARawData;
+  Result := True;
+end;
+
+function TLocalClockPaymentClient.GetNotificationResponse(ASuccess: Boolean): string;
+begin
+  Result := 'success';
+end;
+
+{ TPaidAtWireConventionTests }
+
+procedure TPaidAtWireConventionTests.Test_PaidAtISO_IsZuluInstantOfLocalBarePaidAt;
+var
+  PaidAtLocal: TDateTime;
+  ExpectedUtc: TDateTime;
+  Parsed: TDateTime;
+  Client: TLocalClockPaymentClient;
+  Verifier: ICommerceNotificationVerifier;
+  Notification: TCommercePaymentNotification;
+begin
+  PaidAtLocal := EncodeDateTime(2031, 3, 1, 12, 0, 0, 0);
+  ExpectedUtc := TTimeZone.Local.ToUniversalTime(PaidAtLocal);
+  Client := TLocalClockPaymentClient.Create(PaidAtLocal);
+  try
+    Verifier := TSDKNotificationVerifier.Create(cppAlipay, Client, 'CNY');
+    Notification := Verifier.VerifyNotification('{"stub":true}', []);
+    Assert.IsTrue(Copy(Notification.PaidAtISO, Length(Notification.PaidAtISO), 1) = 'Z',
+      'PaidAtISO must leave the bridge in Zulu form, got ' + Notification.PaidAtISO);
+    Assert.IsTrue(TryISO8601ToDate(Notification.PaidAtISO, Parsed, True),
+      'PaidAtISO must parse back as an ISO-8601 UTC instant');
+    Assert.AreEqual(0.0, Abs((Parsed - ExpectedUtc) * 86400000), 0.001,
+      'PaidAtISO must round-trip to the UTC instant of the clock reading the provider sent');
+  finally
+    Verifier := nil;
+  end;
+end;
+
+procedure TPaidAtWireConventionTests.Test_PaidAtISO_EmptyWhenProviderSuppliesNoPaidAt;
+var
+  Client: TLocalClockPaymentClient;
+  Verifier: ICommerceNotificationVerifier;
+  Notification: TCommercePaymentNotification;
+begin
+  Client := TLocalClockPaymentClient.Create(0);
+  try
+    Verifier := TSDKNotificationVerifier.Create(cppAlipay, Client, 'CNY');
+    Notification := Verifier.VerifyNotification('{"stub":true}', []);
+    Assert.AreEqual('', Notification.PaidAtISO,
+      'A provider that supplies no paid-at must leave the field empty');
+  finally
+    Verifier := nil;
+  end;
+end;
 
 { TWeChatPayBridgeTests }
 
@@ -378,6 +523,7 @@ begin
 end;
 
 initialization
+  TDUnitX.RegisterTestFixture(TPaidAtWireConventionTests);
   TDUnitX.RegisterTestFixture(TWeChatPayBridgeTests);
   TDUnitX.RegisterTestFixture(TPayPalBridgeTests);
 
