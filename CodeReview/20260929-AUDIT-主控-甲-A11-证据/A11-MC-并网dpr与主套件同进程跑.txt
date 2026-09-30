@@ -1,0 +1,21 @@
+== 主套件同进程 --run（dpr 已并网，外部隔离树 @6264d17 + 并网 1 行）==
+exe: /d/_ProgData/DeepBase-MC-A11/wt-6264d17/.tmp/build-gate/exe/Tests/DeepBaseTests.exe（T0 并网复跑产物）
+cmd: ./DeepBaseTests.exe --run:Test.DeepBase.TimeGuardSecretStore.TTimeGuardSecretStoreTests
+
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+............
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUN_EXIT=0

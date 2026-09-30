@@ -1,0 +1,76 @@
+﻿{ A11 诊断探针 v2（一次性，不进任何构建面）：主控验收甲 A11 时坐实疑点——
+  TimeGuard 的服务器读数链功能是否全程把 UTC 数值当本地裸值用（与乙 B10 同族
+  的跨框架裸值混用）。生产 ParseRfc822Date 是 TimeGuard 自研函数（implementation
+  段，单元外不可见），Result := EncodeDateTime(GMT 各部分) 原样编码不换算；本探针
+  用真 TTimeGuard + fake transport 复现两条读数框架下的 Verify 行为差异。
+  产物落 .tmp/，入库须用 .dpr.template 别名（CodeReview/** 禁 .dpr）。 }
+program A11FrameProbe;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  System.DateUtils,
+  DeepBase.TimeGuard;
+
+type
+  TFakeTransport = class(TInterfacedObject, ITimeGuardHttpTransport)
+  private
+    FServerTime: TDateTime;
+  public
+    constructor Create(const AServerTime: TDateTime);
+    function FetchServerTime(const AUrl: string): TDateTime;
+  end;
+
+constructor TFakeTransport.Create(const AServerTime: TDateTime);
+begin
+  inherited Create;
+  FServerTime := AServerTime;
+end;
+
+function TFakeTransport.FetchServerTime(const AUrl: string): TDateTime;
+begin
+  Result := FServerTime;
+end;
+
+function RunVerify(const AScenario: string; AServerTime: TDateTime;
+  AMaxDrift: Integer): TTimeGuardResult;
+var
+  LGuard: TTimeGuard;
+begin
+  LGuard := TTimeGuard.Create('deepbase.mc.a11.probe.' + AScenario, AMaxDrift);
+  try
+    LGuard.SetServerUrl('http://127.0.0.1:1');
+    LGuard.SetHttpTransport(TFakeTransport.Create(AServerTime));
+    Result := LGuard.Verify;
+    Writeln(Format('%-28s server=%.6f local_now=%.6f drift_min=%7.1f -> %s',
+      [AScenario, AServerTime, Now, Abs((AServerTime - Now) * MinsPerDay),
+       TimeGuardResultToStr(Result)]));
+  finally
+    LGuard.Free;
+  end;
+end;
+
+begin
+  Writeln('offset hours (local - utc) : ',
+    Format('%.2f', [((Now - TTimeZone.Local.ToUniversalTime(Now)) * 24)]));
+  // 生产链：ParseRfc822Date(GMT Date 头) 的产物 = EncodeDateTime(GMT 数值)
+  //        = UTC 裸值框架（真实瞬时的 UTC 数值）
+  RunVerify('utc-framed server (prod)', TTimeZone.Local.ToUniversalTime(Now), 5);
+  // 健康对照：服务器读数换算到本地框架（修后应有形态）
+  RunVerify('local-framed server', Now, 5);
+  // 水位写读往返算术：生产 SaveLastKnownGoodTime(DateToISO8601(X, False)) /
+  // LoadLastKnownGoodTime(TryISO8601ToDate(S, False)) 对 UTC 框架 X 的读回值
+  var LUtc := TTimeZone.Local.ToUniversalTime(Now);
+  var LStored := DateToISO8601(LUtc, False);
+  var LBack: TDateTime;
+  TryISO8601ToDate(LStored, LBack, False);
+  Writeln('watermark write/read (False/False) : ',
+    FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', LBack),
+    '  == utc bare? ', (LBack = LUtc),
+    '  == local now? ', (Abs(LBack - Now) < 1 / 86400));
+  Writeln('offline rewind fires with utc watermark? ',
+    BoolToStr(Now < LBack, True),
+    '  (local now=', FormatDateTime('hh:nn:ss', Now),
+    ' vs watermark=', FormatDateTime('hh:nn:ss', LBack), ')');
+end.

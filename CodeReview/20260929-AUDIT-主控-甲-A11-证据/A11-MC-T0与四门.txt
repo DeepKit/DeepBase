@@ -1,0 +1,57 @@
+== A11 主控 T0 与四门 ==
+tree: /d/_ProgData/DeepBase-MC-A11/wt-6264d17 HEAD=6264d17 (隔离 --detach 树 @ A11 交付 commit)
+cmd: node 09_工程脚本/build-gate/check_build.js --root . --manifest 09_工程脚本/build-gate/contracts/T0-生产契约面.txt
+
+[dpr 1/2] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=238 WARN=17
+[dpr 2/2] Tests/Integration/DeepBaseIntegrationTests.dpr CONFIG=default BUILD_EXIT=0 HINT=68 WARN=0
+[dpk 1/25] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=18 WARN=0
+[dpk 2/25] DeepBaseServices.dpk CONFIG=DeepBaseServices.dproj BUILD_EXIT=0 HINT=8 WARN=2
+[dpk 3/25] DeepAxis.dpk CONFIG=DeepAxis.dproj BUILD_EXIT=0 HINT=11 WARN=4
+[dpk 4/25] DeepBaseBrowser.dpk CONFIG=DeepBaseBrowser.dproj BUILD_EXIT=0 HINT=18 WARN=4
+[dpk 5/25] DeepBaseCommerce.dpk CONFIG=DeepBaseCommerce.dproj BUILD_EXIT=0 HINT=8 WARN=2
+[dpk 6/25] DeepBasePlatform.dpk CONFIG=DeepBasePlatform.dproj BUILD_EXIT=0 HINT=18 WARN=6
+[dpk 7/25] DeepBaseDataPlatform.dpk CONFIG=DeepBaseDataPlatform.dproj BUILD_EXIT=0 HINT=21 WARN=8
+[dpk 8/25] DeepBaseLLM.dpk CONFIG=DeepBaseLLM.dproj BUILD_EXIT=0 HINT=21 WARN=6
+[dpk 9/25] DeepBaseIntentClarification.dpk CONFIG=DeepBaseIntentClarification.dproj BUILD_EXIT=0 HINT=21 WARN=6
+[dpk 10/25] DeepBaseInference.dpk CONFIG=DeepBaseInference.dproj BUILD_EXIT=0 HINT=8 WARN=2
+[dpk 11/25] DeepBaseSpeechCore.dpk CONFIG=DeepBaseSpeechCore.dproj BUILD_EXIT=0 HINT=9 WARN=2
+[dpk 12/25] DeepBaseFeatures.dpk CONFIG=DeepBaseFeatures.dproj BUILD_EXIT=0 HINT=35 WARN=10
+[dpk 13/25] DeepBaseFMX.dpk CONFIG=DeepBaseFMX.dproj BUILD_EXIT=0 HINT=45 WARN=23
+[dpk 14/25] DeepBasePersistence.dpk CONFIG=DeepBasePersistence.dproj BUILD_EXIT=0 HINT=23 WARN=2
+[dpk 15/25] DeepBaseGovernance.dpk CONFIG=DeepBaseGovernance.dproj BUILD_EXIT=0 HINT=36 WARN=6
+[dpk 16/25] DeepBaseSpeechASR.dpk CONFIG=DeepBaseSpeechASR.dproj BUILD_EXIT=0 HINT=11 WARN=2
+[dpk 17/25] DeepBaseSpeechTTS.dpk CONFIG=DeepBaseSpeechTTS.dproj BUILD_EXIT=0 HINT=10 WARN=2
+[dpk 18/25] DeepBaseSpeechVoice.dpk CONFIG=DeepBaseSpeechVoice.dproj BUILD_EXIT=0 HINT=9 WARN=2
+[dpk 19/25] DeepBaseSpeechWake.dpk CONFIG=DeepBaseSpeechWake.dproj BUILD_EXIT=0 HINT=10 WARN=2
+[dpk 20/25] DeepBaseVCL.dpk CONFIG=DeepBaseVCL.dproj BUILD_EXIT=0 HINT=51 WARN=11
+[dpk 21/25] Examples/PluginExample/SamplePluginPkg.dpk CONFIG=default BUILD_EXIT=0 HINT=0 WARN=0
+[dpk 22/25] Tests/Regression/R7P4Probe.dpk CONFIG=default BUILD_EXIT=0 HINT=0 WARN=2
+[dpk 23/25] dclDeepBaseCore.dpk CONFIG=dclDeepBaseCore.dproj BUILD_EXIT=0 HINT=0 WARN=0
+[dpk 24/25] dclDeepBaseFMX.dpk CONFIG=dclDeepBaseFMX.dproj BUILD_EXIT=0 HINT=45 WARN=23
+[dpk 25/25] dclDeepBaseVCL.dpk CONFIG=dclDeepBaseVCL.dproj BUILD_EXIT=0 HINT=51 WARN=11
+编译门禁统计：DPR总数=2 成功=2 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=25 成功=25 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=27 已跟踪=90 清单来源=manifest:T0-生产契约面.txt .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=793 Warning=155 按码=H2077=425,H2443=175,H2219=141,W1033=77,H2164=47,W1000=17,W1010=13,W1050=10,W1073=10,W1024=8,W1035=7,W1036=6,W1074=6,H2269=5,W1057=1
+编译噪声基线比对通过：判定面「manifest:T0-生产契约面.txt」按码计数未超过 noise-baseline.json
+编译门禁通过：27 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）
+T0_EXIT=0
+
+== 四门-check_eol ==
+行尾门禁通过：检查了 1595 个文件（.pas CRLF / .md LF），跳过目录 3
+GATE_EXIT=0
+
+== 四门-check_pas_encoding ==
+编码门禁通过：1013 个 .pas + 735 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 3）
+GATE_EXIT=0
+
+== 四门-check_mojibake ==
+丙类损坏门禁通过：扫描 1013 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+GATE_EXIT=0
+
+== 四门-check_evidence_encoding ==
+证据编码门禁通过：扫描 1037 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+GATE_EXIT=0
+
+== 附注 ==
+四门取各门禁末行总结行入档；evidence-encoding 门的 E3 明细逐行（存量登记 21 件的原文→还原后对）主控刻意不复刻入本证据文件——那是存量双重编码文本，复制进来会被本门判为新的 E3 命中、撑爆 21 件封顶。该门 GATE_EXIT=0 即结论。

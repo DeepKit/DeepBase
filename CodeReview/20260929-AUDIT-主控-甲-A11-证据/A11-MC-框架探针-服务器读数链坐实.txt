@@ -1,0 +1,9 @@
+== A11 主控框架探针（真 TTimeGuard + fake transport，坐实服务器读数链框架混用）==
+tree: D:/_Progs/02Business/DeepBase/.tmp/mc-a11/wt-post HEAD=6264d17
+
+offset hours (local - utc) : 8.00
+utc-framed server (prod)     server=46295.174963 local_now=46295.508296 drift_min=  480.0 -> MajorSkew
+local-framed server          server=46295.508296 local_now=46295.508297 drift_min=    0.0 -> OK
+watermark write/read (False/False) : 2026-09-30T04:11:56  == utc bare? TRUE  == local now? FALSE
+offline rewind fires with utc watermark? False  (local now=12:11:56 vs watermark=04:11:56)
+PROBE_EXIT=0
