@@ -1,0 +1,30 @@
+== 编译一次性 runner（单元: Test.DeepFlow.Engine） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+DeepFlow\Source\Core\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+DeepFlow\Tests\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'
+25531 lines, 1.27 seconds, 2814176 bytes code, 385872 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepFlow.Engine） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........
+
+Tests Found   : 4
+Tests Ignored : 0
+Tests Passed  : 4
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=4 pass=4 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
