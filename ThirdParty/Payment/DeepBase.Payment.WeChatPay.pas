@@ -106,6 +106,14 @@ type
     function BuildAppPayParams(const APrepayId: string): string;
   end;
 
+/// <summary>
+/// Wire value of the time_expire field: RFC 3339 stamped with the Beijing offset
+/// that WeChat Pay requires. The clock reading arrives as a UTC bare value, so
+/// shifting to UTC+8 is the only step left here.
+/// </summary>
+function WeChatTimeExpire(const ANowUtcBare: TDateTime;
+  AExpireMinutes: Integer): string;
+
 implementation
 
 uses
@@ -443,6 +451,13 @@ begin
 end;
 {$ENDIF}
 
+function WeChatTimeExpire(const ANowUtcBare: TDateTime;
+  AExpireMinutes: Integer): string;
+begin
+  Result := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"+08:00"',
+    IncHour(ANowUtcBare + AExpireMinutes / 1440, 8));
+end;
+
 { TWeChatPayConfig }
 
 constructor TWeChatPayConfig.Create;
@@ -748,8 +763,8 @@ begin
       ReqBody.AddPair('notify_url', FConfig.NotifyUrl);
 
     if AOrder.ExpireMinutes > 0 then
-      ReqBody.AddPair('time_expire', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"+08:00"',
-        Now + AOrder.ExpireMinutes / 1440));
+      ReqBody.AddPair('time_expire',
+        WeChatTimeExpire(TTimeZone.Local.ToUniversalTime(Now), AOrder.ExpireMinutes));
 
     try
       RespObj := DoWeChatPost('/v3/pay/transactions/native', ReqBody);

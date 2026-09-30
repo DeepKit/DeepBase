@@ -5,6 +5,7 @@ interface
 uses
   System.SysUtils,
   System.DateUtils,
+  System.TimeSpan,
   System.Generics.Collections,
   DUnitX.TestFramework,
   DeepBase.Payment,
@@ -121,6 +122,18 @@ type
 
     [Test]
     procedure Test_Stripe_ExpiresAtUnix_RoundTripsToExpireInstant;
+
+    [Test]
+    procedure Test_Stripe_ExpiresAtUnix_KeepsInstantThroughCallSiteConversion;
+
+    [Test]
+    procedure Test_WeChat_TimeExpire_IsBeijingWireOfInjectedClock;
+
+    [Test]
+    procedure Test_WeChat_TimeExpire_RoundTripsToExpireInstant;
+
+    [Test]
+    procedure Test_WeChat_TimeExpire_KeepsInstantThroughCallSiteConversion;
   end;
 
 implementation
@@ -581,6 +594,75 @@ begin
   DriftSeconds := Round((Parsed - (NowUtcBare + ExpireMinutes / 1440)) * 86400);
   Assert.AreEqual<Int64>(0, DriftSeconds,
     'expires_at must read back as the expire instant it names');
+end;
+
+procedure TPaymentWireTimeTests.Test_WeChat_TimeExpire_IsBeijingWireOfInjectedClock;
+const
+  ExpireMinutes = 30;
+  ExpectedWire = '2031-03-01T12:30:00+08:00';
+var
+  NowUtcBare: TDateTime;
+begin
+  NowUtcBare := EncodeDateTime(2031, 3, 1, 4, 0, 0, 0);
+  Assert.AreEqual(ExpectedWire, WeChatTimeExpire(NowUtcBare, ExpireMinutes),
+    'time_expire must be the Beijing representation of the injected instant, '
+    + 'independent of the machine timezone');
+end;
+
+procedure TPaymentWireTimeTests.Test_WeChat_TimeExpire_RoundTripsToExpireInstant;
+const
+  ExpireMinutes = 45;
+var
+  NowUtcBare: TDateTime;
+  Parsed: TDateTime;
+  DriftSeconds: Int64;
+begin
+  NowUtcBare := EncodeDateTime(2031, 3, 1, 4, 0, 0, 0);
+  Assert.IsTrue(
+    TryISO8601ToDate(WeChatTimeExpire(NowUtcBare, ExpireMinutes), Parsed, True),
+    'time_expire must parse as an ISO-8601 instant');
+  DriftSeconds := Round((Parsed - (NowUtcBare + ExpireMinutes / 1440)) * 86400);
+  Assert.AreEqual<Int64>(0, DriftSeconds,
+    'time_expire must read back as the expire instant it names');
+end;
+
+procedure TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_KeepsInstantThroughCallSiteConversion;
+const
+  ExpireMinutes = 90;
+var
+  NowLocalBare: TDateTime;
+  Expected: Int64;
+begin
+  // Mirror of the call site: the clock reading is captured as a local bare value
+  // and handed to the seam already converted to UTC. The expected value is derived
+  // straight from the local reading, so a missing conversion on either side of the
+  // seam shifts it by the machine offset instead of cancelling out.
+  NowLocalBare := EncodeDateTime(2031, 3, 1, 12, 0, 0, 0);
+  Expected := Round(((NowLocalBare - TTimeZone.Local.GetUtcOffset(NowLocalBare).TotalHours / 24
+    + ExpireMinutes / 1440) - EncodeDateTime(1970, 1, 1, 0, 0, 0, 0)) * 86400);
+  Assert.AreEqual<Int64>(Expected,
+    StripeExpiresAtUnix(TTimeZone.Local.ToUniversalTime(NowLocalBare), ExpireMinutes),
+    'expires_at must name the same UTC instant the local clock reading denotes');
+end;
+
+procedure TPaymentWireTimeTests.Test_WeChat_TimeExpire_KeepsInstantThroughCallSiteConversion;
+const
+  ExpireMinutes = 90;
+var
+  NowLocalBare: TDateTime;
+  ExpectedWire: string;
+begin
+  // Same mirror as for Stripe: local bare in, Beijing wire out. The wire value is
+  // the local reading shifted by the difference between the required +08:00 and the
+  // machine offset, so dropping either the call-site conversion or the seam offset
+  // lands on a different instant.
+  NowLocalBare := EncodeDateTime(2031, 3, 1, 12, 0, 0, 0);
+  ExpectedWire := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"+08:00"',
+    NowLocalBare + (8 - TTimeZone.Local.GetUtcOffset(NowLocalBare).TotalHours) / 24
+    + ExpireMinutes / 1440);
+  Assert.AreEqual(ExpectedWire,
+    WeChatTimeExpire(TTimeZone.Local.ToUniversalTime(NowLocalBare), ExpireMinutes),
+    'time_expire must name the same instant the local clock reading denotes');
 end;
 
 initialization
