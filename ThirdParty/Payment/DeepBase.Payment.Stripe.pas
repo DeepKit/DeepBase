@@ -99,6 +99,14 @@ type
     function VerifyWebhookSignature(const APayload, ASignatureHeader: string): Boolean;
   end;
 
+/// <summary>
+/// Wire value of the Checkout Session expires_at field: UTC Unix seconds.
+/// The clock reading arrives in the UTC bare framework the API expects, so the
+/// whole conversion stays in one place and is testable without an HTTP call.
+/// </summary>
+function StripeExpiresAtUnix(const ANowUtcBare: TDateTime;
+  AExpireMinutes: Integer): Int64;
+
 implementation
 
 uses
@@ -107,6 +115,12 @@ uses
 const
   STRIPE_API_URL = 'https://api.stripe.com/v1';
   STRIPE_API_VERSION = '2023-10-16';
+
+function StripeExpiresAtUnix(const ANowUtcBare: TDateTime;
+  AExpireMinutes: Integer): Int64;
+begin
+  Result := DateTimeToUnix(ANowUtcBare + AExpireMinutes / 1440);
+end;
 
 { TStripeConfig }
 
@@ -310,7 +324,8 @@ begin
     Params.Add('client_reference_id', AOrder.OrderNo);
 
     if AOrder.ExpireMinutes > 0 then
-      Params.Add('expires_at', IntToStr(DateTimeToUnix(Now + AOrder.ExpireMinutes / 1440)));
+      Params.Add('expires_at', IntToStr(
+        StripeExpiresAtUnix(TTimeZone.Local.ToUniversalTime(Now), AOrder.ExpireMinutes)));
 
     try
       RespObj := DoStripePost('/checkout/sessions', Params,

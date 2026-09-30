@@ -4,11 +4,13 @@ interface
 
 uses
   System.SysUtils,
+  System.DateUtils,
   System.Generics.Collections,
   DUnitX.TestFramework,
   DeepBase.Payment,
   DeepBase.Payment.Alipay,
   DeepBase.Payment.WeChatPay,
+  DeepBase.Payment.Stripe,
   DeepBase.Payment.PayPal;
 
 type
@@ -105,6 +107,20 @@ type
 
     [Test]
     procedure Test_PayPal_VerifyNotification_RejectsProductionWithoutHeaderContext;
+  end;
+
+  /// <summary>
+  /// Wire-time tests for the payment providers' outbound expire fields: each
+  /// conversion must name the UTC instant of the clock reading it was given.
+  /// </summary>
+  [TestFixture]
+  TPaymentWireTimeTests = class
+  public
+    [Test]
+    procedure Test_Stripe_ExpiresAtUnix_IsUtcSecondsOfInjectedClock;
+
+    [Test]
+    procedure Test_Stripe_ExpiresAtUnix_RoundTripsToExpireInstant;
   end;
 
 implementation
@@ -534,11 +550,45 @@ begin
   end;
 end;
 
+{ TPaymentWireTimeTests }
+
+procedure TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_IsUtcSecondsOfInjectedClock;
+const
+  ExpireMinutes = 30;
+var
+  NowUtcBare: TDateTime;
+  Expected: Int64;
+begin
+  NowUtcBare := EncodeDateTime(2031, 3, 1, 4, 0, 0, 0);
+  // Whole seconds since the Unix epoch, derived by date arithmetic so the
+  // expected value does not come from the routine under test.
+  Expected := Round((NowUtcBare + ExpireMinutes / 1440 -
+    EncodeDateTime(1970, 1, 1, 0, 0, 0, 0)) * 86400);
+  Assert.AreEqual<Int64>(Expected, StripeExpiresAtUnix(NowUtcBare, ExpireMinutes),
+    'expires_at must name the UTC instant of the injected clock reading plus the ttl');
+end;
+
+procedure TPaymentWireTimeTests.Test_Stripe_ExpiresAtUnix_RoundTripsToExpireInstant;
+const
+  ExpireMinutes = 45;
+var
+  NowUtcBare: TDateTime;
+  Parsed: TDateTime;
+  DriftSeconds: Int64;
+begin
+  NowUtcBare := EncodeDateTime(2031, 3, 1, 4, 0, 0, 0);
+  Parsed := UnixToDateTime(StripeExpiresAtUnix(NowUtcBare, ExpireMinutes));
+  DriftSeconds := Round((Parsed - (NowUtcBare + ExpireMinutes / 1440)) * 86400);
+  Assert.AreEqual<Int64>(0, DriftSeconds,
+    'expires_at must read back as the expire instant it names');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TPaymentOrderTests);
   TDUnitX.RegisterTestFixture(TPaymentResultTests);
   TDUnitX.RegisterTestFixture(TRefundRequestTests);
   TDUnitX.RegisterTestFixture(TPaymentHelperTests);
   TDUnitX.RegisterTestFixture(TPaymentSignatureSecurityTests);
+  TDUnitX.RegisterTestFixture(TPaymentWireTimeTests);
 
 end.
