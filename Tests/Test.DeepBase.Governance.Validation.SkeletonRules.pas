@@ -119,13 +119,18 @@ end;
 procedure TSkeletonRuleTests.CanRelease_WorksWithOnlyP0Rules;
 var
   LAction: TAction;
+  LGate: TAccessGate;
 begin
   // Add a valid action (with DueRef and GateKey)
   LAction := TAction.Create('valid_action', 'Valid', rlL2, 'valid_gate', 'due_ref', 'purpose');
   FKeyResolver.RegisterAction(LAction);
 
   // Add a valid gate
-  FKeyResolver.RegisterGate(TAccessGate.Create('valid_gate', 'Valid Gate', gtAction, '', ''));
+  // INV-5 要求 gtAction 门至少挂一个 ActionKey；RegisterGate 不做 Action→Gate 反向链接，
+  // 所以关联必须在门上调 AddActionKey，否则该门是孤儿门禁（vsSevere）。
+  LGate := TAccessGate.Create('valid_gate', 'Valid Gate', gtAction, '', '');
+  LGate.AddActionKey('valid_action');
+  FKeyResolver.RegisterGate(LGate);
 
   // CanRelease should work with only P0 rules
   // Since we have a valid action with all required fields, it should pass

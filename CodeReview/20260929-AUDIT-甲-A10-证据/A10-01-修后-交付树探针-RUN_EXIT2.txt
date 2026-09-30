@@ -1,0 +1,23 @@
+== 编译一次性 runner（单元: Test.DeepBase.Governance.Validation.SkeletonRules） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Governance\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used
+Governance\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used
+Governance\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used
+Governance\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used
+Governance\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used
+Governance\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used
+Governance\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used
+Governance\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used
+24957 lines, 1.20 seconds, 2535972 bytes code, 360256 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Governance.Validation.SkeletonRules） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+ENoTestsRegistered: No Test Fixtures found
+RUN_EXIT=2

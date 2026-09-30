@@ -1,0 +1,41 @@
+== 编译一次性 runner（单元: Test.DeepBase.Governance.Validation.SkeletonRules） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Governance\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used
+Governance\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used
+Governance\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used
+Governance\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used
+Governance\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used
+Governance\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used
+Governance\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used
+Governance\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used
+24957 lines, 1.26 seconds, 2738244 bytes code, 378304 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Governance.Validation.SkeletonRules） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.....F
+
+Tests Found   : 3
+Tests Ignored : 0
+Tests Passed  : 2
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.Governance.Validation.SkeletonRules.TSkeletonRuleTests.CanRelease_WorksWithOnlyP0Rules
+  Message: Condition is False when True expected. [CanRelease should work correctly with only P0 rules registered]
+
+
+RUNNER_STATS fixtureCount=1 testCount=3 pass=2 failure=1 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
