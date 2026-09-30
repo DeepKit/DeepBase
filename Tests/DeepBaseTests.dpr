@@ -60,6 +60,7 @@ uses
   Test.DeepBase.Theme in 'Test.DeepBase.Theme.pas',
   Test.DeepBase.License in 'Test.DeepBase.License.pas',
   Test.DeepBase.LicensingTimeSource in 'Test.DeepBase.LicensingTimeSource.pas',
+  Test.DeepBase.TimeGuardSecretStore in 'Test.DeepBase.TimeGuardSecretStore.pas',
   Test.DeepBase.Updater in 'Test.DeepBase.Updater.pas',
   Test.DeepBase.Unlock in 'Test.DeepBase.Unlock.pas',
   // MAINT: Core infra tests
