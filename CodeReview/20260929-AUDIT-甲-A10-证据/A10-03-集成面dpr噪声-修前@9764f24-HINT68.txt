@@ -1,0 +1,7 @@
+[dpr 1/1] Tests/Integration/DeepBaseIntegrationTests.dpr CONFIG=default BUILD_EXIT=0 HINT=68 WARN=0
+编译门禁统计：DPR总数=1 成功=1 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=0 成功=0 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：判定面=1 已跟踪=90 清单来源=named .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=68 Warning=0 按码=H2443=52,H2077=14,H2219=2
+编译噪声基线未比对：本轮判定面「named」≠ 基线记录面「manifest:T0-生产契约面.txt」（跨面计数不可比）；噪声计数仅观测
+编译门禁通过：1 个工程全部 BUILD_EXIT=0（判定应来自隔离 --detach 工作树 @ 目标 commit）

@@ -401,7 +401,6 @@ type
   /// <summary>
   /// Base class for integration tests
   /// </summary>
-  [TestFixture]
   TIntegrationTestBase = class
   private
     class var FSharedContext: TIntegrationTestContext;
