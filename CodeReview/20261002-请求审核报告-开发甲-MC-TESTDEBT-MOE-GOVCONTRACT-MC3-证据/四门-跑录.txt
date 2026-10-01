@@ -1,0 +1,67 @@
+== DeepBase 四门统一跑录（本批 4 单全部落笔后 · 最终态）
+跑录时间: 2026-10-02 01:51:36
+工作树 HEAD: 82b5462   分支: master
+
+门名口径（依 WO-20261001-MC-A16 验收结论 §八 的订正）：
+  「四门」= 行尾 eol / 编码 encoding / 丙类损坏 mojibake / 证据编码 evidence-encoding 四道静态门禁，**不含 contract-gate**。
+  contract-gate 自 2026-09-29（eb93e23）起在 HEAD 恒 EXIT=1，归 WO-20261001-MC-主控-CONTRACTGATE；
+  本批 GOVCONTRACT 登记后其读数由 2 项红变 3 项红，单独列于文末并逐条归因。
+
+====================================================================
+
+--------------------------------------------------------------------
+门禁：行尾门禁
+入口：09_工程脚本/eol-gate/check_eol.js
+命令：node .\09_工程脚本\eol-gate\check_eol.js --root .
+EXIT=0
+结论行：行尾门禁通过：检查了 1662 个文件（.pas CRLF / .md LF），跳过目录 11
+
+--------------------------------------------------------------------
+门禁：编码门禁
+入口：09_工程脚本/encoding-gate/check_pas_encoding.js
+命令：node .\09_工程脚本\encoding-gate\check_pas_encoding.js --root .
+EXIT=0
+结论行：编码门禁通过：1017 个 .pas + 798 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+
+--------------------------------------------------------------------
+门禁：丙类损坏门禁
+入口：09_工程脚本/mojibake-gate/check_mojibake.js
+命令：node .\09_工程脚本\mojibake-gate\check_mojibake.js --root .
+EXIT=0
+结论行：丙类损坏门禁通过：扫描 1015 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+
+--------------------------------------------------------------------
+门禁：证据编码门禁
+入口：09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js
+命令：node .\09_工程脚本\evidence-encoding-gate\check_evidence_encoding.js --root .
+EXIT=0
+结论行：证据编码门禁通过：扫描 1232 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+
+====================================================================
+参考读数（不在四门口径内，单列以便复核）
+
+门禁：消费者契约门禁（contract-gate）
+入口：09_工程脚本/contract-gate/check_contract.js
+命令：node .\09_工程脚本\contract-gate\check_contract.js --root .
+EXIT=1
+| 契约门禁失败：扫描 19 单元，stable 破坏性变更 2 项:
+|   DeepBase.Licensing: 公开签名消失/改写 2 处（须记 CHANGELOG 并重新生成基线）:
+|       interface uses System.SysUtils, System.JSON, System.Generics.Collections, DeepBase.Commerce.Types, DeepBase.Commerce.SafeClient, DeepBase.Commerce.Permissions, DeepBase.Commerce.UpgradeFlow, DeepBase.Commerce.JsonUtil, DeepBase.Unlock, DeepBase.TimeGuard
+|       type TLicensingTier = (ltFree, ltPro)
+|   stable 单元 DeepBase.DataBinding 不在基线内（新纳入稳定的单元须发版时写入基线）
+
+  逐条归因：
+   ① DeepBase.Licensing 明细② interface uses ... DeepBase.TimeGuard —— 真变更但向后兼容
+      （eb93e23 乙 B7 追加 uses，无公开声明被删/改写，按 check_contract.js:18 口径新增只报不拦）；
+   ② DeepBase.Licensing 明细① type TLicensingTier = (ltFree, ltPro) —— **假阳性**：check_contract.js:146-155
+      按 ; 分块且 :132 stripComments 把注释打成空格，type 关键字只与同块首个声明绑定，注释位移即幻象
+      removal，声文本体一字未改；
+   ③ stable 单元 DeepBase.DataBinding 不在基线内 —— 本批 GOVCONTRACT 登记的直接后果，记账性红，
+      指向发版动作（signature-baseline.json 由 :185-205 的 --emit-baseline 在发版时重生成），不是缺陷。
+   ①② 的修法归 WO-20261001-MC-主控-CONTRACTGATE；③ 由 GOVCONTRACT 裁定件 §五 归入同一单（通用结构盲区）。
+
+====================================================================
+本批读数增量归因（依 09_工程脚本/README-门禁覆盖面.md §二：四门为工作树口径，只看目录名 SKIP 集）
+  · .pas 计数 1017 未变 ⇒ 本批零 .pas 改动（与各回执的「零生产代码」自述一致）
+  · 增量来源：本批新增并入库的交付件与证据件（CodeReview/** 42 件、docs/** 10 件、contract 1 件、.gitignore 1 件）
+  · 未跟踪剩余条目 = 22（全部为 docs/** 的 D 组，已逐件分类待主控裁定，见 MC3 项4 结论件 §四）
