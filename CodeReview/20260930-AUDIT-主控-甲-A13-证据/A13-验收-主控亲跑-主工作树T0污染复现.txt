@@ -1,0 +1,71 @@
+[dpr 1/2] Tests/DeepBaseTests.dpr CONFIG=DeepBaseTests.dproj BUILD_EXIT=0 HINT=238 WARN=17
+[dpr 2/2] Tests/Integration/DeepBaseIntegrationTests.dpr CONFIG=default BUILD_EXIT=0 HINT=68 WARN=0
+[dpk 1/25] DeepBaseCore.dpk CONFIG=DeepBaseCore.dproj BUILD_EXIT=0 HINT=18 WARN=0
+[dpk 2/25] DeepBaseServices.dpk CONFIG=DeepBaseServices.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseServices.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 3/25] DeepAxis.dpk CONFIG=DeepAxis.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepAxis.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 4/25] DeepBaseBrowser.dpk CONFIG=DeepBaseBrowser.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseBrowser.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 5/25] DeepBaseCommerce.dpk CONFIG=DeepBaseCommerce.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseCommerce.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 6/25] DeepBasePlatform.dpk CONFIG=DeepBasePlatform.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBasePlatform.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 7/25] DeepBaseDataPlatform.dpk CONFIG=DeepBaseDataPlatform.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseDataPlatform.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 8/25] DeepBaseLLM.dpk CONFIG=DeepBaseLLM.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseLLM.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 9/25] DeepBaseIntentClarification.dpk CONFIG=DeepBaseIntentClarification.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseIntentClarification.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 10/25] DeepBaseInference.dpk CONFIG=DeepBaseInference.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseInference.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 11/25] DeepBaseSpeechCore.dpk CONFIG=DeepBaseSpeechCore.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseSpeechCore.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 12/25] DeepBaseFeatures.dpk CONFIG=DeepBaseFeatures.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseFeatures.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 13/25] DeepBaseFMX.dpk CONFIG=DeepBaseFMX.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseFMX.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 14/25] DeepBasePersistence.dpk CONFIG=DeepBasePersistence.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBasePersistence.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 15/25] DeepBaseGovernance.dpk CONFIG=DeepBaseGovernance.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseGovernance.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 16/25] DeepBaseSpeechASR.dpk CONFIG=DeepBaseSpeechASR.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseSpeechASR.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 17/25] DeepBaseSpeechTTS.dpk CONFIG=DeepBaseSpeechTTS.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseSpeechTTS.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 18/25] DeepBaseSpeechVoice.dpk CONFIG=DeepBaseSpeechVoice.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseSpeechVoice.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 19/25] DeepBaseSpeechWake.dpk CONFIG=DeepBaseSpeechWake.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseSpeechWake.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 20/25] DeepBaseVCL.dpk CONFIG=DeepBaseVCL.dproj BUILD_EXIT=1 HINT=6 WARN=0
+  DeepBaseVCL.dpk 编译失败：Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+[dpk 21/25] Examples/PluginExample/SamplePluginPkg.dpk CONFIG=default BUILD_EXIT=0 HINT=0 WARN=0
+[dpk 22/25] Tests/Regression/R7P4Probe.dpk CONFIG=default BUILD_EXIT=0 HINT=0 WARN=2
+[dpk 23/25] dclDeepBaseCore.dpk CONFIG=dclDeepBaseCore.dproj BUILD_EXIT=0 HINT=0 WARN=0
+[dpk 24/25] dclDeepBaseFMX.dpk CONFIG=dclDeepBaseFMX.dproj BUILD_EXIT=0 HINT=45 WARN=23
+[dpk 25/25] dclDeepBaseVCL.dpk CONFIG=dclDeepBaseVCL.dproj BUILD_EXIT=0 HINT=51 WARN=11
+编译门禁统计：DPR总数=2 成功=2 失败=0 被跳过=0 失败子路径=0
+编译门禁统计：DPK总数=25 成功=6 失败=19 被跳过=0 失败子路径=0
+编译门禁统计：判定面=27 已跟踪=90 清单来源=manifest:T0-生产契约面.txt .res生成=0 编译器=dcc64.exe 陈旧DCU清理=0
+编译门禁统计：编译噪声 Hint=534 Warning=53 按码=H2077=279,H2443=175,H2219=54,H2164=23,W1033=14,W1000=11,W1010=7,W1074=6,W1036=4,H2269=3,W1024=3,W1050=3,W1073=3,W1035=2
+编译门禁失败：19 个工程编译不过
+  DeepBaseServices.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepAxis.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseBrowser.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseCommerce.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBasePlatform.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseDataPlatform.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseLLM.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseIntentClarification.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseInference.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseSpeechCore.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseFeatures.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseFMX.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBasePersistence.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseGovernance.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseSpeechASR.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseSpeechTTS.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseSpeechVoice.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseSpeechWake.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+  DeepBaseVCL.dpk EXIT=1  Core\DeepBase.Security.DPAPI.pas(554) Error: E2251 Ambiguous overloaded call to 'SecureZeroMemory'
+BUILDGATE_EXIT=1
