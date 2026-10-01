@@ -39,6 +39,8 @@ const EVIDENCE_FACE_REJECT = '证据附件不得进生产编译面（口径唯�
 
 // 与其余四道门共用 gate-skip 的目录名集（`Logs` 是本门专属：dcc64 的编译日志落处）。
 // 这是「枚举面」的定义，不是「范围内放行谁」——判定面内每一个工程都编、都判，红就红。
+// 同一集在【编译器搜索路径】上是同一语义的更硬一面（见 projectEnv 的 isArtifactDir）：
+// 这些目录里的 .dcu/.dcp 是机器残留而非工程真相源，进了 -U/-O，编译结果就由机器状态决定。
 const BUILD_ARTIFACT_DIRS = gateSkipSet('Logs');
 // 源目录（BUG-285：dcc64 即使指定 -N0，也可能把早期依赖的 DCU 落进源目录，跑完须清掉【本次新产生】的那些）。
 const SOURCE_DIRS = ['Core', 'Features', 'Persistence', 'VCL', 'FMX', 'Governance', 'Tests', 'Tools', 'Examples', 'DeepFlow', 'DeepBaseRun', 'doQry', 'ThirdParty'];
@@ -502,6 +504,14 @@ function walkProjects(root, acc, readdirFailures) {
 }
 
 // ---- 编译环境：缺省面（仓内构建脚本同构）+ 每个工程 .dproj 自己的面 ----
+// resolve 后的目录是否落在仓内构建产物树下（目录名口径 = BUILD_ARTIFACT_DIRS，与其余四道门同一真相源）。
+// 只判「仓内相对路径的段名」，仓外路径（BDS、DUnitX）不适用这条口径。
+function isArtifactDir(root, abs) {
+  const rel = path.relative(root, abs);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return false;
+  return rel.split(path.sep).some(seg => BUILD_ARTIFACT_DIRS.has(seg));
+}
+
 function resolveToolchain() {
   let dcc64 = null;
   if (process.env.DCC64 && fs.existsSync(process.env.DCC64)) dcc64 = process.env.DCC64;
@@ -603,7 +613,19 @@ function projectEnv(root, rel, env, face) {
         continue;
       }
       const expanded = e.replace(/\$\(BDS\)/gi, env.bds).replace(/\$\(CDIR\)|\$\(SourceDir\)/gi, projDir);
-      dirs.add(path.resolve(projDir, expanded.replace(/\\/g, path.sep)));
+      const abs = path.resolve(projDir, expanded.replace(/\\/g, path.sep));
+      // 构建产物目录不得进编译器搜索路径（WO-20261001-MC-MC2）。dproj 把本机构建输出目录声明进
+      // DCC_UnitSearchPath（20+ 个 .dpk 声明 TestResults\dcp32/dcp64，DeepBaseCommerce.dproj
+      // 还声明 TestResults\dcu32/dcu64），而本门把这些声明目录排在源码目录之前 ⇒ 机器上残留的
+      // 陈旧 .dcu/.dcp 先于源码解析，把「接口早已搬迁」的旧声明带进制程作用域，编译结果由机器
+      // 残留决定而不是由源码决定。坐实实例：9387222 把 SecureZeroMemory 两个重载从 Security.pas
+      // 搬入 SecureMemory.pas 后，TestResults\dcp64\DeepBaseCore.dcp（9/14，搬迁前）仍带旧接口，
+      // 19/25 个 dpk 在 Core\DeepBase.Security.DPAPI.pas(554) 报 E2251，而同源码隔离树 27/27 绿。
+      // 这与本门自己的口径正相反（README §五：包产物重定向 + 每轮抹平，防的正是同一件事），
+      // 声明目录成了从后门把陈旧产物放回来的入口，故按五门共用的目录名集整段剔除。
+      // 只剔 dproj 声明目录：env.searchPaths 末尾的本轮 outRoot/dcp 必须留着，否则包间 requires 无从解析。
+      if (isArtifactDir(root, abs)) continue;
+      dirs.add(abs);
     }
   }
   for (const m of xml.matchAll(/<DCC_Namespace>([\s\S]*?)<\/DCC_Namespace>/g)) {

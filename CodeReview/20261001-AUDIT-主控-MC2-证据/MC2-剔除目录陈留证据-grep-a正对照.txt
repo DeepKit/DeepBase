@@ -1,0 +1,50 @@
+MC2 判据 2（负样本）第三态：陈留构建产物 + 修后门禁 ⇒ 仍全绿
+====================================================================
+执行时刻：2026-10-01（主控亲跑）
+命令口径：grep -ac <符号> <dcu>（本环境 strings 对 .dcu 恒 0 命中，已用正对照证伪该方法）
+
+一、正对照（必定含该符号的现行版单元产物）
+--------------------------------------------------------------------
+$ grep -ac SecureZeroMemory TestResults/p1-dcu/DeepBase.SecureMemory.dcu
+1
+⇒ 同一命令对现行 SecureMemory 产物有命中，方法本身有效，后续负结果才可采信。
+
+二、陈留在盘、且被本单剔除出编译器搜索路径的构建产物（未删除，故意保留）
+--------------------------------------------------------------------
+$ grep -ac SecureZeroMemory TestResults/dcu32/DeepBase.Security.dcu
+1
+$ grep -ac SecureZeroMemory TestResults/dcu64/DeepBase.Security.dcu
+1
+$ ls -l --time-style=long-iso TestResults/dcu32/DeepBase.Security.dcu TestResults/dcu64/DeepBase.Security.dcu
+-rw-r--r-- 1 fuyi.it 197121 30830 2026-09-14 20:09 TestResults/dcu64/DeepBase.Security.dcu
+-rw-r--r-- 1 fuyi.it 197121   30830 2026-09-20 12:12 TestResults/dcu32/DeepBase.Security.dcu
+⇒ 两件均含旧版 SecureZeroMemory 声明（mtime 早于 9387222 搬迁提交 2026-09-20 19:24）。
+
+$ ls -l --time-style=long-iso TestResults/dcp64/DeepBaseCore.dcp
+-rw-r--r-- 1 fuyi.it 197121 16797835 2026-09-14 20:09 TestResults/dcp64/DeepBaseCore.dcp
+⇒ 该陈旧 .dcp 内嵌搬迁前的 DeepBase.Security 接口（DeepBaseCore.dpk:90 contains），
+   是 19/25 个 dpk 在 Core\DeepBase.Security.DPAPI.pas(554) 报 E2251 的直接载体。
+
+$ ls TestResults/dcp32
+ls: 无法访问 'TestResults/dcp32': No such file or directory
+⇒ 目录不存在（dproj 仍声明它，剔除后不影响任何解析）。
+
+三、对照结论
+--------------------------------------------------------------------
+上述产物在盘、未被删除、未被清理（本次运行统计行 陈旧DCU清理=0），
+而 MC2-修后-主工作树T0.txt 的读数为 27/27 BUILD_EXIT=0、Hint=793 Warning=155。
+⇒ 「陈旧产物仍在机器上 + 路径不进判定面 ⇒ 门禁不红」，免疫成立。
+
+四、反向坐实（同一份产物、把路径放回去）
+--------------------------------------------------------------------
+MC2-负样本-摘掉剔除必红.txt：临时去掉剔除逻辑（其余不动）后同命令复跑，
+19/25 个 dpk 全部 E2251，与 A13 修前证据的失败集合逐条同名同错。
+⇒ 红绿开关确由「构建产物目录是否在 -U/-O」决定，样本真咬机制。
+
+五、附：源码位植入陈旧 .dcu 不红（已登记为何不是有效负样本）
+--------------------------------------------------------------------
+MC2-负样本-植入Core源码位-仍绿-B使样本失效.txt：把 TestResults/dcu64/DeepBase.Security.dcu
+复制进 Core/（源码目录，-U 第一位）后同命令复跑，仍 27/27 全绿。
+原因：compileOne 传 -B（build all），被 uses 的单元按源码重编，陈旧 .dcu 不被采信；
+且植入件 mtime/size 未变（未被覆盖、也未被 陈旧DCU清理 删除，统计行 陈旧DCU清理=0）。
+⇒ 源码位不是本机制的生效位；本单的负样本以「摘掉剔除」为反向坐实形态。
