@@ -1,0 +1,65 @@
+== A13 交付 §六 判据4「四门 EXIT=0」+ 三面既存红归因 ==
+== 采集时刻(本地): 2026-10-01 12:59:21 ==
+== 口径: 四门 = eol / pas-encoding / mojibake / evidence-encoding（本单判据面）==
+==       另三面 build-ownership / contract / managed-copy 不在判据4 清单，本件另证其红为既存
+== 执行位置: 主仓工作树，代码笔 dfceab7600469c41f1ee7c3c36f09ff8103eb741 已入库（4 文件在索引口径内）==
+== 扫描口径: 四门默认只扫 git 已跟踪文件；本跑时本单证据件尚未入库 ⇒ 全量口径的提交后复跑件另笔入库（§九-6 同族规程）==
+
+##### 四门之 check_eol #####
+EXIT=0
+行尾门禁通过：检查了 1627 个文件（.pas CRLF / .md LF），跳过目录 11
+
+##### 四门之 check_pas_encoding #####
+EXIT=0
+编码门禁通过：1016 个 .pas + 764 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+
+##### 四门之 check_mojibake #####
+EXIT=0
+丙类损坏门禁通过：扫描 1014 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+
+##### 四门之 check_evidence_encoding #####
+EXIT=0
+（E3 命中逐行清单为存量基线内既有豁免，不在本件复读；命令与参数见文末，主控复跑即得）
+  CodeReview/_audit_recheck/乙-R3-gate-output.txt:17: 闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤? L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md L1 .pas 婧愮爜闈為鏈熺函 LF → 门禁输出（预期包�?L1, L2, L3 违规�? 行尾门禁失败，违�?3 �? L2 .md 文档非预期包�?CRLF (要求 LF): docs/Bad_CRLF.md L1 .pas 源码非预期纯 LF (要求 CRLF): src/（替换符 6/44）
+证据编码门禁通过：扫描 1101 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+
+##### 三面既存红归因（干净 HEAD 树 vs 交付态）#####
+== 对照树: D:/_ProgData/DeepBase-A13-wt/wt-baseline（--detach @2258a5d，无任何本单改动、无未跟踪文件）==
+
+--- check_build_ownership ---
+  基线树输出行数=5 / 交付态输出行数=5
+  两份输出逐字节相同 ⇒ 该门红项与 A13 交付无关（既存红，非本单引入）PASS
+  基线树输出全文:
+    构建归属门禁失败：生产单元 576，构建文件 126，违规 4 项:
+      O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Gate.Verdict.pas (unit DeepBase.Gate.Verdict)
+      O1 FAIL 新增孤儿单元（不在基线）: Core/DeepBase.Security.UBS2.Migration.pas (unit DeepBase.Security.UBS2.Migration)
+      O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Browser.Engine.WebView2.pas (unit DeepBase.Browser.Engine.WebView2)
+      O1 FAIL 新增孤儿单元（不在基线）: Features/DeepBase.Update.Contracts.pas (unit DeepBase.Update.Contracts)
+
+--- check_contract ---
+  基线树输出行数=4 / 交付态输出行数=4
+  两份输出逐字节相同 ⇒ 该门红项与 A13 交付无关（既存红，非本单引入）PASS
+  基线树输出全文:
+    契约门禁失败：扫描 18 单元，stable 破坏性变更 1 项:
+      DeepBase.Licensing: 公开签名消失/改写 2 处（须记 CHANGELOG 并重新生成基线）:
+          interface uses System.SysUtils, System.JSON, System.Generics.Collections, DeepBase.Commerce.Types, DeepBase.Commerce.SafeClient, DeepBase.Commerce.Permissions, DeepBase.Commerce.UpgradeFlow, DeepBase.Commerce.JsonUtil, DeepBase.Unlock, DeepBase.TimeGuard
+          type TLicensingTier = (ltFree, ltPro)
+
+--- check_managed_copy ---
+  基线树输出行数=9 / 交付态输出行数=9
+  两份输出逐字节相同 ⇒ 该门红项与 A13 交付无关（既存红，非本单引入）PASS
+  基线树输出全文:
+    托管拷贝门禁失败，违规 8 项:
+      M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+      M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Core/DeepBase.Security.MasterKey.pas
+      M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+      M2 未评审的裸内存 Move 调用 (当前 1 > 基线 0): Tests/Test.DeepBase.ConfigurationDecrypt.pas
+      M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureMemory.pas
+      M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): Tests/Test.DeepBase.SecureRandomDouble.pas
+      M2 未评审的裸内存 Move 调用 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+      M2 未评审的 FillChar 内存操作 (当前 3 > 基线 0): Tests/Test.DeepBase.Security.UBS2.pas
+
+##### 命令口径（七门同源，仅脚本名不同；均在仓库根执行）#####
+  node 09_工程脚本/<门>/check_<...>.js
+  四门: eol-gate/check_eol.js, encoding-gate/check_pas_encoding.js, mojibake-gate/check_mojibake.js, evidence-encoding-gate/check_evidence_encoding.js
+  另三面: build-ownership/check_build_ownership.js, contract-gate/check_contract.js, managed-copy-gate/check_managed_copy.js

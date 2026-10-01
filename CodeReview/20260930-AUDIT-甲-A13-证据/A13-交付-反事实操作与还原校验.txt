@@ -1,0 +1,19 @@
+== A13 交付 §五 D 反事实操作记录（改什么/结果/还原的字节级校验）==
+== 树: wt-a13-post（--detach @2258a5d）· 脚本: logs-v2/cf-run.sh ==
+== 采集时刻(本地): 2026-10-01 12:59:21 ==
+
+CF-1 还原 A11 Tests/Test.DeepBase.TimeGuardSecretStore.pas :229-230 → 基线单行形态
+  交付态: LGuard.SetHttpTransport(TFakeTimeServer.Create(
+              TTimeZone.Local.ToUniversalTime(System.SysUtils.Now)));
+  还原为(基线 :229): LGuard.SetHttpTransport(TFakeTimeServer.Create(System.SysUtils.Now));
+  结果: 6 例 → 5 通过 1 红，红例 BackendFailures_DoNotEscapeThroughVerify（got MajorSkew），RUN_EXIT=1
+  还原校验: sha256 前16位 af4cfc96804f02e6 == 改前值
+
+CF-2 还原 B7 Tests/Test.DeepBase.LicensingTimeSource.pas 摘掉 UtcOf 包装（裁定 §五 D 指基线 :309，交付态行号 :315）
+  交付态: InstallGuardWith(UtcOf(IncMinute(System.SysUtils.Now, 7)), 0);
+  还原为(基线 :309): InstallGuardWith(IncMinute(System.SysUtils.Now, 7), 0);
+  结果: 7 例 → 6 通过 1 红，红例 Test_MinorSkewClock_StillTrusted_TrialDaysUnchanged（Expected [1] but got [2]），RUN_EXIT=1
+  还原校验: sha256 前16位 566ea0a8ec3bf65c == 改前值
+
+CF-3 两处全部还原后复跑: A11 6/6、B7 7/7 双绿（RUN_EXIT=0）
+  ⇒ 判据1/2 的绿不是「红挪到别处」的假绿；且两夹具在未重架时必然红，与裁定 §三.1「11 例/9 行」同向

@@ -1,0 +1,229 @@
+== A13 交付：§五 授权范围落点逐行复核 + §六 判据7 断言冻结核验 ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 法源: CodeReview/20260930-AUDIT-主控-甲-A13-裁定结论.md §五/§六 ==
+== 采集时刻(本地): 2026-10-01 12:59:21（本机 UTC+8） ==
+== 基线 2258a5d → 交付笔 dfceab7600469c41f1ee7c3c36f09ff8103eb741（4 文件一笔入库）==
+== 命令: git diff 2258a5d -- <文件>（对本笔父提交取 diff，逐字入本件）==
+== 探针交付件 sha256=ddf78b7d0a3c38defe729152d44c566ee9b038802347ed4b175261183628e01d（Tests/Test.DeepBase.A13TimeFraming.pas，BOM+CRLF）==
+
+##### 一、§五 A 生产面 3 行 + §五 C.1/C.2 声明与注释订正 #####
+----- Features/DeepBase.TimeGuard.pas -----
+diff --git a/Features/DeepBase.TimeGuard.pas b/Features/DeepBase.TimeGuard.pas
+index 9e34277a..989e86a3 100644
+--- a/Features/DeepBase.TimeGuard.pas
++++ b/Features/DeepBase.TimeGuard.pas
+@@ -61,6 +61,11 @@ type
+     /// <summary>
+     /// Send a HEAD or GET request and return the server's Date header as TDateTime.
+     /// Returns 0 if the request fails or Date header is missing.
++    /// Framework contract (WO-20260929-AUDIT-甲-A13): the value is the server's
++    /// current instant expressed as UTC naked numbers — the GMT figures of the
++    /// Date header, with no conversion into the machine's local time zone.
++    /// Implementations that hand back local naked values make Verify report a
++    /// skew of exactly the machine's UTC offset.
+     /// </summary>
+     function FetchServerTime(const AUrl: string): TDateTime;
+   end;
+@@ -105,7 +110,7 @@ type
+     FServerUrl: string;
+     FMaxDriftMinutes: Integer;
+     FLastKnownGoodTime: TDateTime;
+-    FServerTimeOffset: TDateTime;  // ServerTime - LocalTime
++    FServerTimeOffset: TDateTime;  // ServerTime - UTC(Now), both UTC naked
+     FLastVerifyResult: TTimeGuardResult;
+     FHttpTransport: ITimeGuardHttpTransport;
+     FSecretStore: ITimeGuardSecretStore;
+@@ -378,7 +383,7 @@ begin
+   if LStore = nil then
+     Exit;
+   try
+-    LISO := DateToISO8601(ATime, False);  // UTC
++    LISO := DateToISO8601(ATime, True);  // Zulu form, the B10 wire convention
+     LStore.SaveSecret(FStorageKey, LISO);
+   except
+     // Storage failure is non-fatal
+@@ -397,7 +402,7 @@ begin
+   try
+     LISO := LStore.LoadSecret(FStorageKey);
+     if LISO <> '' then
+-      TryISO8601ToDate(LISO, Result, False);
++      TryISO8601ToDate(LISO, Result, True);
+   except
+     Result := 0;
+   end;
+@@ -410,7 +415,9 @@ var
+   LLastGood: TDateTime;
+ begin
+   FVerified := True;
+-  LLocalNow := Now;
++  // The transport contract is UTC naked numbers, so offset, drift and both rewind
++  // branches compare against the same UTC reading of the machine clock.
++  LLocalNow := TTimeZone.Local.ToUniversalTime(Now);
+ 
+   // Load last known good time
+   LLastGood := LoadLastKnownGoodTime;
+
+##### 二、§五 B 测试面 9 行（A11 夹具 1 处 + B7 夹具 helper 与 8 处）#####
+----- Tests/Test.DeepBase.TimeGuardSecretStore.pas -----
+diff --git a/Tests/Test.DeepBase.TimeGuardSecretStore.pas b/Tests/Test.DeepBase.TimeGuardSecretStore.pas
+index 1bde4c17..276c19af 100644
+--- a/Tests/Test.DeepBase.TimeGuardSecretStore.pas
++++ b/Tests/Test.DeepBase.TimeGuardSecretStore.pas
+@@ -226,7 +226,8 @@ begin
+   LGuard := TTimeGuard.Create(NewProbeKey('fail'), 5);
+   try
+     LGuard.SetServerUrl('http://127.0.0.1:1');
+-    LGuard.SetHttpTransport(TFakeTimeServer.Create(System.SysUtils.Now));
++    LGuard.SetHttpTransport(TFakeTimeServer.Create(
++      TTimeZone.Local.ToUniversalTime(System.SysUtils.Now)));
+     LGuard.SetSecretStore(LAdapter);
+ 
+     // No try/except of its own here: an exception escaping Verify would surface
+
+----- Tests/Test.DeepBase.LicensingTimeSource.pas -----
+diff --git a/Tests/Test.DeepBase.LicensingTimeSource.pas b/Tests/Test.DeepBase.LicensingTimeSource.pas
+index e18fc2e5..69cc6c03 100644
+--- a/Tests/Test.DeepBase.LicensingTimeSource.pas
++++ b/Tests/Test.DeepBase.LicensingTimeSource.pas
+@@ -48,6 +48,7 @@ type
+     FStore: TFakeTimeGuardStore;
+     function AnchorNoon: TDateTime;
+     function LocalOf(const AUtcInstant: TDateTime): TDateTime;
++    function UtcOf(const ALocalValue: TDateTime): TDateTime;
+     procedure InstallGuardWith(const AServerTime: TDateTime;
+       const ALastKnownGood: TDateTime);
+     procedure UseFakeClock(const ANow: TDateTime);
+@@ -125,6 +126,14 @@ begin
+   Result := TTimeZone.Local.ToLocalTime(AUtcInstant);
+ end;
+ 
++function TLicensingTimeSourceTests.UtcOf(const ALocalValue: TDateTime): TDateTime;
++begin
++  // The guard's transport contract is UTC naked numbers (WO-20260929-AUDIT-甲-A13),
++  // so a reading taken from the wall clock enters the guard in that framing —
++  // the mirror image of LocalOf.
++  Result := TTimeZone.Local.ToUniversalTime(ALocalValue);
++end;
++
+ procedure TLicensingTimeSourceTests.Setup;
+ var
+   Config: TDeepLicensingProductConfig;
+@@ -164,7 +173,7 @@ var
+ begin
+   Transport := TFakeTimeGuardTransport.Create(AServerTime);
+   if ALastKnownGood > 0 then
+-    FStore.Value := DateToISO8601(ALastKnownGood, False);
++    FStore.Value := DateToISO8601(UtcOf(ALastKnownGood), True);
+ 
+   // The guard belongs to the facade and is created by Initialize; its own test
+   // seams are used here, so no production seam exists for tests alone.
+@@ -211,7 +220,7 @@ begin
+   // A server clock that agrees with the wall clock makes the clock trusted; the
+   // trial verdict then has to come from the injectable Core clock, not the wall
+   // clock, which is what makes the verdict testable and single-tracked.
+-  InstallGuardWith(System.SysUtils.Now, 0);
++  InstallGuardWith(UtcOf(System.SysUtils.Now), 0);
+   Assert.AreEqual(Ord(tgOk), Ord(FLicensing.VerifyTime),
+     'Server time within tolerance must classify the clock as trusted');
+ 
+@@ -228,7 +237,7 @@ var
+ begin
+   LocalExpiry := LocalOf(IncDay(AnchorNoon, 10));
+   WriteTrialExpiring(IncDay(AnchorNoon, 10));
+-  InstallGuardWith(System.SysUtils.Now, 0);
++  InstallGuardWith(UtcOf(System.SysUtils.Now), 0);
+   Assert.AreEqual(Ord(tgOk), Ord(FLicensing.VerifyTime));
+ 
+   // Drive the clock past expiry so the shared clock records that instant as its
+@@ -258,7 +267,7 @@ begin
+ 
+   // An unreachable server plus a last-known-good value ahead of the local clock
+   // is the clock-rewound signal.
+-  InstallGuardWith(0, IncDay(System.SysUtils.Now, 40));
++  InstallGuardWith(0, UtcOf(IncDay(System.SysUtils.Now, 40)));
+   Assert.AreEqual(Ord(tgClockRewound), Ord(FLicensing.VerifyTime),
+     'Local time below last known good must classify as ClockRewound');
+ 
+@@ -306,7 +315,7 @@ begin
+   // 7 days as the fully trusted case.
+   LocalExpiry := LocalOf(IncDay(AnchorNoon, 10));
+   WriteTrialExpiring(IncDay(AnchorNoon, 10));
+-  InstallGuardWith(IncMinute(System.SysUtils.Now, 7), 0);
++  InstallGuardWith(UtcOf(IncMinute(System.SysUtils.Now, 7)), 0);
+   Assert.AreEqual(Ord(tgSkewMinor), Ord(FLicensing.VerifyTime),
+     'Seven minutes of server drift stays inside the tolerated skew');
+   Assert.IsTrue(FLicensing.IsTimeTrusted,
+@@ -325,7 +334,7 @@ begin
+   // reading must never be pushed into the monotonic watermark, otherwise a
+   // fake-ahead server could extend a licence window.
+   WriteTrialExpiring(IncDay(AnchorNoon, 400));
+-  InstallGuardWith(IncDay(System.SysUtils.Now, 3), 0);
++  InstallGuardWith(UtcOf(IncDay(System.SysUtils.Now, 3)), 0);
+   Assert.AreEqual(Ord(tgSkewMajor), Ord(FLicensing.VerifyTime),
+     'Three days of server drift must classify as MajorSkew');
+   Assert.IsFalse(FLicensing.IsTimeTrusted,
+@@ -357,7 +366,7 @@ begin
+ 
+   // A server that agrees with the wall clock is trusted, and its corrected
+   // reading is the wall clock itself.
+-  InstallGuardWith(WallNow, 0);
++  InstallGuardWith(UtcOf(WallNow), 0);
+   Assert.AreEqual(Ord(tgOk), Ord(FLicensing.VerifyTime));
+ 
+   // Without the watermark seed the verdict would be eight days: the trial would
+
+##### 三、§六 判据7 断言冻结核验（计数与文本基线态=交付态）#####
+  Tests/Test.DeepBase.TimeGuardSecretStore.pas       基线 Assert.=18  交付 Assert.=18 
+  Tests/Test.DeepBase.LicensingTimeSource.pas        基线 Assert.=30  交付 Assert.=30 
+  核验1: 两夹具 git diff 中 Assert. 行数 = 0
+  核验2: 断言文本行序列逐字 diff（空输出即全等）
+  --- Tests/Test.DeepBase.TimeGuardSecretStore.pas ---
+  断言文本行全等 PASS
+  --- Tests/Test.DeepBase.LicensingTimeSource.pas ---
+  断言文本行全等 PASS
+
+##### 四、§五 C.3 探针 P2 镜像换 UTC：交付态 vs 停机上报归档模板 #####
+  停机上报归档模板 sha256=579d6075d6fb1af8960617414075012fe6bbc6d783c9fc36ced72b0763022495
+  交付态探针        sha256=ddf78b7d0a3c38defe729152d44c566ee9b038802347ed4b175261183628e01d
+  两态差异仅限: 头部注释（取证件→交付件+哨兵声明）与 P2 用例（改名 + 注入值换 UTC 框架）；P1/P3/P4/P5 与全部断言未动
+2c2
+<   Test.DeepBase.A13TimeFraming - pre-work probe for WO-20260929-AUDIT-甲-A13
+---
+>   Test.DeepBase.A13TimeFraming - framework sentinel for WO-20260929-AUDIT-甲-A13
+4,8c4,7
+<   NOT a delivery artefact. This unit measures, on the machine that has the
+<   defect (UTC+8), where the server-read framing conversion has to sit: inside
+<   the RFC 822 parser (案 A) or inside Verify (案 B). The same source file runs in
+<   three detached trees (baseline / 案 A / 案 B) so the matrix is measured rather
+<   than reasoned:
+---
+>   Delivery artefact of A13 (裁定件 §五 C.3 + §六 判据6): the same source file is
+>   run in a pre-fix tree and in the post-fix tree, so 判据1's 双向对照 is measured
+>   rather than reasoned. P1 is the standing sentinel: anyone who moves Verify back
+>   to the local naked framing makes P1 red again.
+11c10,11
+<     P2 fake transport carrying local numbers -> the A11 accepted arrange value
+---
+>     P2 fake transport as the A11 fixture now injects it (UTC numbers) -> the
+>        accepted A11 assertion form pinned against the authorised arrange value
+77c77
+<     [Test] procedure P2_FakeTransportCarryingLocalNumbers_IsTrusted;
+---
+>     [Test] procedure P2_FakeTransportCarryingUtcNumbersLikeA11_IsTrusted;
+256c256
+< procedure TA13TimeFramingTests.P2_FakeTransportCarryingLocalNumbers_IsTrusted;
+---
+> procedure TA13TimeFramingTests.P2_FakeTransportCarryingUtcNumbersLikeA11_IsTrusted;
+263,264c263,267
+<   // The value the A11 accepted unit injects (System.SysUtils.Now, the local
+<   // naked reading) and the verdict its accepted assertion requires.
+---
+>   // The arrange value A11's accepted unit now carries after the authorised
+>   // re-framing (裁定件 §五 B: TFakeTimeServer.Create(ToUniversalTime(Now))), and
+>   // the verdict its accepted assertion requires. Before the re-framing this
+>   // injected System.SysUtils.Now, which only read honestly under the old
+>   // local-naked mixing.
+270c273,274
+<     LGuard.SetHttpTransport(TFixedTransport.Create(System.SysUtils.Now));
+---
+>     LGuard.SetHttpTransport(TFixedTransport.Create(
+>       TTimeZone.Local.ToUniversalTime(System.SysUtils.Now)));

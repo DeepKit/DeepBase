@@ -1,0 +1,117 @@
+== A13 交付 · 主套件 DeepBaseTests.exe 同进程 --run 四夹具原始输出 + HEAD 态泄漏对照（判据3/§九-1） ==
+== 工单: WO-20260929-AUDIT-甲-A13 · 法源: CodeReview/20260930-AUDIT-主控-甲-A13-裁定结论.md ==
+== 采集时刻(本地): 2026-10-01 12:59:21（本机 UTC+8，offset=+08:00） ==
+== 树: D:/_ProgData/DeepBase-A13-wt/wt-a13-{pre,post}（仓库外隔离 --detach @2258a5d，非主树）==
+== 命令: <树>/.tmp/build-gate/exe/Tests/DeepBaseTests.exe --run:<单元>.<夹具类>（主套件同进程，禁全量 run） ==
+== 探针源码两树同一份（交付态），sha256=ddf78b7d0a3c38defe729152d44c566ee9b038802347ed4b175261183628e01d ==
+
+######## post-mainsuite-A11 ########
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+............
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+######## post-mainsuite-B7 ########
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+An unexpected memory leak has occurred. The unexpected small block leaks are:
+
+41 - 56 bytes: TFakeTimeGuardStore x 1
+
+######## post-mainsuite-License ########
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+................................
+
+Tests Found   : 16
+Tests Ignored : 0
+Tests Passed  : 16
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+######## post-mainsuite-Commerce ########
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+######## pre-mainsuite-B7 ########
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+An unexpected memory leak has occurred. The unexpected small block leaks are:
+
+41 - 56 bytes: TFakeTimeGuardStore x 1
+
+
+##### 附一：逐次退出码（各段为其命令的完整原始输出）#####
+  post-mainsuite-A11      EXIT=0  Found=6  Passed=6  Failed=0  Errored=0  Leaked=0
+  post-mainsuite-B7       EXIT=0  Found=7  Passed=7  Failed=0  Errored=0  Leaked=0  FastMM: TFakeTimeGuardStore x 1
+  post-mainsuite-License  EXIT=0  Found=16 Passed=16 Failed=0  Errored=0  Leaked=0
+  post-mainsuite-Commerce EXIT=0  Found=68 Passed=68 Failed=0  Errored=0  Leaked=0
+  pre-mainsuite-B7        EXIT=0  Found=7  Passed=7  Failed=0  Errored=0  Leaked=0  FastMM: TFakeTimeGuardStore x 1
+
+##### 附二：主套件同进程 FastMM 项归因（既存，非本单引入）#####
+  pre-mainsuite-B7 用的是基线 2258a5d 态（未带 §五 改动）单独构建的 DeepBaseTests.exe（构建命令见 T0 件第四节），
+  与交付态 post-mainsuite-B7 报出完全相同的 FastMM 项「41 - 56 bytes: TFakeTimeGuardStore x 1」，两跑的 DUnitX Tests Leaked 均为 0
+  ⇒ 该 FastMM 项属 B7 夹具既存的对象生命周期遗留，与 A13 交付无关，登记为后续项（见交付回执 §六）。
