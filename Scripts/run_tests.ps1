@@ -532,6 +532,8 @@ $UnitPaths = @(
     "$BaseDir\Persistence",
     "$BaseDir\VCL",
     "$BaseDir\FMX",
+    "$BaseDir\Governance",
+    "$BaseDir\doQry",
     "$BaseDir\ThirdParty\Payment",
     "$BaseDir\ThirdParty\Social",
     "$BaseDir\Tools\CLI",
@@ -542,6 +544,33 @@ $UnitPaths = @(
     "D:\ProgramData\delphi\DUnitX\Source\"
 )
 $SearchPath = $UnitPaths -join ";"
+
+# Unit scope names（-NS）：legacy 单元名要靠命名空间前缀才解析得到——doQry\uDoQryLegacy.pas 的
+# `ADODB` 实际是 Data.Win.ADODB，整个 uses 里其余单元都是全限定名，只这一个裸名，缺了 -NS
+# 编译就断在 F2613 'ADODB' not found（WO-20261001-MC-MC1 项1）。
+# 口径与编译门禁同一真相源：09_工程脚本/build-gate/contracts/命名空间声明.txt 的 default 行
+# （与 Scripts\compile_packages_win64.ps1 的 $NS 逐位相同），并按「声明只补不减」并入被测
+# dproj 自己的 DCC_Namespace——门禁 projectEnv 正是这样并（default ∪ 工程声明），runner 少并
+# 这一段就比门禁窄一截，同一份源码在门禁绿、在 runner 红。
+function Get-NamespacePrefixes {
+    param(
+        [string]$DprojPath,
+        [string]$Default = "System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win"
+    )
+    $set = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($n in $Default.Split(';')) { if ($n) { [void]$set.Add($n) } }
+    if (Test-Path -LiteralPath $DprojPath) {
+        $xml = [IO.File]::ReadAllText($DprojPath, [Text.Encoding]::UTF8)
+        foreach ($m in [regex]::Matches($xml, '(?s)<DCC_Namespace>(.*?)</DCC_Namespace>')) {
+            foreach ($n in ($m.Groups[1].Value -split ';')) {
+                # XML 实体还原；$(DCC_Namespace) 是对缺省集的递归引用，本身不带新前缀
+                $n = $n.Trim() -replace '&lt;', '<' -replace '&gt;', '>' -replace '&quot;', '"' -replace '&apos;', "'" -replace '&amp;', '&'
+                if ($n -and $n -ne '$(DCC_Namespace)') { [void]$set.Add($n) }
+            }
+        }
+    }
+    return ($set -join ';')
+}
 
 # Unit directories for code coverage (只统计 DeepBase 源码，不用测试代码稀释覆盖率)
 $CoverageUnitDirs = @(
@@ -571,6 +600,10 @@ function Compile-TestProject {
         New-Item -ItemType Directory -Path $projectDcuDir -Force | Out-Null
     }
 
+    # 单元作用域名按被测工程自己的 .dproj 取（与门禁 projectEnv 同一取法：dproj 就在工程旁边），
+    # Unit 与 Integration 两份工程各自声明，不共用一份。
+    $namespaces = Get-NamespacePrefixes -DprojPath ([IO.Path]::ChangeExtension($ProjectFile, '.dproj'))
+
     # BUG-285: dcc64 在解析 .dproj 的 DCC_DcuOutput 时,偶尔会把早期依赖的 DCU 写到源目录。
     # 构建前清理源目录中的残留 DCU,避免架构测试(源目录不得包含 DCU 产物)误报。
     # 清单须与 Test.Arch.PackageBoundaries 的 SOURCE_DIRS(Core/Persistence/Features/Tests/VCL/FMX/ThirdParty)对齐,
@@ -587,6 +620,7 @@ function Compile-TestProject {
 
     $args = @(
         "-U$SearchPath",
+        "-NS$namespaces",
         "-N0$projectDcuDir",
         "-Q"
     )

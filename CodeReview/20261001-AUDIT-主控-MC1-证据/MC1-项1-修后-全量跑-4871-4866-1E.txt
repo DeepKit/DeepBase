@@ -1,0 +1,37 @@
+WO-20261001-MC-MC1 项1 · 修后全量跑（判据1 的「跑度量」）
+
+环境：隔离 --detach 树 D:/_ProgData/DeepBase-MC1/wt-c9b9fc5（@ c9b9fc5，tracked 2953 件与主树同源），
+      树内 Scripts/run_tests.ps1 = 主树修后件（sha256 逐字节同一）。
+命令：powershell -ExecutionPolicy Bypass -File ./Scripts/run_tests.ps1 -Type Unit -CI -Platform Win64
+      即工单判据1 的命令本体，未加任何过滤开关（-AllowFilteredCI 未用）。
+用时：约 45 分钟（HB Gate / 泄漏闸等重负载 fixture 占大头，期间进程持续推进、未卡死）。
+
+DUnitX 汇总（取自子进程控制台输出，'.' 计数停在 11093）：
+....................................
+
+Tests Found   : 4871
+Tests Ignored : 4
+Tests Passed  : 4866
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 1
+
+Tests With Errors
+
+  Test.DeepBase.Resilience.Timeout.PBT.TTimeoutPolicyPropertyTests.Property6_TimeoutCancelsBackgroundTask
+  Message: Access violation at address 00007FF733ABF7DA in module 'DeepBaseTests.exe' (offset 232F7DA). Read of address 0000000000000000
+
+
+
+runner 侧结论：
+  「FAILED: Some Unit Tests tests failed (Exit code: 1)」→ 整仓命令 EXIT=1。
+  子进程 DUnitX: --exitbehavior:Continue ⇒ 1 个 errored 即使 EXIT≠0，但 4866 个已跑完。
+
+唯一红项归因（判据1「与既有红项集合同集合或逐条归因」）：
+  Test.DeepBase.Resilience.Timeout.PBT.TTimeoutPolicyPropertyTests.Property6_TimeoutCancelsBackgroundTask
+  AV @ nil read，模块偏移 232F7DA，两次运行（全量跑 + 单独重跑该 fixture）偏移同一、必现。
+  已在册存量：CodeReview/20260921-AUDIT-乙-P0-HEAD编译断裂修复-请求审核报告.md:89 记为「存量 · AV @ nil read」；
+              CodeReview/20260921-AUDIT-主控-乙-P1-验收结论.md:19 记为「P2-b 只定位未修 · 非本单范围 · 非阻断」。
+  与本项的关系：修前该工程编译即断在 F2613，整组测试从未跑起来 ⇒ 此项是被编译断裂掩住的存量红，
+  不是本项引入（本项零 .pas，只改编译搜索面）；本项把它从「被掩盖」变成「可见且已归因」。
+  未见 runtime error 216（memory 早前记的「全量单进程跑必崩 216」与本次观测不符，另行更正）。

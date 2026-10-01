@@ -1,0 +1,32 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: True
+Skip Compile: False
+No Rebuild: False
+Output: D:\_Progs\02Business\DeepBase\TestResults
+DCU Output: D:\_Progs\02Business\DeepBase\TestResults\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Test.DeepBase.GovernanceChainKey.pas(24) Fatal: F2613 Unit 'DeepBase.Governance.EvidenceRecorder' not found.
+ERROR: Failed to compile Unit Tests
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        FAILED
+==============================================
+
+Some tests failed!
+EXIT=1

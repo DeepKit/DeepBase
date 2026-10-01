@@ -1,0 +1,90 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: True
+Skip Compile: False
+No Rebuild: False
+Output: D:\_Progs\02Business\DeepBase\TestResults
+DCU Output: D:\_Progs\02Business\DeepBase\TestResults\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ReviewQueue.SQLite.pas(827) Hint: H2077 Value assigned to 'TReviewQueueSQLite.MarkExecuted' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Collections.pas(728) Hint: H2164 Variable 'Node' is declared but never used in 'DeepBase.Collections.TLRUCache<K,V>.Evict'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Collections.pas(116) Hint: H2219 Private symbol 'Evict' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used
+Test.DeepBase.ConfigRegistrarDefaultMode.pas(131) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.ConfigRegistrarDefaultMode.pas(152) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.ConfigRegistrarDefaultMode.pas(153) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(665) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(666) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(667) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(668) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(671) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(672) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(673) Hint: H2443 Inline function 'TFDParam.SetAsDateTime' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(674) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(675) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(685) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+D:\_Progs\02Business\DeepBase\Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.UIA.Engine.pas(539) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(295) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(348) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(380) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(381) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(604) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(607) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(608) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(795) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\doQry\uDoQryLegacy.pas(856) Hint: H2077 Value assigned to 'doQry' never used
+D:\_Progs\02Business\DeepBase\doQry\uDoQryLegacy.pas(985) Hint: H2077 Value assigned to 'doQry' never used
+D:\_Progs\02Business\DeepBase\doQry\uDoQryLegacy.pas(868) Hint: H2077 Value assigned to 'doQry' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(248) Error: E2065 Unsatisfied forward or external declaration: 'TBindingManager.DropBindingsForTarget'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(249) Error: E2065 Unsatisfied forward or external declaration: 'TBindingManager.UnsubscribeTarget'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(253) Error: E2065 Unsatisfied forward or external declaration: 'TBindingManager.HasRemainingBindingForTarget'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(319) Error: E2065 Unsatisfied forward or external declaration: 'TBindingTargetWatcher.Notification'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(321) Error: E2065 Unsatisfied forward or external declaration: 'TBindingTargetWatcher.Create'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(248) Hint: H2219 Private symbol 'DropBindingsForTarget' declared but never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(249) Hint: H2219 Private symbol 'UnsubscribeTarget' declared but never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(253) Hint: H2219 Private symbol 'HasRemainingBindingForTarget' declared but never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.DataBinding.pas(317) Hint: H2219 Private symbol 'FManager' declared but never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.MVVM.pas(33) Fatal: F2063 Could not compile used unit 'DeepBase.DataBinding.pas'
+ERROR: Failed to compile Unit Tests
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        FAILED
+==============================================
+
+Some tests failed!

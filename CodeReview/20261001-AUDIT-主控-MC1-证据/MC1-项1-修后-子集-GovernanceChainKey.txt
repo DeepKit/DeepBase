@@ -1,0 +1,36 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_ProgData\DeepBase-MC1\wt-verify
+Test Type: Unit
+Platform: Win64
+CI Mode: True
+Skip Compile: False
+No Rebuild: False
+Run Filter: Test.DeepBase.GovernanceChainKey.TTestGovernanceChainKey
+Output: D:\_ProgData\DeepBase-MC1\wt-verify\TestResults
+DCU Output: D:\_ProgData\DeepBase-MC1\wt-verify\TestResults\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+SUCCESS: Unit Tests compiled
+SQLite vendor copied: D:\Program Files (x86)\Embarcadero\Studio\37.0\bin64\sqlite3.dll -> D:\_ProgData\DeepBase-MC1\wt-
+verify\Tests\sqlite3.dll
+
+Running Unit Tests...
+----------------------------------------------
+
+SUCCESS: All Unit Tests tests passed
+Temporary sqlite3.dll removed from Tests directory.
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        PASSED
+==============================================
+
+All tests passed!

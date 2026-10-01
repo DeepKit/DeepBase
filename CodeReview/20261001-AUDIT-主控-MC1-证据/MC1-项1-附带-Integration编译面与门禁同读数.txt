@@ -1,0 +1,16 @@
+WO-20261001-MC-MC1 项1 · 附带观测：Integration 工程在同口径下的编译面
+
+动机：-NS 加在 Compile-TestProject 内，Unit 与 Integration 两个工程共用；须证它在
+Integration 侧不制造假红（-NS 只会扩展解析面，理论上不缩，但要看实测）。
+
+命令（dcc64 直编，参数与 runner 的 Compile-TestProject 逐项同形：-U<$UnitPaths> -NS<缺省15项>
+      -N0<临时dcu目录> -Q -B -DCI，cwd=Tests/Integration）：
+  目标：Tests/Integration/DeepBaseIntegrationTests.dpr（该工程无 .dproj，
+        故 Get-NamespacePrefixes 只返回缺省 15 项——与门禁对同工程的 CONFIG=default 同口径）
+
+结果：EXIT=0，Hint=68 Warning=0，无 Fatal/Error
+      末行：75842 lines, 4.44 seconds, 11294092 bytes code, 1097904 bytes data.
+对照：MC2 跑录中同工程 [dpr 2/2] Tests/Integration/DeepBaseIntegrationTests.dpr CONFIG=default
+      BUILD_EXIT=0 HINT=68 WARN=0 —— 读数同一（68/0）。
+
+结论：本项对 Integration 编译面无副作用，且与编译门禁同口径收敛。

@@ -1,0 +1,51 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Governance\DeepBase.Governance.ReviewQueue.SQLite.pas(827) Hint: H2077 Value assigned to 'TReviewQueueSQLite.MarkExecuted' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Collections.pas(728) Hint: H2164 Variable 'Node' is declared but never used in 'DeepBase.Collections.TLRUCache<K,V>.Evict'
+D:\_ProgData\DeepBase-MC1\wt-verify\Core\DeepBase.Collections.pas(116) Hint: H2219 Private symbol 'Evict' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Governance\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Governance\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Governance\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Governance\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used
+Test.DeepBase.ConfigRegistrarDefaultMode.pas(131) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.ConfigRegistrarDefaultMode.pas(152) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.ConfigRegistrarDefaultMode.pas(153) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(665) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(666) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(667) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(668) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(671) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(672) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(673) Hint: H2443 Inline function 'TFDParam.SetAsDateTime' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(674) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(675) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Persistence\DeepBase.SQLLogger.pas(685) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.UIA.Engine.pas(539) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(295) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(348) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(380) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(381) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(604) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(607) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(608) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\Features\DeepBase.LLM.HTTP.pas(795) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Test.DeepBase.DeepFlow.ContextResolve.pas(224) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-MC1\wt-verify\doQry\uDoQryLegacy.pas(8) Fatal: F2613 Unit 'ADODB' not found.
