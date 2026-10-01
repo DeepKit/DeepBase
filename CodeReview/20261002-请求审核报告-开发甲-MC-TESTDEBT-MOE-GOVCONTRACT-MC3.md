@@ -5,7 +5,7 @@
 > **基线 HEAD**：`41b580a` → **交付 HEAD**：`c6be63f`（+ 本报告 1 笔）
 > **改动面**：63 文件 / +21527 / −1；**零 `.pas` / 零 `.dpr` / 零 `.dpk` / 零 `.dproj`**（本批四单全为清点/转派/治理/验收类，无一条是生产代码单）
 > **纪律**：8 笔 H15 原子提交（逐单一笔 + 1 笔门禁缺陷修正），显式 pathspec，**未 push**；台账状态槽**未改**（逐单给出建议措辞交主控回填）
-> **四门**：eol 1662 / encoding 1017+798 / mojibake 1015·丙-B 0 / evidence-encoding 1232·E3=240，**四道 EXIT=0**；contract-gate 单列，EXIT=1 且归因完毕
+> **四门**：eol 1662 / encoding 1017+798 / mojibake 1015·丙-B 0 / evidence-encoding 1234·E3=240，**四道 EXIT=0**；contract-gate 单列，EXIT=1 且归因完毕
 
 ---
 
@@ -290,7 +290,7 @@ D:\_Progs\02Business\DeepBase\docs\DB4-20261002-COS未配置决策材料-草稿.
 | **行尾门禁** | `09_工程脚本/eol-gate/check_eol.js` | **0** | 行尾门禁通过：检查了 **1662** 个文件（.pas CRLF / .md LF），跳过目录 11 |
 | **编码门禁** | `09_工程脚本/encoding-gate/check_pas_encoding.js` | **0** | 编码门禁通过：**1017** 个 .pas + **798** 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11） |
 | **丙类损坏门禁** | `09_工程脚本/mojibake-gate/check_mojibake.js` | **0** | 丙类损坏门禁通过：扫描 **1015** 个 .pas，丙-B 命中 **0** 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增） |
-| **证据编码门禁** | `09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js` | **0** | 证据编码门禁通过：扫描 **1232** 个 CodeReview 证据文件，NUL 违规 **0**，全部为合法 UTF-8；E3 命中 **240** 行，均在存量清单 21 件的封顶内 |
+| **证据编码门禁** | `09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js` | **0** | 证据编码门禁通过：扫描 **1234** 个 CodeReview 证据文件，NUL 违规 **0**，全部为合法 UTF-8；E3 命中 **240** 行，均在存量清单 21 件的封顶内 |
 
 **单列（不在四门口径内）**：消费者契约门禁 `09_工程脚本/contract-gate/check_contract.js` → **EXIT=1**，3 项红，逐条归因见 §2.7。
 
