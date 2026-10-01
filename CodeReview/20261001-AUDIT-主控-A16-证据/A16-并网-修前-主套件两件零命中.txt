@@ -1,0 +1,28 @@
+WO-20261001-MC-甲-A16 收尾 · 并网判据①（修前态：主套件 uses 零命中 = 覆盖缺口）
+命令：./Tests/DeepBaseTests.exe -b -r:"Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests,Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount" -exit:Continue
+用树/二进制：主工作树 Tests/DeepBaseTests.exe（2026-10-01 19:40 构建，dpr uses 面尚未含两件）
+==============================================
+EXE: ./Tests/DeepBaseTests.exe
+EXIT: 0
+----
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+
+
+Tests Found   : 0
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+...[输出略]...
+---- 统计段 ----
+Tests Found   : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+判读：Found=0 ⇒ 两件夹具在主套件里根本不执行；A16 回执 §七.2「主套件存在覆盖缺口」坐实。
+注意：本二进制是修前态。修前同时用一次性 harness 证明两件自身可跑且全绿（见 harness 21 例件）。

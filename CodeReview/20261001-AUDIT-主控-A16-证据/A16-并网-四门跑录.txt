@@ -1,0 +1,15 @@
+WO-20261001-MC-甲-A16 收尾 · 并网笔四门跑录（主工作树，含 Tests/DeepBaseTests.dpr 并网改动）
+命令统一形：node 09_工程脚本/<门>/check_*.js --root .
+取证方式：python subprocess 直捕，只取各门自己的汇总行。
+
+[eol-gate] EXIT=0
+  行尾门禁通过：检查了 1637 个文件（.pas CRLF / .md LF），跳过目录 11
+[encoding-gate] EXIT=0
+  编码门禁通过：1017 个 .pas + 773 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+[mojibake-gate] EXIT=0
+  丙类损坏门禁通过：扫描 1015 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+[evidence-encoding-gate] EXIT=0
+  证据编码门禁通过：扫描 1165 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+
+说明：本笔只改 Tests/DeepBaseTests.dpr（.dpr 不在 eol/encoding/mojibake 三门的扩展面内）；
+新增证据件在 CodeReview/** 下、均为 UTF-8 LF 无 BOM、U+FFFD 0。

@@ -1,0 +1,28 @@
+WO-20261001-MC-甲-A16 收尾 · 并网判据②（修后态：主套件同进程跑两件）
+命令：./.tmp/build-gate/exe/Tests/DeepBaseTests.exe -b -r:"Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests,Test.DeepBase.DataBindingUnbindRefCount.TDataBindingUnbindRefCount" -exit:Continue
+二进制来源：主工作树（dpr 已含两件 uses）经 node 09_工程脚本/build-gate/check_build.js --dpr Tests/DeepBaseTests.dpr 编译产出
+==============================================
+EXE: ./.tmp/build-gate/exe/Tests/DeepBaseTests.exe
+EXIT: 0
+----
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+..........................................
+
+Tests Found   : 21
+Tests Ignored : 0
+Tests Passed  : 21
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+...[输出略]...
+---- 统计段 ----
+EXIT: 0
+Tests Found   : 21
+Tests Passed  : 21
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+判读：Found=21 Passed=21 Failed=0 Errored=0 Leaked=0 ⇒ 与修前 harness 21 例读数一致，并网未改变用例集合、只改执行面。

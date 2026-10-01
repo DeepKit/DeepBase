@@ -1,0 +1,98 @@
+WO-20261001-MC-甲-A16 收尾 · 跨夹具 License 红「根因亲验」件（主控复跑 §四 面，推翻回执的机制定性）
+
+背景：甲 A16 回执 §四 末段把「八件同进程时 Test.DeepBase.License 16 例报
+No license storage factory registered for connection-backed constructor」定性为
+「跨夹具全局注册顺序缺陷……与 A16 两笔无关，交主控派单」。主控按零信任复跑该面，
+复现了 16 例红（读数逐字一致），但**机制定性与实测不符**，本件记亲验过程与结论。
+
+--------------------------------------------------------------------------
+亲验 A：单夹具 License 独跑 ⇒ 16/16 全绿（回执未做此对照）
+--------------------------------------------------------------------------
+命令：bash .../a16_run_multi_fixture.sh mc-lic-alone Tests/Test.DeepBase.License.pas
+== 同进程夹具清单: Test.DeepBase.License ==
+BUILD_EXIT=0
+Tests Found   : 16
+Tests Passed  : 16
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=16 pass=16 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+--------------------------------------------------------------------------
+亲验 B：License + Commerce 两件 ⇒ 84/84 全绿
+--------------------------------------------------------------------------
+命令：bash .../a16_run_multi_fixture.sh mc-lic-commerce Tests/Test.DeepBase.License.pas Tests/Test.DeepBase.Commerce.pas
+== 同进程夹具清单: Test.DeepBase.License, Test.DeepBase.Commerce ==
+BUILD_EXIT=0
+Tests Found   : 84
+Tests Passed  : 84
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=84 pass=84 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+--------------------------------------------------------------------------
+亲验 C：复现 A16 证据件四件组合 ⇒ 97/81/16err（与甲读数逐字一致）
+--------------------------------------------------------------------------
+命令：bash .../a16_run_multi_fixture.sh mc-lic4         Tests/Test.DeepBase.License.pas Tests/Test.DeepBase.Commerce.pas         Tests/Test.DeepBase.LicensingTimeSource.pas Tests/Test.DeepBase.TimeGuardSecretStore.pas
+== 同进程夹具清单: Test.DeepBase.License, Test.DeepBase.Commerce, Test.DeepBase.LicensingTimeSource, Test.DeepBase.TimeGuardSecretStore ==
+BUILD_EXIT=0
+Tests Found   : 97
+Tests Passed  : 81
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 16
+RUNNER_STATS fixtureCount=1 testCount=97 pass=81 failure=0 error=16 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+--------------------------------------------------------------------------
+亲验 D：同一四件组合 + 生产注册单元 ⇒ 97/97 全绿（决定性）
+--------------------------------------------------------------------------
+命令：bash .../a16_run_multi_fixture.sh mc-lic4reg <同上四件> Persistence/DeepBase.Persistence.License.FireDAC.pas
+== 同进程夹具清单: Test.DeepBase.License, Test.DeepBase.Commerce, Test.DeepBase.LicensingTimeSource, Test.DeepBase.TimeGuardSecretStore, DeepBase.Persistence.License.FireDAC ==
+BUILD_EXIT=0
+Tests Found   : 97
+Tests Passed  : 97
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=97 pass=97 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==========================================================================
+机制亲读（源码面，主控亲读 @ a8ffef4）
+==========================================================================
+1) Persistence/DeepBase.Persistence.License.FireDAC.pas:286-288 的 initialization 段调用
+   RegisterLicenseStorageFactory —— connection-backed License 存储工厂的【唯一】注册点；
+   全仓 TDeepBaseLicense.SetStorageFactory 调用点仅此一处（rg 亲证；其余同名类方法属
+   Config/Logging/LLM/Manager 等其他存储面）。
+2) Tests/Test.DeepBase.License.pas:15-19 的 uses 面【不含】DeepBase.Persistence.License.FireDAC
+   => 夹具从未声明这条传递依赖。
+3) Tests/DeepBaseTests.dpr:381 生产 uses 区显式含 DeepBase.Persistence.License.FireDAC
+   => 主套件里工厂已注册，License 16 例真绿（全量跑 Passed 4866 / Errored 1 即证）。
+4) Tests/Test.DeepBase.LicensingTimeSource.pas:80 uses DeepBase.Persistence.Manager.FireDAC
+   => 四件组合里由它把【连接】工厂带进进程（亲验 C 的触发条件）。
+5) Core/DeepBase.Manager.pas:1309-1320 ConnectToDatabase：FConnectionFactory 未注册即
+   ecConfigDBNotFound 退出发 => 该进程里 InitializeWithDB 必失败。
+6) Tests/Test.DeepBase.License.pas:130-131
+       if not Manager.IsInitialized then Manager.InitializeWithDB(':memory:');
+   —— 【返回值被忽略】。
+
+==========================================================================
+结论（主控裁定）
+==========================================================================
+真根因 = 测试夹具的【隐式传递依赖未声明】，有两个面孔：
+  (i)  连接工厂在（LicensingTimeSource 带入）而 License 存储工厂不在 => 16 例运行期抛错；
+  (ii) 连接工厂也不在 => InitializeWithDB 失败但返回值被忽略、ConfigDB 留 nil，
+        TDeepBaseLicense.Create(nil) 因 Assigned(AConnection)=False 不抛 => 【16 例假绿】
+        （亲验 A/B：单跑与两件组合都「全绿」，但那些用例实际未触达任何存储）。
+=> 不是「全局注册顺序」缺陷；「与 A16 两笔无关」这半结论成立，但机制表述须订正。
+=> 影响面：只在一次性 harness / 子集 dpr 上；主套件面不受影响（dpr:381 已在册）。
+=> 更该修的是面孔 (ii)：忽略 InitializeWithDB 返回值 = 假绿，比 16 例红更危险。
+=> 已据此另行派单（见 WO-20261001-MC-主控-LICFIX），A16 收尾本单不扩面。

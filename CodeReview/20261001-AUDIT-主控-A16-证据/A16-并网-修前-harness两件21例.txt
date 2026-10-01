@@ -1,0 +1,19 @@
+WO-20261001-MC-甲-A16 收尾 · 并网判据①配套（修前态：两件在一次进程下可跑且全绿）
+命令：bash CodeReview/20261001-AUDIT-甲-A16-证据/附件/a16_run_multi_fixture.sh mc-a16two \n        Tests/Test.DeepBase.DataBindingLifetime.pas Tests/Test.DeepBase.DataBindingUnbindRefCount.pas
+取数树：主工作树 @ a8ffef4（HEAD，dpr uses 尚未含两件）
+口径：与 B2 单夹具 runner 同一套 fail-closed（FailsOnNoAsserts=True、testCount=0 ⇒ EXIT=2）
+==============================================
+---- 统计段 ----
+BUILD_EXIT=0
+Tests Found   : 21
+Tests Passed  : 21
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=21 pass=21 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+---- 夹具清单 ----
+== 同进程夹具清单: Test.DeepBase.DataBindingLifetime, Test.DeepBase.DataBindingUnbindRefCount ==
+
+判读：21 例（Lifetime 14 + UnbindRefCount 7）同进程全绿、Leaked=0 ⇒ 两件自身无红；缺的只是主套件 uses 登记。

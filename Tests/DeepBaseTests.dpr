@@ -164,6 +164,10 @@ uses
   Test.DeepBase.Collections in 'Test.DeepBase.Collections.pas',
   Test.DeepBase.Configuration in 'Test.DeepBase.Configuration.pas',
   Test.DeepBase.DataBinding in 'Test.DeepBase.DataBinding.pas',
+  // A5-R02 (WO-20261001-MC-甲-A16) 落笔② 新增/触及的夹具并网（主控笔，A15 谱系）：
+  // 两件此前只在一次性 harness 下真跑，主套件 uses 零命中 = 覆盖缺口。
+  Test.DeepBase.DataBindingLifetime in 'Test.DeepBase.DataBindingLifetime.pas',
+  Test.DeepBase.DataBindingUnbindRefCount in 'Test.DeepBase.DataBindingUnbindRefCount.pas',
   Test.DeepBase.DB.AutoRefreshConfig in 'Test.DeepBase.DB.AutoRefreshConfig.pas',
   Test.DeepBase.DB.ConnectionPool in 'Test.DeepBase.DB.ConnectionPool.pas',
   Test.DeepBase.DB.DoQry in 'Test.DeepBase.DB.DoQry.pas',
