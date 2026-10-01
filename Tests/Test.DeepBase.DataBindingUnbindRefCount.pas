@@ -23,11 +23,15 @@ uses
 type
 
   {$M+}
-  TUnbindProbeTarget = class(TObject)
+  // A16 落笔②裁定 Q2：Bind 的 target 面只接受可登记对象 ⇒ 替身换基类为 TComponent，
+  // 七个用例的断言内容、计数与限定名一字未改。无主 Create 保住原 7 处 .Create 调用点。
+  TUnbindProbeTarget = class(TComponent)
   private
     FText: string;
   published
     property Text: string read FText write FText;
+  public
+    constructor Create; reintroduce;
   end;
 
   TUnbindProbeSource = class(TObservableObject)
@@ -64,6 +68,12 @@ type
   end;
 
 implementation
+
+constructor TUnbindProbeTarget.Create;
+begin
+  // 无主创建：与原裸对象替身一致，生命周期由用例的 finally 管
+  inherited Create(nil);
+end;
 
 procedure TUnbindProbeSource.SetName(const Value: string);
 begin

@@ -2,10 +2,10 @@
 { ============================================================================
   Test.DeepBase.DataBindingLifetime - 绑定关系生命周期回归单元
 
-  工单：WO-20261001-MC-甲-A16（A5-R02 强路线 (a-1) 落笔① · source 面）
+  工单：WO-20261001-MC-甲-A16（A5-R02 强路线 (a-1) 落笔① source 面 + 落笔② target 面）
   被测缺陷：TBindingEntry 以裸指针持有 Source/Target，绑定对象先于 manager 释放时
-            条目不会消失，后续任意绑定路径都会读写已释放实例（read-after-free）。
-  判据来源：A5-R02 停机上报的 A4-01 探针 S4 现场（CodeReview/20260925-AUDIT-甲-A4-证据/
+            条目不会消失，后续任意绑定路径都会读写已释放实例（read/write-after-free）。
+  判据来源：A5-R02 停机上报的 A4-01 探针 S3/S4 现场（CodeReview/20260925-AUDIT-甲-A4-证据/
             附件/A401_Databinding.dpr.template），本单元是其 DUnitX 化。
   ============================================================================ }
 
@@ -59,6 +59,30 @@ type
 
     [Test]
     procedure SourceFreedBeforeManager_BothTeardownsSafe;
+
+    [Test]
+    procedure TargetDestroy_DropsItsBindingsAndStopsUpdates;
+
+    [Test]
+    procedure TargetDestroy_WithDecoyAtFreedSlot_SourceNotWritten;
+
+    [Test]
+    procedure TargetDestroy_LeavesOtherTargetsBindingsLive;
+
+    [Test]
+    procedure TwoManagersOnSameTarget_BothDropWhenTargetFreed;
+
+    [Test]
+    procedure TargetFreedBeforeManager_BothTeardownsSafe;
+
+    [Test]
+    procedure Bind_NonComponentTarget_RaisesAndKeepsNoEntry;
+
+    [Test]
+    procedure Bind_NonObservableSource_RaisesAndKeepsNoEntry;
+
+    [Test]
+    procedure Bind_NilSide_RaisesAndKeepsNoEntry;
   end;
 
 implementation
@@ -261,6 +285,235 @@ begin
     T.Free;
     if S <> nil then
       S.Free;
+  end;
+end;
+
+// S3 复刻（甲）：目标释放后条目必须消失，源后续变更不得再写这条绑定
+procedure TDataBindingLifetimeTests.TargetDestroy_DropsItsBindingsAndStopsUpdates;
+var
+  M: TBindingManager;
+  S: TLiveSource;
+  T: TLiveTarget;
+begin
+  M := TBindingManager.Create;
+  S := TLiveSource.Create;
+  T := TLiveTarget.Create;
+  try
+    M.Bind(S, 'Name', T, 'Text', bmOneWay);
+    Assert.AreEqual<Integer>(1, M.BindingCount);
+    T.Free;
+    T := nil;
+    // 修前红点：裸指针条目仍在（BindingCount=1），源变更会写进已释放的目标槽
+    Assert.AreEqual<Integer>(0, M.BindingCount,
+      'a freed target must have all of its binding entries removed');
+    S.Name := 'after-free';
+    Assert.AreEqual('after-free', S.Name, 'the source itself must still hold the new value');
+    M.UpdateAllTargets;
+  finally
+    M.Free;
+    S.Free;
+    if T <> nil then
+      T.Free;
+  end;
+end;
+
+// S3 复刻（乙）：释放槽位被同型替身复用后，源通知不得把旧槽当活目标写
+procedure TDataBindingLifetimeTests.TargetDestroy_WithDecoyAtFreedSlot_SourceNotWritten;
+var
+  M: TBindingManager;
+  S: TLiveSource;
+  T: TLiveTarget;
+  Decoy: TLiveTarget;
+  FreedAddr: NativeInt;
+begin
+  M := TBindingManager.Create;
+  S := TLiveSource.Create;
+  T := TLiveTarget.Create;
+  try
+    M.Bind(S, 'Name', T, 'Text', bmOneWay);
+    FreedAddr := NativeInt(T);
+    T.Free;
+    T := nil;
+    Decoy := TLiveTarget.Create;
+    try
+      // 断言顺序即 fail-closed 顺序：先卡确定性红点（条目残留），
+      // 只有修法在场时才会走到依赖地址复用的那段写入。
+      Assert.AreEqual<Integer>(0, M.BindingCount,
+        'entries left behind a freed target write into whichever object reuses the slot');
+      if NativeInt(Decoy) = FreedAddr then
+      begin
+        S.Name := 'WAF-SENTINEL';
+        Assert.AreEqual('', Decoy.Text,
+          'the stale entry wrote into the slot-reuse decoy as if it were the live target');
+      end;
+    finally
+      Decoy.Free;
+    end;
+  finally
+    M.Free;
+    S.Free;
+    if T <> nil then
+      T.Free;
+  end;
+end;
+
+// 反向半：只摘该目标的条目，其它目标的绑定必须继续活着（防做成全局清空）
+procedure TDataBindingLifetimeTests.TargetDestroy_LeavesOtherTargetsBindingsLive;
+var
+  M: TBindingManager;
+  S: TLiveSource;
+  T1, T2: TLiveTarget;
+begin
+  M := TBindingManager.Create;
+  S := TLiveSource.Create;
+  T1 := TLiveTarget.Create;
+  T2 := TLiveTarget.Create;
+  try
+    M.Bind(S, 'Name', T1, 'Text', bmOneWay);
+    M.Bind(S, 'Name', T2, 'Text', bmOneWay);
+    T1.Free;
+    T1 := nil;
+    Assert.AreEqual<Integer>(1, M.BindingCount, 'only the freed target entries may be dropped');
+    S.Name := 'still-live';
+    Assert.AreEqual('still-live', T2.Text, 'a live target must keep receiving updates');
+  finally
+    M.Free;
+    S.Free;
+    T2.Free;
+    if T1 <> nil then
+      T1.Free;
+  end;
+end;
+
+// 同一目标被两个 manager 分别绑定：目标析构时两侧都要摘，且互不影响计数
+procedure TDataBindingLifetimeTests.TwoManagersOnSameTarget_BothDropWhenTargetFreed;
+var
+  M1, M2: TBindingManager;
+  S1, S2: TLiveSource;
+  T: TLiveTarget;
+begin
+  M1 := TBindingManager.Create;
+  M2 := TBindingManager.Create;
+  S1 := TLiveSource.Create;
+  S2 := TLiveSource.Create;
+  T := TLiveTarget.Create;
+  try
+    M1.Bind(S1, 'Name', T, 'Text', bmOneWay);
+    M2.Bind(S2, 'Name', T, 'Text', bmOneWay);
+    T.Free;
+    T := nil;
+    Assert.AreEqual<Integer>(0, M1.BindingCount);
+    Assert.AreEqual<Integer>(0, M2.BindingCount);
+    S1.Name := 'from-S1';
+    S2.Name := 'from-S2';
+    M1.UpdateAllTargets;
+    M2.UpdateAllTargets;
+  finally
+    M1.Free;
+    M2.Free;
+    S1.Free;
+    S2.Free;
+    if T <> nil then
+      T.Free;
+  end;
+end;
+
+// 拆解顺序对照：目标先死、manager 后死 ⇒ 双向登记都要成对收敛，退订路径不得回调进已释放对象
+procedure TDataBindingLifetimeTests.TargetFreedBeforeManager_BothTeardownsSafe;
+var
+  M: TBindingManager;
+  S: TLiveSource;
+  T: TLiveTarget;
+begin
+  M := TBindingManager.Create;
+  S := TLiveSource.Create;
+  T := TLiveTarget.Create;
+  try
+    M.Bind(S, 'Name', T, 'Text', bmTwoWay);
+    T.Free;
+    T := nil;
+    // 目标已死 ⇒ 该源的这条绑定是最后一条，源侧订阅必须同时退掉
+    M.UnbindAll;
+    Assert.AreEqual<Integer>(0, M.BindingCount);
+    S.Name := 'no-listener';
+    M.UpdateAllTargets;
+  finally
+    M.Free;
+    S.Free;
+    if T <> nil then
+      T.Free;
+  end;
+end;
+
+// 不可登记面 fail-closed：target 不是 TComponent ⇒ 抛指定异常类，且不留半截条目
+procedure TDataBindingLifetimeTests.Bind_NonComponentTarget_RaisesAndKeepsNoEntry;
+var
+  M: TBindingManager;
+  S: TLiveSource;
+  Bare: TObject;
+begin
+  M := TBindingManager.Create;
+  S := TLiveSource.Create;
+  Bare := TObject.Create;
+  try
+    Assert.WillRaise(
+      procedure begin M.Bind(S, 'Name', Bare, 'Text', bmOneWay); end,
+      EBindingUnsupportedObject,
+      'a target that cannot register FreeNotification must be refused, not silently bound');
+    Assert.AreEqual<Integer>(0, M.BindingCount,
+      'the refused call must not leave a half-built binding entry');
+  finally
+    M.Free;
+    S.Free;
+    Bare.Free;
+  end;
+end;
+
+// 不可登记面 fail-closed：source 不是 TObservableObject 后代 ⇒ 抛同一异常类
+procedure TDataBindingLifetimeTests.Bind_NonObservableSource_RaisesAndKeepsNoEntry;
+var
+  M: TBindingManager;
+  T: TLiveTarget;
+  Bare: TPersistent;
+begin
+  M := TBindingManager.Create;
+  T := TLiveTarget.Create;
+  Bare := TPersistent.Create;
+  try
+    Assert.WillRaise(
+      procedure begin M.Bind(Bare, 'Name', T, 'Text', bmOneWay); end,
+      EBindingUnsupportedObject,
+      'a source that cannot report its own destruction must be refused');
+    Assert.AreEqual<Integer>(0, M.BindingCount);
+  finally
+    M.Free;
+    T.Free;
+    Bare.Free;
+  end;
+end;
+
+// 空引用同样走闸门：报错而不是让后续路径踩空指针
+procedure TDataBindingLifetimeTests.Bind_NilSide_RaisesAndKeepsNoEntry;
+var
+  M: TBindingManager;
+  S: TLiveSource;
+  T: TLiveTarget;
+begin
+  M := TBindingManager.Create;
+  S := TLiveSource.Create;
+  T := TLiveTarget.Create;
+  try
+    Assert.WillRaise(
+      procedure begin M.Bind(nil, 'Name', T, 'Text', bmOneWay); end,
+      EBindingUnsupportedObject, 'a nil source must be refused by the same gate');
+    Assert.WillRaise(
+      procedure begin M.Bind(S, 'Name', nil, 'Text', bmOneWay); end,
+      EBindingUnsupportedObject, 'a nil target must be refused by the same gate');
+    Assert.AreEqual<Integer>(0, M.BindingCount);
+  finally
+    M.Free;
+    S.Free;
+    T.Free;
   end;
 end;
 

@@ -38,12 +38,15 @@ type
   end;
   
   // Test target class (simulates UI control)
-  TTestTarget = class
+  // A16 落笔②裁定 Q2：Bind 的 target 面改为只接受可登记对象（TComponent 后代），
+  // 替身随之换基类；断言内容一字未改。无主 Create 保住原有 15 处 .Create 调用点字节不变。
+  TTestTarget = class(TComponent)
   private
     FText: string;
     FValue: Integer;
     FChecked: Boolean;
   public
+    constructor Create; reintroduce;
     property Text: string read FText write FText;
     property Value: Integer read FValue write FValue;
     property Checked: Boolean read FChecked write FChecked;
@@ -174,6 +177,14 @@ type
   end;
 
 implementation
+
+{ TTestTarget }
+
+constructor TTestTarget.Create;
+begin
+  // 无主创建：与原裸对象替身一样，生命周期由用例自己管
+  inherited Create(nil);
+end;
 
 { TTestPerson }
 

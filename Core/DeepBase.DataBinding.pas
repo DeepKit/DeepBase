@@ -26,7 +26,8 @@ uses
   System.Rtti,
   System.TypInfo,
   System.Generics.Collections,
-  System.Generics.Defaults;
+  System.Generics.Defaults,
+  DeepBase.Exceptions;
 
 type
   // Forward declarations
@@ -187,6 +188,18 @@ type
   end;
   
   /// <summary>
+  /// Bind 的入参契约（A5-R02 裁定 Q1 = (a-1)：可登记面分层登记，不可登记面 fail-closed）：
+  /// source 须 TObservableObject 后代（析构时有「正在析构」通知面），
+  /// target 须 TComponent 后代（可挂 RTL FreeNotification）。
+  /// 任一侧不满足即抛出——同一套 API 有的组合安全、有的组合不安全又无法区分，
+  /// 就是被否决的弱路线变体；报错是让调用方看见缺口的唯一方式。
+  /// </summary>
+  EBindingUnsupportedObject = class(EInvalidOperationException);
+
+  { target 面登记代理的前置声明：它要回指 manager，manager 又要持它。}
+  TBindingTargetWatcher = class;
+
+  /// <summary>
   /// Binding entry record
   /// </summary>
   TBindingEntry = record
@@ -207,6 +220,7 @@ type
     FBindings: TList<TBindingEntry>;
     FRttiContext: TRttiContext;
     FUpdating: Boolean;
+    FTargetWatcher: TBindingTargetWatcher;
     
     procedure HandleSourcePropertyChanged(const Args: TPropertyChangedEventArgs);
     procedure UpdateTarget(const Entry: TBindingEntry);
@@ -216,8 +230,7 @@ type
     procedure SetPropertyValue(Obj: TObject; const PropName: string; const Value: TValue);
 
     { A5-R02 落笔①（source 面）：源正在析构 ⇒ 以它为 source 的条目全部作废。
-      摘条只能在析构通知里做（此后指针即悬空），且必须绕开退订：此刻对象的 handler 列表
-      正要随它一起消失，回调里再去 Remove handler 是在已析构实例上做无用功。 }
+      摘条只能在析构通知里做（此后指针即悬空）。 }
     procedure HandleSourceDestroying(Sender: TObject);
     procedure DropBindingsForDestroyingSource(ASource: TObject);
 
@@ -226,20 +239,33 @@ type
       UpdateAllTargets 重读），退订侧同理。 }
     procedure UnsubscribeSource(ASource: TObject);
 
-    { A5-R01 退订按源引用计数：AddPropertyChangedHandler 对同一 handler 去重
-      （TObservableObject.AddPropertyChangedHandler 有 Contains 判重），一个 Source
-      在同一个 manager 内只登记一份订阅。因此删除绑定条目时必须先确认该 Source 没有
-      其它条目，否则解绑同源兄弟绑定中的一条会退订共享订阅，让存活的绑定静默失效。
-      ASkipIndex 指向即将删除的那一条，不计入「剩余」。 }
-    function HasRemainingBindingForSource(ASource: TObject;
-      ASkipIndex: Integer): Boolean;
+    { A5-R02 落笔②（target 面）：target 是 TComponent，析构时由 RTL 通过
+      System.Classes.pas:17661 回调登记方的 Notification(opRemove)；本 manager 的登记方
+      是 FTargetWatcher（Owner=nil，故 :17668 的同主跳过分支永不触发），回调里摘除以该
+      target 为目标的全部条目。UnsubscribeTarget 与 Bind 侧的 FreeNotification 成对：
+      RTL 的登记是双向的（:17677），漏摘会让已释放的 watcher 仍留在 target 的登记表里。 }
+    procedure DropBindingsForTarget(ATarget: TObject);
+    procedure UnsubscribeTarget(ATarget: TObject);
+
+    { 删条目的唯一入口，两侧引用计数在这里同步收敛（A5-R01 的按源计数 + 落笔② 的按目标计数）。
+      ADyingSource / ADyingTarget 标记「正在析构、登记随它一起消失」的一侧：对它们退订是
+      在消亡中的实例上做无用功，而且在源侧会在 FDestroyingHandlers 正在遍历时改动该表。 }
+    procedure RemoveEntry(Index: Integer; ADyingSource, ADyingTarget: TObject);
+
+    { AddPropertyChangedHandler / FreeNotification 都对同一对象去重：一个对象在同一个
+      manager 内只占一份登记。因此删条目时必须确认它没有剩余条目才退订，否则解绑兄弟绑定
+      中的一条会退掉共享订阅，让存活的绑定静默失效。 }
+    function HasRemainingBindingForSource(ASource: TObject): Boolean;
+    function HasRemainingBindingForTarget(ATarget: TObject): Boolean;
 
   public
     constructor Create;
     destructor Destroy; override;
     
     /// <summary>
-    /// Create a binding between source and target properties
+    /// Create a binding between source and target properties.
+    /// Source must descend from TObservableObject and target from TComponent;
+    /// 任一侧不满足 ⇒ 抛 EBindingUnsupportedObject（不可登记面不做静默降级）。
     /// </summary>
     procedure Bind(Source: TObject; const SourceProp: string;
                    Target: TObject; const TargetProp: string;
@@ -275,6 +301,21 @@ type
     /// Number of active bindings
     /// </summary>
     function BindingCount: Integer;
+  end;
+
+  /// <summary>
+  /// target 面的析构登记代理：只服务 TBindingManager，不出现在任何公开接口上。
+  /// 它自己必须 Owner=nil —— RTL 的 FreeNotification 在「双方同 Owner」时静默不登记
+  /// （System.Classes.pas:17668），若把 manager 本身做成带 Owner 的 TComponent，
+  /// 同 Owner 的 target 子树会重新掉回「登记了但收不到通知」的静默降级形态。
+  /// </summary>
+  TBindingTargetWatcher = class(TComponent)
+  private
+    FManager: TBindingManager;
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AManager: TBindingManager); reintroduce;
   end;
 
 implementation
@@ -473,11 +514,15 @@ begin
   FBindings := TList<TBindingEntry>.Create;
   FRttiContext := TRttiContext.Create;
   FUpdating := False;
+  FTargetWatcher := TBindingTargetWatcher.Create(Self);
 end;
 
 destructor TBindingManager.Destroy;
 begin
   UnbindAll;
+  { 登记已全部摘除后才拆代理：此刻 watcher 的 FFreeNotifies 为空，
+    它的析构不会再回调进正在释放的 manager。 }
+  FreeAndNil(FTargetWatcher);
   FreeAndNil(FBindings);
   FRttiContext.Free;
   inherited;
@@ -512,25 +557,66 @@ begin
     RttiProp.SetValue(Obj, Value);
 end;
 
-function TBindingManager.HasRemainingBindingForSource(ASource: TObject;
-  ASkipIndex: Integer): Boolean;
+function TBindingManager.HasRemainingBindingForSource(ASource: TObject): Boolean;
 var
   i: Integer;
 begin
   for i := 0 to FBindings.Count - 1 do
-    if (i <> ASkipIndex) and (FBindings[i].Source = ASource) then
+    if FBindings[i].Source = ASource then
+      Exit(True);
+  Result := False;
+end;
+
+function TBindingManager.HasRemainingBindingForTarget(ATarget: TObject): Boolean;
+var
+  i: Integer;
+begin
+  for i := 0 to FBindings.Count - 1 do
+    if FBindings[i].Target = ATarget then
       Exit(True);
   Result := False;
 end;
 
 procedure TBindingManager.UnsubscribeSource(ASource: TObject);
 var
-  Observable: INotifyPropertyChanged;
+  Observable: TObservableObject;
 begin
-  if Supports(ASource, INotifyPropertyChanged, Observable) then
-    Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
-  if ASource is TObservableObject then
-    TObservableObject(ASource).RemoveDestroyingHandler(HandleSourceDestroying);
+  { 直调而非 Supports：Bind 的闸门保证每个条目的 source 都是 TObservableObject 后代，
+    这里再留接口探测分支就是在替「不可登记面」兜底，而那正是 (a-1) 否决的形态。 }
+  Observable := TObservableObject(ASource);
+  Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
+  Observable.RemoveDestroyingHandler(HandleSourceDestroying);
+end;
+
+procedure TBindingManager.UnsubscribeTarget(ATarget: TObject);
+begin
+  TComponent(ATarget).RemoveFreeNotification(FTargetWatcher);
+end;
+
+procedure TBindingManager.RemoveEntry(Index: Integer; ADyingSource,
+  ADyingTarget: TObject);
+var
+  Entry: TBindingEntry;
+begin
+  Entry := FBindings[Index];
+  FBindings.Delete(Index);
+  { 先删后计数：条目已不在表里，剩余判断不必再排除自己。
+    两侧都要收敛 —— 漏掉任一侧，本 manager 释放后仍会被活着的对侧回调（悬空方法指针），
+    那正是本单要消灭的形态，不能在自己修出来的路径上重新引入。 }
+  if (Entry.Source <> ADyingSource) and not HasRemainingBindingForSource(Entry.Source) then
+    UnsubscribeSource(Entry.Source);
+  if (Entry.Target <> ADyingTarget) and not HasRemainingBindingForTarget(Entry.Target) then
+    UnsubscribeTarget(Entry.Target);
+end;
+
+procedure TBindingManager.DropBindingsForTarget(ATarget: TObject);
+var
+  i: Integer;
+begin
+  { ATarget 侧登记由 RTL 的 Notification 默认实现成对拆掉（inherited），故作为 ADyingTarget 传入 }
+  for i := FBindings.Count - 1 downto 0 do
+    if FBindings[i].Target = ATarget then
+      RemoveEntry(i, nil, ATarget);
 end;
 
 procedure TBindingManager.HandleSourceDestroying(Sender: TObject);
@@ -542,9 +628,11 @@ procedure TBindingManager.DropBindingsForDestroyingSource(ASource: TObject);
 var
   i: Integer;
 begin
+  { ASource 正在析构，它自己的两份 handler 表随之消失；把它作为 ADyingSource 传入还有一层
+    硬约束：NotifyDestroying 正在遍历 FDestroyingHandlers，退订会在遍历中的表上删除元素。 }
   for i := FBindings.Count - 1 downto 0 do
     if FBindings[i].Source = ASource then
-      FBindings.Delete(i);
+      RemoveEntry(i, ASource, nil);
 end;
 
 procedure TBindingManager.HandleSourcePropertyChanged(const Args: TPropertyChangedEventArgs);
@@ -605,13 +693,36 @@ begin
   end;
 end;
 
+{ 报错文本里的对象名：nil 取不了 ClassName，IfThen 又会同时求值两个分支。 }
+function ClassNameOrNil(Obj: TObject): string;
+begin
+  if Assigned(Obj) then
+    Result := Obj.ClassName
+  else
+    Result := 'nil';
+end;
+
 procedure TBindingManager.Bind(Source: TObject; const SourceProp: string;
                                 Target: TObject; const TargetProp: string;
                                 Mode: TBindingMode; Converter: IValueConverter);
 var
   Entry: TBindingEntry;
-  Observable: INotifyPropertyChanged;
 begin
+  { A5-R02 落笔②（裁定 Q1 = (a-1)）闸门：两侧都得有可登记的析构通知面，缺任意一侧
+    就在建条目之前拒绝。裸指针的 UAF 面不靠调用方自觉：同一 API 有的组合安全、
+    有的组合不安全又不可区分，就是被否决的弱路线形态。先判后建 ⇒ 报错路径不留半截条目。
+    `is` 对 nil 实例返回 False，空引用与类型不符走同一条报错。 }
+  if not (Source is TObservableObject) then
+    raise EBindingUnsupportedObject.Create(Format(
+      'Bind source must descend from TObservableObject (it is the only face that can report '
+      + 'destruction); got %s for property "%s".',
+      [ClassNameOrNil(Source), SourceProp]));
+  if not (Target is TComponent) then
+    raise EBindingUnsupportedObject.Create(Format(
+      'Bind target must descend from TComponent (it is the only face RTL FreeNotification '
+      + 'can register); got %s for property "%s".',
+      [ClassNameOrNil(Target), TargetProp]));
+
   // Create binding entry
   Entry.Source := Source;
   Entry.SourceProperty := SourceProp;
@@ -624,13 +735,16 @@ begin
   FBindings.Add(Entry);
   
   // Subscribe to source property changes
-  if (Mode <> bmOneTime) and Supports(Source, INotifyPropertyChanged, Observable) then
-    Observable.AddPropertyChangedHandler(HandleSourcePropertyChanged);
+  if Mode <> bmOneTime then
+    TObservableObject(Source).AddPropertyChangedHandler(HandleSourcePropertyChanged);
   
   { 生命周期登记不分绑定模式：bmOneTime 的条目仍会被 UpdateAllTargets 重读，
     源析构后它同样是悬空指针。属性变更订阅可以按模式裁剪，存活订阅不行。 }
-  if Source is TObservableObject then
-    TObservableObject(Source).AddDestroyingHandler(HandleSourceDestroying);
+  TObservableObject(Source).AddDestroyingHandler(HandleSourceDestroying);
+  
+  { target 面同理：条目里存的仍是裸指针，target 析构时必须由 RTL 回调摘条。
+    登记是双向的（System.Classes.pas:17677），因此 Unbind/UnbindAll 侧要成对 Remove。 }
+  TComponent(Target).FreeNotification(FTargetWatcher);
   
   // Initial sync: source -> target
   UpdateTarget(Entry);
@@ -645,13 +759,7 @@ begin
   begin
     Entry := FBindings[i];
     if (Entry.Source = Source) and (Entry.Target = Target) then
-    begin
-      // 仅当该 Source 不再有其它绑定条目时才退订共享 handler（A5-R01）
-      if not HasRemainingBindingForSource(Entry.Source, i) then
-        UnsubscribeSource(Entry.Source);
-
-      FBindings.Delete(i);
-    end;
+      RemoveEntry(i, nil, nil);
   end;
 end;
 
@@ -664,28 +772,16 @@ begin
   begin
     Entry := FBindings[i];
     if (Entry.Source = Obj) or (Entry.Target = Obj) then
-    begin
-      // 同 A5-R01：Obj 作为目标被解绑时，它作为源的其它绑定必须保住订阅
-      if not HasRemainingBindingForSource(Entry.Source, i) then
-        UnsubscribeSource(Entry.Source);
-
-      FBindings.Delete(i);
-    end;
+      RemoveEntry(i, nil, nil);
   end;
 end;
 
 procedure TBindingManager.UnbindAll;
 var
   i: Integer;
-  Entry: TBindingEntry;
 begin
   for i := FBindings.Count - 1 downto 0 do
-  begin
-    Entry := FBindings[i];
-    UnsubscribeSource(Entry.Source);
-  end;
-  
-  FBindings.Clear;
+    RemoveEntry(i, nil, nil);
 end;
 
 procedure TBindingManager.UpdateAllTargets;
@@ -719,6 +815,26 @@ end;
 function TBindingManager.BindingCount: Integer;
 begin
   Result := FBindings.Count;
+end;
+
+{ TBindingTargetWatcher }
+
+constructor TBindingTargetWatcher.Create(AManager: TBindingManager);
+begin
+  { 无主创建：Owner=nil 让 RTL FreeNotification 的同主跳过分支（System.Classes.pas:17668）
+    对本代理永不成立，任何 TComponent 目标都能真正登记上。 }
+  inherited Create(nil);
+  FManager := AManager;
+end;
+
+procedure TBindingTargetWatcher.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  if (Operation = opRemove) and Assigned(AComponent) then
+    FManager.DropBindingsForTarget(AComponent);
+  { inherited 不可省：默认实现（System.Classes.pas:17846）按对称方式拆掉双方登记，
+    只摘 manager 一侧会在目标的 FFreeNotifies 里留下本代理的悬空条目。 }
+  inherited;
 end;
 
 end.
