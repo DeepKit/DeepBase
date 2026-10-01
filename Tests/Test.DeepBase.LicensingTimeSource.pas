@@ -48,6 +48,7 @@ type
     FStore: TFakeTimeGuardStore;
     function AnchorNoon: TDateTime;
     function LocalOf(const AUtcInstant: TDateTime): TDateTime;
+    function UtcOf(const ALocalValue: TDateTime): TDateTime;
     procedure InstallGuardWith(const AServerTime: TDateTime;
       const ALastKnownGood: TDateTime);
     procedure UseFakeClock(const ANow: TDateTime);
@@ -125,6 +126,14 @@ begin
   Result := TTimeZone.Local.ToLocalTime(AUtcInstant);
 end;
 
+function TLicensingTimeSourceTests.UtcOf(const ALocalValue: TDateTime): TDateTime;
+begin
+  // The guard's transport contract is UTC naked numbers (WO-20260929-AUDIT-甲-A13),
+  // so a reading taken from the wall clock enters the guard in that framing —
+  // the mirror image of LocalOf.
+  Result := TTimeZone.Local.ToUniversalTime(ALocalValue);
+end;
+
 procedure TLicensingTimeSourceTests.Setup;
 var
   Config: TDeepLicensingProductConfig;
@@ -164,7 +173,7 @@ var
 begin
   Transport := TFakeTimeGuardTransport.Create(AServerTime);
   if ALastKnownGood > 0 then
-    FStore.Value := DateToISO8601(ALastKnownGood, False);
+    FStore.Value := DateToISO8601(UtcOf(ALastKnownGood), True);
 
   // The guard belongs to the facade and is created by Initialize; its own test
   // seams are used here, so no production seam exists for tests alone.
@@ -211,7 +220,7 @@ begin
   // A server clock that agrees with the wall clock makes the clock trusted; the
   // trial verdict then has to come from the injectable Core clock, not the wall
   // clock, which is what makes the verdict testable and single-tracked.
-  InstallGuardWith(System.SysUtils.Now, 0);
+  InstallGuardWith(UtcOf(System.SysUtils.Now), 0);
   Assert.AreEqual(Ord(tgOk), Ord(FLicensing.VerifyTime),
     'Server time within tolerance must classify the clock as trusted');
 
@@ -228,7 +237,7 @@ var
 begin
   LocalExpiry := LocalOf(IncDay(AnchorNoon, 10));
   WriteTrialExpiring(IncDay(AnchorNoon, 10));
-  InstallGuardWith(System.SysUtils.Now, 0);
+  InstallGuardWith(UtcOf(System.SysUtils.Now), 0);
   Assert.AreEqual(Ord(tgOk), Ord(FLicensing.VerifyTime));
 
   // Drive the clock past expiry so the shared clock records that instant as its
@@ -258,7 +267,7 @@ begin
 
   // An unreachable server plus a last-known-good value ahead of the local clock
   // is the clock-rewound signal.
-  InstallGuardWith(0, IncDay(System.SysUtils.Now, 40));
+  InstallGuardWith(0, UtcOf(IncDay(System.SysUtils.Now, 40)));
   Assert.AreEqual(Ord(tgClockRewound), Ord(FLicensing.VerifyTime),
     'Local time below last known good must classify as ClockRewound');
 
@@ -306,7 +315,7 @@ begin
   // 7 days as the fully trusted case.
   LocalExpiry := LocalOf(IncDay(AnchorNoon, 10));
   WriteTrialExpiring(IncDay(AnchorNoon, 10));
-  InstallGuardWith(IncMinute(System.SysUtils.Now, 7), 0);
+  InstallGuardWith(UtcOf(IncMinute(System.SysUtils.Now, 7)), 0);
   Assert.AreEqual(Ord(tgSkewMinor), Ord(FLicensing.VerifyTime),
     'Seven minutes of server drift stays inside the tolerated skew');
   Assert.IsTrue(FLicensing.IsTimeTrusted,
@@ -325,7 +334,7 @@ begin
   // reading must never be pushed into the monotonic watermark, otherwise a
   // fake-ahead server could extend a licence window.
   WriteTrialExpiring(IncDay(AnchorNoon, 400));
-  InstallGuardWith(IncDay(System.SysUtils.Now, 3), 0);
+  InstallGuardWith(UtcOf(IncDay(System.SysUtils.Now, 3)), 0);
   Assert.AreEqual(Ord(tgSkewMajor), Ord(FLicensing.VerifyTime),
     'Three days of server drift must classify as MajorSkew');
   Assert.IsFalse(FLicensing.IsTimeTrusted,
@@ -357,7 +366,7 @@ begin
 
   // A server that agrees with the wall clock is trusted, and its corrected
   // reading is the wall clock itself.
-  InstallGuardWith(WallNow, 0);
+  InstallGuardWith(UtcOf(WallNow), 0);
   Assert.AreEqual(Ord(tgOk), Ord(FLicensing.VerifyTime));
 
   // Without the watermark seed the verdict would be eight days: the trial would

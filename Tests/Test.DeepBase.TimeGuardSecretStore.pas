@@ -226,7 +226,8 @@ begin
   LGuard := TTimeGuard.Create(NewProbeKey('fail'), 5);
   try
     LGuard.SetServerUrl('http://127.0.0.1:1');
-    LGuard.SetHttpTransport(TFakeTimeServer.Create(System.SysUtils.Now));
+    LGuard.SetHttpTransport(TFakeTimeServer.Create(
+      TTimeZone.Local.ToUniversalTime(System.SysUtils.Now)));
     LGuard.SetSecretStore(LAdapter);
 
     // No try/except of its own here: an exception escaping Verify would surface

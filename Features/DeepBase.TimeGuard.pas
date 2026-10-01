@@ -61,6 +61,11 @@ type
     /// <summary>
     /// Send a HEAD or GET request and return the server's Date header as TDateTime.
     /// Returns 0 if the request fails or Date header is missing.
+    /// Framework contract (WO-20260929-AUDIT-甲-A13): the value is the server's
+    /// current instant expressed as UTC naked numbers — the GMT figures of the
+    /// Date header, with no conversion into the machine's local time zone.
+    /// Implementations that hand back local naked values make Verify report a
+    /// skew of exactly the machine's UTC offset.
     /// </summary>
     function FetchServerTime(const AUrl: string): TDateTime;
   end;
@@ -105,7 +110,7 @@ type
     FServerUrl: string;
     FMaxDriftMinutes: Integer;
     FLastKnownGoodTime: TDateTime;
-    FServerTimeOffset: TDateTime;  // ServerTime - LocalTime
+    FServerTimeOffset: TDateTime;  // ServerTime - UTC(Now), both UTC naked
     FLastVerifyResult: TTimeGuardResult;
     FHttpTransport: ITimeGuardHttpTransport;
     FSecretStore: ITimeGuardSecretStore;
@@ -378,7 +383,7 @@ begin
   if LStore = nil then
     Exit;
   try
-    LISO := DateToISO8601(ATime, False);  // UTC
+    LISO := DateToISO8601(ATime, True);  // Zulu form, the B10 wire convention
     LStore.SaveSecret(FStorageKey, LISO);
   except
     // Storage failure is non-fatal
@@ -397,7 +402,7 @@ begin
   try
     LISO := LStore.LoadSecret(FStorageKey);
     if LISO <> '' then
-      TryISO8601ToDate(LISO, Result, False);
+      TryISO8601ToDate(LISO, Result, True);
   except
     Result := 0;
   end;
@@ -410,7 +415,9 @@ var
   LLastGood: TDateTime;
 begin
   FVerified := True;
-  LLocalNow := Now;
+  // The transport contract is UTC naked numbers, so offset, drift and both rewind
+  // branches compare against the same UTC reading of the machine clock.
+  LLocalNow := TTimeZone.Local.ToUniversalTime(Now);
 
   // Load last known good time
   LLastGood := LoadLastKnownGoodTime;
