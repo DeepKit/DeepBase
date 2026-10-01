@@ -1,0 +1,10 @@
+﻿Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+Features\DeepBase.UIA.Engine.pas(500) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+10271 lines, 0.45 seconds, 44040 bytes code, 7704 bytes data.
+
+EXIT_CODE=0

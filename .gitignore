@@ -121,5 +121,9 @@ root.txt
 # AI 工具与脚本运行缓存（本地工作现场，永不入库）
 .ai/
 .superpowers/
+# WorkBuddy 工作台的每日会话记忆快照：与 .ai/ .superpowers/ 同族，同为工具本地现场。
+# 注意：.workbuddy/memory/MEMORY.md 与 MEMORY-ARCHIVE-*.md 已在库（历史入库），
+# gitignore 不回溯已跟踪文件；要让「整个目录不入库」自洽须由主控决定是否 git rm --cached 那 5 件。
+.workbuddy/
 __pycache__/
 **/__pycache__/

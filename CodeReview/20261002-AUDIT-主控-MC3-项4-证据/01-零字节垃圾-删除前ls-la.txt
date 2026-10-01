@@ -1,0 +1,39 @@
+== 根目录三件 0 字节封版写入事故垃圾 · 删除前取证（零信任：逐件取 Length / 时间戳 / 内容指纹）
+取证时间: 2026-10-02
+
+---- 文件名(字面): [版本：]
+  码位序列     : 7248 672C FF1A F02A F02A
+  Length       : 0 字节
+  LastWriteTime: 2026-09-24 17:12:34
+  CreationTime : 2026-09-24 17:12:34
+  Attributes   : Archive
+  git hash-object: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+  git status    : ?? 版本：
+
+---- 文件名(字面): [范围：2026-09-18]
+  码位序列     : 8303 56F4 FF1A 0032 0030 0032 0036 002D 0030 0039 002D 0031 0038
+  Length       : 0 字节
+  LastWriteTime: 2026-09-24 17:12:34
+  CreationTime : 2026-09-24 17:12:34
+  Attributes   : Archive
+  git hash-object: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+  git status    : ?? 范围：2026-09-18
+
+---- 文件名(字面): [封版人：主控（沈予安）]
+  码位序列     : 5C01 7248 4EBA FF1A 4E3B 63A7 FF08 6C88 4E88 5B89 FF09
+  Length       : 0 字节
+  LastWriteTime: 2026-09-24 17:12:34
+  CreationTime : 2026-09-24 17:12:34
+  Attributes   : Archive
+  git hash-object: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+  git status    : ?? 封版人：主控（沈予安）
+
+== 逐条结论
+  1) 三件 Length 全部 = 0，内容指纹全部 = e69de29bb2d1d6434b8b29ae775ad8c2e48c5391（Git 空 blob 的固定哈希）⇒ 内容为空，删除零信息损失
+  2) 第二件『版本：』的文件名末尾含两个 U+F02A（Unicode 私用区码位）⇒ 文件名本身即是终端/重定向事故产物，不可能是人工命名
+  3) 三件 LastWriteTime/CreationTime 全部 = 2026-09-24 17:12:34，与本机封版 v1.1.0 同日同期（台账 C3 行：末笔 d7a9fb9）⇒ 封版记录写入事故产物成立
+  4) 封版正文在 CodeReview/20260924-AUDIT-主控-封版记录.md（已在库），不依赖这三个空文件
+  5) 三件从未被 git 跟踪（git ls-files 查同名 = 0 命中）⇒ 删除不影响任何历史，也不存在「需要复原」的对象
+
+== git 中是否存在同名文件（确认从未入库）
+  []  ← 空 ⇒ 从未入库

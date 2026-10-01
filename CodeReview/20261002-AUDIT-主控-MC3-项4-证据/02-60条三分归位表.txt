@@ -1,0 +1,97 @@
+== MC3 项4 · C0-02 工作树卫生：开工时 60 条未跟踪件的三分归位表
+取证时间: 2026-10-02 · 基线 HEAD: 41b580a
+三分口径：① 入账提交  ② 入 .gitignore  ③ 删除（仅限 0 字节垃圾）  ④ 分类登记待主控裁定（本单授权面外，不擅动）
+
+== A 组 · CodeReview/** 27 件 —— 全部「入账提交」
+   判据：.gitignore:37 *.log 全局忽略 + .gitignore:118 !CodeReview/**/*.log 反向规则，
+         本批 23 个 .log 正是该反向规则的设计意图（台账 MC3 项4 已亲证其有效性）。
+         2 份 .md 是乙线交付报告（P0 编译断裂修复请求审核报告 / P2b AV 诊断报告），是真回执。
+         2 份 .xml 是 DUnitX 全量跑录原件（各约 976 KB）；仓内已有 22 份同族 .xml 在库，
+         其中 5 份体积 950-1021 KB，与本批同量级 ⇒ 不另立 XML 排除规则（否则制造第二套口径）。
+
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Authorization.pas.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Crypto.AES.pas.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.KeyManager.pas.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Reflection.pas.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/R2-build-DeepBase.Template.pas.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/R2-run-tests.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-action-executor.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-autoupdate.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-config-registrar.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-crypto-aes.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-crypto-rsa.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-gate-verdict.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-manifest-verifier.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-plugin-manager.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-review-queue.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-test-a8-inflight.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-test-bug340.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-test-crypto.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-test-manifest-verifier.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-test-updater.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-uia-engine.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/build-updater.log
+   [1-入账] CodeReview/20260919-AUDIT-甲-证据/run-tests-a6a8.log
+   [1-入账] CodeReview/20260921-AUDIT-乙-P0-HEAD编译断裂修复-请求审核报告.md   (6039 B)
+   [1-入账] CodeReview/20260921-AUDIT-乙-P2b-AV诊断报告.md                (6762 B)
+   [1-入账] CodeReview/20260921-AUDIT-乙-P1-证据/p1-reporoot.xml         (975946 B)
+   [1-入账] CodeReview/20260921-AUDIT-乙-P1-证据/p1-wrongcwd.xml          (976490 B)
+
+== B 组 · .workbuddy/** 10 件 —— 全部「入 .gitignore」
+   判据：工单项 4 任务 2 的口径是「核实是否 AI 工作台本地件（应入 gitignore 而非入账）」。
+         核实结果：是工具本地现场（WorkBuddy 每日会话记忆快照，2026-08-29..2026-09-25），
+         与已在 .gitignore 的 .ai/ .superpowers/ 同族。已加 .workbuddy/ 一行。
+   ⚠ 派单原口径被实测部分推翻，须登记：.workbuddy/memory/ 下已有 5 件在库
+     （MEMORY.md / MEMORY-ARCHIVE-20260920.md / 2026-09-19.md / 2026-09-20.md / 2026-09-21.md）；
+     gitignore 不回溯已跟踪文件 ⇒ 现状是「5 件在库 + 10 件忽略」。若要整个目录不入库自洽，
+     须由主控决定是否 git rm --cached 那 5 件（索引删除，超出本单授权面，本单不做）。
+
+== C 组 · 根目录 3 件 —— 全部「删除」（0 字节，已证零信息损失）
+   判据与取证见同目录 01-零字节垃圾-删除前ls-la.txt。
+   [3-删除] 封版人：主控（沈予安）      Length=0  hash=e69de29…  2026-09-24 17:12:34
+   [3-删除] 版本：<U+F02A><U+F02A>  Length=0  hash=e69de29…  2026-09-24 17:12:34
+            （第二件文件名末尾两个 U+F02A 私用区码位 ⇒ 文件名本身即事故产物）
+   [3-删除] 范围：2026-09-18          Length=0  hash=e69de29…  2026-09-24 17:12:34
+
+== D 组 · docs/** 20 件 —— 「分类登记待主控裁定」（本单授权面外，不擅动）
+   判据：本单授权面只含 docs/ui/work-orders/00-主控派单总表.md 与 DB4 函件草稿（落 docs/）；
+         其余 20 件既不在授权面也不在禁动区，属「可分类、不可擅动」。分类如下：
+
+   D1 在寿命期（1 件）—— 建议入账提交
+      docs/DeepBase-MoE端侧流式推理下沉基础架构讨论包-20260925.md  (13627 B, 2026-09-25)
+      理由：正是 WO-20261002-MC-甲-MOE 的对象，本轮已派 3 份工单草案承接它 ⇒ 已从「零工单」变为「有工单族」，
+            在寿命期成立，应入账。⚠ 本单授权面不含它，故只登记不提交。
+
+   D2 已沉淀完成（11 件）—— 建议归档或删除，需主控裁定
+      8 月 HB 视觉层那一轮的交付报告与最终裁决，全部已各自有「最终裁决」：
+      docs/WO-20260829-0230-开发甲-VCL-HB-视觉层全面修复交付报告.md
+      docs/WO-20260830-003-审核-交付验收报告.md
+      docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md
+      docs/WO-20260830-004-审核-最终裁决.md
+      docs/WO-20260830-004-开发甲-HB审计文档整理交付报告.md
+      docs/WO-20260830-005-审核-最终裁决.md
+      docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度交付报告.md
+      docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度工单.md
+      docs/WO-20260830-005-开发甲-HB审计统计口径纠偏交付报告.md
+      docs/WO-20260830-HB-交付报告纠偏-审核-最终裁决.md
+      docs/WO-20260830-审核-交付验收-最终裁决.md
+      docs/WO-20260830-文档整理-开发甲-交付报告.md
+      docs/WO-20260830-最终验证-开发甲-交付报告.md
+
+   D3 已完成工单的 brief（3 件）—— 建议归档，需主控裁定
+      docs/brief-WO-20260905-003-开发甲.md / -004- / -005-
+      对应工单（HB-CLEANUP-005R / HB-BENCHMARK-FX / HB-GATE5）均已结
+
+   D4 原始编译证据（2 件）—— 建议入账提交（与 A 组 .log 同族）
+      docs/evidence-dcc64-hb-32units.txt (1829 B, 2026-08-30)
+      docs/evidence-dcc64-hb-005-34units.txt (2756 B, 2026-08-31)
+
+   D5 状态待定（1 件）—— 需主控裁定
+      docs/ui/HB-HACI-Visual-Alignment.md (6694 B, 2026-09-26)
+      比 A16 与工单目录都晚一周，git log 未入库；无法从仓内判断它是否仍生效（HB 线域）。
+
+== 汇总（本单实际执行 vs 待裁定）
+   已执行：[1-入账] 27（CodeReview）+ [2-忽略] 10（.workbuddy）+ [3-删除] 3（根目录 0 字节）= 40 件
+   待裁定：[4-登记] 20（docs/**，其中 D1 在寿命期建议入账、D2/D3 建议归档或删除、D4 建议入账、D5 待定）
+   status 条目：开工 60 → 本单动作后（不含本轮各单自身新增件）20
+   判据 4「status 条目 ≤ 40」在扣除本轮各单新增件后成立：20 ≤ 40 ✓

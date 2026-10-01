@@ -1,0 +1,35 @@
+== .gitignore 反向规则保持有效 + 本次新增 .workbuddy/ 规则生效（判据 3 与判据 5 的反向样本）
+取证时间: 2026-10-02
+
+-- 背景
+   .gitignore:37  *.log                     （全局忽略 .log）
+   .gitignore:118 !CodeReview/**/*.log      （反向：CodeReview 下的 .log 必须入库）
+   .gitignore:127 .workbuddy/                （本次新增，与 .ai/ .superpowers/ 同族）
+
+-- 反向样本：新造 CodeReview/zz-probe-reverse-rule.log 后 git status 是否仍可见
+   $ git status --porcelain | Select-String zz-probe
+   ?? CodeReview/zz-probe-reverse-rule.log      ← 出现在 status ⇒ 未被忽略 ⇒ 反向规则有效
+
+-- 命中行亲证
+   $ git check-ignore -v --no-index CodeReview/zz-probe-reverse-rule.log
+   .gitignore:118:!CodeReview/**/*.log	CodeReview/zz-probe-reverse-rule.log    (exit=0)
+
+-- 对照样本：同目录 .txt（无反向规则）也可见，说明可见性不是 .log 专属
+   ?? CodeReview/zz-probe-normal.txt            ← 同样出现在 status
+
+-- 新增规则生效：.workbuddy/ 下的新文件
+   $ Set-Content .workbuddy/zz-probe-memory.md
+   $ git status --porcelain | Select-String zz-probe
+   （输出中无 .workbuddy 条目 ⇒ 被忽略）
+   $ git check-ignore -v --no-index .workbuddy/zz-probe-memory.md
+   .gitignore:127:.workbuddy/	.workbuddy/zz-probe-memory.md    (exit=0)
+
+-- 探针清理确认
+   CodeReview/zz-probe-reverse-rule.log 已删；CodeReview/zz-probe-normal.txt 已删；
+   .workbuddy/zz-probe-memory.md 已删（Get-ChildItem 复查为空）
+
+-- 结论
+   判据 3（.gitignore:118 反向规则保持有效）：成立。反向规则未被本轮任何改动覆盖，
+   新造的 CodeReview/*.log 仍然出现在 git status（未被忽略）。
+   判据 5（反向样本：不得为了降数把在寿命期的证据件误入 gitignore）：成立。本轮对 .workbuddy/
+   的处理不涉及任何 CodeReview 证据件；23 个在库的 .log 证据件走的是「入账提交」而非「忽略」。

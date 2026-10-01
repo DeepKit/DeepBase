@@ -1,0 +1,8 @@
+﻿Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Core\DeepBase.PluginManager.pas(1095) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Tests\Regression\Tests\Regression\Test.Regression.A8_InFlightUnloadGate.pas(128) Hint: H2077 Value assigned to 'LStart' never used
+3977 lines, 0.22 seconds, 4266 bytes code, 732 bytes data.
+
+EXIT_CODE=0

@@ -1,0 +1,9 @@
+﻿Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Tests\Tests\Test.DeepBase.Manifest.Verifier.pas(74) Hint: H2219 Private symbol 'WithGeneration' declared but never used
+Tests\Tests\Test.DeepBase.Manifest.Verifier.pas(76) Hint: H2219 Private symbol 'WithIssuedAt' declared but never used
+Tests\Tests\Test.DeepBase.Manifest.Verifier.pas(77) Hint: H2219 Private symbol 'WithExpiresAt' declared but never used
+3270 lines, 0.25 seconds, 35866 bytes code, 3020 bytes data.
+
+EXIT_CODE=0

@@ -1,0 +1,10 @@
+﻿Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Governance\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used
+Governance\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used
+Governance\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used
+Governance\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+7792 lines, 0.50 seconds, 55051 bytes code, 6828 bytes data.
+
+EXIT_CODE=0

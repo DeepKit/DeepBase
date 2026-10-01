@@ -1,0 +1,6 @@
+﻿Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\Core\DeepBase.PluginManager.pas(1095) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+3448 lines, 0.19 seconds, 79404 bytes code, 12680 bytes data.
+
+EXIT_CODE=0
