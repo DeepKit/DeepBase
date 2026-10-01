@@ -39,7 +39,7 @@ type
   
   // Test target class (simulates UI control)
   // A16 落笔②裁定 Q2：Bind 的 target 面改为只接受可登记对象（TComponent 后代），
-  // 替身随之换基类；断言内容一字未改。无主 Create 保住原有 15 处 .Create 调用点字节不变。
+  // 替身随之换基类；断言内容一字未改。无主 Create 保住原有 2 处 TTestTarget.Create 调用点（14 处 Bind 目标位）字节不变。
   TTestTarget = class(TComponent)
   private
     FText: string;

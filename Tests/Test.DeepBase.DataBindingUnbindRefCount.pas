@@ -24,7 +24,7 @@ type
 
   {$M+}
   // A16 落笔②裁定 Q2：Bind 的 target 面只接受可登记对象 ⇒ 替身换基类为 TComponent，
-  // 七个用例的断言内容、计数与限定名一字未改。无主 Create 保住原 7 处 .Create 调用点。
+  // 七个用例的断言内容、计数与限定名一字未改。无主 Create 保住 7 个用例里的 15 处 TUnbindProbeTarget.Create 调用点。
   TUnbindProbeTarget = class(TComponent)
   private
     FText: string;
