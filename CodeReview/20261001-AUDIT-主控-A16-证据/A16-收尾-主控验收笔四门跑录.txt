@@ -1,0 +1,39 @@
+WO-20261001-MC-甲-A16 收尾 · 主控验收笔四门跑录（主工作树）
+命令形：node 09_工程脚本/<门>/check_*.js --root .
+取证方式：python subprocess 直捕，只取各门自己的汇总行。
+
+[eol-gate] EXIT=0
+  行尾门禁通过：检查了 1640 个文件（.pas CRLF / .md LF），跳过目录 11
+[encoding-gate] EXIT=0
+  编码门禁通过：1017 个 .pas + 776 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线 50，扩展面存量损坏豁免 13，跳过目录 11）
+[mojibake-gate] EXIT=0
+  丙类损坏门禁通过：扫描 1015 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+[evidence-encoding-gate] EXIT=0
+  证据编码门禁通过：扫描 1173 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+[contract-gate] EXIT=1  ← 既存红，非本笔引入（归因见 A16-收尾-contract-gate既存红-eb93e23归因.txt）
+  契约门禁失败：扫描 18 单元，stable 破坏性变更 1 项:
+    DeepBase.Licensing: 公开签名消失/改写 2 处（须记 CHANGELOG 并重新生成基线）...
+
+--------------------------------------------------------------------------
+本笔改动面与「四门」集合的关系
+--------------------------------------------------------------------------
+本笔改动 = CHANGELOG.md（docs 面）+ 2 份新工单 + 1 份验收结论 + 1 份证据件 + 台账
+=> 只进 eol/encoding/mojibake/evidence-encoding 的扫描面；无 .pas 改动。
+=> contract-gate 的 stable 签名面（含 DeepBase.DataBinding 之外 17 个契约单元）与本笔无关，
+   其红已归因至 eb93e23（乙 B7，2026-09-29），另派 WO-20261001-MC-主控-CONTRACTGATE。
+
+--------------------------------------------------------------------------
+doc-links 门（check_doc_links.ps1）逐件跑录
+--------------------------------------------------------------------------
+[CodeReview/20261001-AUDIT-主控-A16-验收结论.md] EXIT=0（Document references OK）
+[docs/ui/work-orders/WO-20261001-MC-主控-LICFIX-*.md] EXIT=0（Document references OK）
+[docs/ui/work-orders/WO-20261001-MC-主控-CONTRACTGATE-*.md] EXIT=0（Document references OK）
+[docs/ui/work-orders/00-主控派单总表.md] EXIT=1，断链 10 条
+  .pas/.dpr/.dproj/.dpk / check_doc_links.ps1 / dclDeepBaseFMX.dpk / DeepBaseCommerce.dpk /
+  DeepBaseFMX.dpk / DeepBaseServices.dpk / DeepBaseTests.dproj / README-版本管理员.md /
+  README-许可证服务.md / run_tests.ps1
+  => 与干净隔离树 @248283b 同文件跑录逐条同一（EXIT=1 / 同样 10 条），
+     即 MC1 项 2 已登记的 10 条存量断链，本笔零新增、零消除。
+  => 全部为「裸名（无路径分隔符）」形式，按 check_doc_links.ps1:28 回落 $targetDir
+     （= docs/ui/work-orders/）解析而误判断链；:47-48 只豁免裸 .pas，不豁免
+     裸 .ps1/.dpk/.dproj/.md。属该脚本既存弱点（MC1 项 2 已登记），不属本笔回归。

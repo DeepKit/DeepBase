@@ -1,0 +1,127 @@
+==========================================================================
+零信任验收 · 主控亲跑（2026-10-01）
+判据：甲 A16 收尾提交 248283b 四门复跑时，contract-gate 是否 EXIT=0
+==========================================================================
+背景：甲 A16 交付回执与主控台账均记载「四门 EXIT=0」。本项亲跑证伪该记载的
+      contract-gate 一条腿。
+
+--------------------------------------------------------------------------
+判据 1 —— 主树（working tree，含本次 CHANGELOG.md 编辑）
+--------------------------------------------------------------------------
+命令：node 09_工程脚本/contract-gate/check_contract.js --root .
+读数：契约门禁失败：扫描 18 单元，stable 破坏性变更 1 项:
+        DeepBase.Licensing: 公开签名消失/改写 2 处（须记 CHANGELOG 并重新生成基线）:
+            interface uses System.SysUtils, System.JSON, System.Generics.Collections,
+              DeepBase.Commerce.Types, DeepBase.Commerce.SafeClient, DeepBase.Commerce.Permissions,
+              DeepBase.Commerce.UpgradeFlow, DeepBase.Commerce.JsonUtil, DeepBase.Unlock, DeepBase.TimeGuard
+            type TLicensingTier = (ltFree, ltPro)
+      EXIT=1
+
+--------------------------------------------------------------------------
+判据 2 —— 非主树污染：干净隔离树 @ 248283b（A16 收尾提交本体）
+--------------------------------------------------------------------------
+命令：同判据 1，root = D:/_ProgData/DeepBase-A16/wt-a16-post
+前置：git status --porcelain 空输出（树干净，内容恰为 248283b）
+读数：与判据 1 逐字符同一，EXIT=1
+结论：红与本会话 CHANGELOG 编辑无关，也非主树脏招；红在提交本体内。
+
+--------------------------------------------------------------------------
+判据 3 —— 归因锚点：干净隔离树 @ 604d05a（eb93e23 的父提交）
+--------------------------------------------------------------------------
+命令：同判据 1，root = D:/_ProgData/DeepBase-B7-wt/wt-604d05a
+读数：契约门禁通过：18 单元（stable 18），单份核对无误，stable 公开签名与基线一致。
+      向后兼容新增（不拦）:
+        DeepBase.Manager: 新增公开签名 2 处（向后兼容，仅提示）
+        DeepBase.AutoFix: 新增公开签名 1 处（向后兼容，仅提示）
+      EXIT=0
+结论：红由 604d05a..248283b 之间引入。DeepBase.Licensing.pas 在该区间唯一改动提交为
+      eb93e23 fix(licensing): B7-R09 ...（WO-20260925-AUDIT-乙-B7，2026-09-29）。
+
+--------------------------------------------------------------------------
+判据 4 —— 非禁动区被动：主树 Features/ contracts/ Core/ 干净度
+--------------------------------------------------------------------------
+命令：git status --porcelain -- Features/ contracts/ Core/（空）
+      git diff HEAD --stat -- Features/ contracts/ Core/（空）
+结论：主控未动 Features/DeepBase.Licensing.pas、contracts/**、Core/**（均为禁动区）。
+      A16 交付（a2c4077/37cdf3a/7c1a98b/2b858dc）与主控两笔（a8ffef4/248283b）均未触该文件。
+
+--------------------------------------------------------------------------
+判据 5 —— 签名差集（--emit-baseline 到 .tmp 后与已提交基线比对，未动基线）
+--------------------------------------------------------------------------
+基线 = 09_工程脚本/contract-gate/signature-baseline.json，generated 2026-09-24T04:15:10Z
+     （提交 3127203，甲 D9 段2），sigs 81 条；当前 83 条。
+
+removed（门禁判「消失/改写」2 处）:
+  - type TLicensingTier = (ltFree, ltPro)
+  - interface uses System.SysUtils, System.JSON, System.Generics.Collections,
+    DeepBase.Commerce.Types, DeepBase.Commerce.SafeClient, DeepBase.Commerce.Permissions,
+    DeepBase.Commerce.UpgradeFlow, DeepBase.Commerce.JsonUtil, DeepBase.Unlock, DeepBase.TimeGuard
+
+added（门禁判「新增」，不拦 4 处）:
+  + function VerifyTimeGuard: TTimeGuardResult
+  + TLicensingTier = (ltFree, ltPro)
+  + interface uses ... DeepBase.TimeGuard, DeepBase.TimeSource
+  + type EDeepBaseLicensingTimeUntrusted = class(EDeepBaseCommerceError)
+
+--------------------------------------------------------------------------
+判据 6 —— removed 第 1 条是幻象：抽取器分块缺陷（check_contract.js:146-155）
+--------------------------------------------------------------------------
+signatures() 的实现：
+    const iface = extractInterface(text);          // stripComments 后取 interface..implementation
+    for (let chunk of iface.split(';')) {          // 按分号切块
+      const norm = chunk.replace(/\s+/g,' ').trim();
+      if (norm) set.add(norm);                     // 每块整体作为一条签名
+    }
+stripComments() 把 {…} (*…*) //… 全部替换为单个空格（:135-140）。
+
+=> 「type」关键字只是某一分块的前缀词，谁跟在它后面（同块内）就归谁。
+   eb93e23 在 type 段首插入带 /// 文档注释的 EDeepBaseLicensingTimeUntrusted 后：
+       type [注释→空格] EDeepBaseLicensingTimeUntrusted = class(EDeepBaseCommerceError);
+       [注释→空格] TLicensingTier = (ltFree, ltPro);
+   按 ';' 分块时，「type」被绑进前一片；TLicensingTier 那片不再含 type 前缀。
+=> 声文本体一字未改（TLicensingTier = (ltFree, ltPro) 仍在，字号内容同一），
+   仅签名串形态由 "type TLicensingTier = (ltFree, ltPro)" 变为 "TLicensingTier = (ltFree, ltPro)"，
+   同一现实被同时计为 1 条 removal + 1 条 addition。
+=> 属门禁假阳性；与「公开声明消失或改写」无关。
+
+--------------------------------------------------------------------------
+判据 7 —— removed 第 2 条为真但属向后兼容
+--------------------------------------------------------------------------
+eb93e23 diff 实证：interface uses 末尾
+    -  DeepBase.TimeGuard;
+    +  DeepBase.TimeGuard,
+    +  DeepBase.TimeSource;
+公开增补一个同产品内单元的 uses 依赖：无公开声明被删/被改写，属向后兼容面，
+   按 :18 的判定口径（新增公开成员只报不拦）不构成破坏。
+=> 门禁把「interface uses 整行」当成单条签名做全等比对，任何 uses 增删都计 removal，
+   是同一设计缺陷的另一面（uses 行是结构化事实，不应做整串全等）。
+
+--------------------------------------------------------------------------
+判据 8 —— eb93e23 自证的「四门」集合不含 contract-gate
+--------------------------------------------------------------------------
+eb93e23 提交说明原文：「四门（B7-7/B7-11）encoding/eol/mojibake/evidence-encoding 全 EXIT=0。」
+=> 乙 B7 的四门 = encoding/eol/mojibake/evidence-encoding，不含 contract-gate，
+   故该单未暴露本红。主控侧「四门 EXIT=0」的记载在 contract-gate 一条腿上不实，
+   本件即为订正，涉 a8ffef4 与 248283b 两笔的记载口径。
+
+--------------------------------------------------------------------------
+判据 9 —— 真实破坏性改动未记 CHANGELOG（须补登记）
+--------------------------------------------------------------------------
+grep -n "GetCorrectedNow|EDeepBaseLicensingTimeUntrusted|TimeGuard|TimeSource|B7|试用" CHANGELOG.md
+    => 零命中
+eb93e23 提交说明自述 Breaking：「GetCorrectedNow 由『未验证返回裸 Now』改为抛异常；
+    未校钟/回拨/重大偏差下试用天数由『照判』改为 0；离线启动由『必抛』改为可正常初始化。」
+=> 该语义破坏已发生但 CHANGELOG 零登记，正是 contract-gate 报错文本
+   「须记 CHANGELOG 并重新生成基线」所指事项的前半。
+
+==========================================================================
+结论（主控裁定，2026-10-01）
+==========================================================================
+1) 红为既存，非甲 A16、非主控两笔所致；引入提交 = eb93e23（乙 B7，2026-09-29）。
+2) 两项「破坏」中：TLicensingTier 一条为抽取器分块假阳性（声文本体未动）；
+   interface uses 一条为真但向后兼容（uses 追加 DeepBase.TimeSource）。
+3) 真实破坏（GetCorrectedNow 等三条语义变更）未记 CHANGELOG。
+4) 主控不自行 signature-baseline.json --emit-baseline：那是发版动作，且会在
+   假阳性未修的情况下把「门禁发现的问题」一并洗掉 = 掩盖。
+5) 已据此派单 WO-20261001-MC-主控-CONTRACTGATE：修抽取器（type 关键字与 uses 行
+   两处），补 CHANGELOG 登记，基线重建留待发版。

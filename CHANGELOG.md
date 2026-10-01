@@ -6,6 +6,15 @@ All notable changes to DeepBase are documented in this file.
 
 （本节在 `v1.1.0` 之后的改动累积于此。）
 
+### ⚠ BREAKING CHANGES（消费者必读）
+
+- **`TBindingManager.Bind` 入参契约收窄为「可追踪对象」，不可登记面运行期抛类型化异常（A5-R02，`a2c4077` + `37cdf3a`，工单 `WO-20261001-MC-甲-A16`）**：形参**声明未变**（仍为 `Source: TObject; Target: TObject`，编译期不报错），但语义收窄——source 必须是 `TObservableObject` 后代（析构时能发「正在析构」通知），target 必须是 `TComponent` 后代（RTL `FreeNotification` 唯一可用的析构登记面）；任一侧不满足（含 `nil`）即抛 `DeepBase.DataBinding.EBindingUnsupportedObject`（祖先链 `DeepBase.Exceptions.EInvalidOperationException` → `EOperationException` → `EDeepBaseException`），消息带实际类名（`nil` 即字面 `nil`）与属性名，报错路径零副作用（先判后建，`BindingCount` 不变）。**原来能跑通的裸对象组合现在由「成功但埋 UAF」变为「明确报错」**——同一 API 有的组合安全、有的不安全又不可区分，正是被否决的弱路线形态。新增行为：任一侧析构时该侧全部条目（含 `bmOneTime`）自动摘除并成对退订，无需再手工 `Unbind`；`Unbind` / `UnbindObject` / `UnbindAll` 语义不变，只是与自动摘除共用同一 `RemoveEntry` 出口。**仓内 consumer 影响面为零**（主控亲读：`VCL/DeepBase.VCL.MVVMControls.pas:457/580` 的 source 为 `TViewModelBase = class(TObservableObject, IValidatable)`〔`Core/DeepBase.MVVM.pas:268`〕、target 为 `TControl`；`Examples/DataBindingDemo/MainForm.pas:276-283` 的 source 为 `TPersonModel = class(TObservableObject)`、target 为 `TEdit`/`TCheckBox`；`VCL/DeepBase.VCL.BindableControls.pas:12` 是单位头 usage 注释、非可执行调用）。**外部迁移路径**：把不可登记的 target 换成 `TComponent` 后代，或改由调用方自持生命周期并显式 `Unbind`。登记说明：`DeepBase.DataBinding` 目前**不在** `contract/consumer-contract.json` 的 units 清单内，故不在 `contract-gate` 的 stable 签名基线覆盖范围内（本变更是语义收窄、签名未动，基线无需重建）；是否把它显式登记进消费者契约属另一项治理决定，已在派单总表登记为待办。
+
+### Added
+
+- **`DeepBase.DataBinding.EBindingUnsupportedObject`** — `Bind` 不可登记面（source 非 `TObservableObject` 后代 / target 非 `TComponent` 后代）的 fail-closed 报错类型，复用既有 `DeepBase.Exceptions.EInvalidOperationException` 基类、未新增异常文件（A5-R02 落笔②，`WO-20261001-MC-甲-A16`）。
+- **`Tests/Test.DeepBase.DataBindingLifetime.pas`**（14 例）与 **`Tests/Test.DeepBase.DataBindingUnbindRefCount.pas`（7 例）** 进 `Tests/DeepBaseTests.dpr` 主套件 uses 面（主控并网笔 `248283b`）——此前两件只在一次性 harness 下真跑，主套件覆盖缺口自此补齐；21 例同进程 `Found=21 Passed=21 Leaked=0`。
+
 ## [1.1.0] - 2026-09-24
 
 > 本节覆盖 `v1.0.0` (2025-12-08) 至 `v1.1.0` 的累积变更（540 个提交）。
