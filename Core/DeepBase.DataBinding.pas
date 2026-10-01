@@ -4,13 +4,16 @@
   Version: 0.3
   Description: Provides data binding infrastructure for Model-View separation.
                Supports one-way, two-way, and one-time bindings.
+               Binding entries track the lifetime of the observable source: when
+               a source is destroyed its entries are removed automatically, so a
+               manager never dereferences a freed source.
   
   Thread Safety: TBindingManager is NOT thread-safe. Use from main thread only.
   
   Usage:
-    FUser := TUserModel.Create;
+    FUser := TUserModel.Create;      // TUserModel = class(TObservableObject)
     FBindings := TBindingManager.Create;
-    FBindings.Bind(FUser, 'Name', EditName, 'Text', bmTwoWay);
+    FBindings.Bind(FUser, 'Name', EditName, 'Text', bmTwoWay);  // EditName: TControl
   ============================================================================ }
 
 unit DeepBase.DataBinding;
@@ -42,6 +45,12 @@ type
   /// Property changed event handler
   /// </summary>
   TPropertyChangedEvent = procedure(const Args: TPropertyChangedEventArgs) of object;
+  
+  /// <summary>
+  /// "对象正在析构" event handler. Sender is the instance being destroyed.
+  /// 订阅方只能据此摘除自己持有的对该实例的引用；此刻起读写它的属性都已越界。
+  /// </summary>
+  TObjectDestroyingEvent = procedure(Sender: TObject) of object;
   
   /// <summary>
   /// Collection changed action
@@ -107,11 +116,17 @@ type
   TObservableObject = class(TInterfacedPersistent, INotifyPropertyChanged)
   private
     FPropertyChangedHandlers: TList<TPropertyChangedEvent>;
+    FDestroyingHandlers: TList<TObjectDestroyingEvent>;
   protected
     /// <summary>
     /// Call this in property setters after changing the value
     /// </summary>
     procedure NotifyPropertyChanged(const PropertyName: string);
+    
+    /// <summary>
+    /// 由 Destroy 在释放 handler 列表之前调用；派生类不应改写其时序。
+    /// </summary>
+    procedure NotifyDestroying;
     
     /// <summary>
     /// Helper to set field and notify if changed
@@ -124,6 +139,14 @@ type
     // INotifyPropertyChanged
     procedure AddPropertyChangedHandler(Handler: TPropertyChangedEvent);
     procedure RemovePropertyChangedHandler(Handler: TPropertyChangedEvent);
+    
+    /// <summary>
+    /// 登记「正在析构」回调，供持有本实例裸指针的一方（TBindingManager）及时摘除引用。
+    /// 与 AddPropertyChangedHandler 同样对同一 handler 去重：一个订阅方在一个源上只占一份登记，
+    /// 因此退订也必须按订阅方计数（见 TBindingManager.HasRemainingBindingForSource）。
+    /// </summary>
+    procedure AddDestroyingHandler(Handler: TObjectDestroyingEvent);
+    procedure RemoveDestroyingHandler(Handler: TObjectDestroyingEvent);
   end;
   
   /// <summary>
@@ -192,6 +215,17 @@ type
     function GetPropertyValue(Obj: TObject; const PropName: string): TValue;
     procedure SetPropertyValue(Obj: TObject; const PropName: string; const Value: TValue);
 
+    { A5-R02 落笔①（source 面）：源正在析构 ⇒ 以它为 source 的条目全部作废。
+      摘条只能在析构通知里做（此后指针即悬空），且必须绕开退订：此刻对象的 handler 列表
+      正要随它一起消失，回调里再去 Remove handler 是在已析构实例上做无用功。 }
+    procedure HandleSourceDestroying(Sender: TObject);
+    procedure DropBindingsForDestroyingSource(ASource: TObject);
+
+    { 退订成对收口：属性变更与「正在析构」两份登记必须同时摘除。漏摘后者会让本 manager
+      释放后仍被源析构回调（悬空方法指针）。登记侧不分绑定模式（bmOneTime 的条目仍被
+      UpdateAllTargets 重读），退订侧同理。 }
+    procedure UnsubscribeSource(ASource: TObject);
+
     { A5-R01 退订按源引用计数：AddPropertyChangedHandler 对同一 handler 去重
       （TObservableObject.AddPropertyChangedHandler 有 Contains 判重），一个 Source
       在同一个 manager 内只登记一份订阅。因此删除绑定条目时必须先确认该 Source 没有
@@ -254,11 +288,16 @@ constructor TObservableObject.Create;
 begin
   inherited Create;
   FPropertyChangedHandlers := TList<TPropertyChangedEvent>.Create;
+  FDestroyingHandlers := TList<TObjectDestroyingEvent>.Create;
 end;
 
 destructor TObservableObject.Destroy;
 begin
+  { 时序即修法本身：通知必须在两份 handler 列表释放之前发出，否则订阅方（TBindingManager）
+    无从得知自己持有的裸指针即将失效 —— 摘掉本行即 A4-01 探针 S4 read-after-free 复现。 }
+  NotifyDestroying;
   FreeAndNil(FPropertyChangedHandlers);
+  FreeAndNil(FDestroyingHandlers);
   inherited;
 end;
 
@@ -271,6 +310,25 @@ end;
 procedure TObservableObject.RemovePropertyChangedHandler(Handler: TPropertyChangedEvent);
 begin
   FPropertyChangedHandlers.Remove(Handler);
+end;
+
+procedure TObservableObject.AddDestroyingHandler(Handler: TObjectDestroyingEvent);
+begin
+  if not FDestroyingHandlers.Contains(Handler) then
+    FDestroyingHandlers.Add(Handler);
+end;
+
+procedure TObservableObject.RemoveDestroyingHandler(Handler: TObjectDestroyingEvent);
+begin
+  FDestroyingHandlers.Remove(Handler);
+end;
+
+procedure TObservableObject.NotifyDestroying;
+var
+  Handler: TObjectDestroyingEvent;
+begin
+  for Handler in FDestroyingHandlers do
+    Handler(Self);
 end;
 
 procedure TObservableObject.NotifyPropertyChanged(const PropertyName: string);
@@ -465,6 +523,30 @@ begin
   Result := False;
 end;
 
+procedure TBindingManager.UnsubscribeSource(ASource: TObject);
+var
+  Observable: INotifyPropertyChanged;
+begin
+  if Supports(ASource, INotifyPropertyChanged, Observable) then
+    Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
+  if ASource is TObservableObject then
+    TObservableObject(ASource).RemoveDestroyingHandler(HandleSourceDestroying);
+end;
+
+procedure TBindingManager.HandleSourceDestroying(Sender: TObject);
+begin
+  DropBindingsForDestroyingSource(Sender);
+end;
+
+procedure TBindingManager.DropBindingsForDestroyingSource(ASource: TObject);
+var
+  i: Integer;
+begin
+  for i := FBindings.Count - 1 downto 0 do
+    if FBindings[i].Source = ASource then
+      FBindings.Delete(i);
+end;
+
 procedure TBindingManager.HandleSourcePropertyChanged(const Args: TPropertyChangedEventArgs);
 var
   i: Integer;
@@ -545,6 +627,11 @@ begin
   if (Mode <> bmOneTime) and Supports(Source, INotifyPropertyChanged, Observable) then
     Observable.AddPropertyChangedHandler(HandleSourcePropertyChanged);
   
+  { 生命周期登记不分绑定模式：bmOneTime 的条目仍会被 UpdateAllTargets 重读，
+    源析构后它同样是悬空指针。属性变更订阅可以按模式裁剪，存活订阅不行。 }
+  if Source is TObservableObject then
+    TObservableObject(Source).AddDestroyingHandler(HandleSourceDestroying);
+  
   // Initial sync: source -> target
   UpdateTarget(Entry);
 end;
@@ -553,7 +640,6 @@ procedure TBindingManager.Unbind(Source, Target: TObject);
 var
   i: Integer;
   Entry: TBindingEntry;
-  Observable: INotifyPropertyChanged;
 begin
   for i := FBindings.Count - 1 downto 0 do
   begin
@@ -561,9 +647,8 @@ begin
     if (Entry.Source = Source) and (Entry.Target = Target) then
     begin
       // 仅当该 Source 不再有其它绑定条目时才退订共享 handler（A5-R01）
-      if not HasRemainingBindingForSource(Entry.Source, i) and
-        Supports(Entry.Source, INotifyPropertyChanged, Observable) then
-        Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
+      if not HasRemainingBindingForSource(Entry.Source, i) then
+        UnsubscribeSource(Entry.Source);
 
       FBindings.Delete(i);
     end;
@@ -574,7 +659,6 @@ procedure TBindingManager.UnbindObject(Obj: TObject);
 var
   i: Integer;
   Entry: TBindingEntry;
-  Observable: INotifyPropertyChanged;
 begin
   for i := FBindings.Count - 1 downto 0 do
   begin
@@ -582,9 +666,8 @@ begin
     if (Entry.Source = Obj) or (Entry.Target = Obj) then
     begin
       // 同 A5-R01：Obj 作为目标被解绑时，它作为源的其它绑定必须保住订阅
-      if not HasRemainingBindingForSource(Entry.Source, i) and
-        Supports(Entry.Source, INotifyPropertyChanged, Observable) then
-        Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
+      if not HasRemainingBindingForSource(Entry.Source, i) then
+        UnsubscribeSource(Entry.Source);
 
       FBindings.Delete(i);
     end;
@@ -595,13 +678,11 @@ procedure TBindingManager.UnbindAll;
 var
   i: Integer;
   Entry: TBindingEntry;
-  Observable: INotifyPropertyChanged;
 begin
   for i := FBindings.Count - 1 downto 0 do
   begin
     Entry := FBindings[i];
-    if Supports(Entry.Source, INotifyPropertyChanged, Observable) then
-      Observable.RemovePropertyChangedHandler(HandleSourcePropertyChanged);
+    UnsubscribeSource(Entry.Source);
   end;
   
   FBindings.Clear;
