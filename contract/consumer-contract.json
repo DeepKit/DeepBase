@@ -25,6 +25,7 @@
     { "unit": "DeepBase.AutoFix", "subdir": "Core", "stability": "stable", "consumers": 1, "critical": false, "why": "自动修复", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
     { "unit": "DeepBase.AutoFix.ScenarioRunner", "subdir": "Core", "stability": "stable", "consumers": 1, "critical": false, "why": "场景运行器", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
     { "unit": "DeepBase.Commerce.Types", "subdir": "Features", "stability": "stable", "consumers": 1, "critical": false, "why": "商务类型", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
-    { "unit": "DeepBase.Persistence.Manager.FireDAC", "subdir": "Persistence", "stability": "stable", "consumers": 1, "critical": true, "why": "FireDAC 持久化管理器", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" }
+    { "unit": "DeepBase.Persistence.Manager.FireDAC", "subdir": "Persistence", "stability": "stable", "consumers": 1, "critical": true, "why": "FireDAC 持久化管理器", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" },
+    { "unit": "DeepBase.DataBinding", "subdir": "Core", "stability": "stable", "consumers": 5, "critical": true, "consumers_basis": "in-repo（git grep 亲核 @41b580a）；外部兄弟项目消费者计数未取证，不混入本数", "why": "MVVM 绑定唯一入口。A16 起 TBindingManager.Bind 契约由「任意 TObject」收窄为「可追踪对象」，属消费者可见的 breaking change（已记 ./CHANGELOG.md ## [Unreleased]）。仓内消费者 5：Core/DeepBase.MVVM.pas、VCL/DeepBase.VCL.BindableControls.pas、VCL/DeepBase.VCL.MVVMControls.pas、Examples/DataBindingDemo、Examples/MVVMDemo。外部：DeepSync 源码面引用 0（唯一 DataBinding 字样在 Tests/DeepSyncTests.rsm 二进制本地化资源内，非源码引用）。本单元的 signatures 比对面尚未建立——signature-baseline.json 是发版快照，本单禁重建，故 contract-gate 会以「不在基线内」红一次，指明发版动作待执行而非掩盖。", "breaking_change_policy": "记录于 CHANGELOG 并提升版本号后方可合入 master" }
   ]
 }

@@ -1,0 +1,4 @@
+契约门禁失败：扫描 18 单元，stable 破坏性变更 1 项:
+  DeepBase.Licensing: 公开签名消失/改写 2 处（须记 CHANGELOG 并重新生成基线）:
+      interface uses System.SysUtils, System.JSON, System.Generics.Collections, DeepBase.Commerce.Types, DeepBase.Commerce.SafeClient, DeepBase.Commerce.Permissions, DeepBase.Commerce.UpgradeFlow, DeepBase.Commerce.JsonUtil, DeepBase.Unlock, DeepBase.TimeGuard
+      type TLicensingTier = (ltFree, ltPro)
