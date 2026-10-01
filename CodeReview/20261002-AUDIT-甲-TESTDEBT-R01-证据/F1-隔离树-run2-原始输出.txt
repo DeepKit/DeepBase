@@ -1,0 +1,144 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_ProgData\DeepBase-TDR01\wt-41b580a
+Test Type: Unit
+Platform: Win64
+CI Mode: False
+Skip Compile: True
+No Rebuild: False
+Run Filter: Test.DeepBase.HB.Benchmark
+Output: D:\_ProgData\DeepBase-TDR01\wt-41b580a\TestResults
+DCU Output: D:\_ProgData\DeepBase-TDR01\wt-41b580a\TestResults\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+SQLite vendor copied: D:\Program Files (x86)\Embarcadero\Studio\37.0\bin64\sqlite3.dll -> D:\_ProgData\DeepBase-TDR01\wt-41b580a\Tests\sqlite3.dll
+
+Running Unit Tests...
+----------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+.  HB Gate #1: sample 1/20 ...
+  HB Gate #1: sample 2/20 ...
+  HB Gate #1: sample 3/20 ...
+  HB Gate #1: sample 4/20 ...
+  HB Gate #1: sample 5/20 ...
+  HB Gate #1: sample 6/20 ...
+  HB Gate #1: sample 7/20 ...
+  HB Gate #1: sample 8/20 ...
+  HB Gate #1: sample 9/20 ...
+  HB Gate #1: sample 10/20 ...
+  HB Gate #1: sample 11/20 ...
+  HB Gate #1: sample 12/20 ...
+  HB Gate #1: sample 13/20 ...
+  HB Gate #1: sample 14/20 ...
+  HB Gate #1: sample 15/20 ...
+  HB Gate #1: sample 16/20 ...
+  HB Gate #1: sample 17/20 ...
+  HB Gate #1: sample 18/20 ...
+  HB Gate #1: sample 19/20 ...
+  HB Gate #1: sample 20/20 ...
+
+================================================================
+  HB Gate #1: Cold Start First Paint
+================================================================
+  Samples : 20
+  P50     : 100.12 ms
+  P95     : 112.06 ms [Threshold <= 800 ms]
+  Max     : 125.50 ms
+================================================================
+..
+================================================================
+  HB Gate #2: 100k Grid Scroll Frame Budget
+================================================================
+  Frames  : 500 (paint-only)
+  Worst   : 2.153 ms [Threshold <= 16.6 ms]
+  P95     : 1.161 ms
+================================================================
+..
+================================================================
+  HB Gate #3: Theme Switch Broadcast
+================================================================
+  Palette 1 : 2.468 ms [Threshold <= 100 ms]
+  Palette 2 : 0.826 ms [Threshold <= 100 ms]
+  Palette 3 : 0.754 ms [Threshold <= 100 ms]
+  Palette 4 : 0.780 ms [Threshold <= 100 ms]
+  Palette 5 : 0.944 ms [Threshold <= 100 ms]
+  Palette 6 : 0.750 ms [Threshold <= 100 ms]
+  Palette 7 : 0.743 ms [Threshold <= 100 ms]
+  Palette 8 : 1.071 ms [Threshold <= 100 ms]
+  Palette 9 : 0.827 ms [Threshold <= 100 ms]
+  Palette 10 : 0.838 ms [Threshold <= 100 ms]
+================================================================
+..
+================================================================
+  HB Gate #4: DPI Switch Relayout
+================================================================
+  Step 1 : 0.035 ms [Threshold <= 30 ms]
+  Step 2 : 2.182 ms [Threshold <= 30 ms]
+================================================================
+..  HB Gate #5: step 0/500 ...
+  HB Gate #5: step 100/500 ...
+  HB Gate #5: step 200/500 ...
+  HB Gate #5: step 300/500 ...
+  HB Gate #5: step 400/500 ...
+
+================================================================
+  HB Gate #5: Resize Interaction Budget
+================================================================
+  Steps : 500 (post warm-up)
+  Worst : 2.446 ms [Threshold <= 16.6 ms]
+================================================================
+..  HB Gate #6 round 1: created 0/10000 ...
+  HB Gate #6 round 1: created 2000/10000 ...
+  HB Gate #6 round 1: created 4000/10000 ...
+  HB Gate #6 round 1: created 6000/10000 ...
+  HB Gate #6 round 1: created 8000/10000 ...
+  Gate #6 round 1: GDI 42->42 USER 37->36 Heap 0->0 (created 10000)
+  HB Gate #6 round 2: created 0/10000 ...
+  HB Gate #6 round 2: created 2000/10000 ...
+  HB Gate #6 round 2: created 4000/10000 ...
+  HB Gate #6 round 2: created 6000/10000 ...
+  HB Gate #6 round 2: created 8000/10000 ...
+  Gate #6 round 2: GDI 42->42 USER 36->36 Heap 0->0 (created 10000)
+..
+================================================================
+  HB Gate #7: Touchpoint Evidence Write Latency Benchmark
+================================================================
+  Total Interactions : 100000
+  Latency P95        : 0.0039 ms [Threshold <= 2.0 ms]
+  Latency Max        : 0.0260 ms
+================================================================
+.
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+Unexpected Memory Leak
+An unexpected memory leak has occurred. The unexpected small block leaks are:
+
+41 - 56 bytes: UnicodeString x 19
+
+SUCCESS: All Unit Tests tests passed
+Temporary sqlite3.dll removed from Tests directory.
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        PASSED
+==============================================
+
+All tests passed!

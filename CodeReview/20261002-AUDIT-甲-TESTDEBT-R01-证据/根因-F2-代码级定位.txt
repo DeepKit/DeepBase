@@ -1,0 +1,56 @@
+== F2 根因代码级定位（前置单 T2 最小诊断；本单只诊断不修）
+生成时间: 2026-10-02   基线 HEAD: 41b580a   隔离树: D:/_ProgData/DeepBase-TDR01/wt-41b580a
+
+-- 1) 前置单 T2 的竞态假说：'任务取消与回调生命周期竞态导致空指针'
+   判定: 不成立。不是竞态，是确定性的空指针解引用。
+
+-- 2) 用例侧：Property6 的取消观察机制（Tests/Test.DeepBase.Resilience.Timeout.PBT.pas）
+   :33-41  单元头注释断言前提：'TTimeoutPolicy is purely Delphi RTL: TTask + ITask.Cancel + ITask.Wait'
+   :240    工作体内调用 TTask.CurrentTask.CheckCanceled
+   :244-245 except on EOperationCancelled -> LObservedCancel
+
+-- 3) 生产侧：TTimeoutPolicy.Execute 的实际执行载体（Core/DeepBase.Resilience.Timeout.pas）
+   :98-111 Worker := TManagedWorker.Create(<匿名 proc>, 'Resilience.Timeout')
+   :112    Worker.Start
+   :113-122 超时未完成 -> Worker.Evacuate（Cancel + 移交隔离区）-> raise ETimeoutException
+
+-- 4) TManagedWorker 的执行载体（Core/DeepBase.ManagedWorker.pas）
+   :37     TCoreThread = class(TThread)          <-- 关键：不是 TTask
+   :264-272 TCoreThread.Create: inherited Create(True); FreeOnTerminate := False
+   :274-286 TCoreThread.Execute: 直接调 FProc
+   :224-228 Cancel = FCancelEvent.SetEvent + FThread.Terminate
+
+-- 5) 推理链：TTask.CurrentTask 在纯 TThread 上恒为 nil
+   RTL System.Threading.TTask.CurrentTask 读线程局部 TTask.CurrentThreadTask，
+   只有 TTask 自己的工作线程才会置位该 TLS；纯 TThread 线程上该 TLS 恒 nil。
+   => 用例 :240 的 TTask.CurrentTask.CheckCanceled == nil.CheckCanceled
+   => Access violation, Read of address 0000000000000000（与审计方读数同签名）
+
+-- 6) 时序证据：AV 发生在超时之前，不存在'取消与回调竞争'的时间窗
+   用例循环体 :237-241 = Sleep(10) 后立刻 CheckCanceled；
+   第 1 次迭代即在 t~10ms 命中 nil.CheckCanceled，而超时预算是 CTimeoutMs=50（:215）。
+   => AV 时刻 ~10ms < 50ms，Cancel 尚未发出。竞态假说要求'Cancel 与回调竞争'，本例是 Cancel 之前就崩。
+
+-- 7) 时序面零变更（排除'区间内引入的回归'）
+   git log --oneline 59a1a24..HEAD -- Tests/Test.DeepBase.Resilience.Timeout.PBT.pas  => 空
+   git log --oneline 59a1a24..HEAD -- Core/DeepBase.Resilience.Timeout.pas            => 空
+   git log --oneline 59a1a24..HEAD -- Core/DeepBase.ManagedWorker.pas                  => 空
+   三件最后改动均为 2026-09-19（649b1e0 / ed50cfd），早于审计基线 59a1a24（2026-09-28）。
+   => TManagedWorker 重构发生在审计之前；缺陷自 2026-09-19 起既存，非区间内回归。
+
+-- 8) 复现读数（隔离树 @41b580a 单跑，原文见 F2-隔离树-TimeoutPBT-原始输出.txt）
+   Tests Found   : 2
+   Tests Passed  : 1
+   Tests Failed  : 0
+   Tests Errored : 1
+   Message: Access violation at address 00007FF681EBCC5A in module 'DeepBaseTests.exe' (offset 233CC5A).
+            Read of address 0000000000000000
+   RUNNER_EXIT=1
+   审计方 2026-09-28 读数：Access violation at address 00007FF79B1F7A1A (offset 2217A1A).
+            Read of address 0000000000000000
+   => 地址/偏移不同（二进制不同），签名逐项相同：AV + Read of address 0。
+
+-- 9) 结论
+   根因 = 用例的取消观察机制与生产执行载体脱节：生产已迁到 TManagedWorker（纯 TThread + Terminate/CancelEvent），
+   用例仍按 TTask 语义调 TTask.CurrentTask.CheckCanceled。属【测试断言机制随生产重构失效】，非产品竞态缺陷。
+   修法方向与取舍见回执 §三.2（不在本单执行）。

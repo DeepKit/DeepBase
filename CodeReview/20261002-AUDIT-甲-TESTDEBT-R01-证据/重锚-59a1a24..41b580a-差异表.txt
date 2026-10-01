@@ -1,0 +1,32 @@
+== 重锚差异表：59a1a24（前置单基线，2026-09-28）.. 41b580a（本单开工 HEAD）
+commit 范围提交数：96
+
+== 两灯涉及面的逐件 diffstat（空 = 逐字未变）
+--- Tests/Test.DeepBase.HB.Benchmark.pas
+    (diff 为空 = 59a1a24 与 41b580a 逐字相同)
+--- Core/DeepBase.Resilience.Timeout.pas
+    (diff 为空 = 59a1a24 与 41b580a 逐字相同)
+--- Core/DeepBase.ManagedWorker.pas
+    (diff 为空 = 59a1a24 与 41b580a 逐字相同)
+--- Tests/Test.DeepBase.Resilience.Timeout.PBT.pas
+    (diff 为空 = 59a1a24 与 41b580a 逐字相同)
+
+== HB 生产面（VCL/ + FMX/ + Core 下 HB* ）
+    (diff 为空 = VCL/ 与 FMX/ 全域逐字未变)
+
+== 区间内改动面总量（提交数 / 文件数）
+ 435 files changed, 34866 insertions(+), 222 deletions(-)
+区间内改动文件按目录：
+     342  CodeReview
+      32  docs
+      30  Tests
+      10  Core
+       8  Features
+       4  09_工程脚本
+       2  Scripts
+       2  ThirdParty
+       1  .github
+       1  CHANGELOG.md
+       1  DeepBaseCommerce.dpk
+       1  DeepBaseServices.dpk
+       1  DeepFlow
