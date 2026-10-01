@@ -1,0 +1,229 @@
+program A401_Databinding;
+{ WO-20260925-AUDIT-甲-A4 / A4-01 : DeepBase.DataBinding lifetime probe }
+{$APPTYPE CONSOLE}
+{$M+}
+uses
+  System.SysUtils,
+  System.Classes,
+  DeepBase.DataBinding;
+
+type
+  TProbeTarget = class(TComponent)
+  private
+    FText: string;
+  public
+    constructor Create; reintroduce;
+  published
+    property Text: string read FText write FText;
+  end;
+
+  TProbeSource = class(TObservableObject)
+  private
+    FName: string;
+    procedure SetName(const Value: string);
+  published
+    property Name: string read FName write SetName;
+  end;
+
+constructor TProbeTarget.Create;
+begin
+  inherited Create(nil);
+end;
+
+procedure TProbeSource.SetName(const Value: string);
+begin
+  SetField<string>(FName, Value, 'Name');
+end;
+
+var
+  GFail: Integer = 0;
+
+procedure Emit(const ATag, AText: string);
+begin
+  Writeln(ATag + ' | ' + AText);
+end;
+
+procedure Expect(const ATag: string; ACond: Boolean; const AText: string);
+begin
+  if not ACond then
+    Inc(GFail);
+  Emit(BoolToStr(ACond, True) + ' ' + ATag, AText);
+end;
+
+{ S1: literal claim - after Unbind, does the manager still hold the source /
+  target reference? Bind -> Unbind -> free both -> trigger every bind path. }
+procedure S1_UnbindReleasesReferences;
+var
+  M: TBindingManager;
+  S: TProbeSource;
+  T1: TProbeTarget;
+begin
+  Emit('--- S1 bind/unbind/free/trigger ---', '');
+  M := TBindingManager.Create;
+  try
+    S := TProbeSource.Create;
+    T1 := TProbeTarget.Create;
+    M.Bind(S, 'Name', T1, 'Text', bmOneWay);
+    Expect('S1-bind', M.BindingCount = 1, 'BindingCount after Bind = ' + IntToStr(M.BindingCount));
+    M.Unbind(S, T1);
+    Expect('S1-unbind', M.BindingCount = 0, 'BindingCount after Unbind = ' + IntToStr(M.BindingCount));
+    S.Free;
+    T1.Free;
+    try
+      M.UpdateAllTargets;
+      M.NotifyTargetChanged(nil, 'Text');
+      Emit('S1-trigger', 'NO_CRASH after freeing source+target and re-entering bind paths');
+    except
+      on E: Exception do
+      begin
+        Inc(GFail);
+        Emit('S1-trigger', 'CRASH ' + E.ClassName + ': ' + E.Message);
+      end;
+    end;
+  finally
+    M.Free;
+  end;
+end;
+
+{ S2: two bindings sharing one source - Unbind of one pair unsubscribes the
+  shared property-changed handler, so the surviving binding goes silent. }
+procedure S2_UnbindKillsSiblingBinding;
+var
+  M: TBindingManager;
+  S: TProbeSource;
+  T1, T2: TProbeTarget;
+  Ok: Boolean;
+begin
+  Emit('--- S2 sibling binding after Unbind ---', '');
+  M := TBindingManager.Create;
+  try
+    S := TProbeSource.Create;
+    T1 := TProbeTarget.Create;
+    T2 := TProbeTarget.Create;
+    M.Bind(S, 'Name', T1, 'Text', bmOneWay);
+    M.Bind(S, 'Name', T2, 'Text', bmOneWay);
+    S.Name := 'phase-A';
+    Emit('S2-after-bind', 'T1.Text=' + T1.Text + ' T2.Text=' + T2.Text +
+      ' BindingCount=' + IntToStr(M.BindingCount));
+    M.Unbind(S, T1);
+    Emit('S2-after-unbind-one', 'BindingCount=' + IntToStr(M.BindingCount));
+    S.Name := 'phase-B';
+    Ok := (T2.Text = 'phase-B');
+    Expect('S2-sibling-still-live', Ok,
+      'surviving binding T2.Text=' + T2.Text + ' (expected phase-B)');
+  finally
+    M.Free;
+    S.Free;
+    T1.Free;
+    T2.Free;
+  end;
+end;
+
+{ S3: bound target freed WITHOUT unbind -> later source notification writes
+  into a freed instance (write-after-free). Decoy allocation proves the write
+  landed on memory that is no longer the original object. }
+procedure S3_WriteAfterFreeTarget;
+var
+  M: TBindingManager;
+  S: TProbeSource;
+  T1: TProbeTarget;
+  Decoys: array[0..31] of TProbeTarget;
+  I, Hit, Addr: Integer;
+  HitText: string;
+begin
+  Emit('--- S3 write-after-free target ---', '');
+  M := TBindingManager.Create;
+  try
+    S := TProbeSource.Create;
+    T1 := TProbeTarget.Create;
+    Addr := Integer(NativeInt(T1));
+    M.Bind(S, 'Name', T1, 'Text', bmOneWay);
+    T1.Free;
+    Hit := -1;
+    for I := 0 to High(Decoys) do
+    begin
+      Decoys[I] := TProbeTarget.Create;
+      if Integer(NativeInt(Decoys[I])) = Addr then
+        Hit := I;
+    end;
+    Emit('S3-address', 'freed target @' + IntToStr(Addr) +
+      ' reused=' + BoolToStr(Hit >= 0, True));
+    HitText := '';
+    try
+      S.Name := 'WAF-SENTINEL';
+      for I := 0 to High(Decoys) do
+        if Decoys[I].Text = 'WAF-SENTINEL' then
+        begin
+          Hit := I;
+          HitText := Decoys[I].Text;
+        end;
+      Expect('S3-write-after-free', HitText = 'WAF-SENTINEL',
+        'decoy[' + IntToStr(Hit) + '].Text=' + HitText +
+        ' after source notification (original target already freed)');
+    except
+      on E: Exception do
+        Emit('S3-exception', E.ClassName + ': ' + E.Message);
+    end;
+    for I := 0 to High(Decoys) do
+      Decoys[I].Free;
+  finally
+    M.Free;
+    S.Free;
+  end;
+end;
+
+{ S4: source freed while still bound -> later manager reads the freed instance. }
+procedure S4_ReadAfterFreeSource;
+var
+  M: TBindingManager;
+  S: TProbeSource;
+  T1: TProbeTarget;
+  D: TProbeSource;
+  Addr, DecoyAddr: Integer;
+begin
+  Emit('--- S4 read-after-free source ---', '');
+  M := TBindingManager.Create;
+  try
+    S := TProbeSource.Create;
+    T1 := TProbeTarget.Create;
+    M.Bind(S, 'Name', T1, 'Text', bmOneWay);
+    Addr := Integer(NativeInt(S));
+    S.Free;
+    D := TProbeSource.Create;
+    D.Name := 'DECOY-VALUE';
+    DecoyAddr := Integer(NativeInt(D));
+    Emit('S4-address', 'freed source @' + IntToStr(Addr) +
+      ' decoy @' + IntToStr(DecoyAddr) +
+      ' same=' + BoolToStr(Addr = DecoyAddr, True));
+    try
+      M.UpdateAllTargets;
+      Expect('S4-read-after-free', T1.Text = 'DECOY-VALUE',
+        'target Text=' + T1.Text + ' (expected DECOY-VALUE only if the freed source slot was re-read)');
+    except
+      on E: Exception do
+        Emit('S4-exception', E.ClassName + ': ' + E.Message);
+    end;
+  finally
+    M.Free;
+    T1.Free;
+    D.Free;
+  end;
+end;
+
+begin
+  GFail := 0;
+  try
+    S1_UnbindReleasesReferences;
+    S2_UnbindKillsSiblingBinding;
+    S3_WriteAfterFreeTarget;
+    S4_ReadAfterFreeSource;
+  except
+    on E: Exception do
+    begin
+      Inc(GFail);
+      Emit('FATAL', E.ClassName + ': ' + E.Message);
+    end;
+  end;
+  Writeln('');
+  Writeln('A4-01 PROBE DONE, failed-assertions=' + IntToStr(GFail));
+end.

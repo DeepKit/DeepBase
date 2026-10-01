@@ -1,0 +1,64 @@
+WO-20261001-MC-甲-A16 证据件
+说明：「① + 仅 EBindingUnsupportedObject 类型声明」混排件（不抛、不登记，非交付物，件内已标注）：target 面 4 例摘条 + 闸门 3 例全部回红，其余 7 例绿。
+取数口径：b2_run_fixture.sh @ 混排生产面；混排件差量见 附件/A16-反事实与混排件差量.txt 段1
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> lifetime 夹具 Found=14 Passed=7 Failed=7
+<<SOURCE>>  .tmp/a16/pre2b-Test.DeepBase.DataBindingLifetime.txt
+<<SHA256>>  2393c9da8e102a94
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingLifetime） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24779 lines, 1.17 seconds, 2622424 bytes code, 366752 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBindingLifetime） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.............F.F.F.F...F.F.F
+
+Tests Found   : 14
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 7
+Tests Errored : 0
+
+Failing Tests
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.TargetDestroy_DropsItsBindingsAndStopsUpdates
+  Message: Expected [0] but got [1] a freed target must have all of its binding entries removed
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.TargetDestroy_WithDecoyAtFreedSlot_SourceNotWritten
+  Message: Expected [0] but got [1] entries left behind a freed target write into whichever object reuses the slot
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.TargetDestroy_LeavesOtherTargetsBindingsLive
+  Message: Expected [1] but got [2] only the freed target entries may be dropped
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.TwoManagersOnSameTarget_BothDropWhenTargetFreed
+  Message: Expected [0] but got [1]
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.Bind_NonComponentTarget_RaisesAndKeepsNoEntry
+  Message: Method did not throw any exceptions.
+a target that cannot register FreeNotification must be refused, not silently bound
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.Bind_NonObservableSource_RaisesAndKeepsNoEntry
+  Message: Method did not throw any exceptions.
+a source that cannot report its own destruction must be refused
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.Bind_NilSide_RaisesAndKeepsNoEntry
+  Message: Method raised [EAccessViolation] was expecting [EBindingUnsupportedObject]. Access violation at address 00007FF75D98CF41 in module 'B2FixtureRunner.exe' (offset 26CF41). Read of address 0000000000000000
+
+
+RUNNER_STATS fixtureCount=1 testCount=14 pass=7 failure=7 error=0 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

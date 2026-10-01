@@ -1,0 +1,24 @@
+WO-20261001-MC-甲-A16 证据件
+说明：落笔② 夹具引用本笔新增类型 EBindingUnsupportedObject，无法在 ① 生产面上编译 —— 这是判据 1「修前红」在夹具面的原始形态，混排件（下一件）因此才有必要。
+取数口径：b2_run_fixture.sh Tests/Test.DeepBase.DataBindingLifetime.pas @ 生产面 = a2c4077
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> 编译红 E2003/E2250/F2063
+<<SOURCE>>  .tmp/a16/pre2-Test.DeepBase.DataBindingLifetime.txt
+<<SHA256>>  5a2ef931de315af4
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingLifetime） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tests\Test.DeepBase.DataBindingLifetime.pas(461) Error: E2003 Undeclared identifier: 'EBindingUnsupportedObject'
+Tests\Test.DeepBase.DataBindingLifetime.pas(462) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.DataBindingLifetime.pas(485) Error: E2003 Undeclared identifier: 'EBindingUnsupportedObject'
+Tests\Test.DeepBase.DataBindingLifetime.pas(486) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.DataBindingLifetime.pas(508) Error: E2003 Undeclared identifier: 'EBindingUnsupportedObject'
+Tests\Test.DeepBase.DataBindingLifetime.pas(508) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+Tests\Test.DeepBase.DataBindingLifetime.pas(511) Error: E2250 There is no overloaded version of 'WillRaise' that can be called with these arguments
+.tmp\b2\runner\Test.DeepBase.DataBindingLifetime\B2FixtureRunner.dpr(13) Fatal: F2063 Could not compile used unit 'Test.DeepBase.DataBindingLifetime.pas'
+BUILD_EXIT=1
+== runner 编译未过 ⇒ 判据不成立 ==

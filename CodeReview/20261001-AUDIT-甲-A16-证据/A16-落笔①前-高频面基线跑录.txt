@@ -1,0 +1,327 @@
+WO-20261001-MC-甲-A16 证据件
+说明：§〇.4 要求的高频路径改前基线：A4-01 探针 + 三件既有夹具（DataBinding / DataBindingUnbindRefCount / MVVM）+ 四件不回归面（License / Commerce / LicensingTimeSource / TimeGuardSecretStore），共 8 段，全部在落笔① 之前取数。（件头口径为交付时订正，<<SEGMENT>> 起的原始跑录分段未改动。）
+取数口径：b2_run_fixture.sh / run_probe.sh 一次性 runner，产物落 .tmp，不入构建面
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> A4-01 探针（原样模板，裸 TObject target）
+<<SOURCE>>  .tmp/a16/base-A401-probe.txt
+<<SHA256>>  d3a31d6bf95c268c
+------------------------------------------------------------------------------
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-pre/A401_Databinding.dpr(108) Warning: W1036 Variable 'S' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-pre/A401_Databinding.dpr(110) Warning: W1036 Variable 'T2' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-pre/A401_Databinding.dpr(109) Warning: W1036 Variable 'T1' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-pre/A401_Databinding.dpr(163) Warning: W1036 Variable 'S' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-pre/A401_Databinding.dpr(200) Warning: W1036 Variable 'T1' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-pre/A401_Databinding.dpr(201) Warning: W1036 Variable 'D' might not have been initialized
+868 lines, 0.17 seconds, 1379956 bytes code, 191752 bytes data.
+COMPILE_EXIT=0
+--- S1 bind/unbind/free/trigger --- | 
+True S1-bind | BindingCount after Bind = 1
+True S1-unbind | BindingCount after Unbind = 0
+S1-trigger | NO_CRASH after freeing source+target and re-entering bind paths
+--- S2 sibling binding after Unbind --- | 
+S2-after-bind | T1.Text=phase-A T2.Text=phase-A BindingCount=2
+S2-after-unbind-one | BindingCount=1
+True S2-sibling-still-live | surviving binding T2.Text=phase-B (expected phase-B)
+--- S3 write-after-free target --- | 
+S3-address | freed target @977882496 reused=True
+True S3-write-after-free | decoy[0].Text=WAF-SENTINEL after source notification (original target already freed)
+--- S4 read-after-free source --- | 
+S4-address | freed source @977811680 decoy @977811680 same=True
+True S4-read-after-free | target Text=DECOY-VALUE (expected DECOY-VALUE only if the freed source slot was re-read)
+
+A4-01 PROBE DONE, failed-assertions=0
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.DataBinding
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.DataBinding.txt
+<<SHA256>>  0f4e3217ad2dcaca
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBinding） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24300 lines, 1.23 seconds, 2638892 bytes code, 368040 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBinding） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............................................
+
+Tests Found   : 22
+Tests Ignored : 0
+Tests Passed  : 22
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=22 pass=22 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.DataBindingUnbindRefCount
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.DataBindingUnbindRefCount.txt
+<<SHA256>>  80ad815dea233d53
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingUnbindRefCount） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24000 lines, 1.25 seconds, 2591448 bytes code, 364352 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBindingUnbindRefCount） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.MVVM
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.MVVM.txt
+<<SHA256>>  409b2da1fb5cde30
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.MVVM） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+26217 lines, 1.39 seconds, 2829632 bytes code, 385408 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.MVVM） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+....................................................................................
+
+Tests Found   : 42
+Tests Ignored : 0
+Tests Passed  : 42
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=42 pass=42 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.License
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.License.txt
+<<SHA256>>  04b4a539af8b8c5a
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.License） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+39220 lines, 1.88 seconds, 3555156 bytes code, 452168 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.License） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+................................
+
+Tests Found   : 16
+Tests Ignored : 0
+Tests Passed  : 16
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=16 pass=16 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.Commerce
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.Commerce.txt
+<<SHA256>>  d2bd10a996fd7ce6
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.Commerce） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+39886 lines, 1.80 seconds, 4306404 bytes code, 525024 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.Commerce） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................
+
+Tests Found   : 68
+Tests Ignored : 0
+Tests Passed  : 68
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=68 pass=68 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.LicensingTimeSource
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.LicensingTimeSource.txt
+<<SHA256>>  ffd641980fa74ec9
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.LicensingTimeSource） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+51789 lines, 2.41 seconds, 6654020 bytes code, 738008 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.LicensingTimeSource） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+..............
+
+Tests Found   : 7
+Tests Ignored : 0
+Tests Passed  : 7
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=7 pass=7 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> Test.DeepBase.TimeGuardSecretStore
+<<SOURCE>>  .tmp/a16/base-Test.DeepBase.TimeGuardSecretStore.txt
+<<SHA256>>  56f1d17f381e3494
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.TimeGuardSecretStore） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+38044 lines, 1.84 seconds, 3430604 bytes code, 443912 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.TimeGuardSecretStore） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 6
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=6 pass=6 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0

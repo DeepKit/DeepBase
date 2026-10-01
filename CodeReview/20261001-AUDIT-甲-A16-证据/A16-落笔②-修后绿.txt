@@ -1,0 +1,91 @@
+WO-20261001-MC-甲-A16 证据件
+说明：落笔② 定稿（生产面 = 37cdf3a）：夹具 14/14 且 Tests Leaked: 0；探针适配件 S3、S4 双 False（failed-assertions 0→1→2 随两笔递增）；原样裸对象探针在第一次 Bind 即抛 EBindingUnsupportedObject（无静默降级）。
+取数口径：b2_run_fixture.sh + run_probe.sh @ 37cdf3a
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> lifetime 夹具 14/14
+<<SOURCE>>  .tmp/a16/post3-Test.DeepBase.DataBindingLifetime.txt
+<<SHA256>>  5c0304e7776df2f7
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingLifetime） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24890 lines, 1.19 seconds, 2624368 bytes code, 366848 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBindingLifetime） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+............................
+
+Tests Found   : 14
+Tests Ignored : 0
+Tests Passed  : 14
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=14 pass=14 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> A401 适配件（target 改 TComponent）S3/S4 双 False
+<<SOURCE>>  .tmp/a16/post2-A401-probe-adapted.txt
+<<SHA256>>  202a0c353e6f692c
+------------------------------------------------------------------------------
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2/A401_Databinding.dpr(116) Warning: W1036 Variable 'S' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2/A401_Databinding.dpr(118) Warning: W1036 Variable 'T2' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2/A401_Databinding.dpr(117) Warning: W1036 Variable 'T1' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2/A401_Databinding.dpr(171) Warning: W1036 Variable 'S' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2/A401_Databinding.dpr(208) Warning: W1036 Variable 'T1' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2/A401_Databinding.dpr(209) Warning: W1036 Variable 'D' might not have been initialized
+1528 lines, 0.19 seconds, 1405712 bytes code, 194272 bytes data.
+COMPILE_EXIT=0
+--- S1 bind/unbind/free/trigger --- | 
+True S1-bind | BindingCount after Bind = 1
+True S1-unbind | BindingCount after Unbind = 0
+S1-trigger | NO_CRASH after freeing source+target and re-entering bind paths
+--- S2 sibling binding after Unbind --- | 
+S2-after-bind | T1.Text=phase-A T2.Text=phase-A BindingCount=2
+S2-after-unbind-one | BindingCount=1
+True S2-sibling-still-live | surviving binding T2.Text=phase-B (expected phase-B)
+--- S3 write-after-free target --- | 
+S3-address | freed target @-1144540144 reused=True
+False S3-write-after-free | decoy[0].Text= after source notification (original target already freed)
+--- S4 read-after-free source --- | 
+S4-address | freed source @-1144214240 decoy @-1144214240 same=True
+False S4-read-after-free | target Text= (expected DECOY-VALUE only if the freed source slot was re-read)
+
+A4-01 PROBE DONE, failed-assertions=2
+RUN_EXIT=0
+
+==============================================================================
+<<SEGMENT>> A401 原样件（裸 TObject target）闸门 FATAL
+<<SOURCE>>  .tmp/a16/post2-A401-probe-verbatim-gate.txt
+<<SHA256>>  d7005b7fd7707844
+------------------------------------------------------------------------------
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2-verbatim/A401_Databinding.dpr(108) Warning: W1036 Variable 'S' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2-verbatim/A401_Databinding.dpr(110) Warning: W1036 Variable 'T2' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2-verbatim/A401_Databinding.dpr(109) Warning: W1036 Variable 'T1' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2-verbatim/A401_Databinding.dpr(163) Warning: W1036 Variable 'S' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2-verbatim/A401_Databinding.dpr(200) Warning: W1036 Variable 'T1' might not have been initialized
+D:/_Progs/02Business/DeepBase/.tmp/a16/probe-post2-verbatim/A401_Databinding.dpr(201) Warning: W1036 Variable 'D' might not have been initialized
+1520 lines, 0.17 seconds, 1405360 bytes code, 194208 bytes data.
+COMPILE_EXIT=0
+--- S1 bind/unbind/free/trigger --- | 
+FATAL | EBindingUnsupportedObject: Bind target must descend from TComponent (it is the only face RTL FreeNotification can register); got TProbeTarget for property "Text".
+
+A4-01 PROBE DONE, failed-assertions=1
+RUN_EXIT=0

@@ -1,0 +1,368 @@
+WO-20261001-MC-甲-A16 证据件
+说明：非本单回归的既存缺陷登记：八件一进程时 Test.DeepBase.License 16 例报「No license storage factory registered for connection-backed constructor」。用「未触碰的四件」（License+Commerce+LicensingTimeSource+TimeGuardSecretStore）在同一进程复现，并在 c9b9fc5（本单开工前）生产面上跑同一组合，错误集合 16 例逐名同一 ⇒ 与 A16 两笔无关，属跨夹具全局注册顺序缺陷，交主控处置。
+取数口径：a16_run_multi_fixture.sh @ 37cdf3a 与 @ c9b9fc5 生产面副本
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> 修后四件组合 97/81/16err
+<<SOURCE>>  .tmp/a16/post2-multi-license4.txt
+<<SHA256>>  6bd0f8494da84e5f
+------------------------------------------------------------------------------
+== 同进程夹具清单: Test.DeepBase.License, Test.DeepBase.Commerce, Test.DeepBase.LicensingTimeSource, Test.DeepBase.TimeGuardSecretStore ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+60767 lines, 2.77 seconds, 7368120 bytes code, 803128 bytes data.
+BUILD_EXIT=0
+
+== 真跑（同进程  ）==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A16MultiFixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................EEEEEEEEEEEEEEEE..........................
+
+Tests Found   : 97
+Tests Ignored : 0
+Tests Passed  : 81
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 16
+
+Tests With Errors
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GetDeviceId_NotEmpty
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GetDeviceId_Consistent
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ValidateLicense_EmptyKey_Invalid
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ValidateLicense_InvalidFormat
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GenerateLicenseKey_ValidFormat
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GenerateLicenseKey_CanBeValidated
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseInfo_DefaultValues
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Trial
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Standard
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Pro
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Enterprise
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ExpiredLicense_Detected
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ActivateLicense_ValidKey
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_DeactivateLicense
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_CurrentLicenseInfo
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_StorageInjection_BasicFlow
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+
+RUNNER_STATS fixtureCount=1 testCount=97 pass=81 failure=0 error=16 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==============================================================================
+<<SEGMENT>> 开工前生产面同组合 97/81/16err
+<<SOURCE>>  .tmp/a16/base-multi-license4.txt
+<<SHA256>>  471aa92ab5baf13a
+------------------------------------------------------------------------------
+== 同进程夹具清单: Test.DeepBase.License, Test.DeepBase.Commerce, Test.DeepBase.LicensingTimeSource, Test.DeepBase.TimeGuardSecretStore ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+60767 lines, 2.70 seconds, 7368120 bytes code, 803128 bytes data.
+BUILD_EXIT=0
+
+== 真跑（同进程  ）==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A16MultiFixtureRunner.exe] - Starting Tests.
+
+........................................................................................................................................EEEEEEEEEEEEEEEE..........................
+
+Tests Found   : 97
+Tests Ignored : 0
+Tests Passed  : 81
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 16
+
+Tests With Errors
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GetDeviceId_NotEmpty
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GetDeviceId_Consistent
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ValidateLicense_EmptyKey_Invalid
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ValidateLicense_InvalidFormat
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GenerateLicenseKey_ValidFormat
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GenerateLicenseKey_CanBeValidated
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseInfo_DefaultValues
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Trial
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Standard
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Pro
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Enterprise
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ExpiredLicense_Detected
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ActivateLicense_ValidKey
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_DeactivateLicense
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_CurrentLicenseInfo
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_StorageInjection_BasicFlow
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+
+RUNNER_STATS fixtureCount=1 testCount=97 pass=81 failure=0 error=16 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1
+
+==============================================================================
+<<SEGMENT>> 八件全组合 182/166/16err
+<<SOURCE>>  .tmp/a16/post2-multi-all8.txt
+<<SHA256>>  d311f9cdd7c69f17
+------------------------------------------------------------------------------
+== 同进程夹具清单: Test.DeepBase.DataBinding, Test.DeepBase.DataBindingUnbindRefCount, Test.DeepBase.DataBindingLifetime, Test.DeepBase.MVVM, Test.DeepBase.License, Test.DeepBase.Commerce, Test.DeepBase.LicensingTimeSource, Test.DeepBase.TimeGuardSecretStore ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Core\DeepBase.Security.DPAPI.pas(395) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+65533 lines, 2.89 seconds, 7679040 bytes code, 828008 bytes data.
+BUILD_EXIT=0
+
+== 真跑（同进程  ）==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A16MultiFixtureRunner.exe] - Starting Tests.
+
+..............................................................................................................................................................................................................................EEEEEEEEEEEEEEEE..............................................................................................................
+
+Tests Found   : 182
+Tests Ignored : 0
+Tests Passed  : 166
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 16
+
+Tests With Errors
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GetDeviceId_NotEmpty
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GetDeviceId_Consistent
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ValidateLicense_EmptyKey_Invalid
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ValidateLicense_InvalidFormat
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GenerateLicenseKey_ValidFormat
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_GenerateLicenseKey_CanBeValidated
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseInfo_DefaultValues
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Trial
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Standard
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Pro
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_LicenseType_Enterprise
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ExpiredLicense_Detected
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ActivateLicense_ValidKey
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_DeactivateLicense
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_CurrentLicenseInfo
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_StorageInjection_BasicFlow
+  Message: No license storage factory registered for connection-backed constructor. Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).
+
+
+RUNNER_STATS fixtureCount=1 testCount=182 pass=166 failure=0 error=16 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

@@ -1,0 +1,63 @@
+WO-20261001-MC-甲-A16 证据件
+说明：落笔① source 面 S4 read-after-free 复刻夹具在修法未在场时的红点（判据 1 第一段）。
+取数口径：b2_run_fixture.sh Tests/Test.DeepBase.DataBindingLifetime.pas @ 无修法生产面
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> lifetime 夹具 6 例，Found=6 Passed=0
+<<SOURCE>>  .tmp/a16/pre1-Test.DeepBase.DataBindingLifetime.txt
+<<SHA256>>  369025ccf895409a
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingLifetime） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+23985 lines, 1.51 seconds, 2589828 bytes code, 364352 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBindingLifetime） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.F.E.F.F.F.E
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 4
+Tests Errored : 2
+
+Failing Tests
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_DropsItsBindingsAndStopsUpdates
+  Message: Expected [0] but got [1] a freed source must have all of its binding entries removed
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_OneTimeBindingAlsoDropped
+  Message: Expected [0] but got [1] bmOneTime entries keep the raw source pointer and must drop with it
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_LeavesOtherSourcesBindingsLive
+  Message: Expected [1] but got [2] only the freed source entries may be dropped
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.TwoManagersOnSameSource_BothDropWhenSourceFreed
+  Message: Expected [0] but got [1]
+
+
+
+Tests With Errors
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_WithDecoyAtFreedSlot_TargetNotResurrected
+  Message: Access violation at address 00007FF714C5702B in module 'B2FixtureRunner.exe' (offset 1702B). Read of address FFFFFFFFFFFFFFFF
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceFreedBeforeManager_BothTeardownsSafe
+  Message: Access violation at address 00007FF714C4D128 in module 'B2FixtureRunner.exe' (offset D128). Read of address FFFFFFFFFFFFFFFF
+
+
+RUNNER_STATS fixtureCount=1 testCount=6 pass=0 failure=4 error=2 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

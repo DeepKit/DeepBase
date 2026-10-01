@@ -1,0 +1,66 @@
+WO-20261001-MC-甲-A16 反事实/混排件的确切差量（不附全量生产面副本，按差量即可复原；差分基准为对应提交面的 CRLF 形态）
+基准：git show a2c4077|37cdf3a:Core/DeepBase.DataBinding.pas
+
+==============================================================================
+<<SEGMENT>> 1. 混排件 pre2b = 落笔① 生产面 + 仅 EBindingUnsupportedObject 类型声明（不抛、不登记）
+------------------------------------------------------------------------------
+--- a2c4077:Core/DeepBase.DataBinding.pas
++++ pre2b-混排件
+@@ -26,12 +26,17 @@
+   System.Rtti,
+   System.TypInfo,
+   System.Generics.Collections,
+-  System.Generics.Defaults;
++  System.Generics.Defaults,
++  DeepBase.Exceptions;
+ 
+ type
+   // Forward declarations
+   TObservableObject = class;
+   TBindingManager = class;
++
++  { PRE-2 混排件专用声明（非交付物）：落笔② 的测试单元引用此类型才能编译，
++    而落笔① 的生产面没有它。此处只声明、不抛、不登记，用于取 target 面的「修前红」。}
++  EBindingUnsupportedObject = class(EInvalidOperationException);
+   
+   /// <summary>
+   /// Property changed event arguments
+
+
+==============================================================================
+<<SEGMENT>> 2. 反事实A cf2a = 落笔② 生产面删 Bind 内一行登记（target 面 4 例应回红）
+------------------------------------------------------------------------------
+--- 37cdf3a:Core/DeepBase.DataBinding.pas
++++ cf2a-无登记
+@@ -744,7 +744,6 @@
+   
+   { target 面同理：条目里存的仍是裸指针，target 析构时必须由 RTL 回调摘条。
+     登记是双向的（System.Classes.pas:17677），因此 Unbind/UnbindAll 侧要成对 Remove。 }
+-  TComponent(Target).FreeNotification(FTargetWatcher);
+   
+   // Initial sync: source -> target
+   UpdateTarget(Entry);
+
+
+==============================================================================
+<<SEGMENT>> 3. 反事实B cf2b = 落笔② 生产面删 Bind 内两处 raise（闸门 3 例应回红/errored）
+------------------------------------------------------------------------------
+--- 37cdf3a:Core/DeepBase.DataBinding.pas
++++ cf2b-无闸门
+@@ -712,16 +712,6 @@
+     就在建条目之前拒绝。裸指针的 UAF 面不靠调用方自觉：同一 API 有的组合安全、
+     有的组合不安全又不可区分，就是被否决的弱路线形态。先判后建 ⇒ 报错路径不留半截条目。
+     `is` 对 nil 实例返回 False，空引用与类型不符走同一条报错。 }
+-  if not (Source is TObservableObject) then
+-    raise EBindingUnsupportedObject.Create(Format(
+-      'Bind source must descend from TObservableObject (it is the only face that can report '
+-      + 'destruction); got %s for property "%s".',
+-      [ClassNameOrNil(Source), SourceProp]));
+-  if not (Target is TComponent) then
+-    raise EBindingUnsupportedObject.Create(Format(
+-      'Bind target must descend from TComponent (it is the only face RTL FreeNotification '
+-      + 'can register); got %s for property "%s".',
+-      [ClassNameOrNil(Target), TargetProp]));
+ 
+   // Create binding entry
+   Entry.Source := Source;

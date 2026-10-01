@@ -1,0 +1,59 @@
+WO-20261001-MC-甲-A16 证据件
+说明：判据 1 第三段：删掉 TObservableObject.Destroy 里的 NotifyDestroying 一行 ⇒ 6 例全部 error（AV read 0x10），证明绿点由该修法承载。
+取数口径：生产面副本 = a2c4077 减一行通知，逐字节差见段内注释
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> lifetime 夹具 6 errored
+<<SOURCE>>  .tmp/a16/cf1-Test.DeepBase.DataBindingLifetime.txt
+<<SHA256>>  5f77a6db09c34b42
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingLifetime） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24066 lines, 1.22 seconds, 2608316 bytes code, 365800 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBindingLifetime） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.E.E.E.E.E.E
+
+Tests Found   : 6
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 6
+
+Tests With Errors
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_DropsItsBindingsAndStopsUpdates
+  Message: Access violation at address 00007FF746C2702B in module 'B2FixtureRunner.exe' (offset 1702B). Read of address 0000000000000010
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_WithDecoyAtFreedSlot_TargetNotResurrected
+  Message: Access violation at address 00007FF746C2702B in module 'B2FixtureRunner.exe' (offset 1702B). Read of address 0000000000000010
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_OneTimeBindingAlsoDropped
+  Message: Access violation at address 00007FF746C2702B in module 'B2FixtureRunner.exe' (offset 1702B). Read of address 0000000000000010
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceDestroy_LeavesOtherSourcesBindingsLive
+  Message: Access violation at address 00007FF746C2702B in module 'B2FixtureRunner.exe' (offset 1702B). Read of address 0000000000000010
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.TwoManagersOnSameSource_BothDropWhenSourceFreed
+  Message: Access violation at address 00007FF746C1D128 in module 'B2FixtureRunner.exe' (offset D128). Read of address FFFFFFFFFFFFFFFF
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.SourceFreedBeforeManager_BothTeardownsSafe
+  Message: Access violation at address 00007FF746C2702B in module 'B2FixtureRunner.exe' (offset 1702B). Read of address 0000000000000010
+
+
+RUNNER_STATS fixtureCount=1 testCount=6 pass=0 failure=0 error=6 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

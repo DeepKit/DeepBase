@@ -1,0 +1,59 @@
+{ A16 同进程多夹具 runner 模板（被 a16_run_multi_fixture.sh 实体化到 .tmp 后编译运行）。
+  __UNITS__ 由脚本替换为逗号分隔的测试单元名清单。
+  为什么需要它：WO-20261001-MC-甲-A16 判据 2 要求既有夹具「同进程跑」并核 `Tests Leaked: 0`，
+  而 B2 的单夹具 runner 只能一次挂一件；本模板沿用同一套 fail-closed 口径
+  （FailsOnNoAsserts=True、testCount=0 ⇒ EXIT=2），不另立标准。 }
+program A16MultiFixtureRunner;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  __UNITS__;
+
+var
+  LRunner  : ITestRunner;
+  LResults : IRunResults;
+  LLogger  : ITestLogger;
+
+begin
+  ReportMemoryLeaksOnShutdown := False;
+  try
+    TDUnitX.CheckCommandLine;
+
+    LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := True;
+
+    LLogger := TDUnitXConsoleLogger.Create(True);
+    LRunner.AddLogger(LLogger);
+
+    LResults := LRunner.Execute;
+    Writeln(Format('RUNNER_STATS fixtureCount=%d testCount=%d pass=%d failure=%d error=%d ignored=%d',
+      [LResults.FixtureCount, LResults.TestCount, LResults.PassCount,
+       LResults.FailureCount, LResults.ErrorCount, LResults.IgnoredCount]));
+
+    if LResults.TestCount = 0 then
+    begin
+      Writeln('RUNNER_VERDICT: NO_TEST_EXECUTED');
+      System.ExitCode := 2;
+      Exit;
+    end;
+
+    if not LResults.AllPassed then
+    begin
+      Writeln('RUNNER_VERDICT: FAILED');
+      System.ExitCode := 1;
+      Exit;
+    end;
+    Writeln('RUNNER_VERDICT: PASSED');
+  except
+    on E: Exception do
+    begin
+      Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

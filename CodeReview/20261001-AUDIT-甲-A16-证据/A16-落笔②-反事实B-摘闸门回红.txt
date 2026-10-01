@@ -1,0 +1,54 @@
+WO-20261001-MC-甲-A16 证据件
+说明：删掉 Bind 里两处 raise（10 行）⇒ 闸门 3 例回红/errored（裸对象与 nil 直接踩进后续裸指针路径，正是本单要消灭的形态），其余 11 例仍绿。
+取数口径：生产面副本 = 37cdf3a 减两处 raise，差量见 附件/A16-反事实与混排件差量.txt 段3
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> lifetime 夹具 Found=14 Passed=11 Failed=1 Errored=2
+<<SOURCE>>  .tmp/a16/cf2b-Test.DeepBase.DataBindingLifetime.txt
+<<SHA256>>  04a17f583e944281
+------------------------------------------------------------------------------
+== 编译一次性 runner（单元: Test.DeepBase.DataBindingLifetime） ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+24880 lines, 1.56 seconds, 2623408 bytes code, 366840 bytes data.
+BUILD_EXIT=0
+
+== 真跑（Test.DeepBase.DataBindingLifetime） ==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [B2FixtureRunner.exe] - Starting Tests.
+
+.......................E.E.F
+
+Tests Found   : 14
+Tests Ignored : 0
+Tests Passed  : 11
+Tests Leaked  : 0
+Tests Failed  : 1
+Tests Errored : 2
+
+Failing Tests
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.Bind_NilSide_RaisesAndKeepsNoEntry
+  Message: Method raised [EAccessViolation] was expecting [EBindingUnsupportedObject]. Access violation at address 00007FF7A0C3CBE9 in module 'B2FixtureRunner.exe' (offset 26CBE9). Read of address 0000000000000018
+
+
+
+Tests With Errors
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.Bind_NonComponentTarget_RaisesAndKeepsNoEntry
+  Message: Access violation at address 00007FF7A0AEF950 in module 'B2FixtureRunner.exe' (offset 11F950). Read of address 0000000200000010
+
+  Test.DeepBase.DataBindingLifetime.TDataBindingLifetimeTests.Bind_NonObservableSource_RaisesAndKeepsNoEntry
+  Message: Access violation at address 0000000000000000 in module 'B2FixtureRunner.exe' (offset 0). Execution of address 0000000000000000
+
+
+RUNNER_STATS fixtureCount=1 testCount=14 pass=11 failure=1 error=2 ignored=0
+RUNNER_VERDICT: FAILED
+RUN_EXIT=1

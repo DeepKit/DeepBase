@@ -1,0 +1,101 @@
+WO-20261001-MC-甲-A16 证据件
+说明：判据 2 守恒面：@ d35ec6a 与工作树的夹具限定名清单、Assert 调用多重集、断言消息串逐件比对，drift=0（VERDICT: CONSERVED）。
+取数口径：附件/a16_qualname_inventory.py d35ec6a <三件测试单元>
+生成时间：2026-10-01（主工作树 @ 37cdf3a 前后，命令原样记录在件内）
+
+
+==============================================================================
+<<SEGMENT>> qualname inventory
+<<SOURCE>>  .tmp/a16/qualname-conservation.txt
+<<SHA256>>  e4ec6fb024c469a8
+------------------------------------------------------------------------------
+=== Tests/Test.DeepBase.DataBinding.pas @ d35ec6a vs WORK ===
+  fixtures: ['TTestObservableObject', 'TTestObservableList', 'TTestBindingManager'] -> ['TTestObservableObject', 'TTestObservableList', 'TTestBindingManager']
+  qualified test names: 22 -> 22  conserved=True
+    - TTestBindingManager.Test_Bind_InitialSync
+    - TTestBindingManager.Test_BindingCount_ReturnsCorrectCount
+    - TTestBindingManager.Test_MultipleBindings_AllUpdate
+    - TTestBindingManager.Test_OneTimeBinding_NoUpdatesAfterInit
+    - TTestBindingManager.Test_OneWayBinding_SourceToTarget
+    - TTestBindingManager.Test_TwoWayBinding_TargetToSource
+    - TTestBindingManager.Test_UnbindAll_ClearsBindings
+    - TTestBindingManager.Test_Unbind_StopsUpdates
+    - TTestBindingManager.Test_UpdateAllTargets_ForcesSync
+    - TTestBindingManager.Test_ValueConverter_ConvertBackOnTwoWay
+    - TTestBindingManager.Test_ValueConverter_ConvertOnSync
+    - TTestObservableList.Test_Add_NotifiesChange
+    - TTestObservableList.Test_Clear_NotifiesChange
+    - TTestObservableList.Test_Delete_NotifiesChange
+    - TTestObservableList.Test_Insert_NotifiesChange
+    - TTestObservableList.Test_Remove_ReturnsCorrectIndex
+    - TTestObservableList.Test_SetItem_NotifiesReplace
+    - TTestObservableObject.Test_MultipleHandlers_AllReceiveNotification
+    - TTestObservableObject.Test_NotifyPropertyChanged_FiresEvent
+    - TTestObservableObject.Test_RemoveHandler_StopsNotification
+    - TTestObservableObject.Test_SetField_NoNotifyWhenSameValue
+    - TTestObservableObject.Test_SetField_NotifiesOnChange
+  assert calls: 46 -> 46  conserved=True
+  assert multiset: ['Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue']
+  message strings kept=True lost=0 added=0
+=== Tests/Test.DeepBase.DataBindingUnbindRefCount.pas @ d35ec6a vs WORK ===
+  fixtures: ['TDataBindingUnbindRefCount'] -> ['TDataBindingUnbindRefCount']
+  qualified test names: 7 -> 7  conserved=True
+    - TDataBindingUnbindRefCount.LastBindingForSource_UnsubscribesAndStopsUpdating
+    - TDataBindingUnbindRefCount.SiblingBinding_StillUpdatesAfterUnbindOfOther
+    - TDataBindingUnbindRefCount.ThreeSiblings_KeepUpdatingUntilTheLastOneIsUnbound
+    - TDataBindingUnbindRefCount.TwoManagersOnSameSource_EachKeepsItsOwnSubscription
+    - TDataBindingUnbindRefCount.UnbindAll_StopsEveryNotification
+    - TDataBindingUnbindRefCount.UnbindObject_TargetSide_KeepsSiblingSubscription
+    - TDataBindingUnbindRefCount.UnbindOneSource_LeavesOtherSourcesBindingsLive
+  assert calls: 14 -> 14  conserved=True
+  assert multiset: ['Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual']
+  message strings kept=True lost=0 added=0
+=== Tests/Test.DeepBase.MVVM.pas @ d35ec6a vs WORK ===
+  fixtures: ['TTestViewModelBase', 'TTestValidation', 'TTestValidationRules', 'TTestRelayCommand', 'TTestAsyncCommand', 'TTestValidationError'] -> ['TTestViewModelBase', 'TTestValidation', 'TTestValidationRules', 'TTestRelayCommand', 'TTestAsyncCommand', 'TTestValidationError']
+  qualified test names: 42 -> 42  conserved=True
+    - TTestAsyncCommand.Test_CanExecute_FalseWhileRunning
+    - TTestAsyncCommand.Test_Cancel_StopsExecution
+    - TTestAsyncCommand.Test_Execute_RunsInBackground
+    - TTestAsyncCommand.Test_Execute_SetsViewModelBusy
+    - TTestAsyncCommand.Test_OnCompleted_CalledOnSuccess
+    - TTestAsyncCommand.Test_OnError_CalledOnException
+    - TTestAsyncCommand.Test_State_TransitionsCorrectly
+    - TTestRelayCommand.Test_CanExecute_ReturnsFuncResult
+    - TTestRelayCommand.Test_CanExecute_ReturnsTrue_WhenNoFunc
+    - TTestRelayCommand.Test_Execute_CallsExecuteProc
+    - TTestRelayCommand.Test_Execute_DoesNothing_WhenCanExecuteFalse
+    - TTestRelayCommand.Test_Execute_WithParameter
+    - TTestRelayCommand.Test_RaiseCanExecuteChanged_NotifiesHandlers
+    - TTestValidation.Test_ClearErrors_RemovesAllErrors
+    - TTestValidation.Test_GetErrors_ReturnsPropertyErrors
+    - TTestValidation.Test_HasErrors_FalseWhenNoErrors
+    - TTestValidation.Test_HasErrors_TrueWhenErrors
+    - TTestValidation.Test_PropertyErrorHandler_CalledOnError
+    - TTestValidation.Test_ValidateProperty_ReturnsPropertyErrors
+    - TTestValidation.Test_Validate_ReturnsErrors
+    - TTestValidationError.Test_Create_SetsFields
+    - TTestValidationError.Test_DefaultSeverity_IsError
+    - TTestValidationRules.Test_Email_FailsOnInvalid
+    - TTestValidationRules.Test_Email_PassesOnEmpty
+    - TTestValidationRules.Test_Email_PassesOnValid
+    - TTestValidationRules.Test_MaxLength_FailsOnLong
+    - TTestValidationRules.Test_MaxLength_PassesOnShort
+    - TTestValidationRules.Test_MinLength_FailsOnShort
+    - TTestValidationRules.Test_MinLength_PassesOnLong
+    - TTestValidationRules.Test_Range_FailsOutOfRange
+    - TTestValidationRules.Test_Range_PassesInRange
+    - TTestValidationRules.Test_Required_FailsOnEmpty
+    - TTestValidationRules.Test_Required_PassesOnNonEmpty
+    - TTestViewModelBase.Test_Activate_CallsOnActivate
+    - TTestViewModelBase.Test_BeginBusy_SetsIsBusyAndMessage
+    - TTestViewModelBase.Test_BusyMessage_NotifiesPropertyChanged
+    - TTestViewModelBase.Test_Create_DefaultValues
+    - TTestViewModelBase.Test_CustomProperty_NotifiesChange
+    - TTestViewModelBase.Test_Deactivate_CallsOnDeactivate
+    - TTestViewModelBase.Test_EndBusy_ClearsIsBusyAndMessage
+    - TTestViewModelBase.Test_ErrorMessage_NotifiesPropertyChanged
+    - TTestViewModelBase.Test_IsBusy_NotifiesPropertyChanged
+  assert calls: 77 -> 77  conserved=True
+  assert multiset: ['Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.AreEqual', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsFalse', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue', 'Assert.IsTrue']
+  message strings kept=True lost=0 added=0
+VERDICT: CONSERVED

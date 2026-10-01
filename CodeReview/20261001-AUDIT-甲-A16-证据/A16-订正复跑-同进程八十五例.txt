@@ -1,0 +1,40 @@
+WO-20261001-MC-甲-A16 证据件
+说明：判据 2 订正复跑：两处测试替身注释的调用点计数订正（15↔2、7↔15，纯注释、无一处断言或代码语义变化）之后，同进程四件（DataBinding + DataBindingUnbindRefCount + DataBindingLifetime + MVVM）复跑仍 Found=85 Passed=85 Tests Leaked: 0，RUN_EXIT=0。原「修后同进程八十五例」件按不覆盖原则保留，本件是订正态的独立跑录。
+取数口径：bash CodeReview/20261001-AUDIT-甲-A16-证据/附件/a16_run_multi_fixture.sh post4-commentfix <四件路径>，注释订正态工作树（落笔② = 37cdf3a）
+生成时间：2026-10-01
+
+
+==============================================================================
+<<SEGMENT>> 同进程四件 85/85 Leaked 0（注释订正后）
+<<SOURCE>>  .tmp/a16/post4-commentfix-multi85.txt
+<<SHA256>>  d4ee3cbd66000703
+------------------------------------------------------------------------------
+== a16_run_multi_fixture.sh post4-commentfix ==
+== @ 37cdf3a92ee7c21f636f0caaaffc080b1f3cef31 工作树含注释订正 2026-10-01T20:23:31+08:00 ==
+== 同进程夹具清单: Test.DeepBase.DataBinding, Test.DeepBase.DataBindingUnbindRefCount, Test.DeepBase.DataBindingLifetime, Test.DeepBase.MVVM ==
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+28288 lines, 1.44 seconds, 2959824 bytes code, 395096 bytes data.
+BUILD_EXIT=0
+
+== 真跑（同进程  ）==
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [A16MultiFixtureRunner.exe] - Starting Tests.
+
+..........................................................................................................................................................................
+
+Tests Found   : 85
+Tests Ignored : 0
+Tests Passed  : 85
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUNNER_STATS fixtureCount=1 testCount=85 pass=85 failure=0 error=0 ignored=0
+RUNNER_VERDICT: PASSED
+RUN_EXIT=0
+EXIT=0
