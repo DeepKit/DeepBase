@@ -1,0 +1,12 @@
+﻿R01-A5R01Verify	BUILD_EXIT=0(27061 lines, 1.67 seconds, 2917788 bytes code, 392096 bytes data. Hint=0 Warn=0)	RUN_EXIT=0	Tests Found   : 71	Tests Passed  : 71	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R02-A5R0102Baseline	BUILD_EXIT=0(26773 lines, 1.36 seconds, 2908580 bytes code, 391576 bytes data. Hint=0 Warn=0)	RUN_EXIT=0	Tests Found   : 64	Tests Passed  : 64	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R03-A5R03Verify	BUILD_EXIT=0(40776 lines, 2.06 seconds, 5954780 bytes code, 671000 bytes data. Hint=49 Warn=4)	RUN_EXIT=0	Tests Found   : 30	Tests Passed  : 30	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R03w-A5R03Wide	BUILD_EXIT=0(44836 lines, 2.42 seconds, 7796236 bytes code, 812088 bytes data. Hint=49 Warn=4)	RUN_EXIT=1	Tests Found   : 133	Tests Passed  : 129	Tests Failed  : 4	Tests Errored : 0	Tests Leaked  : 0
+R04-A5R04Verify	BUILD_EXIT=0(27795 lines, 1.38 seconds, 2873440 bytes code, 392696 bytes data. Hint=0 Warn=5)	RUN_EXIT=0	Tests Found   : 86	Tests Passed  : 83	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R04b-A5R04Broad	BUILD_EXIT=0(33135 lines, 1.83 seconds, 3823040 bytes code, 483000 bytes data. Hint=5 Warn=5)	RUN_EXIT=0	Tests Found   : 78	Tests Passed  : 75	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R05-A5R05Verify	BUILD_EXIT=0(57436 lines, 2.45 seconds, 4123880 bytes code, 505032 bytes data. Hint=12 Warn=0)	RUN_EXIT=0	Tests Found   : 54	Tests Passed  : 54	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R05b-A5R05Broad	BUILD_EXIT=0(68413 lines, 3.55 seconds, 4764912 bytes code, 560048 bytes data. Hint=13 Warn=0)	RUN_EXIT=0	Tests Found   : 69	Tests Passed  : 69	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R06-A5R06Verify	BUILD_EXIT=0(31926 lines, 2.50 seconds, 4062540 bytes code, 500760 bytes data. Hint=4 Warn=0)	RUN_EXIT=0	Tests Found   : 43	Tests Passed  : 43	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R07-A5R07Export	BUILD_EXIT=0(25640 lines, 1.41 seconds, 2966444 bytes code, 410352 bytes data. Hint=0 Warn=0)	RUN_EXIT=0	Tests Found   : 24	Tests Passed  : 24	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R08-A5R08Docx	BUILD_EXIT=0(25550 lines, 1.36 seconds, 2948364 bytes code, 408520 bytes data. Hint=0 Warn=0)	RUN_EXIT=0	Tests Found   : 24	Tests Passed  : 24	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
+R09-A5R09Verify	BUILD_EXIT=0(43899 lines, 2.00 seconds, 3710908 bytes code, 465576 bytes data. Hint=9 Warn=0)	RUN_EXIT=0	Tests Found   : 78	Tests Passed  : 78	Tests Failed  : 0	Tests Errored : 0	Tests Leaked  : 0
