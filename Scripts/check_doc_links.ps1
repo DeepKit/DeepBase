@@ -33,9 +33,15 @@ $candidates = New-Object System.Collections.Generic.List[object]
 $missing = @()
 foreach ($candidateInfo in ($candidates | Sort-Object Link,Base -Unique)) {
     $candidate = $candidateInfo.Link
+    # Windows filename-illegal characters: the table had < > * : { } but not | or ".
+    # Markdown table/link escaping (`dpr`\|`.dproj`, [x](a\|b)) feeds | into a
+    # candidate, which then reaches GetFullPath and throws ArgumentException,
+    # aborting the whole script so the document gets zero link checking.
+    # (WO-20261001-MC-MC1 item 2)
     if ($candidate.Contains("<") -or $candidate.Contains(">") -or
         $candidate.Contains("*") -or $candidate.Contains(":") -or
-        $candidate.Contains("{") -or $candidate.Contains("}")) {
+        $candidate.Contains("{") -or $candidate.Contains("}") -or
+        $candidate.Contains("|") -or $candidate.Contains('"')) {
         continue
     }
 
@@ -46,7 +52,15 @@ foreach ($candidateInfo in ($candidates | Sort-Object Link,Base -Unique)) {
 
     $normalized = $candidate.Replace('\', [string][IO.Path]::DirectorySeparatorChar)
     $basePath = $candidateInfo.Base
-    $fullPath = [IO.Path]::GetFullPath((Join-Path $basePath $normalized))
+    try {
+        $fullPath = [IO.Path]::GetFullPath((Join-Path $basePath $normalized))
+    } catch {
+        # Forms outside the list above (control characters, ...) must not abort the
+        # whole script either: record as a broken reference so the exit code matches
+        # the facts.
+        $missing += $candidate
+        continue
+    }
     if (-not $fullPath.StartsWith($repoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
         continue
     }

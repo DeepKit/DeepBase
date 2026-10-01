@@ -1,0 +1,26 @@
+WO-20261001-MC-MC1 项2 · 负样本②：含中文路径的文档 ⇒ 不崩，且修前修后结论逐字一致
+主控 2026-10-01 亲跑 · Scripts/check_doc_links.ps1
+==============================================
+
+探针 .tmp/mc1-item2/probe2-nonascii.md：一个存在的中文路径（正对照）+ 两个不存在的中文路径。
+
+---------- [修前] prefix-probe2-nonascii.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe2-nonascii.md
+EXIT: 1
+----
+Broken document references in .tmp/mc1-item2/probe2-nonascii.md:
+  文档/不存在的文件.md
+  文档/不存在的文件2.md
+
+---------- [修后] postfix-probe2-nonascii.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe2-nonascii.md
+EXIT: 1
+----
+Broken document references in .tmp/mc1-item2/probe2-nonascii.md:
+  文档/不存在的文件.md
+  文档/不存在的文件2.md
+
+
+判读：修前与修后输出逐字相同 ⇒ 本机非 ASCII 路径本来就不崩（工单签发时把非 ASCII 与管道符并列为两类
+崩溃触发形，实测只管道符一类会崩；此差异已如实登记于工单 §九）。
+另：正对照 .claude/workorder-HB-交付报告纠偏-20260830.md 未出现在断链清单 ⇒ 中文路径的 Test-Path 判定正常。

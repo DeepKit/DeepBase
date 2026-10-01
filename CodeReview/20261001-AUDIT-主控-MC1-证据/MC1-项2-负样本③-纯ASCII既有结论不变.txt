@@ -1,0 +1,41 @@
+WO-20261001-MC-MC1 项2 · 负样本③：纯 ASCII 文档 ⇒ 修前修后结论逐字一致（既有断链不许放行）
+主控 2026-10-01 亲跑 · Scripts/check_doc_links.ps1
+==============================================
+
+三个目标：仓内既有文档 B14 工单（真实存量文档）、探针 probe3（纯 ASCII + 真断链）、
+探针 probe4（全部引用可解析，正对照 EXIT=0）。
+
+---------- [修前] prefix-repo-ascii-B14.txt ----------
+TARGET(repo-relative): docs/ui/work-orders/WO-20260930-AUDIT-乙-B14-CoreAutoFix时间框架收口.md
+EXIT: 1
+----
+Broken document references in docs/ui/work-orders/WO-20260930-AUDIT-乙-B14-CoreAutoFix时间框架收口.md:
+  CodeReview/20260930-AUDIT-乙-B14-交付回执.md
+
+---------- [修后] postfix-repo-ascii-B14.txt ----------
+TARGET(repo-relative): docs/ui/work-orders/WO-20260930-AUDIT-乙-B14-CoreAutoFix时间框架收口.md
+EXIT: 1
+----
+Broken document references in docs/ui/work-orders/WO-20260930-AUDIT-乙-B14-CoreAutoFix时间框架收口.md:
+  CodeReview/20260930-AUDIT-乙-B14-交付回执.md
+
+---------- [修前] prefix-probe3-ascii.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe3-ascii.md
+EXIT: 1
+----
+Broken document references in .tmp/mc1-item2/probe3-ascii.md:
+  docs/does-not-exist.md
+
+---------- [修后] postfix-probe3-ascii.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe3-ascii.md
+EXIT: 1
+----
+Broken document references in .tmp/mc1-item2/probe3-ascii.md:
+  docs/does-not-exist.md
+
+
+probe4（干净文档，两边都应 OK）：
+  修前 EXIT=0 -> Document references OK: .tmp/mc1-item2/probe4-clean.md
+  修后 EXIT=0 -> Document references OK: .tmp/mc1-item2/probe4-clean.md
+判读：三个纯 ASCII 目标修前/修后逐字一致 ⇒ 无既有断链被放行、无新增误报；新增的 | 与 " 过滤与 try/catch
+只作用于本来就会崩的候选，对纯 ASCII 候选零影响。

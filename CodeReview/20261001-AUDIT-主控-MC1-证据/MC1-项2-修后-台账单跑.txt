@@ -1,0 +1,41 @@
+WO-20261001-MC-MC1 项2 · 判据①：本台账单跑从「脚本中止」变「正常校验输出」
+主控 2026-10-01 亲跑 · Scripts/check_doc_links.ps1
+==============================================
+
+目标 = docs/ui/work-orders/00-主控派单总表.md（工单自述『本台账自身即中招』的那一件）。
+
+---------- [修前] prefix-ledger.txt ----------
+TARGET(repo-relative): docs/ui/work-orders/00-主控派单总表.md
+EXIT: 1
+----
+Exception calling "GetFullPath" with "1" argument(s): "Illegal characters in path."
+At D:\_Progs\02Business\DeepBase\Scripts\check_doc_links.ps1:49 char:5
++     $fullPath = [IO.Path]::GetFullPath((Join-Path $basePath $normaliz ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ArgumentException
+ 
+
+---------- [修后] postfix-ledger.txt ----------
+TARGET(repo-relative): docs/ui/work-orders/00-主控派单总表.md
+EXIT: 1
+----
+Broken document references in docs/ui/work-orders/00-主控派单总表.md:
+  .pas/.dpr/.dproj/.dpk
+  check_doc_links.ps1
+  dclDeepBaseFMX.dpk
+  DeepBaseCommerce.dpk
+  DeepBaseFMX.dpk
+  DeepBaseServices.dpk
+  DeepBaseTests.dproj
+  README-版本对比台账.md
+  README-门禁覆盖面.md
+  run_tests.ps1
+
+
+判读：修前 ArgumentException 中止；修后输出断链清单、EXIT=1。
+清单 10 条逐条核对：其中 9 条是**裸名提及**（run_tests.ps1 / check_doc_links.ps1 / DeepBaseFMX.dpk /
+DeepBaseCommerce.dpk / DeepBaseServices.dpk / dclDeepBaseFMX.dpk / DeepBaseTests.dproj /
+README-版本对比台账.md / README-门禁覆盖面.md），:28 对不含路径分隔符的内联码取 $targetDir 为基准 ⇒ 解析成
+docs/ui/work-orders/<裸名> 而判不存在；1 条（.pas/.dpr/.dproj/.dpk）是带 / 的形式。
+⇒ 这是本 checker 既有的「裸名误报」弱点（修前被崩溃掩盖、从未可见），非本项引入，已登记为后续收口项。

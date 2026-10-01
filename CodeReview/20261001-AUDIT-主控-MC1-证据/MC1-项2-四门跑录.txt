@@ -1,0 +1,23 @@
+WO-20261001-MC-MC1 项2 · 四门跑录（主工作树，含本项唯一改动 Scripts/check_doc_links.ps1）
+命令统一形：node 09_工程脚本/<门>/check_*.js --root .
+取证方式：python subprocess 直捕 stdout/stderr，只取各门自己的汇总行（证据门禁 stdout 的
+          E3 明细段会逐条印出存量已登记的双重编码违规原文，含 U+FFFD，抄进来会污染证据件，故不取）。
+
+[eol] EXIT=0
+  行尾门禁通过：检查了 1637 个文件（.pas CRLF / .md LF），跳过目录 11
+
+[encoding] EXIT=0
+  编码门禁通过：1017 个 .pas + 773 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 11）
+
+[mojibake] EXIT=0
+  丙类损坏门禁通过：扫描 1015 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+
+[evidence-encoding] EXIT=0
+  证据编码门禁通过：扫描 1157 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+
+说明：本项只改 Scripts/check_doc_links.ps1（.ps1 不在行尾/编码门禁扩展面内），新增 6 件证据件在 CodeReview/** 下、均为 UTF-8 LF 无 BOM、U+FFFD 0。
+
+[台账/工单回填后复跑（同一跑录台，新增 docs/ui/work-orders/00-主控派单总表.md 与
+ WO-20261001-MC-MC1-工程脚本与CI收口3项.md 两件 .md 文本改动后）] EXIT=0 / 0 / 0 / 0
+  读数与回填前逐字一致：eol 1637 / encoding 1017+773 / mojibake 1015（丙-B 0）/ evidence 1157（E3=240）
+  回填文本不含任何 U+FFFD（两件 .md 均为 UTF-8 LF 无 BOM，Fffd=0）。

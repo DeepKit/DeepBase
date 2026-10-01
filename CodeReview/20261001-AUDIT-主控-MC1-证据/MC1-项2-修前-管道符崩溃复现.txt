@@ -1,0 +1,37 @@
+WO-20261001-MC-MC1 项2 · 修前复现：管道符候选致 GetFullPath ArgumentException，整脚本中止
+主控 2026-10-01 亲跑 · Scripts/check_doc_links.ps1
+==============================================
+
+判据①基线 + 负样本①修前态。命令形：
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; & './Scripts/check_doc_links.ps1' -Path '<repo-relative>'; exit $LASTEXITCODE"
+（cwd = 仓根；-Path 必须仓内相对路径：Join-Path 对绝对路径是直接拼接，见下）
+
+---------- [修前] prefix-probe1-pipe.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe1-pipe.md
+EXIT: 1
+----
+使用“1”个参数调用“GetFullPath”时发生异常:“路径中具有非法字符。”
+所在位置 D:\_Progs\02Business\DeepBase\Scripts\check_doc_links.ps1:49 字符: 5
++     $fullPath = [IO.Path]::GetFullPath((Join-Path $basePath $normaliz ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ArgumentException
+ 
+
+---------- [修前] prefix-ledger.txt ----------
+TARGET(repo-relative): docs/ui/work-orders/00-主控派单总表.md
+EXIT: 1
+----
+Exception calling "GetFullPath" with "1" argument(s): "Illegal characters in path."
+At D:\_Progs\02Business\DeepBase\Scripts\check_doc_links.ps1:49 char:5
++     $fullPath = [IO.Path]::GetFullPath((Join-Path $basePath $normaliz ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ArgumentException
+ 
+
+
+结论：两个目标同样抛 ArgumentException（本地化为「路径中具有非法字符」），脚本在 :49 GetFullPath 处中止，
+既没有断链清单也没有 Document references OK ⇒ 该文档零链接校验。
+附带发现（登记）：-Path 传绝对路径不生效——:8 的 Join-Path $repoRoot $Path 对绝对子路径是字符串拼接，
+结果为『仓根\D:\...』，:10 Test-Path 判假 ⇒ 报 Markdown file not found。故探针文档必须放仓内（本批用 .tmp/，已被 gitignore）。

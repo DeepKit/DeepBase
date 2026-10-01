@@ -1,0 +1,68 @@
+WO-20261001-MC-MC1 项2 · 修法过程中的二次断裂与根因：.ps1 无 BOM + Windows PowerShell 5.1 ANSI 解码
+主控 2026-10-01 亲跑
+==============================================
+
+一、发生了什么
+
+项2 首版修法把三行中文注释写进 Scripts/check_doc_links.ps1，结果脚本**从"崩在运行期"变成"连解析都过不去"**。
+首版（已回退、未提交）的 AST 报错原件：
+
+  ERR L34 col75: 语句块或类型定义中缺少右"}"。（foreach 行）
+  ERR L41 col62: 表达式或语句中包含意外的标记")"。
+  ERR L71 col1:  表达式或语句中包含意外的标记"}"。
+
+改为 ASCII 注释后同命令复跑（本证据件即在此状态下采集）：
+
+  AST PARSE OK
+
+二、根因（坐实，可复算）
+
+Scripts/check_doc_links.ps1 是 **UTF-8 无 BOM**。Windows PowerShell 5.1（CLR 4.0 / .NET Framework）
+对无 BOM 的 .ps1 用**系统 ANSI 代码页**（本机 CP936/GBK）解码，于是中文注释的 UTF-8 字节被错误配对成
+GBK 双字节字符；误配后果不只是"注释变乱码"——**行尾换行被吞掉、注释与下一行代码粘成一行**。
+下为 Get-Content -Raw（无 BOM 即按 ANSI）读到的前若干行，`[...]` 是一个数组元素（即"一行"）：
+
+AST PARSE OK
+--- Get-Content -Raw (BOM-less => ANSI/CP936) view of the first lines ---
+[param(]
+[    [string]$Path = "ARCH-QUICKSTART.md"]
+[)]
+[]
+[$ErrorActionPreference = "Stop"]
+[]
+[$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path]
+[$target = Join-Path $repoRoot $Path]
+[]
+[if (-not (Test-Path -LiteralPath $target)) {]
+[    Write-Error "Markdown file not found: $Path"]
+[}]
+--- length: ANSI-decoded=3033 vs UTF8-decoded=3033 ---
+
+注意其中的注释行与下一行 `    if ($candidate.Contains("<")...` **落在同一个 [...] 元素里**（两者之间的
+换行已被吞）。PowerShell 解析器从此处花括号配平失败，从而产生上述三条 ERR。
+
+三、逐行二分（定位到具体那一行注释）
+
+对首版文件做"删单行"二分：
+  drop-L36 -> FAIL     only-L36 -> PARSE OK
+  drop-L37 -> FAIL     only-L37 -> PARSE OK
+  drop-L38 -> PARSE OK only-L38 -> FAIL
+=> L38（首版 `# ArgumentException 使整脚本中止、该文档零链接校验（WO-20261001-MC-MC1 项2）。`）是唯一触发行。
+
+再对 L38 内容二分：
+  去掉（WO-...项2）段          -> FAIL
+  只留 ASCII（去掉全部中文）    -> PARSE OK
+  去顿号 / 去全角括号 / 去句号  -> 全部 FAIL
+=> 触发物是**该行具体的中文字节序列**，与 ASCII 内容无关；换成 ASCII 注释即恢复。
+
+四、修法处置（落笔）
+
+把本项新增的两段注释改为 **ASCII 英文**，不动文件编码、不加 BOM。
+理由：仓内 23 个含中文的 .ps1 **全部无 BOM**（含 Scripts/run_tests.ps1 的 493 个中文字符——MC1 项1
+全量跑 45 分钟正常），加 BOM 属改动文件编码约定且 diff 会变整文件重写，超出"修法最小化"。
+
+五、结论与登记（超出本项，须另行收口）
+
+这不是本项的 bug，是**仓级潜在断裂面**：任何向 .ps1 追加中文注释的行为都可能随机踩中"换行被吞"。
+本次首版修法实测踩中，被 fail-closed 判据当场拦下（AST PARSE 失败即不予提交），未流入交付。
+已登记为后续收口项：给 .ps1 补 UTF-8 BOM，或加 lint 禁 .ps1 内非 ASCII。本项只处置自己引入的注释。

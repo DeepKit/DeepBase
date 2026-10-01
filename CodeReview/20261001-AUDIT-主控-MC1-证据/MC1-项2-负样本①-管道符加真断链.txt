@@ -1,0 +1,31 @@
+WO-20261001-MC-MC1 项2 · 负样本①：含管道符形态的文档 ⇒ 不崩且真断链照报
+主控 2026-10-01 亲跑 · Scripts/check_doc_links.ps1
+==============================================
+
+探针 .tmp/mc1-item2/probe1-pipe.md 含三种管道符触发形（表格转义 `dpr`\|`.dproj`、
+长表格转义、markdown 链接转义 [ref](Tests/DeepBaseTests.dpr\|.dproj)）+ 一个正对照引用 + 两个真断链。
+
+---------- [修前] prefix-probe1-pipe.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe1-pipe.md
+EXIT: 1
+----
+使用“1”个参数调用“GetFullPath”时发生异常:“路径中具有非法字符。”
+所在位置 D:\_Progs\02Business\DeepBase\Scripts\check_doc_links.ps1:49 字符: 5
++     $fullPath = [IO.Path]::GetFullPath((Join-Path $basePath $normaliz ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ArgumentException
+ 
+
+---------- [修后] postfix-probe1-pipe.txt ----------
+TARGET(repo-relative): .tmp/mc1-item2/probe1-pipe.md
+EXIT: 1
+----
+Broken document references in .tmp/mc1-item2/probe1-pipe.md:
+  Core/DeepBase.NoSuchUnit.pas
+  docs/does-not-exist.md
+
+
+判读：
+  修前 = 崩（零校验）；修后 = 不崩，且两个真断链（Core/DeepBase.NoSuchUnit.pas、docs/does-not-exist.md）被报出，
+  正对照 Scripts/check_doc_links.ps1 未出现在断链清单 ⇒ 脚本没有整篇放行，也没有把管道符形态误报成断链。EXIT=1 与断链事实一致。
