@@ -1,0 +1,9 @@
+claim        : AMD Ryzen 7 3700X 8C/16T, 63.95 GB, 无独立加速卡; MXFP4(4 bit 半字节 + 每 32 元素 1 个 E8M0 标度); 4608x7168 单专家 = 33,030,144 参数; 3 组重复, 单线程离散度 7.3%
+hardware     : declared
+quant/format : declared
+model shape  : declared
+repetitions  : 3
+spread       : 7.3%
+
+VERDICT: REPRODUCIBLE
+  判据：三态取「可复算」。引用时必须把上面 6 个字段一起带上，否则接收方无法复跑。

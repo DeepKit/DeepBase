@@ -1,0 +1,17 @@
+claim        : 15~35 tok/s（讨论包 §4.1 场景 A：2B~16B 端侧 MoE，1.5 GB 内存预算）
+hardware     : MISSING
+quant/format : MISSING
+model shape  : MISSING
+repetitions  : 0
+spread       : MISSING
+
+VERDICT: NOT-REPRODUCIBLE
+  缺 5 项：
+    - 硬件基线（CPU 型号 / 核数 / 内存 / 加速卡）
+    - 量化与打包格式（位宽 + 标度分组粒度）
+    - 模型形状（参数量或矩阵维度）
+    - 重复次数（0 次；上游纪律要求 >= 3 次，单次读数不是判据）
+    - 组间离散度（未声明，无法判断该差异是否超过噪声底）
+
+  这不是「大致可信」的问题，是这个数字在当前形态下不可被第三方复跑或反驳，
+  因此不得作为工单判据、WP 验收标准或对老板汇报里的性能依据。

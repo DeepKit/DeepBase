@@ -1,0 +1,25 @@
+#step	formula	value	upstream_claim	verdict
+shape	4608 * 7168	33030144	33,030,144 参数/专家	MATCH-零残差
+pack	33,030,144 * 17/32	17547264	17,547,264 字节/专家	MATCH-零残差
+pack_rate	4 bit + 8/32 bit = 4.25 bit = 0.53125 B/权重	0.53125	0.53125 字节每权重	MATCH-零残差
+experts_count	92 路由层 * 896 专家/层	82432	（896 per layer, top-16, 92 layers route）	自洽
+experts_bytes	82,432 * 17,547,264 = 1446456066048 B = 1.4465 TB(1e12)	1.4465	Routed experts 1.45 TB	MATCH（四舍五入到 2 位小数）
+experts_params	82,432 * 33,030,144 = 2.7227 T	2.7227	—	自洽
+trunk_params	108.81 GB / 2 B (bf16) = 54.405 B	54.405	—	自洽
+total_params	2.7227 T + 0.0544 T	2.7771	Parameters 2.78T	MATCH-舍入
+checkpoint	1.4465 TB + 0.10881 TB + 0.0047 TB	1.56	1.56 TB checkpoint on disk	MATCH-舍入
+active_experts	92 * 16	1472	1,472 of them	MATCH-零残差
+active_params	1,472 * 33,030,144 + 54.4 B = 103.0254 B	103.0254	~104B active/token	MATCH-舍入
+read_per_token	1,472 * 17,547,264 = 25829572608 B = 25.8296 GB(1e9)	25.83 GB/token（gb_read 列）	MATCH-零残差
+expert_pack_share	2.7227T / 2.78T	97.94%	—	97.94% 的参数出厂即 MXFP4
+expert_gmac_per_token	1,472 * 33,030,144 = 48.6204 GMAC/token	—	48.62（专家部分，不含 trunk）
+pack_ratio_bf16	1 - 4.25/16	73.4375%	讨论包 §2.3「内存占用降低 75% 以上」	BELOW-75%（对 bf16 基准）
+pack_ratio_fp32	1 - 4.25/32	86.7188%	同上	ABOVE-75%（对 fp32 基准）
+measured_expand	33,030,144 * 4 B / 17,547,264	7.5294	本方实测（run-bench.tsv）	7.5294
+ladder_8gb_vs_64gb	32.69 -> 28.60 s/token（8 倍内存）	1.143x 提速	—	1.143x
+this_machine_st_median	1,472 * 112.722 ms(3 组中位) = 165.9268 s/token	上游全模型最好实测 19.21 s/token	8.64x SLOWER
+this_machine_nt_median	1,472 * 16.383 ms(3 组中位) = 24.1158 s/token	同上	1.26x SLOWER
+this_machine_nt_best	1,472 * 13.597 ms(3 组最佳) = 20.0148 s/token	同上	1.04x SLOWER（报最佳仅为对照，纪律要求报中位）
+core_ratio	本机 8 物理核 vs 上游 62 物理核(124 线程)	1 : 7.75	—	本机核数是上游的 1/7.75
+mem_lower_bound	16.73 MiB * 1,472 = 24.0557 GiB 活跃权重/token	本机 63.95 GB	trunk 108.81 GB 装不下 => 必须流式
+bw_lower_bound	25.83 GB / 3.2 GB/s	8.07 s/token	19.21 s/token	—（乐观下界，假设活跃权重全命中缓存）

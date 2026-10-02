@@ -1,0 +1,35 @@
+#key	value
+cpu_model	AMD Ryzen 7 3700X 8-Core Processor             
+physical_cores	8
+logical_threads	16
+max_clock_mhz	3600
+ram_total_gb	63.95
+os	Microsoft Windows 11 IoT 企业版 LTSC 10.0.26100
+ps_version	7.6.5
+gemm_shape_out	4608
+gemm_shape_in	7168
+gemm_weights	33030144
+bytes_per_weight	0.53125
+packed_bytes	17547264
+upstream_packed_bytes	17547264
+warmup_iters	3
+measured_iters	10
+single_thread_ms	112.722
+all_threads_ms	16.3826
+all_thread_speedup	6.8806
+single_thread_spread_pct	7.26
+all_threads_spread_pct	14.61
+experts_per_token	1472
+expert_layer_lower_bound_tok_s_1t	0.0052
+expert_layer_lower_bound_tok_s_nt	0.0314
+theoretical_pack_ratio_vs_bf16_pct	73.44
+theoretical_pack_ratio_vs_fp32_pct	86.72
+measured_float_expand_bytes	132120576
+measured_expand_over_packed_ratio	7.5294
+rss_after_pack_bytes	185446400
+rss_after_expand_bytes	321175552
+process_peak_working_set_bytes	332382208
+gc_heap_before_bytes	16339768
+gc_heap_after_expand_bytes	165880024
+checksum_single	1775.352
+checksum_allthreads	1775.352
