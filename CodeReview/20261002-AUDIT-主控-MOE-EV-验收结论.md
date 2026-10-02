@@ -142,10 +142,10 @@ EXIT=1
 | 交付件 | eol/encoding 面 | evidence-encoding 面 |
 |---|---|---|
 | `CodeReview/20261002-AUDIT-主控-MOE-EV-验收结论.md`（本件） | ✅ 在 815 扩展面内 | ✅ 在 1245 内（1244→**1245** 即本件） |
-| `WO-20261002-MC-甲-MOEEV-FIX-结论件三处可复算性订正.md` | ✅ | —（`docs/**` 不在该门扫描面） |
-| `WO-20261002-MC-主控-GATESELF-门禁读数必须覆盖自身交付件.md` | ✅ | — |
-| `WO-20261002-MC-主控-MOE-DP-MoE五决策点拍板.md` | ✅ | — |
-| `WO-20261002-MC-主控-CI-CI集成runner三选一拍板.md` | ✅ | — |
+| `docs/ui/work-orders/WO-20261002-MC-甲-MOEEV-FIX-结论件三处可复算性订正.md` | ✅ | —（`docs/**` 不在该门扫描面） |
+| `docs/ui/work-orders/WO-20261002-MC-主控-GATESELF-门禁读数必须覆盖自身交付件.md` | ✅ | — |
+| `docs/ui/work-orders/WO-20261002-MC-主控-MOE-DP-MoE五决策点拍板.md` | ✅ | — |
+| `docs/ui/work-orders/WO-20261002-MC-主控-CI-CI集成runner三选一拍板.md` | ✅ | — |
 | `docs/ui/work-orders/00-主控派单总表.md` | ✅ | — |
 
 ⇒ eol 1676→1679、encoding 812→815、evidence-encoding 1244→1245，三个增量**全部是本批新入库的交付件**，即读数确实覆盖自身。
@@ -161,8 +161,14 @@ EXIT=1
 形态是 `Scripts/check_doc_links.ps1:28` 的裸名误报——反引号内容不含 `/` 或 `\` 时按被检文档
 所在目录解析，故仓根文件名裸写必误报。已归 `WO-20261001-MC-主控-DOCLINKS`（P2）。
 
-**本批自纠一条**：派单总表 bullet 里裸写的 `` `check-claim-reproducible.ps1` `` 正是这个形态，
-是我**新引入**的第 11 条，已补全为 `docs/moe-ev-bench/check-claim-reproducible.ps1`（含 `/` ⇒ 按仓根解析）。
+**本批自纠一条**：派单总表 bullet 里把仓根下的复算脚本**裸写成文件名**（反引号内容不含分隔符），
+正是这个形态，是我**新引入**的第 11 条。裸写形态与订正后形态对比如下（用代码块而非行内反引号，
+否则订正说明本身又会制造同一条断链）：
+
+```
+裸写（误报）        check-claim-reproducible.ps1
+订正后（按仓根解析）docs/moe-ev-bench/check-claim-reproducible.ps1
+```
 
 ---
 
