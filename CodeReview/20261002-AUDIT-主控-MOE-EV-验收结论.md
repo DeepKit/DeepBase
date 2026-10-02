@@ -127,15 +127,42 @@ EXIT=1
 
 ### 3.4 四门 + contract-gate 在当前 HEAD 的独立复跑
 
+**跑门时口径：全部交付件已先 `git add` 并提交，再跑门**（即 F4 订正后的口径，读数覆盖本件自身）。
+
 | 门 | EXIT | 末行 |
 |---|---|---|
-| eol-gate | **0** | 行尾门禁通过：检查了 **1676** 个文件（.pas CRLF / .md LF），跳过目录 11 |
-| encoding-gate | **0** | 编码门禁通过：**1017** 个 .pas + **812** 个扩展面文件 |
+| eol-gate | **0** | 行尾门禁通过：检查了 **1679** 个文件（.pas CRLF / .md LF），跳过目录 11 |
+| encoding-gate | **0** | 编码门禁通过：**1017** 个 .pas + **815** 个扩展面文件 |
 | mojibake-gate | **0** | 丙类损坏门禁通过：扫描 **1015** 个 .pas，丙-B 命中 0 处 |
-| evidence-encoding-gate | **0** | 证据编码门禁通过：扫描 **1244** 个 CodeReview 证据文件，E3 命中 240 行全在存量 21 件封顶内 |
+| evidence-encoding-gate | **0** | 证据编码门禁通过：扫描 **1245** 个 CodeReview 证据文件，E3 命中 240 行全在存量 21 件封顶内 |
 | contract-gate | **1** | 存量红（`DeepBase.Licensing` 2 处 + `DeepBase.DataBinding` 未入基线），已归 `WO-20261002-MC-主控-CONTRACTGATE-RED`，**非本单引入** |
 
-**读数不含自身交付件**这件事在甲与主控两边都发生了，见发现 F4。
+**自证覆盖**（`git ls-files` 口径，六件全部 `tracked=True`）：
+
+| 交付件 | eol/encoding 面 | evidence-encoding 面 |
+|---|---|---|
+| `CodeReview/20261002-AUDIT-主控-MOE-EV-验收结论.md`（本件） | ✅ 在 815 扩展面内 | ✅ 在 1245 内（1244→**1245** 即本件） |
+| `WO-20261002-MC-甲-MOEEV-FIX-结论件三处可复算性订正.md` | ✅ | —（`docs/**` 不在该门扫描面） |
+| `WO-20261002-MC-主控-GATESELF-门禁读数必须覆盖自身交付件.md` | ✅ | — |
+| `WO-20261002-MC-主控-MOE-DP-MoE五决策点拍板.md` | ✅ | — |
+| `WO-20261002-MC-主控-CI-CI集成runner三选一拍板.md` | ✅ | — |
+| `docs/ui/work-orders/00-主控派单总表.md` | ✅ | — |
+
+⇒ eol 1676→1679、encoding 812→815、evidence-encoding 1244→1245，三个增量**全部是本批新入库的交付件**，即读数确实覆盖自身。
+
+**读数不含自身交付件**这件事在甲与主控两边都发生了，见发现 F4；本次按订正后口径重跑，已覆盖。
+
+### 3.5 doc-links 复跑（只认 `-Path`）
+
+`Scripts/check_doc_links.ps1 -Path <doc>` 逐件跑本批六件：**5 件 `EXIT=0`**（含本件）；
+`docs/ui/work-orders/00-主控派单总表.md` `EXIT=1`，报 10 条断链。
+
+**全部 10 条为存量**（与本次改动前 `de13d6c^` 同版本逐条比对，`NEW-only = 0`），
+形态是 `Scripts/check_doc_links.ps1:28` 的裸名误报——反引号内容不含 `/` 或 `\` 时按被检文档
+所在目录解析，故仓根文件名裸写必误报。已归 `WO-20261001-MC-主控-DOCLINKS`（P2）。
+
+**本批自纠一条**：派单总表 bullet 里裸写的 `` `check-claim-reproducible.ps1` `` 正是这个形态，
+是我**新引入**的第 11 条，已补全为 `docs/moe-ev-bench/check-claim-reproducible.ps1`（含 `/` ⇒ 按仓根解析）。
 
 ---
 
