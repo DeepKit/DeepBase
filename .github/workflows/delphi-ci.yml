@@ -3,7 +3,7 @@
 #
 # Runner requirements:
 #   - Label: delphi-windows
-#   - Delphi path: C:\Program Files (x86)\Embarcadero\Studio\23.0
+#   - Delphi path: D:\Program Files (x86)\Embarcadero\Studio\37.0
 #   - FireDAC SQLite units installed
 #   - sqlite3.dll available from Delphi bin, repo root, Tests, or a configured host path
 
@@ -29,8 +29,8 @@ on:
         type: boolean
 
 env:
-  DELPHI_VERSION: '23.0'
-  DELPHI_PATH: 'C:\Program Files (x86)\Embarcadero\Studio\23.0'
+  DELPHI_VERSION: '37.0'
+  DELPHI_PATH: 'D:\Program Files (x86)\Embarcadero\Studio\37.0'
   TEST_PLATFORM: Win64
 
 jobs:
