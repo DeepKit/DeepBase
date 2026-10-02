@@ -37,36 +37,64 @@
 CI 工单第一版五门读数正是这样把红读成 0 的。
 ⇒ 门禁退出码一律**子进程 `returncode` 直取**（Python `subprocess.run(...).returncode`，或 pwsh `$LASTEXITCODE` **且不经管道**）。
 
+## 三、再补一条（F5 订正后新增）：四道门的枚举口径并不相同，读数不能互相对齐
+
+主控在读验收结论 F5 时原本写「甲四门的其余计数同样是其**父提交态**读数」，亲读四道门的源码后
+发现这句对半数门是过头断言：
+
+| 门 | 枚举方式（已亲读源码坐实） | 口径 | 可否从 git 复算 |
+|---|---|---|---|
+| `eol-gate/check_eol.js:41-61` | `walk(ROOT)` 磁盘遍历 + `gate-skip.js` 12 目录名 | **磁盘** | ❌ 含未跟踪与未被 SKIP 的忽略文件 |
+| `encoding-gate/check_pas_encoding.js:55-91` | `walk(ROOT)` 磁盘遍历，同一 SKIP 集 | **磁盘** | ❌ 同上 |
+| `mojibake-gate/check_mojibake.js:64` | `git ls-files -z -- '*.pas'` | **git** | ✅ |
+| `evidence-encoding-gate/check_evidence_encoding.js:161-192` | `git ls-files -z -- CodeReview`（默认）；`--all-worktree` 才走磁盘 | **git** | ✅ |
+
+**磁盘口径的正对照（已做）**：用同一套 12 目录 SKIP 集在磁盘上数 `.pas`+`.md` 得 **1679**，
+与门禁自报 HEAD 的 1679 完全吻合，「跳过目录 11」也吻合 ⇒ 口径判定无误。
+
+**这直接改变 F5 的判法**：主控逐个提交实测，甲的 evidence-encoding 读数 **1235 恰等于 `e995538` 态**
+（= `1c2bfd4` 的实际父提交，甲末笔 `25047c6` 态是 1243，甲自称的开工 HEAD `5804050` 态反而是 1234）
+⇒ git 口径那道门可以**精确坐实**「读数取自父提交态」；而 eol 1675 / 扩展面 811 是**甲本机磁盘态**读数，
+**不可与任何提交对齐**，把它们叫「父提交态读数」是错的。
+
+⇒ **本单要立的第三条规矩**：回执/结论件报门禁读数时，**必须逐门声明它是磁盘态还是 git 态**；
+git 态的须写到**具体提交号**（主控用 `git ls-tree -r <c> -- <path>` 复算），
+磁盘态的可复算性要求降级为「声明是本机磁盘态、不声称与任何提交对齐」。
+
 ---
 
-## 三、任务（主控自办）
+## 四、任务（主控自办）
 
 | # | 任务 | 判据 |
 |---|---|---|
-| 1 | 把本节两条口径写进派单总表的「验收纪律」段，供后续所有单沿用 | 台账有该段，且措辞含「跑门前先 git add / 或 --all-worktree」与「退出码 returncode 直取」 |
+| 1 | 把本节三条口径写进派单总表的「验收纪律」段，供后续所有单沿用 | 台账有该段，且措辞含「跑门前先 git add / 或 --all-worktree」「退出码 returncode 直取」「逐门声明磁盘态/git 态」 |
 | 2 | 复核在途各单的回执：凡门禁读数未声明「已覆盖自身交付件」的，在验收结论里点名并要求补跑 | 逐单有记录；至少复核 `WO-20261002-MC-甲-MOEEV-FIX` 判据 6 是否落地 |
 | 3 | 自家话：本工单自身的门禁读数按上述口径跑（先 `git add` 再跑） | 回执里 evidence-encoding 的扫描件数 = 加本单后的 `git ls-files CodeReview` 数 |
+| 4 | 把「逐门声明磁盘态/git 态」补进 `WO-20261002-MC-甲-MOEEV-FIX` 的判据表 | 该单判据表有一条要求回执逐门写口径，且 git 态写到提交号 |
 
 ---
 
-## 四、验收判据
+## 五、验收判据
 
 | # | 判据 | 达成标准 |
 |---|---|---|
-| 1 | 台账纪律段已写入 | 主控亲核 `docs/ui/work-orders/00-主控派单总表.md` 含两条口径原文 |
+| 1 | 台账纪律段已写入 | 主控亲核 `docs/ui/work-orders/00-主控派单总表.md` 含三条口径原文 |
 | 2 | 在途单复核有记录 | 逐单列出「读数是否覆盖自身交付件」 |
 | 3 | 本单自身读数合规 | 先 `git add` 再跑四门，evidence-encoding 扫描件数与 `git ls-files CodeReview \| wc -l` **相等** |
-| 4 | 四门 | eol / encoding / mojibake / evidence-encoding 全 `EXIT=0`；contract-gate 单列（存量红归 `WO-20261002-MC-主控-CONTRACTGATE-RED`） |
-| 5 | 纪律 | 一笔 H15，显式 pathspec，未 push，零 `.pas`/`.dpr`/`.dpk` |
+| 4 | 门口径表已落到 MOEEV-FIX | 该单 §〇 有四道门枚举方式表，且判据表有对应一条 |
+| 5 | 四门 | eol / encoding / mojibake / evidence-encoding 全 `EXIT=0`；contract-gate 单列（存量红归 `WO-20261002-MC-主控-CONTRACTGATE-RED`） |
+| 6 | 纪律 | 一笔 H15，显式 pathspec，未 push，零 `.pas`/`.dpr`/`.dpk` |
 
 ---
 
-## 五、不在本单
+## 六、不在本单
 
 - 修改 `09_工程脚本/**` 任何门禁的**默认扫描口径**（改默认为工作树枚举会影响 CI 与所有本地调用方，属禁动区，另议）。
-- 甲 MOE-EV 结论件的三处订正 —— 归 `WO-20261002-MC-甲-MOEEV-FIX`。
+- 甲 MOE-EV 结论件的五处订正 —— 归 `WO-20261002-MC-甲-MOEEV-FIX`。
+- 让 eol/encoding 两道门也改成 git 口径（那是让「磁盘态」不可见，反而更糟；要做的是**声明**，不是统一）。
 - contract-gate 存量红 —— 归 `WO-20261002-MC-主控-CONTRACTGATE-RED`。
 
 ---
 
 *主控自办 · 2026-10-02 · P2 · 流程纪律单 · 零生产代码*
+*修订 1（2026-10-02）：新增 §三「四道门枚举口径并不相同」，任务 3 条 → 4 条，判据 5 条 → 6 条*
