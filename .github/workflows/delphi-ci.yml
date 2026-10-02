@@ -6,6 +6,9 @@
 #   - Delphi path: D:\Program Files (x86)\Embarcadero\Studio\37.0
 #   - FireDAC SQLite units installed
 #   - sqlite3.dll available from Delphi bin, repo root, Tests, or a configured host path
+#   - pwsh on PATH (D:\Program Files\PowerShell\7): every step uses `shell: pwsh` because
+#     Windows PowerShell 5.1 decodes the runner's UTF-8-no-BOM step scripts as CP936,
+#     which corrupts paths like 09_工程脚本 into 09_宸ョ▼鑴氭湰 and cannot be recovered
 
 name: Delphi CI
 
@@ -40,7 +43,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - name: Checkout
@@ -105,7 +108,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - name: Checkout
@@ -131,7 +134,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - name: Checkout
@@ -155,7 +158,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - name: Checkout
@@ -188,7 +191,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - name: Checkout
@@ -213,7 +216,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     env:
       DEEPBASE_RUN_DB_INTEGRATION: '1'
@@ -240,7 +243,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - name: Checkout
