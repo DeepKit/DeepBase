@@ -349,6 +349,13 @@ uses
   Test.Regression.BUG035_InsecureRandom in 'Regression\Test.Regression.BUG035_InsecureRandom.pas',
   Test.Regression.BUG037_KeyDerivation in 'Regression\Test.Regression.BUG037_KeyDerivation.pas',
   Test.Regression.BUG058_XOREncryption in 'Regression\Test.Regression.BUG058_XOREncryption.pas',
+  // WO-20261003-MC-甲-ORPHANREG batch2: security posture + in-flight gate (6)
+  Test.Regression.A8_InFlightUnloadGate in 'Regression\Test.Regression.A8_InFlightUnloadGate.pas',
+  Test.Regression.BUG062_PluginSandbox in 'Regression\Test.Regression.BUG062_PluginSandbox.pas',
+  Test.Regression.BUG063_PluginConfigBypass in 'Regression\Test.Regression.BUG063_PluginConfigBypass.pas',
+  Test.Regression.BUG066_PathTraversal in 'Regression\Test.Regression.BUG066_PathTraversal.pas',
+  Test.Regression.BUG070_LogInjection in 'Regression\Test.Regression.BUG070_LogInjection.pas',
+  Test.Regression.BUG073_EventTypeInjection in 'Regression\Test.Regression.BUG073_EventTypeInjection.pas',
   // REVIEW5-GOV-007: DeepFlow production source code and tests
   DeepFlow.Message in '..\DeepFlow\Source\Core\DeepFlow.Message.pas',
   DeepFlow.Role in '..\DeepFlow\Source\Core\DeepFlow.Role.pas',
