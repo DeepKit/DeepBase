@@ -342,6 +342,13 @@ uses
   Test.Regression.BUG345_PoolReleaseInvalidate in 'Regression\Test.Regression.BUG345_PoolReleaseInvalidate.pas',
   Test.Regression.BUG346_JobQueueConcurrentDequeue in 'Regression\Test.Regression.BUG346_JobQueueConcurrentDequeue.pas',
   Test.Regression.BUG347_DoQryConnectionSerialize in 'Regression\Test.Regression.BUG347_DoQryConnectionSerialize.pas',
+  // WO-20261003-MC-甲-ORPHANREG batch1: signature + crypto primitives (6)
+  Test.Regression.BUG013_RSASignature in 'Regression\Test.Regression.BUG013_RSASignature.pas',
+  Test.Regression.BUG014_WeChatPaySignature in 'Regression\Test.Regression.BUG014_WeChatPaySignature.pas',
+  Test.Regression.BUG033_WeakEncryption in 'Regression\Test.Regression.BUG033_WeakEncryption.pas',
+  Test.Regression.BUG035_InsecureRandom in 'Regression\Test.Regression.BUG035_InsecureRandom.pas',
+  Test.Regression.BUG037_KeyDerivation in 'Regression\Test.Regression.BUG037_KeyDerivation.pas',
+  Test.Regression.BUG058_XOREncryption in 'Regression\Test.Regression.BUG058_XOREncryption.pas',
   // REVIEW5-GOV-007: DeepFlow production source code and tests
   DeepFlow.Message in '..\DeepFlow\Source\Core\DeepFlow.Message.pas',
   DeepFlow.Role in '..\DeepFlow\Source\Core\DeepFlow.Role.pas',
