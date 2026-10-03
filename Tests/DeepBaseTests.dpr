@@ -356,6 +356,14 @@ uses
   Test.Regression.BUG066_PathTraversal in 'Regression\Test.Regression.BUG066_PathTraversal.pas',
   Test.Regression.BUG070_LogInjection in 'Regression\Test.Regression.BUG070_LogInjection.pas',
   Test.Regression.BUG073_EventTypeInjection in 'Regression\Test.Regression.BUG073_EventTypeInjection.pas',
+  // WO-20261003-MC-甲-ORPHANREG batch3: concurrency + serialization + visual (7)
+  Test.Regression.BUG001_AnimationMemoryLeak in 'Regression\Test.Regression.BUG001_AnimationMemoryLeak.pas',
+  Test.Regression.BUG009_LoggingRace in 'Regression\Test.Regression.BUG009_LoggingRace.pas',
+  Test.Regression.BUG010_WorkerQueueRace in 'Regression\Test.Regression.BUG010_WorkerQueueRace.pas',
+  Test.Regression.BUG054_SemaphoreLeak in 'Regression\Test.Regression.BUG054_SemaphoreLeak.pas',
+  Test.Regression.BUG059_JsonDeserializationType in 'Regression\Test.Regression.BUG059_JsonDeserializationType.pas',
+  Test.Regression.BUG060_SerializationDepth in 'Regression\Test.Regression.BUG060_SerializationDepth.pas',
+  Test.Regression.CR606_FrameDifferAlpha in 'Regression\Test.Regression.CR606_FrameDifferAlpha.pas',
   // REVIEW5-GOV-007: DeepFlow production source code and tests
   DeepFlow.Message in '..\DeepFlow\Source\Core\DeepFlow.Message.pas',
   DeepFlow.Role in '..\DeepFlow\Source\Core\DeepFlow.Role.pas',
