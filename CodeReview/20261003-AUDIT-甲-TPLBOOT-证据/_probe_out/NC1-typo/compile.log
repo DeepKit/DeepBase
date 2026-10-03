@@ -1,0 +1,26 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.SafeClient.pas(1038) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.SafeClient.pas(1039) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.SafeClient.pas(1063) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Commerce.SafeClient.pas(1064) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\VCL\DeepBase.VCL.UpdateDialog.pas(163) Hint: H2443 Inline function 'MessageDlg' has not been expanded because unit 'System.UITypes' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\VCL\DeepBase.VCL.AutoUpdater.pas(89) Hint: H2164 Variable 'Info' is declared but never used in 'TAutoUpdater.CheckUpdate'
+Template.AutoUpdateBootstrap.pas(45) Error: E2003 Undeclared identifier: 'UpdateUrll'
+Template.AutoUpdateBootstrap.pas(50) Error: E2003 Undeclared identifier: 'UpdateUrll'
+Template.AutoUpdateBootstrap.pas(60) Error: E2250 There is no overloaded version of 'ForceQueue' that can be called with these arguments
+TPLBOOTProbe.dpr(7) Fatal: F2063 Could not compile used unit 'Template.AutoUpdateBootstrap.pas'

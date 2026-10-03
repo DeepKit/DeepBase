@@ -1,0 +1,29 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(411) Hint: H2077 Value assigned to 'DroppedDelta' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(790) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(805) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Logging.pas(819) Hint: H2077 Value assigned to 'List' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.PluginManager.pas(1125) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Manager.pas(578) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_ProgData\DeepBase-TPLBOOT-wt\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Template.AutoUpdateBootstrap.pas(27) Error: E2029 Identifier expected but 'VAR' found
+Template.AutoUpdateBootstrap.pas(28) Error: E2029 Declaration expected but identifier 'GAutoUpdater' found
+Template.AutoUpdateBootstrap.pas(34) Error: E2003 Undeclared identifier: 'GAutoUpdater'
+Template.AutoUpdateBootstrap.pas(34) Error: E2015 Operator not applicable to this operand type
+Template.AutoUpdateBootstrap.pas(42) Error: E2003 Undeclared identifier: 'TAutoUpdater'
+Template.AutoUpdateBootstrap.pas(42) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(43) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(44) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(45) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(49) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(50) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(57) Error: E2015 Operator not applicable to this operand type
+Template.AutoUpdateBootstrap.pas(58) Error: E2066 Missing operator or semicolon
+Template.AutoUpdateBootstrap.pas(59) Error: E2250 There is no overloaded version of 'ForceQueue' that can be called with these arguments
+Template.AutoUpdateBootstrap.pas(64) Error: E2003 Undeclared identifier: 'GAutoUpdater'
+TPLBOOTProbe.dpr(7) Fatal: F2063 Could not compile used unit 'Template.AutoUpdateBootstrap.pas'
