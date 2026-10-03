@@ -1,0 +1,72 @@
+{ WO-20261003-MC-甲-ORPHANREG : 22 个未进主测试工程回归单的「一个工程全量可编译」证明。
+  与逐单模板 ORPHANREGOne.dpr.template 的区别只在 uses 段：这里一次挂全部 22 个单元，
+  用来做判据 3 的整体前置编译（Batch=ALL，任一单元编译失败则整体红，再二分定位）。 }
+program ORPHANREG22;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  Test.Regression.A8_InFlightUnloadGate,
+  Test.Regression.BUG001_AnimationMemoryLeak,
+  Test.Regression.BUG007_WhenReadyDeadlock,
+  Test.Regression.BUG009_LoggingRace,
+  Test.Regression.BUG010_WorkerQueueRace,
+  Test.Regression.BUG013_RSASignature,
+  Test.Regression.BUG014_WeChatPaySignature,
+  Test.Regression.BUG020_KeyNameValidation,
+  Test.Regression.BUG033_WeakEncryption,
+  Test.Regression.BUG034_HardcodedKeys,
+  Test.Regression.BUG035_InsecureRandom,
+  Test.Regression.BUG037_KeyDerivation,
+  Test.Regression.BUG054_SemaphoreLeak,
+  Test.Regression.BUG058_XOREncryption,
+  Test.Regression.BUG059_JsonDeserializationType,
+  Test.Regression.BUG060_SerializationDepth,
+  Test.Regression.BUG062_PluginSandbox,
+  Test.Regression.BUG063_PluginConfigBypass,
+  Test.Regression.BUG066_PathTraversal,
+  Test.Regression.BUG070_LogInjection,
+  Test.Regression.BUG073_EventTypeInjection,
+  Test.Regression.CR606_FrameDifferAlpha;
+
+begin
+  ReportMemoryLeaksOnShutdown := False;
+  try
+    TDUnitX.CheckCommandLine;
+
+    var LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+
+    var LResults := LRunner.Execute;
+    Writeln(Format('RUNNER_STATS fixtureCount=%d testCount=%d pass=%d failure=%d error=%d ignored=%d',
+      [LResults.FixtureCount, LResults.TestCount, LResults.PassCount,
+       LResults.FailureCount, LResults.ErrorCount, LResults.IgnoredCount]));
+
+    if LResults.TestCount = 0 then
+    begin
+      Writeln('RUNNER_VERDICT: NO_TEST_EXECUTED');
+      System.ExitCode := 2;
+      Exit;
+    end;
+
+    if not LResults.AllPassed then
+    begin
+      Writeln('RUNNER_VERDICT: FAILED');
+      System.ExitCode := 1;
+      Exit;
+    end;
+    Writeln('RUNNER_VERDICT: PASSED');
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

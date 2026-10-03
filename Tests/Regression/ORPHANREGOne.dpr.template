@@ -1,0 +1,54 @@
+{ WO-20261003-MC-甲-ORPHANREG : 22 个未进主测试工程回归单的逐单取证 runner 模板。
+  被驱动脚本实体化到隔离 scratch 目录后编译运行，本体入 Tests/Regression/。
+  __UNIT__ 由驱动脚本替换为本次的回归单元名（形如 Test.Regression.BUG033_WeakEncryption）。
+  口径与 Tests/DeepBaseTests.dpr 的 runner 对齐（FailsOnNoAsserts=False），
+  另加两道 fail-closed：0 用例 NO_TEST_EXECUTED(2) / 非全绿 FAILED(1)。 }
+program ORPHANREGOne;
+
+{$APPTYPE CONSOLE}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  __UNIT__;
+
+begin
+  ReportMemoryLeaksOnShutdown := False;
+  try
+    TDUnitX.CheckCommandLine;
+
+    var LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+
+    var LResults := LRunner.Execute;
+    Writeln(Format('RUNNER_STATS fixtureCount=%d testCount=%d pass=%d failure=%d error=%d ignored=%d',
+      [LResults.FixtureCount, LResults.TestCount, LResults.PassCount,
+       LResults.FailureCount, LResults.ErrorCount, LResults.IgnoredCount]));
+
+    // fail-closed：0 用例不算绿（登记了空 fixture 也不能算覆盖）
+    if LResults.TestCount = 0 then
+    begin
+      Writeln('RUNNER_VERDICT: NO_TEST_EXECUTED');
+      System.ExitCode := 2;
+      Exit;
+    end;
+
+    if not LResults.AllPassed then
+    begin
+      Writeln('RUNNER_VERDICT: FAILED');
+      System.ExitCode := 1;
+      Exit;
+    end;
+    Writeln('RUNNER_VERDICT: PASSED');
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := 2;
+    end;
+  end;
+end.

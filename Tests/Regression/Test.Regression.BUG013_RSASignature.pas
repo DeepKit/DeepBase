@@ -97,11 +97,12 @@ begin
   
   TestContent := 'test_content_for_signing';
   
-  // 计算箢单的 SHA256+Base64（这是错误的实现方式?  HashBytes := THashSHA2.GetHashBytes(TestContent);
+  // 计算简单的 SHA256+Base64（这是错误的实现方式）
+  HashBytes := THashSHA2.GetHashBytes(TestContent);
   SimpleSHA256Base64 := TNetEncoding.Base64.EncodeBytesToString(HashBytes);
   
   // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符）
-  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),
+  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64)),
     'SHA256+Base64 应该产生 44 字符的结果');
   
   // RSA-2048 签名应该产生 256 字节，Base64 编码后约 344 字符

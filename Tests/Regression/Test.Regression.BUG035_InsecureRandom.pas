@@ -156,7 +156,7 @@ begin
     for I := 1 to 100 do
     begin
       S := TRandomGenerator.RandomString(32);
-      Assert.AreEqual(32, Integer(Length(S), 'Random string length should be correct');
+      Assert.AreEqual(32, Integer(Length(S)), 'Random string length should be correct');
       
       // Check for duplicates
       Assert.IsFalse(Strings.Contains(S), 
@@ -185,7 +185,7 @@ begin
     for I := 1 to 50 do
     begin
       S := TRandomGenerator.RandomHex(64);
-      Assert.AreEqual(64, Integer(Length(S), 'Random hex string length should be correct');
+      Assert.AreEqual(64, Integer(Length(S)), 'Random hex string length should be correct');
       
       // Verify only valid hex characters
       for C in S do
@@ -253,7 +253,7 @@ begin
     for I := 1 to 100 do
     begin
       OTP := TRandomGenerator.GenerateOTP(6);
-      Assert.AreEqual(6, Integer(Length(OTP), 'OTP length should be correct');
+      Assert.AreEqual(6, Integer(Length(OTP)), 'OTP length should be correct');
       
       // Verify only contains digits
       Assert.IsTrue(TryStrToInt(OTP, OTPInt), 'OTP should only contain digits');
