@@ -1,0 +1,24 @@
+# WO-20261003-MC-甲-ORPHANREG 判据4：22 个单逐个 DUnitX 读数（原始 run.log/compile.log 在仓外 D:/_ProgData/DeepBase-ORPHANREG/probes/<单>/）
+# 列：单 / BUILD_EXIT(秒,编译行数,提示,警告) / RUN_EXIT / VERDICT / Found / Passed / Failed / Errored / Leaked / Ignored / 失败用例
+Test.Regression.A8_InFlightUnloadGate	BUILD_EXIT=0(2s,lines=10,hint=7,warn=0)	RUN_EXIT=0	VERDICT=PASSED	Found=4	Passed=4	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG001_AnimationMemoryLeak	BUILD_EXIT=0(2s,lines=7,hint=1,warn=3)	RUN_EXIT=0	VERDICT=PASSED	Found=3	Passed=3	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG007_WhenReadyDeadlock	BUILD_EXIT=0(3s,lines=17,hint=10,warn=4)	RUN_EXIT=0	VERDICT=PASSED	Found=4	Passed=4	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG009_LoggingRace	BUILD_EXIT=0(2s,lines=11,hint=5,warn=3)	RUN_EXIT=0	VERDICT=PASSED	Found=7	Passed=7	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG010_WorkerQueueRace	BUILD_EXIT=0(1s,lines=6,hint=1,warn=2)	RUN_EXIT=0	VERDICT=PASSED	Found=11	Passed=11	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG013_RSASignature	BUILD_EXIT=0(1s,lines=10,hint=2,warn=5)	RUN_EXIT=0	VERDICT=PASSED	Found=5	Passed=5	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG014_WeChatPaySignature	BUILD_EXIT=0(2s,lines=22,hint=14,warn=5)	RUN_EXIT=0	VERDICT=PASSED	Found=5	Passed=5	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG020_KeyNameValidation	BUILD_EXIT=0(2s,lines=15,hint=9,warn=3)	RUN_EXIT=1	VERDICT=FAILED	Found=3	Passed=2	Failed=1	Errored=0	Leaked=0	Ignored=0	DETAIL=  Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_ValidKeyName_IsAccepted|
+Test.Regression.BUG033_WeakEncryption	BUILD_EXIT=0(2s,lines=11,hint=2,warn=6)	RUN_EXIT=0	VERDICT=PASSED	Found=6	Passed=6	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG034_HardcodedKeys	BUILD_EXIT=0(2s,lines=9,hint=2,warn=4)	RUN_EXIT=1	VERDICT=FAILED	Found=4	Passed=3	Failed=1	Errored=0	Leaked=0	Ignored=0	DETAIL=  Test.Regression.BUG034_HardcodedKeys.TBug034_HardcodedKeysTest.Test_MissingKey_ThrowsClearError|
+Test.Regression.BUG035_InsecureRandom	BUILD_EXIT=0(1s,lines=12,hint=2,warn=7)	RUN_EXIT=0	VERDICT=PASSED	Found=7	Passed=7	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG037_KeyDerivation	BUILD_EXIT=0(2s,lines=11,hint=3,warn=5)	RUN_EXIT=0	VERDICT=PASSED	Found=5	Passed=5	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG054_SemaphoreLeak	BUILD_EXIT=0(2s,lines=7,hint=1,warn=3)	RUN_EXIT=0	VERDICT=PASSED	Found=3	Passed=3	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG058_XOREncryption	BUILD_EXIT=0(4s,lines=16,hint=9,warn=4)	RUN_EXIT=0	VERDICT=PASSED	Found=4	Passed=4	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG059_JsonDeserializationType	BUILD_EXIT=0(2s,lines=7,hint=1,warn=3)	RUN_EXIT=0	VERDICT=PASSED	Found=3	Passed=3	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG060_SerializationDepth	BUILD_EXIT=0(1s,lines=6,hint=1,warn=2)	RUN_EXIT=0	VERDICT=PASSED	Found=2	Passed=2	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG062_PluginSandbox	BUILD_EXIT=0(2s,lines=14,hint=6,warn=5)	RUN_EXIT=0	VERDICT=PASSED	Found=5	Passed=5	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG063_PluginConfigBypass	BUILD_EXIT=0(2s,lines=16,hint=6,warn=7)	RUN_EXIT=0	VERDICT=PASSED	Found=7	Passed=7	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG066_PathTraversal	BUILD_EXIT=0(2s,lines=7,hint=1,warn=3)	RUN_EXIT=0	VERDICT=PASSED	Found=3	Passed=3	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG070_LogInjection	BUILD_EXIT=0(2s,lines=7,hint=1,warn=3)	RUN_EXIT=0	VERDICT=PASSED	Found=3	Passed=3	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.BUG073_EventTypeInjection	BUILD_EXIT=0(2s,lines=6,hint=1,warn=2)	RUN_EXIT=0	VERDICT=PASSED	Found=2	Passed=2	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=
+Test.Regression.CR606_FrameDifferAlpha	BUILD_EXIT=0(2s,lines=11,hint=8,warn=0)	RUN_EXIT=0	VERDICT=PASSED	Found=2	Passed=2	Failed=0	Errored=0	Leaked=0	Ignored=0	DETAIL=

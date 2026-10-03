@@ -1,0 +1,9 @@
+# WO-20261003-MC-甲-ORPHANREG 判据8：阴性对照（原始 dpr/compile.log/run.log 在仓外 D:/_ProgData/DeepBase-ORPHANREG/nc/）
+control	search_path	BUILD_EXIT	RUN_EXIT	note	first_error
+NC1_typo_unit_name	runner	1		misspelled unit name (last char dropped)	Fatal: F2085 Unit name mismatch: 'Test.Regression.BUG033_WeakEncryptio' 'Test.Regression.BUG033_WeakEncryption'
+NC2_no_in_clause_dproj_path	dproj	1		no `in 'Regression\X.pas'` clause + dproj search path (no Tests\Regression)	D:\_ProgData\DeepBase-ORPHANREG\nc\NC2_no_in_clause_dproj_path\NCCtl.dpr(9) Fatal: F2613 Unit 'Test.Regression.BUG033_WeakEncryption' not found.
+NC3_no_in_clause_runner_path	runner	0	0	no `in 'Regression\X.pas'` clause + run_tests.ps1 search path (has Tests\Regression)	
+NC4_forward_slash_sep	runner	0	0	in-clause path separator is '/'	
+NC5_tests_prefix_dropped	runner	0	0	in-clause dropped the 'Regression\' prefix	
+NC6_forward_slash_dproj_path	dproj	1		in-clause separator '/' + dproj search path (no Tests\Regression)	Regression\Test.Regression.BUG033_WeakEncryption.pas(25) Fatal: F2613 Unit 'Test.Regression.Base' not found.
+NC7_tests_prefix_dropped_dproj_path	dproj	1		in-clause dropped 'Regression' prefix + dproj search path	D:\_ProgData\DeepBase-ORPHANREG\nc\NC7_tests_prefix_dropped_dproj_path\NCCtl.dpr(9) Fatal: F1026 File not found: 'Test.Regression.BUG033_WeakEncryption.pas'

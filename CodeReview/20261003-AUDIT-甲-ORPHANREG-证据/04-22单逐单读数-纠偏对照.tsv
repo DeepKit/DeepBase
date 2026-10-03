@@ -1,0 +1,26 @@
+# WO-20261003-MC-甲-ORPHANREG 判据4 纠偏：同一个 exe、只把 CWD 从 scratch 目录换成 Tests\ 再跑。
+# 左：原探针读数（CWD=探针 scratch 目录，判据4 首轮表的来源）  右：纠偏读数（CWD=Tests\ = run_tests.ps1 -WorkingDirectory $projectDir 口径 = 主套件实际口径）
+unit	CWD_scratch_F/P/F	CWD_Tests_F/P/F	delta_F	RUN_EXIT	纠偏后失败用例
+A8_InFlightUnloadGate	4/4/0	4/4/0	+0	0	
+BUG001_AnimationMemoryLeak	3/3/0	3/3/0	+0	0	
+BUG007_WhenReadyDeadlock	4/4/0	4/4/0	+0	0	
+BUG009_LoggingRace	7/7/0	7/6/1	+1 <<<	1	Test.Regression.BUG009_LoggingRace.TBug009_LoggingRaceTest.Test_DoubleCheckedLocking_Exists;
+BUG010_WorkerQueueRace	11/11/0	11/11/0	+0	0	
+BUG013_RSASignature	5/5/0	5/5/0	+0	0	
+BUG014_WeChatPaySignature	5/5/0	5/5/0	+0	0	
+BUG020_KeyNameValidation	3/2/1	3/1/2	+1 <<<	1	Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_KeyNameValidation_Exists;Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_ValidKeyName_IsAccepted;
+BUG033_WeakEncryption	6/6/0	6/6/0	+0	0	
+BUG034_HardcodedKeys	4/3/1	4/3/1	+0	1	Test.Regression.BUG034_HardcodedKeys.TBug034_HardcodedKeysTest.Test_MissingKey_ThrowsClearError;
+BUG035_InsecureRandom	7/7/0	7/7/0	+0	0	
+BUG037_KeyDerivation	5/5/0	5/5/0	+0	0	
+BUG054_SemaphoreLeak	3/3/0	3/2/1	+1 <<<	1	Test.Regression.BUG054_SemaphoreLeak.TBug054_SemaphoreLeakTest.Test_SemaphoreReleaseFlag_Exists;
+BUG058_XOREncryption	4/4/0	4/4/0	+0	0	
+BUG059_JsonDeserializationType	3/3/0	3/2/1	+1 <<<	1	Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists;
+BUG060_SerializationDepth	2/2/0	2/1/1	+1 <<<	1	Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable;
+BUG062_PluginSandbox	5/5/0	5/5/0	+0	0	
+BUG063_PluginConfigBypass	7/7/0	7/7/0	+0	0	
+BUG066_PathTraversal	3/3/0	3/3/0	+0	0	
+BUG070_LogInjection	3/3/0	3/3/0	+0	0	
+BUG073_EventTypeInjection	2/2/0	2/2/0	+0	0	
+CR606_FrameDifferAlpha	2/2/0	2/2/0	+0	0	
+ALL22	98/96/2	98/91/7	+5 <<<	1	Test.Regression.BUG009_LoggingRace.TBug009_LoggingRaceTest.Test_DoubleCheckedLocking_Exists;Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_KeyNameValidation_Exists;Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_ValidKeyName_IsAccepted;Test.Regression.BUG034_HardcodedKeys.TBug034_HardcodedKeysTest.Test_MissingKey_ThrowsClearError;Test.Regression.BUG054_SemaphoreLeak.TBug054_SemaphoreLeakTest.Test_SemaphoreReleaseFlag_Exists;Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists;Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable;

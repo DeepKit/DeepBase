@@ -1,0 +1,24 @@
+unit	CWD	Found	Ignored	Passed	Failed	Errored	Leaked	RUN_EXIT	failing_tests
+A8_InFlightUnloadGate	Tests	4 0 4 0 0 0	0	
+BUG001_AnimationMemoryLeak	Tests	3 0 3 0 0 0	0	
+BUG007_WhenReadyDeadlock	Tests	4 0 4 0 0 0	0	
+BUG009_LoggingRace	Tests	7 0 6 1 0 0	1	Test.Regression.BUG009_LoggingRace.TBug009_LoggingRaceTest.Test_DoubleCheckedLocking_Exists;
+BUG010_WorkerQueueRace	Tests	11 0 11 0 0 0	0	
+BUG013_RSASignature	Tests	5 0 5 0 0 0	0	
+BUG014_WeChatPaySignature	Tests	5 0 5 0 0 0	0	
+BUG020_KeyNameValidation	Tests	3 0 1 2 0 0	1	Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_KeyNameValidation_Exists;Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_ValidKeyName_IsAccepted;
+BUG033_WeakEncryption	Tests	6 0 6 0 0 0	0	
+BUG034_HardcodedKeys	Tests	4 0 3 1 0 0	1	Test.Regression.BUG034_HardcodedKeys.TBug034_HardcodedKeysTest.Test_MissingKey_ThrowsClearError;
+BUG035_InsecureRandom	Tests	7 0 7 0 0 0	0	
+BUG037_KeyDerivation	Tests	5 0 5 0 0 0	0	
+BUG054_SemaphoreLeak	Tests	3 0 2 1 0 0	1	Test.Regression.BUG054_SemaphoreLeak.TBug054_SemaphoreLeakTest.Test_SemaphoreReleaseFlag_Exists;
+BUG058_XOREncryption	Tests	4 0 4 0 0 0	0	
+BUG059_JsonDeserializationType	Tests	3 0 2 1 0 0	1	Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists;
+BUG060_SerializationDepth	Tests	2 0 1 1 0 0	1	Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable;
+BUG062_PluginSandbox	Tests	5 0 5 0 0 0	0	
+BUG063_PluginConfigBypass	Tests	7 0 7 0 0 0	0	
+BUG066_PathTraversal	Tests	3 0 3 0 0 0	0	
+BUG070_LogInjection	Tests	3 0 3 0 0 0	0	
+BUG073_EventTypeInjection	Tests	2 0 2 0 0 0	0	
+CR606_FrameDifferAlpha	Tests	2 0 2 0 0 0	0	
+ALL22	Tests	98 0 91 7 0 0	1	Test.Regression.BUG009_LoggingRace.TBug009_LoggingRaceTest.Test_DoubleCheckedLocking_Exists;Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_KeyNameValidation_Exists;Test.Regression.BUG020_KeyNameValidation.TBug020_KeyNameValidationTest.Test_ValidKeyName_IsAccepted;Test.Regression.BUG034_HardcodedKeys.TBug034_HardcodedKeysTest.Test_MissingKey_ThrowsClearError;Test.Regression.BUG054_SemaphoreLeak.TBug054_SemaphoreLeakTest.Test_SemaphoreReleaseFlag_Exists;Test.Regression.BUG059_JsonDeserializationType.TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists;Test.Regression.BUG060_SerializationDepth.TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable;

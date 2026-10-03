@@ -1,0 +1,41 @@
+WO-20261003-MC-甲-ORPHANREG 判据9：四门实跑记录（终版）
+= 只留判定行。原始输出里含存量 mojibake 明细（E3），整段抄进来会让 evidence-encoding-gate
+  把这些存量损坏当成本单新增违规，故只抄判定行，exit code 逐道记录。
+= 四门全部在隔离 worktree D:/_ProgData/DeepBase-ORPHANREG/wt-orphanreg 内、对本单最终交付面实跑；
+  evidence-encoding-gate 实跑前已把本目录全部交付件 git add（该门默认只扫 tracked 文件）。
+
+===== eol-gate =====
+命令：node "09_工程脚本/eol-gate/check_eol.js"
+行尾门禁通过：检查了 1666 个文件（.pas CRLF / .md LF），跳过目录 3
+EXIT=0
+
+===== encoding-gate =====
+命令：node "09_工程脚本/encoding-gate/check_pas_encoding.js"
+编码门禁通过：1015 个 .pas + 804 个扩展面文件（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0，双重编码基线文件 50，扩展面存量损坏豁免 13，跳过目录 3）
+EXIT=0
+
+===== mojibake-gate =====
+命令：node "09_工程脚本/mojibake-gate/check_mojibake.js"
+丙类损坏门禁通过：扫描 1015 个 .pas，丙-B 命中 0 处（0 件），全部在存量清单 17 件 / 343 处封顶内（只减不增）；编译红交叉标记=未提供
+EXIT=0
+
+===== evidence-encoding-gate =====
+命令：node "09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js"
+证据编码门禁通过：扫描 1257 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8；E3 命中 240 行，均在存量清单 21 件的封顶内
+EXIT=0
+（1257 = 本目录本单 7 个新交付件入库前的 1250 + 7；E3 命中 240 行与上一次完全一致
+  ⇒ 本单新增 0 行 mojibake。00-交付总表.md 另单独校验 U+FFFD 计数 = 0。）
+
+===== 本单交付件编码自检 =====
+00-交付总表.md              UTF-8 / LF，U+FFFD=0
+04-22单逐单读数.tsv          UTF-8 / LF
+04-22单逐单读数-纠偏对照.tsv  UTF-8 / LF
+04b-判据4纠偏-CWD复跑-原始.tsv UTF-8 / LF
+08-阴性对照.tsv              UTF-8 / LF
+09-四门跑录.txt              UTF-8 / LF
+mergbatch/chain/fullsuite/rerun 用 .sh 与 .py   ASCII
+
+===== 交付纪律 =====
+H15：每一笔均 git commit -m "..." -- <pathspec>（选项在 -- 前），无 bare commit。
+禁 push：遵守（本单全程未 push）。
+禁 git add -A/.：遵守（只按文件名/目录精确 add Tests/** 与 CodeReview/20261003-AUDIT-甲-ORPHANREG-证据）。
